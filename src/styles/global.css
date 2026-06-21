@@ -320,8 +320,11 @@ h3 {
 }
 .gallery-grid {
   width: min(var(--measure-wide), 92vw);
-  margin-inline: 50%;
-  transform: translateX(-50%);
+  /* Center the wide breakout without `transform` — a transformed element creates a
+     persistent GPU compositing layer that Safari/WebKit can fail to clear when the
+     element is unmounted during client-side navigation, leaving a "ghost" of the
+     gallery painted over the next page. Margin-based centering has no such layer. */
+  margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: 0.6rem;
@@ -362,8 +365,11 @@ h3 {
   padding: 0;
   margin: 0;
   width: min(var(--measure-wide), 92vw);
-  margin-inline: 50%;
-  transform: translateX(-50%);
+  /* Center the wide breakout without `transform` — a transformed element creates a
+     persistent GPU compositing layer that Safari/WebKit can fail to clear when the
+     element is unmounted during client-side navigation, leaving a "ghost" of the
+     gallery painted over the next page. Margin-based centering has no such layer. */
+  margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 0.75rem;
