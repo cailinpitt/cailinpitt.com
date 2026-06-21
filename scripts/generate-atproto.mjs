@@ -35,10 +35,19 @@ async function main() {
     return
   }
 
-  const wellKnown = path.join(DIST, '.well-known')
-  await mkdir(wellKnown, { recursive: true })
-  await writeFile(path.join(wellKnown, 'site.standard.publication'), records.publication + '\n', 'utf8')
-  console.log(`✓ .well-known/site.standard.publication → ${records.publication}`)
+  // The well-known endpoint location depends on the publication url: at the domain
+  // root it's /.well-known/site.standard.publication; if the publication lives under a
+  // path (e.g. /blog), the path is appended → /.well-known/site.standard.publication/blog.
+  // See https://standard.site/docs/verification.
+  let endpoint = 'site.standard.publication'
+  if (records.publicationUrl) {
+    const pubPath = new URL(records.publicationUrl).pathname.replace(/^\/+|\/+$/g, '')
+    if (pubPath) endpoint = `site.standard.publication/${pubPath}`
+  }
+  const file = path.join(DIST, '.well-known', ...endpoint.split('/'))
+  await mkdir(path.dirname(file), { recursive: true })
+  await writeFile(file, records.publication + '\n', 'utf8')
+  console.log(`✓ .well-known/${endpoint} → ${records.publication}`)
 }
 
 main().catch((err) => {

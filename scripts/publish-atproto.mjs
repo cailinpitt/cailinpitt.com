@@ -45,6 +45,11 @@ const RECORDS_FILE = path.join(ROOT, 'content', 'atproto.json')
 const ICON_FILE = path.join(ROOT, 'content', 'atproto-icon.jpg')
 
 const SITE_URL = 'https://cailinpitt.com'
+// Publication landing (the reader's "View publication" button). A path is allowed, but
+// then the verification well-known must be served at the path-appended location
+// (/.well-known/site.standard.publication/blog) — generate-atproto.mjs handles that
+// from the publicationUrl written into atproto.json. See standard.site/docs/verification.
+const PUBLICATION_URL = `${SITE_URL}/blog`
 const PUBLICATION = {
   name: 'Cailin Pitt',
   description: 'Photography and writing by Cailin Pitt.',
@@ -167,10 +172,7 @@ async function main() {
     rkey: 'self',
     record: {
       $type: 'site.standard.publication',
-      // Must be the site origin root: standard.site verification resolves
-      // /.well-known/site.standard.publication against this, and the well-known lives
-      // at the root. A path here (e.g. /blog) breaks verification → no enhanced card.
-      url: SITE_URL,
+      url: PUBLICATION_URL,
       name: PUBLICATION.name,
       description: PUBLICATION.description,
       ...(icon ? { icon } : {}),
@@ -202,7 +204,7 @@ async function main() {
 
   await writeFile(
     RECORDS_FILE,
-    JSON.stringify({ did, publication: pub.data.uri, documents }, null, 2) + '\n',
+    JSON.stringify({ did, publication: pub.data.uri, publicationUrl: PUBLICATION_URL, documents }, null, 2) + '\n',
     'utf8',
   )
   console.log(`\n✓ Wrote ${path.relative(ROOT, RECORDS_FILE)} (${posts.length} documents).`)
