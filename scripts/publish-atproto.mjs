@@ -22,6 +22,7 @@
 // Lexicons: https://standard.site/docs/lexicons/document  (verified 2026-06).
 
 import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AtpAgent } from '@atproto/api'
@@ -39,6 +40,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const BLOG = path.join(ROOT, 'content', 'blog')
 const RECORDS_FILE = path.join(ROOT, 'content', 'atproto.json')
+// Square author/publication icon (≥256px, <1MB). Uploaded as a blob and referenced
+// by the publication record so it shows as the author avatar in standard.site readers.
+const ICON_FILE = path.join(ROOT, 'content', 'atproto-icon.jpg')
 
 const SITE_URL = 'https://cailinpitt.com'
 const PUBLICATION = {
@@ -149,7 +153,14 @@ async function main() {
   const did = agent.session.did
   console.log(`Logged in as ${did} via ${service}`)
 
-  // 1. Publication record (stable rkey "self").
+  // 1. Publication record (stable rkey "self"). Upload the icon blob first, if present.
+  let icon
+  if (existsSync(ICON_FILE)) {
+    const bytes = await readFile(ICON_FILE)
+    const up = await agent.com.atproto.repo.uploadBlob(bytes, { encoding: 'image/jpeg' })
+    icon = up.data.blob
+    console.log(`✓ uploaded icon (${(bytes.length / 1024).toFixed(0)} KB)`)
+  }
   const pub = await agent.com.atproto.repo.putRecord({
     repo: did,
     collection: 'site.standard.publication',
@@ -159,6 +170,7 @@ async function main() {
       url: SITE_URL,
       name: PUBLICATION.name,
       description: PUBLICATION.description,
+      ...(icon ? { icon } : {}),
     },
   })
   console.log(`✓ publication → ${pub.data.uri}`)
