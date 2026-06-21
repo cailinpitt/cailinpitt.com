@@ -1,9 +1,12 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, ScrollRestoration } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Layout() {
   return (
     <>
+      {/* Reset scroll to top on navigation (and restore it on back/forward). React
+          Router's data router doesn't do this automatically. */}
+      <ScrollRestoration />
       <a className="skip-link" href="#main">
         Skip to content
       </a>
