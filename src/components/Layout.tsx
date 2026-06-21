@@ -30,7 +30,9 @@ export function Layout() {
       </main>
 
       <footer className="site-footer">
-        <p>© {new Date().getFullYear()} Cailin Pitt</p>
+        <p>
+          © {new Date().getFullYear()} Cailin Pitt · <Link to="/privacy">Privacy</Link>
+        </p>
         <ul className="social-links">
           <li>
             <a href="https://instagram.com/cailinpitt" rel="me">
