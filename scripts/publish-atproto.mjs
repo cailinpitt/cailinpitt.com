@@ -167,7 +167,10 @@ async function main() {
     rkey: 'self',
     record: {
       $type: 'site.standard.publication',
-      url: SITE_URL,
+      // Publication landing the reader's "View publication" button opens — the blog
+      // index, not the homepage. Document `path`s are root-relative (leading slash),
+      // so they still resolve against the origin regardless of this base.
+      url: `${SITE_URL}/blog`,
       name: PUBLICATION.name,
       description: PUBLICATION.description,
       ...(icon ? { icon } : {}),
