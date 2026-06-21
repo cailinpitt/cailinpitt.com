@@ -16,7 +16,7 @@ export default function Home() {
         publicationUri={atprotoPublicationUri}
       />
       <section className="intro">
-        <h1>Photographer, software engineer, and occasional writer.</h1>
+        <h1>Artist, software engineer, and occasional writer.</h1>
       </section>
 
       {recent.length > 0 && (
