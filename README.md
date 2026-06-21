@@ -39,9 +39,28 @@ Markdown body…
   are **never committed** (see below). After adding images, push them to R2: `npm run images:upload`.
 - Markdown renders at build time (`react-markdown` + `remark-gfm`, with `rehype-raw` so embedded
   HTML like YouTube/Spotify iframes survives).
-- That's all — posts are picked up automatically (glob of `content/blog/*.md`). The post shows up
+- **Social card image:** `image:` in frontmatter is optional — if omitted, the first image in the
+  body is used as the `og:image`/`twitter:image` thumbnail (e.g. when sharing on Bluesky). Set
+  `image:` explicitly only if you want a specific cover.
+- **standard.site (Bluesky):** each post also gets an AT Protocol record so it renders as a
+  first-class document in the Bluesky ecosystem. This is **not automatic** — you must run
+  `npm run publish:atproto` and commit the updated `content/atproto.json` (see the checklist and
+  the [standard.site](#standardsite--bluesky) section below).
+- Otherwise posts are picked up automatically (glob of `content/blog/*.md`). The post shows up
   on `/blog`, the home "Recent writing", `sitemap.xml`, and `llms.txt`, gets JSON-LD, and is
   prerendered to a real HTML file at `path` (so old bookmarks keep working). No routing to wire.
+
+#### Checklist for a new post
+
+1. Create `content/blog/<slug>.md` with the frontmatter above.
+2. Drop any inline images in `public/images/<slug>/`, reference them as `/images/<slug>/<file>`,
+   then `npm run images:upload` (needs R2 creds in `.env`).
+3. Preview locally: `npm run dev` (and optionally `npm run build` to sanity-check the prerender).
+4. Publish the standard.site record: `npm run publish:atproto` (needs Bluesky creds in `.env`),
+   then **commit the updated `content/atproto.json`**.
+5. Commit the post (`content/blog/<slug>.md`) and push `main` → auto-deploys.
+6. _Optional:_ re-share the post link on Bluesky — link cards are cached per-URL, so a fresh post
+   forces Bluesky to re-fetch the new thumbnail/record.
 
 ### Add a photo gallery (e.g. 2026)
 
@@ -78,6 +97,35 @@ are committed** — all of `public/images/` is gitignored. Galleries are defined
 
 > The original galleries were pulled from the old Squarespace site with `npm run galleries:download`
 > (Squarespace-specific). For new galleries, just drop files into `public/images/<gallery>/` as above.
+
+### standard.site / Bluesky
+
+Posts are published as [standard.site](https://standard.site) AT Protocol records so they render
+as first-class long-form documents in the Bluesky ecosystem (not just a link card).
+`scripts/publish-atproto.mjs` upserts one `site.standard.publication` record plus one
+`site.standard.document` per post into your Bluesky repo (PDS). The build reads the resulting
+AT-URIs from `content/atproto.json` to emit `/.well-known/site.standard.publication` and the
+per-post `<link rel="site.standard.*">` tags — so the build itself needs **no** credentials.
+
+Credentials live in `.env` (gitignored). Create an **app password** (not your real password) at
+<https://bsky.app/settings/app-passwords>:
+
+```
+BLUESKY_IDENTIFIER=yourhandle.bsky.social   # handle or account email
+BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+# BLUESKY_PDS=https://bsky.social            # optional; default shown
+```
+
+```bash
+npm run publish:atproto              # create/update records, rewrite content/atproto.json
+npm run publish:atproto -- --dry-run # preview (lists posts; no login, no writes)
+```
+
+- **Idempotent:** records use stable record keys (`self` for the publication, the post slug per
+  document), so re-running updates in place — it never creates duplicates.
+- **Re-run whenever post content/metadata changes** (new post, edited title/description/body), then
+  commit the updated `content/atproto.json`.
+- The `did`/AT-URIs in `content/atproto.json` are public identifiers — safe to commit.
 
 
 ## Deploy
