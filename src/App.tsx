@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import BlogIndex from './pages/BlogIndex'
 import BlogPost from './pages/BlogPost'
 import Gallery from './pages/Gallery'
+import Photos from './pages/Photos'
 import Privacy from './pages/Privacy'
 import NotFound from './pages/NotFound'
 import { posts } from './lib/posts'
@@ -19,6 +20,7 @@ export const routes: RouteRecord[] = [
     children: [
       { index: true, element: <Home /> },
       { path: 'blog', element: <BlogIndex /> },
+      { path: 'photos', element: <Photos /> },
       { path: 'privacy', element: <Privacy /> },
       // One static route per blog post, at its exact preserved Squarespace path.
       ...posts.map((post) => ({

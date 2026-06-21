@@ -15,22 +15,23 @@ export default function Home() {
         jsonLd={[websiteSchema(), personSchema()]}
       />
       <section className="intro">
-        <h1>Cailin Pitt</h1>
-        <p>Photographer, hobbyist, and occasional writer.</p>
+        <h1>Photographer, software engineer, and occasional writer.</h1>
       </section>
 
       {recent.length > 0 && (
-        <section className="recent-posts" aria-labelledby="recent-heading">
-          <h2 id="recent-heading">Recent writing</h2>
+        <section className="recent" aria-labelledby="recent-heading">
+          <h2 id="recent-heading" className="eyebrow">
+            Recent writing
+          </h2>
           <ul className="post-list">
             {recent.map((p) => (
               <li key={p.path}>
-                <Link to={p.path}>{p.title}</Link>
                 <time dateTime={p.date}>{formatDate(p.date)}</time>
+                <Link to={p.path}>{p.title}</Link>
               </li>
             ))}
           </ul>
-          <p>
+          <p className="more">
             <Link to="/blog">All posts →</Link>
           </p>
         </section>

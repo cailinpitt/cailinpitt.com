@@ -5,11 +5,7 @@ import type { Post } from './posts'
 
 const SITE_URL = 'https://cailinpitt.com'
 const AUTHOR = 'Cailin Pitt'
-const SAME_AS = [
-  'https://instagram.com/cailinpitt',
-  'https://github.com/CailinPitt',
-  'https://bsky.app/profile/cailinpitt.com',
-]
+const SAME_AS = ['https://github.com/CailinPitt']
 
 type Json = Record<string, unknown>
 

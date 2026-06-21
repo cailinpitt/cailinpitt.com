@@ -6,15 +6,19 @@ export default function BlogIndex() {
   return (
     <>
       <Seo title="Blog" description="Writing by Cailin Pitt." path="/blog" />
-      <h1>Blog</h1>
-      <ul className="post-list">
-        {posts.map((p) => (
-          <li key={p.path}>
-            <Link to={p.path}>{p.title}</Link>
-            <time dateTime={p.date}>{formatDate(p.date)}</time>
-          </li>
-        ))}
-      </ul>
+      <section className="post">
+        <header className="post-header">
+          <h1>Blog</h1>
+        </header>
+        <ul className="post-list">
+          {posts.map((p) => (
+            <li key={p.path}>
+              <time dateTime={p.date}>{formatDate(p.date)}</time>
+              <Link to={p.path}>{p.title}</Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </>
   )
 }

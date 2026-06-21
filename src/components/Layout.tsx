@@ -13,10 +13,7 @@ export function Layout() {
           </Link>
           <ul className="nav-links">
             <li>
-              <Link to="/">Work</Link>
-            </li>
-            <li>
-              <Link to="/past-work">Past Work</Link>
+              <Link to="/photos">Photos</Link>
             </li>
             <li>
               <Link to="/blog">Blog</Link>
@@ -35,18 +32,8 @@ export function Layout() {
         </p>
         <ul className="social-links">
           <li>
-            <a href="https://instagram.com/cailinpitt" rel="me">
-              Instagram
-            </a>
-          </li>
-          <li>
             <a href="https://github.com/CailinPitt" rel="me">
               GitHub
-            </a>
-          </li>
-          <li>
-            <a href="https://bsky.app/profile/cailinpitt.com" rel="me">
-              Bluesky
             </a>
           </li>
         </ul>

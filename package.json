@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "migrate:posts": "node scripts/migrate-posts.mjs",
-    "migrate:images": "node scripts/download-images.mjs"
+    "migrate:images": "node scripts/download-images.mjs",
+    "galleries:download": "node scripts/download-galleries.mjs",
+    "galleries:upload": "node scripts/upload-r2.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -22,6 +24,7 @@
     "vite-react-ssg": "^0.9.1-beta.1"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1073.0",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

@@ -15,5 +15,21 @@ npm-debug.log*
 squarespace-export.xml
 squarespace-backup/
 
+# Gallery photos — served from Cloudflare R2 (Phase 9), never committed to keep
+# history small. Re-fetch locally with scripts/download-galleries.mjs.
+/public/images/2014/
+/public/images/2015/
+/public/images/2018/
+/public/images/2019/
+/public/images/2020/
+/public/images/2021/
+/public/images/2022/
+/public/images/latest/
+/public/images/latest-work/
+
+# Local env (R2 credentials, image base URL, etc.)
+.env
+.env.local
+
 # OS
 .DS_Store
