@@ -11,14 +11,20 @@ interface SeoProps {
   /** Absolute or root-relative image path for social cards. */
   image?: string
   type?: 'website' | 'article'
+  /** schema.org JSON-LD to embed (a single object or an array of them). */
+  jsonLd?: object | object[]
 }
+
+// Escape `<` so the serialized JSON can't break out of the <script> element.
+const serializeJsonLd = (data: object | object[]) =>
+  JSON.stringify(data).replace(/</g, '\\u003c')
 
 /**
  * Per-page <title>, meta description, canonical, and Open Graph / Twitter tags.
  * Covers the build-time metadata items from specification.website. Rendered into
  * <head> at prerender time by vite-react-ssg's <Head>.
  */
-export function Seo({ title, description, path = '/', image, type = 'website' }: SeoProps) {
+export function Seo({ title, description, path = '/', image, type = 'website', jsonLd }: SeoProps) {
   const url = `${SITE_URL}${path}`
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
   const img = image ? (image.startsWith('http') ? image : `${SITE_URL}${image}`) : undefined
@@ -40,6 +46,10 @@ export function Seo({ title, description, path = '/', image, type = 'website' }:
       <meta name="twitter:title" content={fullTitle} />
       {description && <meta name="twitter:description" content={description} />}
       {img && <meta name="twitter:image" content={img} />}
+
+      {jsonLd && (
+        <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>
+      )}
     </Head>
   )
 }

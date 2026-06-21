@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Seo } from '../components/Seo'
 import { formatDate, type Post } from '../lib/posts'
+import { blogPostingSchema, breadcrumbSchema } from '../lib/structuredData'
 
 export default function BlogPost({ post }: { post: Post }) {
   return (
@@ -13,6 +14,7 @@ export default function BlogPost({ post }: { post: Post }) {
         path={post.path}
         image={post.image}
         type="article"
+        jsonLd={[blogPostingSchema(post), breadcrumbSchema(post)]}
       />
       <article className="post">
         <header className="post-header">

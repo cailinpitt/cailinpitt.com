@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { posts } from '../lib/posts'
 import { formatDate } from '../lib/posts'
+import { personSchema, websiteSchema } from '../lib/structuredData'
 
 export default function Home() {
   const recent = posts.slice(0, 5)
@@ -11,6 +12,7 @@ export default function Home() {
         title="Cailin Pitt"
         description="Photography and writing by Cailin Pitt."
         path="/"
+        jsonLd={[websiteSchema(), personSchema()]}
       />
       <section className="intro">
         <h1>Cailin Pitt</h1>

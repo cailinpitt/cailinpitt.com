@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite-react-ssg build",
-    "postbuild": "node scripts/generate-sitemap.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "migrate:posts": "node scripts/migrate-posts.mjs",
