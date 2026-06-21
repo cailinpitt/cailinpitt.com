@@ -15,7 +15,7 @@ const abs = (p: string) => (p.startsWith('http') ? p : `${SITE_URL}${p.startsWit
 const PERSON: Json = { '@type': 'Person', name: AUTHOR, url: SITE_URL }
 
 /** First local image referenced in a post body (markdown or HTML), used as a cover fallback. */
-function firstImagePath(body: string): string | undefined {
+export function firstImagePath(body: string): string | undefined {
   const md = body.match(/!\[[^\]]*\]\((\/images\/[^)\s]+)\)/)
   if (md) return md[1]
   const html = body.match(/<img[^>]+src=["'](\/images\/[^"']+)["']/i)

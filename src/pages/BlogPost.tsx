@@ -4,7 +4,7 @@ import rehypeRaw from 'rehype-raw'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
 import { formatDate, type Post } from '../lib/posts'
-import { blogPostingSchema, breadcrumbSchema } from '../lib/structuredData'
+import { blogPostingSchema, breadcrumbSchema, firstImagePath } from '../lib/structuredData'
 
 // Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
 const markdownComponents = {
@@ -14,13 +14,16 @@ const markdownComponents = {
 }
 
 export default function BlogPost({ post }: { post: Post }) {
+  // Fall back to the first image in the body so posts without an explicit `image:`
+  // frontmatter field still get a social-card thumbnail (matches the JSON-LD cover).
+  const cover = post.image ?? firstImagePath(post.body)
   return (
     <>
       <Seo
         title={post.title}
         description={post.description}
         path={post.path}
-        image={imageUrl(post.image)}
+        image={imageUrl(cover)}
         type="article"
         jsonLd={[blogPostingSchema(post), breadcrumbSchema(post)]}
       />
