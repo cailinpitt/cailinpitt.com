@@ -1,18 +1,40 @@
-import { Link } from 'react-router-dom'
+import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { galleries, imageUrl } from '../lib/galleries'
+import { imageUrl } from '../lib/galleries'
+import type { GallerySummary } from '../lib/content.server'
+import { pageSchema } from '../lib/structuredData'
 
-export default function Photos() {
+export async function loader(): Promise<GallerySummary[] | null> {
+  if (!import.meta.env.SSR) {
+    if (!import.meta.env.DEV) return null
+    return (await import('../lib/content.client')).loadGallerySummaries()
+  }
+  const { loadGallerySummaries } = await import('../lib/content.server')
+  return loadGallerySummaries()
+}
+
+export function Component() {
+  const galleries = useLoaderData() as GallerySummary[]
   // Skip alias galleries (e.g. /past-work, which mirrors /2022).
   const years = galleries.filter((g) => !g.canonicalPath)
 
   return (
     <div className="gallery">
-      <Seo title="Photos" description="Photography by Cailin Pitt — yearly archives." path="/photos" />
+      <Seo
+        title="Photos"
+        description="Photography by Cailin Pitt — yearly archives."
+        path="/photos"
+        jsonLd={pageSchema({
+          path: '/photos',
+          title: 'Photos',
+          description: 'Photography by Cailin Pitt — yearly archives.',
+          type: 'CollectionPage',
+        })}
+      />
       <h1>Photos</h1>
       <ul className="gallery-index">
         {years.map((g) => {
-          const cover = g.images[0]
+          const cover = g.cover
           return (
             <li key={g.path}>
               <Link to={g.path}>

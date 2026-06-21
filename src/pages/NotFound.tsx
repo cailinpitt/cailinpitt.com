@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 
-export default function NotFound() {
+export function Component() {
   return (
     <>
       <Seo title="Not found" path="/404" />

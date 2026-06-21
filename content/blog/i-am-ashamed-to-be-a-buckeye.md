@@ -3,8 +3,8 @@ title: "I Am Ashamed To Be A Buckeye"
 date: 2016-04-07
 path: /blog/2016/4/7/i-am-ashamed-to-be-a-buckeye
 slug: i-am-ashamed-to-be-a-buckeye
-tags: []
-description: "I am ashamed to be a Buckeye. Yesterday, Reclaim OSU: People's Open Mic organized a peaceful sit-in in Bricker Hall, because students and faculty are fe…"
+tags: ["Activism", "Ohio State"]
+description: "A response to Ohio State’s treatment of student activists during the 2016 Reclaim OSU sit-in."
 ---
 I am ashamed to be a Buckeye.
 

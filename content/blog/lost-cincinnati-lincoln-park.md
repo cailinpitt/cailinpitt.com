@@ -1,10 +1,10 @@
 ---
 title: "Lost Cincinnati: Lincoln Park"
-date: 2020-04-26
+date: 2020-04-25
 path: /blog/2020/4/25/lost-cincinnati-lincoln-park
 slug: lost-cincinnati-lincoln-park
 tags: ["Lost Cincinnati"]
-description: "Recently, I was looking at old Sanborn Maps of my neighborhood (the West End) and came across something interesting called Lincoln Park. It caught my ey…"
+description: "The history of Cincinnati’s lost Lincoln Park and the urban renewal project that erased it."
 ---
 Recently, I was looking at old [Sanborn Maps](https://en.wikipedia.org/wiki/Sanborn_Maps) of my neighborhood (the West End) and came across something interesting called Lincoln Park. It caught my eye because as far as I knew, Lincoln Park did not currently exist. It also caught my eye because it reminded me of present-day Washington Park, a popular green space in the nearby OTR neighborhood that sees thousands of visitors and hosts dozens of events every year. Since I knew Lincoln Park didn’t currently exist, I couldn’t help but wonder what happened to it?
 

@@ -1,10 +1,10 @@
 ---
 title: "Coldplay is the greatest band of all time"
-date: 2016-02-08
+date: 2016-02-07
 path: /blog/2016/2/7/coldplay-is-the-greatest-band-of-all-time
 slug: coldplay-is-the-greatest-band-of-all-time
-tags: []
-description: "On the night of February 7th, 2016, I was blessed by God. I had the esteemed privilege of watching Coldplay perform during the Super Bowl 50 halftime sh…"
+tags: ["Coldplay", "Music"]
+description: "A joyful defense of Coldplay after their Super Bowl 50 halftime performance."
 ---
 On the night of February 7th, 2016, I was blessed by God. I had the esteemed privilege of watching Coldplay perform during the Super Bowl 50 halftime show. Coldplay is one of my (if not the only) favorite bands, as well as one of the many musical influencers in my life. It was very evident that I was excited to see them perform:
 

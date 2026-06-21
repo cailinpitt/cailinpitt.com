@@ -4,7 +4,7 @@ date: 2022-07-18
 path: /blog/2022/7/18/interpol-the-other-side-of-make-believe-2022
 slug: interpol-the-other-side-of-make-believe-2022
 tags: ["Interpol","Music"]
-description: "Interpol’s The Other Side of Make-Believe (2022), released on Matador Records Okay, literally no one asked for this but I’ve decided to share my thought…"
+description: "Thoughts on Interpol’s 2022 album The Other Side of Make-Believe."
 ---
 <figure><img src="/images/interpol-the-other-side-of-make-believe-2022/ab67616d0000b2736cb89a49788d503c0d371ac9.webp" alt=" Interpol’s The Other Side of Make-Believe (2022), released on Matador Records "><figcaption>Interpol’s The Other Side of Make-Believe (2022), released on Matador Records</figcaption></figure>
 

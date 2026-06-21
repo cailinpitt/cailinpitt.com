@@ -3,8 +3,8 @@ title: "I accidentally created a mean Twitter bot"
 date: 2016-04-23
 path: /blog/2016/4/23/i-accidentally-created-a-mean-twitter-bot
 slug: i-accidentally-created-a-mean-twitter-bot
-tags: []
-description: "I've been pretty fascinated with Twitter bots lately. I recently wrote @random\\ map, a bot that tweets random aerial images of the Earth every hour, but…"
+tags: ["Bots", "Software", "Twitter"]
+description: "What happened when I trained a Markov-chain Twitter bot on my own posting history."
 ---
 I've been pretty fascinated with Twitter bots lately. I recently wrote [@random\_map](https://twitter.com/random_map), a bot that tweets random aerial images of the Earth every hour, but I've always wanted to create a Markov Chain based bot that would create random tweets based on words and phrases I would use.
 

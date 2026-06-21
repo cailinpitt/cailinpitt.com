@@ -1,10 +1,10 @@
 ---
 title: "I fear for my life"
-date: 2015-06-19
+date: 2015-06-18
 path: /blog/2015/6/18/i-fear-for-my-life
 slug: i-fear-for-my-life
 tags: ["Dylann Roof","Life","Thoughts"]
-description: "It's 2015, and I fear for my life. In case you aren't caught up with current events, on Wednesday night Dylann Roof went into a Bible study at a local h…"
+description: "A personal reflection on racism, fear, and the Charleston church shooting."
 ---
 It's 2015, and I fear for my life.
 

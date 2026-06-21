@@ -1,10 +1,10 @@
 ---
 title: "2020 Vision: West End"
-date: 2020-03-22
+date: 2020-03-21
 path: /blog/2020/3/21/2020-vision-west-end
 slug: 2020-vision-west-end
-tags: []
-description: "60 years ago, a major section of the West End (a Cincinnati, Ohio neighborhood) was bulldozed and flattened so a new neighborhood and interstate highway…"
+tags: ["Cincinnati", "Urban History", "Transportation"]
+description: "How Cincinnati’s Kenyon-Barr urban renewal project displaced the West End to build Queensgate and Interstate 75."
 ---
 60 years ago, a major section of the West End (a Cincinnati, Ohio neighborhood) was bulldozed and flattened so a new neighborhood and interstate highway could be built through it. The new neighborhood would be called Queensgate, and the new highway would be called I-75. This urban renewal project would be called Kenyon-Barr (named after two streets in the neighborhoods located in the scope of the project), and it would lead to the displacement of [25,737 residents, 97% of which were non-white](http://www.cincinnatimagazine.com/citywiseblog/lost-city-kenyon-barr-queensgate).
 

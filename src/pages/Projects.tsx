@@ -4,6 +4,7 @@ import rehypeRaw from 'rehype-raw'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
 import { projectsPage } from '../lib/projects'
+import { pageSchema } from '../lib/structuredData'
 
 // Rewrite root-relative /images/... sources to their R2 URLs (matches BlogPost).
 const markdownComponents = {
@@ -12,10 +13,20 @@ const markdownComponents = {
   ),
 }
 
-export default function Projects() {
+export function Component() {
   return (
     <>
-      <Seo title={projectsPage.title} description={projectsPage.description} path="/projects" />
+      <Seo
+        title={projectsPage.title}
+        description={projectsPage.description}
+        path="/projects"
+        jsonLd={pageSchema({
+          path: '/projects',
+          title: projectsPage.title,
+          description: projectsPage.description,
+          type: 'CollectionPage',
+        })}
+      />
       <article className="post">
         <header className="post-header">
           <h1>{projectsPage.title}</h1>

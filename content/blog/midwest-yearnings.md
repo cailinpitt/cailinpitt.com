@@ -1,10 +1,10 @@
 ---
 title: "Midwest Yearnings"
-date: 2020-04-09
+date: 2020-04-08
 path: /blog/2020/4/8/midwest-yearnings
 slug: midwest-yearnings
-tags: []
-description: "I was born and spent the first 11 years of my life in New York City. Being born in one of the most popular and busiest cities in the world has always be…"
+tags: ["Cities", "Midwest", "Transportation"]
+description: "A New Yorker’s evolving relationship with Midwestern cities, public transit, and urban life."
 ---
 ![](/images/midwest-yearnings/IMG_6049-1.webp)
 

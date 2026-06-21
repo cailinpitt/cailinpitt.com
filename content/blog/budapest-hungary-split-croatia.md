@@ -3,8 +3,8 @@ title: "Hungary + Croatia"
 date: 2018-08-13
 path: /blog/2018/8/13/budapest-hungary-split-croatia
 slug: budapest-hungary-split-croatia
-tags: []
-description: "Budapest, Hungary Split, Croatia"
+tags: ["Photography", "Travel"]
+description: "Photographs from Budapest, Hungary, and Split, Croatia."
 ---
 ## Budapest, Hungary
 

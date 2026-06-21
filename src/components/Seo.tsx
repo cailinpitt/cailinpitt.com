@@ -10,6 +10,7 @@ interface SeoProps {
   path?: string
   /** Absolute or root-relative image path for social cards. */
   image?: string
+  imageAlt?: string
   type?: 'website' | 'article'
   /** schema.org JSON-LD to embed (a single object or an array of them). */
   jsonLd?: object | object[]
@@ -32,7 +33,8 @@ export function Seo({
   title,
   description,
   path = '/',
-  image,
+  image = '/social-card.png',
+  imageAlt,
   type = 'website',
   jsonLd,
   publicationUri,
@@ -54,11 +56,15 @@ export function Seo({
       {description && <meta property="og:description" content={description} />}
       <meta property="og:url" content={url} />
       {img && <meta property="og:image" content={img} />}
+      {img && <meta property="og:image:alt" content={imageAlt ?? fullTitle} />}
+      {image === '/social-card.png' && <meta property="og:image:width" content="1200" />}
+      {image === '/social-card.png' && <meta property="og:image:height" content="630" />}
 
       <meta name="twitter:card" content={img ? 'summary_large_image' : 'summary'} />
       <meta name="twitter:title" content={fullTitle} />
       {description && <meta name="twitter:description" content={description} />}
       {img && <meta name="twitter:image" content={img} />}
+      {img && <meta name="twitter:image:alt" content={imageAlt ?? fullTitle} />}
 
       {jsonLd && (
         <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>

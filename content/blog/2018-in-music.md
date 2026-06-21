@@ -3,8 +3,8 @@ title: "2018 in Music"
 date: 2018-12-06
 path: /blog/2018/12/6/2018-in-music
 slug: 2018-in-music
-tags: []
-description: "I don’t really have much to say except that 79 people listened to over 2,000 minutes of my music this year and I’m in shock. I feel so thankful. Thank y…"
+tags: ["Music", "Year in Review"]
+description: "A reflection on the people who listened to the music I wrote and recorded in 2018."
 ---
 ![](/images/2018-in-music/MySpotifyWrapped2018.webp)
 

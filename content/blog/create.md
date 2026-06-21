@@ -1,10 +1,10 @@
 ---
 title: "Create"
-date: 2015-08-21
+date: 2015-08-20
 path: /blog/2015/8/20/create
 slug: create
 tags: ["Create","Thoughts"]
-description: "I think we were designed to create. Not necessarily in the creating babies way, but in the \"working with your hands\" way. I think deep in our innate nat…"
+description: "A reflection on creativity, photography, music, and the human need to make things."
 ---
 I think we were designed to create.
 

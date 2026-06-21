@@ -1,12 +1,12 @@
 ---
 title: "Ebikes completely changed how I get around"
-date: 2021-08-12
+date: 2021-08-08
 path: /blog/2021/8/8/ebikes-completely-changed-how-i-get-around
 slug: ebikes-completely-changed-how-i-get-around
-tags: []
-description: "Background Before the pandemic began, I wasn’t much of a bicyclist. I had never really biked until my adult life, when I got a cheap road bike in colleg…"
+tags: ["Bicycling", "Ebikes", "Transportation"]
+description: "How ebikes changed my relationship with bicycling, transportation, and getting around without a car."
 ---
-# Background
+## Background
 
 Before the pandemic began, I wasn’t much of a bicyclist. I had never really biked until my adult life, when I got a cheap road bike in college and used it to get around for a year before selling it (I was poor and needed to pay rent). In late 2018, I started to get the bicycle itch. At the time I lived in the suburbs across the street from a multi-use trail, and I bought a Trek FX 2 so I could get out and ride on it. However I never biked off of that trail, and my car was still my primary mode of transportation.
 
@@ -14,7 +14,7 @@ Then the pandemic happened. At this point I was living in the urban core of Cinc
 
 At this point, I was really getting into bicycling. I was riding only in streets that had bike lanes. I averaged around ~20 miles a week. My car was still my primary mode of transportation. I thought about trying to decrease my car usage and use my bike more, but I decided against it. I was too nervous to ride in streets that didn’t have bike lanes, and most of Cincinnati’s streets did have any. Cincinnati is also a pretty hilly city, so I knew I’d be drenched in sweat if I tried regularly biking to destinations like work. Eventually, I ended up learning about Ebikes, getting my hands on one, and going from depending on my car as my main mode of transportation to using Ebikes to get around in the span of six months.
 
-# What is an Ebike?
+## What is an Ebike?
 
 An Ebike is a bicycle with a small electric motor that helps you pedal, referred to as pedal assist (PAS). Usually how it works is an Ebike has several levels of pedal assist, which corresponds to the amount of power the motor is providing. For instance, the [RadRunner Plus from Rad Power Bikes](https://www.radpowerbikes.com/products/radrunner-plus-electric-utility-bike) has five levels of pedal assist. PAS 1 means the motor is providing a very minimal amount of power, and PAS 5 means the motor is providing maximum pedal assist power. [Ebikes fall into three different types of classes that refer to how fast they can go](https://www.bosch-ebike.com/us/everything-about-the-ebike/stories/three-class-ebike-system):
 
@@ -29,7 +29,7 @@ The classes aren’t strictly rigid, and some Ebikes borrow features from multip
 
 Ebikes have actually [been around for decades](https://www.japantimes.co.jp/news/2018/02/06/business/demand-electric-bikes-japan-still-brisk-25-years-yamaha-motors-first-model/), but weren’t really popular in America until recently. Historically they have also been pretty expensive, with an average one setting you back several thousand dollars. Over the last few years, direct to consumer Ebiker makers like Rad Power Bikes and Vanmoof have spun up and started mass producing more affordable and accessible Ebikes. Nowadays, you can get a dependable and good quality Ebike for around $1000.
 
-# How did I get into Ebikes?
+## How did I get into Ebikes?
 
 In July 2020 I was still riding my non-electric Trek FX 2 on most days for leisure, and relying on my car to get around. One day, I was browsing a tech news website I frequent called The Verge and came across an article they had published about [Ebikes and their rising popularity during the pandemic](https://www.theverge.com/2020/5/14/21258412/city-bike-lanes-open-streets-ebike-sales-bicyclist-pedestrian). I had never heard of Ebikes before, but as someone who was starting to get into bicycling I found it intriguing. The entire premise of the article is that more and more people were buying Ebikes because it allowed them to get out and about and also avoid public transportation (which felt unsafe to use at the time), among other reasons. People were also replacing car trips with Ebikes, which is what really caught my attention.
 
@@ -41,7 +41,7 @@ While I spent the next few months waiting for the RadRunner Plus to arrive, I wa
 
 <figure><img src="/images/ebikes-completely-changed-how-i-get-around/IMG_1695.webp" alt=" Hauling the RadWagon home after buying it. Cargo bikes are large! "><figcaption>Hauling the RadWagon home after buying it. Cargo bikes are large!</figcaption></figure>
 
-# What happened and what have I learned?
+## What happened and what have I learned?
 
 I took a risk on buying an Ebike without having ever ridden one before, and it paid off. The used RadWagon I bought in September 2020 was the first Ebike I had ever used. Before that point, I was still using my car fairly regularly and as my main mode of transportation. By April 2021, Ebikes had taken over as my primary mode of transportation. I use Ebikes to get to work, [to get to appointments](https://www.strava.com/activities/4990909293), [to get groceries](https://www.strava.com/activities/5417302755), [to run errands](https://www.strava.com/activities/5420217184), [to get dinner](https://www.strava.com/activities/5708701596), really for everything. I use my car maybe once a week now and drive only a few miles when I do, usually for date nights with my girlfriend.
 
@@ -112,7 +112,7 @@ There are so many different Ebike brands at this point that it’s a bit hard to
 
 <figure><img src="/images/ebikes-completely-changed-how-i-get-around/IMG_6749.webp" alt=" Me with my RadMission during a group ride "><figcaption>Me with my RadMission during a group ride</figcaption></figure>
 
-# Finally, a consideration
+## Finally, a consideration
 
 I would be remiss if I didn’t mention climate change. On Monday, the Intergovernmental Panel on Climate Change (IPCC) [released a report](https://www.nytimes.com/2021/08/09/climate/climate-change-report-ipcc-un.html) detailing that humanity as a whole has dropped the ball on climate change so badly the earth is going to heat up by 1.1 degrees - whether we immediately get our collective shit together and cut back on emissions, or not. It’s damning news, but the good thing is we can stop the earth from heating up even more if we all start doing our part to fight climate change.
 

@@ -1,12 +1,19 @@
 import { Seo } from '../components/Seo'
+import { pageSchema } from '../lib/structuredData'
 
-export default function Privacy() {
+export function Component() {
   return (
     <>
       <Seo
         title="Privacy"
         description="How cailinpitt.com handles your data: cookieless, privacy-first analytics and nothing else."
         path="/privacy"
+        jsonLd={pageSchema({
+          path: '/privacy',
+          title: 'Privacy',
+          description:
+            'How cailinpitt.com handles your data: cookieless, privacy-first analytics and nothing else.',
+        })}
       />
       <article className="post">
         <header className="post-header">

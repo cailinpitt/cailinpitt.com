@@ -4,7 +4,7 @@ date: 2023-03-03
 path: /blog/2023/3/3/paramore-this-is-why-2023
 slug: paramore-this-is-why-2023
 tags: ["Paramore","Music"]
-description: "Paramore’s This Is Why (2023) Paramore is one of my top five favorite bands of all time. I first started listening to them a bit later than most people…"
+description: "Thoughts on Paramore’s 2023 album This Is Why."
 ---
 <figure><img src="/images/paramore-this-is-why-2023/Paramore.webp" alt=" Paramore’s This Is Why (2023) "><figcaption>Paramore’s This Is Why (2023)</figcaption></figure>
 

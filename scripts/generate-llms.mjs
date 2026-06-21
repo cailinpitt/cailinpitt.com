@@ -16,7 +16,7 @@ const BLOG = path.join(ROOT, 'content', 'blog')
 const DIST = path.join(ROOT, 'dist')
 const SITE = 'https://cailinpitt.com'
 const SITE_NAME = 'Cailin Pitt'
-const TAGLINE = 'Photography and writing by Cailin Pitt.'
+const TAGLINE = 'Photography, software projects, and writing by Cailin Pitt.'
 
 // Mirrors src/lib/frontmatter.ts (same hand-rolled format the migration emits).
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/

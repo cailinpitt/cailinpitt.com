@@ -1,10 +1,10 @@
 ---
 title: "I am a minority"
-date: 2015-11-21
+date: 2015-11-20
 path: /blog/2015/11/20/i-am-a-minority
 slug: i-am-a-minority
-tags: []
-description: "The past two years has been a time where America has been blasted with race. It's nearly impossible to go throughout each day without hearing something…"
+tags: ["Identity", "Race", "Thoughts"]
+description: "A personal reflection on race, identity, and discussing racism as a Black man in America."
 ---
 The past two years has been a time where America has been blasted with race. It's nearly impossible to go throughout each day without hearing something about it. Mizzou. Syrian refugees, Donald Trump.
 

@@ -1,10 +1,10 @@
 ---
 title: "Dear Christians: step out of the bubble"
-date: 2016-02-01
+date: 2016-01-31
 path: /blog/2016/1/31/dear-christians-step-out-of-the-bubble
 slug: dear-christians-step-out-of-the-bubble
-tags: []
-description: "2015 was a year where America was forced to look many different issues in the eye. The death of Freddie Gray was one of the many reminders about the rea…"
+tags: ["Christianity", "Faith", "Social Justice"]
+description: "A call for Christians to move beyond the church bubble and engage honestly with injustice and suffering."
 ---
 2015 was a year where America was forced to look many different issues in the eye. The death of Freddie Gray was one of the many reminders about the reality of police brutality. Mass shootings refused to slow its roll. The refugee crisis continues. 
 

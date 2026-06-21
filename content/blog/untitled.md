@@ -1,10 +1,10 @@
 ---
 title: "untitled"
-date: 2016-07-09
+date: 2016-07-08
 path: /blog/2016/7/8/untitled
 slug: untitled
-tags: []
-description: "I think writing is the only way I can cohesively express my thoughts from this past week. Alton Sterling was killed by police officers early Tuesday mor…"
+tags: ["Police Violence", "Race", "Thoughts"]
+description: "A reflection on the killings of Alton Sterling and Philando Castile and the fear that followed."
 ---
 I think writing is the only way I can cohesively express my thoughts from this past week.
 

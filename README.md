@@ -1,6 +1,6 @@
 # [cailinpitt.com](https://cailinpitt.com)
 
-Personal site + photography + blog. React (Vite + [`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg)),
+Personal site + photography + software projects + blog. React (Vite + [`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg)),
 statically prerendered, deployed to GitHub Pages.
 
 ## Develop
@@ -24,6 +24,7 @@ month/day, matching the old Squarespace convention) and must be unique:
 ---
 title: "Post title"
 date: 2026-01-15
+updated: 2026-02-03  # optional; only for a substantive revision
 path: /blog/2026/1/15/post-slug
 slug: post-slug
 tags: ["music"]

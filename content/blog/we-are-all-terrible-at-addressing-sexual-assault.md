@@ -3,8 +3,8 @@ title: "We are all terrible at addressing sexual assault"
 date: 2016-06-05
 path: /blog/2016/6/5/we-are-all-terrible-at-addressing-sexual-assault
 slug: we-are-all-terrible-at-addressing-sexual-assault
-tags: []
-description: "On June 2nd, 2016, Brock Turner was sentenced to only six months in a county jail for sexually assaulting an unconscious woman behind a dumpster. After…"
+tags: ["Campus", "Sexual Assault"]
+description: "A response to Brock Turner’s sentencing and the institutional failures surrounding sexual assault."
 ---
 On June 2nd, 2016, Brock Turner was sentenced to only [six months in a county jail for sexually assaulting an unconscious woman behind a dumpster](http://www.stanforddaily.com/2016/06/02/brock-turner-sentenced-to-six-months-in-county-jail-three-years-probation/). After originally facing a maximum sentence of 14 years, Judge Aaron Perksy decided upon the lighter sentence because "a prison sentence would have a severe impact on him…I think he will not be a danger to others." Unfortunately, Brock's Father wasn't satisfied with the light sentence, as he claims his son is paying a steep price for "[20 minutes of action out of his 20 plus years of life](https://twitter.com/mldauber/status/739320585222660096)." During the trial, Brock Turner was portrayed as a good kid with great swimming abilities and good academics. During the trial, Brock Turner never acknowledged that he sexually assaulted his victim, and blamed the alcohol he consumed that night. Brock Turner gets to sit in a county jail for six months, register as a sex offender, and then live the rest of his life as a free man, while the victim will continue to live with the pain and memories of that night for years to come.
 

@@ -1,8 +1,22 @@
 import { useRef, useState } from 'react'
+import { useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { imageUrl, type Gallery as GalleryData, type GalleryImage } from '../lib/galleries'
+import { pageSchema } from '../lib/structuredData'
 
-export default function Gallery({ gallery }: { gallery: GalleryData }) {
+export async function loader({ request }: LoaderFunctionArgs): Promise<GalleryData | null> {
+  if (!import.meta.env.SSR && !import.meta.env.DEV) return null
+  const { loadGalleries } = import.meta.env.SSR
+    ? await import('../lib/content.server')
+    : await import('../lib/content.client')
+  const path = new URL(request.url).pathname.replace(/\/$/, '') || '/'
+  const gallery = (await loadGalleries()).find((item) => item.path === path)
+  if (!gallery) throw new Response('Not found', { status: 404 })
+  return gallery
+}
+
+export function Component() {
+  const gallery = useLoaderData() as GalleryData
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [active, setActive] = useState<GalleryImage | null>(null)
 
@@ -21,6 +35,13 @@ export default function Gallery({ gallery }: { gallery: GalleryData }) {
         description={gallery.description ?? `Photography — ${gallery.title}.`}
         path={gallery.canonicalPath ?? gallery.path}
         image={gallery.images[0] ? imageUrl(gallery.images[0].src) : undefined}
+        jsonLd={pageSchema({
+          path: gallery.canonicalPath ?? gallery.path,
+          title: gallery.title,
+          description: gallery.description ?? `Photography — ${gallery.title}.`,
+          image: gallery.images[0]?.src,
+          type: 'ImageGallery',
+        })}
       />
       <h1>{gallery.title}</h1>
 

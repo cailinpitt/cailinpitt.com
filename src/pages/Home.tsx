@@ -1,25 +1,99 @@
-import { Link } from 'react-router-dom'
+import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { atprotoPublicationUri, posts } from '../lib/posts'
-import { formatDate } from '../lib/posts'
-import { galleries, imageUrl } from '../lib/galleries'
-import { personSchema, websiteSchema } from '../lib/structuredData'
+import { formatDate, type PostSummary } from '../lib/posts'
+import { imageUrl } from '../lib/galleries'
+import type { GallerySummary } from '../lib/content.server'
+import { homeSchema } from '../lib/structuredData'
 
-export default function Home() {
-  const recent = posts.slice(0, 5)
-  // Newest galleries with photos, excluding alias galleries (e.g. /past-work → /2022).
-  const recentGalleries = galleries.filter((g) => !g.canonicalPath && g.images.length > 0).slice(0, 4)
+interface HomeData {
+  recent: PostSummary[]
+  recentGalleries: GallerySummary[]
+  publicationUri: string | null
+}
+
+const featuredProjects = [
+  {
+    name: 'Chicago Transit Alerts',
+    description: 'CTA and Metra alerts, independently detected disruptions, and reliability history.',
+    href: 'https://chicagotransitalerts.app/',
+  },
+  {
+    name: 'Atlanta Transit Alerts',
+    description: 'MARTA service alerts and bot-observed disruptions across rail, streetcar, and bus service.',
+    href: 'https://atlantatransitalerts.app/',
+  },
+  {
+    name: 'CTA Bus Bingo',
+    description: 'A trip planner for chaining together Chicago bus routes you have not ridden.',
+    href: 'https://cailinpitt.github.io/cta-bus-bingo/',
+  },
+]
+
+export async function loader(): Promise<HomeData | null> {
+  if (!import.meta.env.SSR) {
+    if (!import.meta.env.DEV) return null
+    const { loadGallerySummaries, loadPostSummaries, loadPublicationUri } = await import(
+      '../lib/content.client'
+    )
+    const posts = loadPostSummaries()
+    const galleries = loadGallerySummaries()
+    return {
+      recent: posts.slice(0, 5),
+      recentGalleries: galleries
+        .filter((gallery) => !gallery.canonicalPath && gallery.cover)
+        .slice(0, 4),
+      publicationUri: loadPublicationUri(),
+    }
+  }
+  const { loadGallerySummaries, loadPostSummaries, loadPublicationUri } = await import(
+    '../lib/content.server'
+  )
+  const [posts, galleries, publicationUri] = await Promise.all([
+    loadPostSummaries(),
+    loadGallerySummaries(),
+    loadPublicationUri(),
+  ])
+  return {
+    recent: posts.slice(0, 5),
+    recentGalleries: galleries
+      .filter((gallery) => !gallery.canonicalPath && gallery.cover)
+      .slice(0, 4),
+    publicationUri,
+  }
+}
+
+export function Component() {
+  const { recent, recentGalleries, publicationUri } = useLoaderData() as HomeData
   return (
     <>
       <Seo
         title="Cailin Pitt"
-        description="Photography and writing by Cailin Pitt."
+        description="Photography, software projects, and writing by Cailin Pitt."
         path="/"
-        jsonLd={[websiteSchema(), personSchema()]}
-        publicationUri={atprotoPublicationUri}
+        jsonLd={homeSchema()}
+        publicationUri={publicationUri}
       />
       <section className="intro">
         <h1>Artist, software engineer, and occasional writer.</h1>
+      </section>
+
+      <section className="recent-projects" aria-labelledby="projects-heading">
+        <h2 id="projects-heading" className="eyebrow">
+          Current projects
+        </h2>
+        <ul className="project-previews">
+          {featuredProjects.map((project) => (
+            <li key={project.name}>
+              <h3>
+                <a href={project.href}>{project.name}</a>
+              </h3>
+              <p>{project.description}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="more">
+          <Link to="/projects">All projects →</Link>
+        </p>
       </section>
 
       {recent.length > 0 && (
@@ -51,10 +125,10 @@ export default function Home() {
               <li key={g.path}>
                 <Link to={g.path} aria-label={`Photos — ${g.title}`}>
                   <img
-                    src={imageUrl(g.images[0].src)}
+                    src={imageUrl(g.cover?.src)}
                     alt=""
-                    width={g.images[0].width}
-                    height={g.images[0].height}
+                    width={g.cover?.width}
+                    height={g.cover?.height}
                     loading="lazy"
                     decoding="async"
                   />

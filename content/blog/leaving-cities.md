@@ -1,10 +1,10 @@
 ---
 title: "Leaving Cities"
-date: 2020-09-05
+date: 2020-09-04
 path: /blog/2020/9/4/leaving-cities
 slug: leaving-cities
-tags: []
-description: "Lately I’ve been seeing a lot of discourse (internet lingo for “everyone is yelling about their opinions”) about people leaving cities and why that esse…"
+tags: ["Cities", "Life", "Thoughts"]
+description: "Thoughts on leaving cities, personal change, and the pressure to justify where we choose to live."
 ---
 Lately I’ve been seeing a lot of discourse (internet lingo for “everyone is yelling about their opinions”) about people leaving cities and why that essentially makes you a sellout because you didn’t try to stick around and make things better. It seems like the events of 2020 have caused a lot of people to reevaluate what they want out of life, and many people are deciding that they want to move cross-country or find a new job or whatever. I feel like I’ve been doing a good job of ignoring this discourse, but this tweet from a tech guy in San Francisco essentially arguing that high rent isn’t a valid reason to move really set me over the edge and I decided to write this post.
 

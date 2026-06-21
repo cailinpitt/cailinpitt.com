@@ -188,13 +188,20 @@ img {
 .nav-links a:hover {
   color: var(--accent);
 }
+.nav-links a[aria-current='page'] {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.3em;
+}
 
 .theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-block: -0.575rem;
   padding: 0;
   border: 0;
   background: none;
@@ -258,25 +265,61 @@ h3 {
   margin: 0;
 }
 
+.recent-projects > .eyebrow,
 .recent > .eyebrow,
 .recent-photos > .eyebrow {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 0.25rem;
 }
+.recent-projects .more,
 .recent .more,
 .recent-photos .more {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   margin-top: 1.5rem;
 }
+.recent-projects .more a,
 .recent .more a,
 .recent-photos .more a {
   text-decoration: none;
 }
+.recent-projects .more a:hover,
 .recent .more a:hover,
 .recent-photos .more a:hover {
   text-decoration: underline;
+}
+
+/* Current projects — compact summaries that match the editorial list rhythm. */
+.recent-projects {
+  margin-bottom: 3rem;
+}
+.project-previews {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.project-previews li {
+  padding-block: 1.15rem;
+  border-bottom: 1px solid var(--rule);
+}
+.project-previews h3 {
+  margin: 0;
+  font-size: var(--step-1);
+}
+.project-previews h3 a {
+  color: var(--fg);
+  text-decoration: none;
+}
+.project-previews h3 a:hover {
+  color: var(--accent);
+}
+.project-previews p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-family: var(--font-sans);
+  line-height: 1.5;
 }
 
 /* Recent photos — compact cover previews linking to the yearly galleries */
@@ -411,6 +454,37 @@ h3 {
   aspect-ratio: 16 / 9;
   width: 100%;
   border: 0;
+}
+
+/* Chronological navigation between posts. */
+.post-navigation {
+  max-width: var(--measure);
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  font-family: var(--font-sans);
+}
+.post-navigation a {
+  color: var(--fg);
+  line-height: 1.35;
+  text-decoration: none;
+}
+.post-navigation a:last-child {
+  text-align: right;
+}
+.post-navigation a:hover {
+  color: var(--accent);
+}
+.post-navigation a span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 /* Galleries — break out wider than the reading column */

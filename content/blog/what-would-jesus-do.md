@@ -1,10 +1,10 @@
 ---
 title: "What Would Jesus Do?"
-date: 2017-01-30
+date: 2017-01-29
 path: /blog/2017/1/29/what-would-jesus-do
 slug: what-would-jesus-do
-tags: []
-description: "I've been struggling with my faith as a Christian for the past year or so. I'm not looking for a pity party, I just want to share how I'm feeling. I've…"
+tags: ["Christianity", "Faith", "Politics"]
+description: "A personal struggle with Christianity, American politics, and a church increasingly disconnected from the world."
 ---
 I've been struggling with my faith as a Christian for the past year or so. I'm not looking for a pity party, I just want to share how I'm feeling. I've been feeling overwhelmingly unsatisfied with the Christian church and how it has related to current events. Specifically, I feel that as a Christian, the Christian church is generally out of touch with the world. As I get older, I feel myself becoming more and more isolated with fellow Christians and finding it harder to connect. For example, based on my personal experiences, most days it feels like Christians my age are more interested in things like finding someone to settle down and build a life with, and I have a hard time relating to that.
 

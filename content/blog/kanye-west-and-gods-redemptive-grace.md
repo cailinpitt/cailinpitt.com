@@ -1,10 +1,10 @@
 ---
 title: "Kanye West and God's Redemptive Grace"
-date: 2019-10-01
+date: 2019-09-30
 path: /blog/2019/9/30/kanye-west-and-gods-redemptive-grace
 slug: kanye-west-and-gods-redemptive-grace
-tags: []
-description: "Recently, Kanye West has been making headlines (I feel like that’s an evergreen phrase) with his recent actions surrounding church and his faith. Over t…"
+tags: ["Christianity", "Faith", "Kanye West", "Music"]
+description: "A reflection on Kanye West, Christianity, and the difficult idea of redemptive grace."
 ---
 Recently, Kanye West has been making headlines (I feel like that’s an evergreen phrase) with his recent actions surrounding church and his faith. Over the past year, [he’s been organizing and holding church services across the country](https://www.thefader.com/2019/09/24/a-history-of-sunday-service-kanye-west), having interviews where he talks about his new-found faith in God, and even recently announcing a new gospel-influenced album entitled Jesus Is King. Kanye says that Jesus Is King has been made to be "[an expression of the gospel and to share the gospel and the truth of what Jesus has done to me.](https://www.nytimes.com/2019/09/30/arts/music/kanye-west-jesus-is-king.html)"
 

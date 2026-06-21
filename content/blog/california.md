@@ -3,6 +3,7 @@ title: "California"
 date: 2016-03-18
 path: /blog/2016/3/18/california
 slug: california
-tags: []
+tags: ["Photography", "Travel"]
+description: "Photographs from California."
 ---
 ![](/images/california/image-asset.webp) ![](/images/california/IMG_6329.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp) ![](/images/california/image-asset.webp)

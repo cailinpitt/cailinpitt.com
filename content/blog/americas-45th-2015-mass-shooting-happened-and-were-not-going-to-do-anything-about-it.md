@@ -1,10 +1,10 @@
 ---
 title: "America's 45th 2015 mass shooting happened, and we're not going to do anything about it"
-date: 2015-10-02
+date: 2015-10-01
 path: /blog/2015/10/1/americas-45th-2015-mass-shooting-happened-and-were-not-going-to-do-anything-about-it
 slug: americas-45th-2015-mass-shooting-happened-and-were-not-going-to-do-anything-about-it
-tags: []
-description: "Today, another mass shooting happened in America. 13 people were senselessly killed, and 20 more people were injured. Two journalists were killed on liv…"
+tags: ["Gun Violence", "Politics"]
+description: "A reflection on America’s recurring mass shootings and its unwillingness to confront gun violence."
 ---
 Today, another mass shooting happened in America.
 

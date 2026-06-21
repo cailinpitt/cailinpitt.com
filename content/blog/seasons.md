@@ -1,10 +1,10 @@
 ---
 title: "Seasons"
-date: 2015-05-24
+date: 2015-05-23
 path: /blog/2015/5/23/seasons
 slug: seasons
 tags: ["Seasons","Life","Hardships","Thoughts"]
-description: "Cincinnati, 5/23 Life isn't one big race to the finish line, or just a roller coaster ride of ups and downs, but more like a change of seasons. And that…"
+description: "A reflection on life’s changing seasons and learning to accept difficult periods as temporary."
 ---
 <figure><img src="/images/seasons/image-asset.webp" alt=" Cincinnati, 5/23 "><figcaption>Cincinnati, 5/23</figcaption></figure>
 

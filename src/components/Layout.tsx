@@ -1,7 +1,12 @@
-import { Link, Outlet, ScrollRestoration } from 'react-router-dom'
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
+import { galleryDefinitions } from '../lib/galleries'
 
 export function Layout() {
+  const { pathname } = useLocation()
+  const photosActive =
+    pathname === '/photos' || galleryDefinitions.some((gallery) => gallery.path === pathname)
+
   return (
     <>
       {/* Reset scroll to top on navigation (and restore it on back/forward). React
@@ -17,13 +22,15 @@ export function Layout() {
           </Link>
           <ul className="nav-links">
             <li>
-              <Link to="/photos">Photos</Link>
+              <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
+                Photos
+              </Link>
             </li>
             <li>
-              <Link to="/projects">Projects</Link>
+              <NavLink to="/projects">Projects</NavLink>
             </li>
             <li>
-              <Link to="/blog">Blog</Link>
+              <NavLink to="/blog">Blog</NavLink>
             </li>
             <li>
               <ThemeToggle />
