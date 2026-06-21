@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite-react-ssg build",
-    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-atproto.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "migrate:posts": "node scripts/migrate-posts.mjs",
     "migrate:images": "node scripts/download-images.mjs",
     "galleries:download": "node scripts/download-galleries.mjs",
-    "images:upload": "node scripts/upload-r2.mjs"
+    "images:upload": "node scripts/upload-r2.mjs",
+    "publish:atproto": "node scripts/publish-atproto.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -24,6 +25,7 @@
     "vite-react-ssg": "^0.9.1-beta.1"
   },
   "devDependencies": {
+    "@atproto/api": "^0.20.16",
     "@aws-sdk/client-s3": "^3.1073.0",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",

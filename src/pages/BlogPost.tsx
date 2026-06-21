@@ -3,7 +3,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
-import { formatDate, type Post } from '../lib/posts'
+import { atprotoPublicationUri, formatDate, type Post } from '../lib/posts'
 import { blogPostingSchema, breadcrumbSchema, firstImagePath } from '../lib/structuredData'
 
 // Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
@@ -26,6 +26,8 @@ export default function BlogPost({ post }: { post: Post }) {
         image={imageUrl(cover)}
         type="article"
         jsonLd={[blogPostingSchema(post), breadcrumbSchema(post)]}
+        publicationUri={atprotoPublicationUri}
+        documentUri={post.atUri}
       />
       <article className="post">
         <header className="post-header">

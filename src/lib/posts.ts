@@ -12,9 +12,32 @@ export interface Post {
   image?: string
   /** Optional short summary for listings + meta description */
   description?: string
+  /** AT-URI of this post's site.standard.document record, if published (Phase 8). */
+  atUri?: string
   /** Markdown body */
   body: string
 }
+
+// standard.site (AT Protocol) record map, populated by `npm run publish:atproto`.
+// We commit an empty default so this file always exists, letting import.meta.glob
+// resolve in both Node (SSG prerender) and the browser build.
+interface AtprotoData {
+  did: string | null
+  publication: string | null
+  documents: Record<string, string>
+}
+const atprotoModules = import.meta.glob('/content/atproto.json', { eager: true }) as Record<
+  string,
+  { default: AtprotoData }
+>
+const atproto: AtprotoData = Object.values(atprotoModules)[0]?.default ?? {
+  did: null,
+  publication: null,
+  documents: {},
+}
+
+/** AT-URI of the site.standard.publication record, or null until published. */
+export const atprotoPublicationUri: string | null = atproto.publication
 
 // Eagerly load every Markdown file in /content/blog as a raw string at build time.
 // import.meta.glob runs during both the SSG prerender and the client build, so the
@@ -37,6 +60,7 @@ function toPost(filePath: string, raw: string): Post {
     tags: Array.isArray(data.tags) ? data.tags : [],
     image: data.image as string | undefined,
     description: data.description as string | undefined,
+    atUri: atproto.documents[path],
     body,
   }
 }

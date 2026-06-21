@@ -13,6 +13,10 @@ interface SeoProps {
   type?: 'website' | 'article'
   /** schema.org JSON-LD to embed (a single object or an array of them). */
   jsonLd?: object | object[]
+  /** AT-URI of the site.standard.publication record (standard.site, Phase 8). */
+  publicationUri?: string | null
+  /** AT-URI of this page's site.standard.document record (standard.site, Phase 8). */
+  documentUri?: string | null
 }
 
 // Escape `<` so the serialized JSON can't break out of the <script> element.
@@ -24,7 +28,16 @@ const serializeJsonLd = (data: object | object[]) =>
  * Covers the build-time metadata items from specification.website. Rendered into
  * <head> at prerender time by vite-react-ssg's <Head>.
  */
-export function Seo({ title, description, path = '/', image, type = 'website', jsonLd }: SeoProps) {
+export function Seo({
+  title,
+  description,
+  path = '/',
+  image,
+  type = 'website',
+  jsonLd,
+  publicationUri,
+  documentUri,
+}: SeoProps) {
   const url = `${SITE_URL}${path}`
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
   const img = image ? (image.startsWith('http') ? image : `${SITE_URL}${image}`) : undefined
@@ -50,6 +63,10 @@ export function Seo({ title, description, path = '/', image, type = 'website', j
       {jsonLd && (
         <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>
       )}
+
+      {/* standard.site: link this page to its AT Protocol records (Phase 8). */}
+      {publicationUri && <link rel="site.standard.publication" href={publicationUri} />}
+      {documentUri && <link rel="site.standard.document" href={documentUri} />}
     </Head>
   )
 }

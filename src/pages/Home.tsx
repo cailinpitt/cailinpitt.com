@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { posts } from '../lib/posts'
+import { atprotoPublicationUri, posts } from '../lib/posts'
 import { formatDate } from '../lib/posts'
 import { personSchema, websiteSchema } from '../lib/structuredData'
 
@@ -13,6 +13,7 @@ export default function Home() {
         description="Photography and writing by Cailin Pitt."
         path="/"
         jsonLd={[websiteSchema(), personSchema()]}
+        publicationUri={atprotoPublicationUri}
       />
       <section className="intro">
         <h1>Photographer, software engineer, and occasional writer.</h1>
