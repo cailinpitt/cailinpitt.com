@@ -1,3 +1,3 @@
-Contact: mailto:cailinpitt1@gmail.com
+Contact: https://github.com/CailinPitt/cailinpitt.com/issues
 Preferred-Languages: en
 Canonical: https://cailinpitt.com/.well-known/security.txt

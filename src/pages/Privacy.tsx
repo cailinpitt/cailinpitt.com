@@ -43,8 +43,11 @@ export default function Privacy() {
 
           <h2>Contact</h2>
           <p>
-            Questions about privacy? Email{' '}
-            <a href="mailto:cailinpitt1@gmail.com">cailinpitt1@gmail.com</a>.
+            Questions about privacy? Open an issue on{' '}
+            <a href="https://github.com/CailinPitt/cailinpitt.com/issues" rel="noreferrer">
+              the GitHub repository
+            </a>
+            .
           </p>
         </div>
       </article>
