@@ -1,6 +1,6 @@
 /* Editorial, typography-led design. Minimal chrome — let the photography lead.
- * Light/dark follows prefers-color-scheme (a manual System/Light/Dark toggle is a
- * backlog item in plan.md). */
+ * Light/dark follows prefers-color-scheme by default; the header toggle can force
+ * Light or Dark via `data-theme` on <html> (see src/components/ThemeToggle.tsx). */
 
 :root {
   color-scheme: light dark;
@@ -44,6 +44,30 @@
     --accent: #e3925b;
     --accent-fg: #141312;
   }
+}
+
+/* Manual override from the header toggle (data-theme on <html>). These win over the
+   media query above via the extra [data-theme] specificity, so they apply regardless
+   of the OS setting; System mode sets no attribute and falls back to the query. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #faf8f4;
+  --surface: #f2ede5;
+  --fg: #1b1a17;
+  --muted: #766f64;
+  --rule: #e5dfd5;
+  --accent: #b34a26;
+  --accent-fg: #ffffff;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #141312;
+  --surface: #1f1d1a;
+  --fg: #ece8e1;
+  --muted: #a49c90;
+  --rule: #2c2a26;
+  --accent: #e3925b;
+  --accent-fg: #141312;
 }
 
 *,
@@ -128,7 +152,7 @@ img {
 .site-nav {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   font-family: var(--font-sans);
@@ -153,6 +177,7 @@ img {
 }
 
 .nav-links {
+  align-items: center;
   font-size: var(--step--1);
   letter-spacing: 0.02em;
 }
@@ -162,6 +187,28 @@ img {
 }
 .nav-links a:hover {
   color: var(--accent);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 5px;
+}
+.theme-toggle:hover {
+  color: var(--accent);
+}
+.theme-toggle svg {
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
 }
 
 .site-main {

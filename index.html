@@ -9,6 +9,16 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#b3541e" />
+    <!-- Apply the saved color theme before first paint to avoid a flash of the wrong
+         theme (FOUC). Mirrors src/components/ThemeToggle.tsx. System = no attribute. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme')
+          if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+        } catch (e) {}
+      })()
+    </script>
     <!-- Per-page <title>, description, canonical, and Open Graph tags are injected by <Seo>. -->
   </head>
   <body>
