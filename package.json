@@ -12,7 +12,7 @@
     "migrate:posts": "node scripts/migrate-posts.mjs",
     "migrate:images": "node scripts/download-images.mjs",
     "galleries:download": "node scripts/download-galleries.mjs",
-    "galleries:upload": "node scripts/upload-r2.mjs"
+    "images:upload": "node scripts/upload-r2.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

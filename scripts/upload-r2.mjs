@@ -10,7 +10,7 @@
 //   R2_ACCOUNT_ID=… R2_ACCESS_KEY_ID=… R2_SECRET_ACCESS_KEY=… R2_BUCKET=cailinpitt-photos \
 //     node scripts/upload-r2.mjs
 
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -87,15 +87,24 @@ async function mapLimit(items, limit, fn) {
   return results
 }
 
+// All files under public/images, as root-relative srcs (/images/<...>).
+async function allImageSrcs(dir = path.join(PUBLIC, 'images')) {
+  const out = []
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name)
+    if (e.isDirectory()) out.push(...(await allImageSrcs(p)))
+    else out.push('/' + path.relative(PUBLIC, p).split(path.sep).join('/'))
+  }
+  return out
+}
+
 async function main() {
-  const manifest = JSON.parse(await readFile(path.join(ROOT, 'src', 'lib', 'gallery-images.json'), 'utf8'))
-  const srcs = Object.values(manifest).flat().map((r) => r.src)
-  console.log(`Uploading ${srcs.length} photos to r2://${R2_BUCKET}${FORCE ? ' (force)' : ''}…`)
+  // Every image (blog + galleries) lives under public/images and is served from R2.
+  const srcs = await allImageSrcs()
+  console.log(`Uploading ${srcs.length} images to r2://${R2_BUCKET}${FORCE ? ' (force)' : ''}…`)
 
   const results = await mapLimit(srcs, CONCURRENCY, uploadOne)
   const counts = results.reduce((acc, r) => ((acc[r.status] = (acc[r.status] || 0) + 1), acc), {})
-  const missing = results.filter((r) => r.status === 'missing-local')
-  if (missing.length) console.warn(`⚠ ${missing.length} missing locally (run download-galleries.mjs):`, missing.slice(0, 5).map((m) => m.key))
   console.log('✓ done:', counts)
 }
 

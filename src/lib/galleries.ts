@@ -22,12 +22,8 @@ export interface Gallery {
 // Squarespace site into /public/images/<folder>/). Keyed by folder name here.
 const images = manifest as Record<string, GalleryImage[]>
 
-// Gallery photos are served from Cloudflare R2 via this custom domain (Phase 9),
-// so they're never committed to the repo. Blog images stay root-relative (in-repo).
-const IMAGES_BASE = 'https://images.cailinpitt.com'
-
-/** Resolve a manifest image path (e.g. /images/2022/x.jpg) to its served R2 URL. */
-export const imageUrl = (src: string) => IMAGES_BASE + src
+// All images (galleries + blog) are served from R2; see src/lib/images.ts.
+export { imageUrl } from './images'
 
 export const galleries: Gallery[] = [
   { path: '/2022', title: '2022', images: images['2022'] },

@@ -1,3 +1,4 @@
+import { imageUrl } from './images'
 import type { Post } from './posts'
 
 // schema.org JSON-LD builders. Kept separate from <Seo> so the shapes are easy to
@@ -46,7 +47,7 @@ export function blogPostingSchema(post: Post): Json {
     datePublished: post.date,
     dateModified: post.date,
     ...(post.description ? { description: post.description } : {}),
-    ...(image ? { image: abs(image) } : {}),
+    ...(image ? { image: imageUrl(image) } : {}),
     ...(post.tags.length ? { keywords: post.tags.join(', ') } : {}),
     author: PERSON,
     publisher: PERSON,
