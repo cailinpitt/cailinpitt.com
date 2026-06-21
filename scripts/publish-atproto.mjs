@@ -45,11 +45,11 @@ const RECORDS_FILE = path.join(ROOT, 'content', 'atproto.json')
 const ICON_FILE = path.join(ROOT, 'content', 'atproto-icon.jpg')
 
 const SITE_URL = 'https://cailinpitt.com'
-// Publication landing (the reader's "View publication" button). A path is allowed, but
-// then the verification well-known must be served at the path-appended location
-// (/.well-known/site.standard.publication/blog) — generate-atproto.mjs handles that
-// from the publicationUrl written into atproto.json. See standard.site/docs/verification.
-const PUBLICATION_URL = `${SITE_URL}/blog`
+// Publication landing (the reader's "View publication" button). Kept at the site root:
+// although standard.site's spec describes path-based publications (with a path-appended
+// well-known), Bluesky's crawler did not honor that in practice — a /blog url dropped the
+// enhanced card back to a plain preview. Root is the verified-working value.
+const PUBLICATION_URL = SITE_URL
 const PUBLICATION = {
   name: 'Cailin Pitt',
   description: 'Photography and writing by Cailin Pitt.',

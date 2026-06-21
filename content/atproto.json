@@ -1,7 +1,7 @@
 {
   "did": "did:plc:ifwa4vnxncu5xnw4vu7bhloa",
   "publication": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.publication/self",
-  "publicationUrl": "https://cailinpitt.com/blog",
+  "publicationUrl": "https://cailinpitt.com",
   "documents": {
     "/blog/2023/3/3/paramore-this-is-why-2023": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/paramore-this-is-why-2023",
     "/blog/2022/7/18/interpol-the-other-side-of-make-believe-2022": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/interpol-the-other-side-of-make-believe-2022",
