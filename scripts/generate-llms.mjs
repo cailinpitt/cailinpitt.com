@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Generate dist/llms.txt (curated index) and dist/llms-full.txt (full text) from
-// content/blog/*.md. Runs after `npm run build` (part of the "postbuild" script).
+// content/projects.md and content/blog/*.md. Runs after `npm run build` (part of
+// the "postbuild" script).
 // Format follows the llms.txt convention — see https://llmstxt.org.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises'
@@ -10,6 +11,7 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
+const PROJECTS = path.join(ROOT, 'content', 'projects.md')
 const BLOG = path.join(ROOT, 'content', 'blog')
 const DIST = path.join(ROOT, 'dist')
 const SITE = 'https://cailinpitt.com'
@@ -66,6 +68,8 @@ async function main() {
   }
 
   const files = (await readdir(BLOG)).filter((f) => f.endsWith('.md'))
+  const projectsRaw = await readFile(PROJECTS, 'utf8')
+  const projects = parseFrontmatter(projectsRaw)
   const posts = []
   for (const f of files) {
     const raw = await readFile(path.join(BLOG, f), 'utf8')
@@ -86,6 +90,10 @@ async function main() {
     '',
     `> ${TAGLINE}`,
     '',
+    '## Projects',
+    '',
+    `- [${projects.data.title ?? 'Projects'}](${SITE}/projects)${projects.data.description ? `: ${projects.data.description}` : ''}`,
+    '',
     '## Blog',
     '',
     ...posts.map((p) => `- [${p.title}](${SITE}${p.path})${p.description ? `: ${p.description}` : ''}`),
@@ -96,6 +104,13 @@ async function main() {
     `# ${SITE_NAME}`,
     '',
     `> ${TAGLINE}`,
+    '',
+    '---',
+    '',
+    `# ${projects.data.title ?? 'Projects'}`,
+    `${SITE}/projects`,
+    '',
+    cleanBody(projects.body),
     '',
     ...posts.flatMap((p) => [
       '---',
