@@ -167,10 +167,10 @@ async function main() {
     rkey: 'self',
     record: {
       $type: 'site.standard.publication',
-      // Publication landing the reader's "View publication" button opens — the blog
-      // index, not the homepage. Document `path`s are root-relative (leading slash),
-      // so they still resolve against the origin regardless of this base.
-      url: `${SITE_URL}/blog`,
+      // Must be the site origin root: standard.site verification resolves
+      // /.well-known/site.standard.publication against this, and the well-known lives
+      // at the root. A path here (e.g. /blog) breaks verification → no enhanced card.
+      url: SITE_URL,
       name: PUBLICATION.name,
       description: PUBLICATION.description,
       ...(icon ? { icon } : {}),
