@@ -1,0 +1,219 @@
+/* Minimal, typography-led base. Let the photography be the loud thing.
+ *
+ * NOTE: this is a deliberately plain PLACEHOLDER design to get the pipeline working — not the
+ * final look. To iterate: see the "Design & UX backlog" in plan.md (visual redesign + a
+ * System/Light/Dark toggle; dark mode is currently prefers-color-scheme only, no manual control).
+ */
+
+:root {
+  --measure: 68ch;
+  --space: 1.5rem;
+  --accent: #b3541e;
+  --bg: #fbfaf8;
+  --fg: #1c1b1a;
+  --muted: #6b6660;
+  --rule: #e6e2dc;
+  --font-body: Georgia, 'Times New Roman', serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #e09255;
+    --bg: #161514;
+    --fg: #eceae6;
+    --muted: #a39d95;
+    --rule: #2e2c29;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 1.125rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--bg);
+  padding: 0.5rem 1rem;
+  z-index: 10;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* Layout shell */
+.site-header,
+.site-main,
+.site-footer {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: var(--space);
+}
+
+.site-header {
+  padding-block: var(--space);
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-ui);
+}
+
+.site-title {
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.nav-links,
+.social-links {
+  display: flex;
+  gap: 1.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.nav-links a:hover {
+  color: var(--fg);
+}
+
+.site-main {
+  padding-block: 2rem 4rem;
+}
+
+.site-footer {
+  border-top: 1px solid var(--rule);
+  padding-block: 2rem;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+}
+.site-footer ul {
+  font-family: var(--font-ui);
+}
+
+/* Headings */
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  font-weight: 700;
+}
+.intro h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-bottom: 0.25rem;
+}
+
+/* Post lists */
+.post-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.post-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+.post-list time {
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+/* Article */
+.post-header {
+  margin-bottom: 2rem;
+}
+.post-date {
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+}
+.post-body > * + * {
+  margin-top: 1.25rem;
+}
+.post-body img {
+  border-radius: 2px;
+}
+.post-body figure {
+  margin-inline: 0;
+}
+.post-body iframe {
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: 0;
+}
+
+/* Galleries */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+.gallery-grid figure {
+  margin: 0;
+}
+.gallery-empty {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

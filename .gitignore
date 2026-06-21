@@ -1,0 +1,19 @@
+# Local-only planning + agent files
+plan.md
+.claude/
+
+# Dependencies / build
+node_modules/
+dist/
+*.local
+
+# Logs
+npm-debug.log*
+*.log
+
+# Migration inputs / backups (large, not part of the site source)
+squarespace-export.xml
+squarespace-backup/
+
+# OS
+.DS_Store
