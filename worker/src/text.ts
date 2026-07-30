@@ -1,8 +1,8 @@
 // Terminal rendering of the listening bundle, for `curl`-style clients. 
 // Same data the page shows, laid out for an 80-column terminal.
 //
-// ANSI colour is on by default (curl has no way to tell us it is a TTY, and the
-// convention these sites follow is to send colour and let `?T` turn it off).
+// ANSI color is on by default (curl has no way to tell us it is a TTY, and the
+// convention these sites follow is to send color and let `?T` turn it off).
 
 import type { Bundle, StatWindow } from './stats'
 import type { Scrobble } from './lastfm'
@@ -11,7 +11,7 @@ const WIDTH = 72
 const BAR_WIDTH = 26
 const LABEL_WIDTH = 22
 
-// 256-colour approximations of the site's palette: --accent #e3925b, plus greys.
+// 256-color approximations of the site's palette: --accent #e3925b, plus greys.
 const CODES = {
   accent: '\x1b[38;5;173m',
   accentDim: '\x1b[38;5;137m',
@@ -52,7 +52,7 @@ function clip(s: string, n: number): string {
 
 /**
  * clip() padded to exactly n, for columns that have something to their right.
- * Never use this on the last field of a line: the padding sits inside the colour
+ * Never use this on the last field of a line: the padding sits inside the color
  * wrap, so it survives any later trimEnd() as invisible trailing whitespace.
  */
 const fit = (s: string, n: number): string => clip(s, n).padEnd(n)
@@ -228,7 +228,7 @@ function footer(b: Bundle, c: Ink): string[] {
     '',
     `  ${c.dim('─'.repeat(WIDTH - 4))}`,
     `  ${c.dim(`${num(b.totalScrobbles)} scrobbles all-time · via Last.fm (${b.user})`)}`,
-    `  ${c.faint('?T for no colour · ?w=30d for the 30-day window · /listening.json for JSON')}`,
+    `  ${c.faint('?T for no color · ?w=30d for the 30-day window · /listening.json for JSON')}`,
     '',
   ]
 }

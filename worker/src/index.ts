@@ -242,7 +242,7 @@ export default {
         const bundle = await getBundle(env)
         return textResponse(
           renderText(bundle, {
-            // ?T disables colour, matching wttr.in's convention.
+            // ?T disables color, matching wttr.in's convention.
             color: !url.searchParams.has('T'),
             window: url.searchParams.get('w') === '30d' || url.searchParams.has('30d') ? '30d' : '7d',
             offset: Number(env.TZ_OFFSET_SECONDS) || 0,
