@@ -20,6 +20,7 @@ import {
   type NowPlaying,
   type NowState,
   type OnThisDay,
+  type OnThisDayYear,
   type Scrobble,
   type StatWindow,
   type WindowKey,
@@ -183,33 +184,95 @@ function OnThisDaySection() {
       </h2>
       <ol className="otd-list">
         {data.years.map((y) => (
-          <li key={y.year}>
-            <div className="otd-head">
-              <Link className="otd-year" to={`/listening/${y.year}`}>
-                {y.year}
-              </Link>
-              <span className="otd-count">
-                {formatNumber(y.count)} scrobble{y.count === 1 ? '' : 's'}
-                {y.topArtist && <> · mostly {y.topArtist}</>}
-              </span>
-            </div>
-            <ul className="otd-tracks">
-              {y.tracks.map((t) => (
-                <li key={`${t.uts}-${t.track}`}>
-                  <time dateTime={new Date(t.uts * 1000).toISOString()}>{formatTime(t.uts)}</time>
-                  <Art src={t.image} alt="" className="otd-art" />
-                  <span className="otd-meta">
-                    <span className="otd-track">{t.track}</span>
-                    <span className="otd-artist">{t.artist}</span>
-                  </span>
-                  <ListenLinks query={trackQuery(t.artist, t.track)} />
-                </li>
-              ))}
-            </ul>
-          </li>
+          <OnThisDayYearBlock key={y.year} year={y} />
         ))}
       </ol>
     </section>
+  )
+}
+
+/**
+ * One past year. The API sends the day's *last* few plays, not all of them, so
+ * the subset is labelled explicitly — showing 5 rows under a "91 scrobbles"
+ * heading otherwise reads as though 5 were all there was.
+ *
+ * Expanding reuses /days: passing the newest track's uts + 1 as the cursor
+ * returns that whole day, so this needs no new endpoint.
+ */
+function OnThisDayYearBlock({ year: y }: { year: OnThisDayYear }) {
+  const [full, setFull] = useState<Scrobble[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  const shown = full ?? y.tracks
+  const hidden = y.count - y.tracks.length
+
+  const expand = async () => {
+    if (full) {
+      setFull(null)
+      return
+    }
+    const newest = y.tracks[0]
+    if (!newest) return
+    setLoading(true)
+    setFailed(false)
+    try {
+      const { days } = await fetchOlderDays(newest.uts + 1, 1)
+      setFull(days[0]?.tracks ?? null)
+    } catch {
+      setFailed(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <li>
+      <div className="otd-head">
+        <Link className="otd-year" to={`/listening/${y.year}`}>
+          {y.year}
+        </Link>
+        <span className="otd-count">
+          {formatNumber(y.count)} scrobble{y.count === 1 ? '' : 's'}
+          {y.topArtist && <> · mostly {y.topArtist}</>}
+        </span>
+      </div>
+
+      {hidden > 0 && (
+        <p className="otd-subset">
+          {full
+            ? `All ${formatNumber(y.count)}, newest first`
+            : `Last ${y.tracks.length} of ${formatNumber(y.count)} that day`}
+        </p>
+      )}
+
+      <ul className="otd-tracks">
+        {shown.map((t) => (
+          <li key={`${t.uts}-${t.track}`}>
+            <time dateTime={new Date(t.uts * 1000).toISOString()}>{formatTime(t.uts)}</time>
+            <Art src={t.image} alt="" className="otd-art" />
+            <span className="otd-meta">
+              <span className="otd-track">{t.track}</span>
+              <span className="otd-artist">{t.artist}</span>
+            </span>
+            <ListenLinks query={trackQuery(t.artist, t.track)} />
+          </li>
+        ))}
+      </ul>
+
+      {hidden > 0 && (
+        <p className="otd-more">
+          <button type="button" onClick={expand} disabled={loading}>
+            {loading
+              ? 'Loading…'
+              : full
+                ? 'Show fewer'
+                : `Show all ${formatNumber(y.count)} from ${y.year} →`}
+          </button>
+          {failed && <span className="otd-failed">Could not load the rest.</span>}
+        </p>
+      )}
+    </li>
   )
 }
 

@@ -1176,6 +1176,43 @@ h3 {
   font-size: var(--step--1);
   color: var(--muted);
 }
+.otd-subset {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-style: italic;
+}
+.otd-more {
+  margin: 0.5rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.otd-more button {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.otd-more button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.otd-more button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.otd-failed {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
 .otd-tracks li {
   display: flex;
   align-items: center;
