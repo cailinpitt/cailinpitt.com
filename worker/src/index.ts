@@ -25,7 +25,16 @@ const KEY = {
   now: 'now:v1',
   stats: 'stats:v1',
   heatmap: 'heatmap:v1',
+  // Cold-path only, and TTL'd — NOT the old per-tick meta:total counter. See
+  // totalFallback(). Written at most once per TTL, and only when now:v1 is absent.
+  totalFallback: 'meta:total:fallback',
 } as const
+
+/** How long the cold-path COUNT(*) result is reused for. KV minimum is 60s. */
+const TOTAL_FALLBACK_TTL = 300
+
+/** Edge-cache lifetime for the read endpoints. */
+const EDGE_TTL = 60
 
 // ---- shapes stored in KV -------------------------------------------------
 
@@ -138,6 +147,22 @@ async function getNow(env: Env): Promise<NowBlob> {
   }
 }
 
+/**
+ * All-time count when now:v1 is missing. COUNT(*) reads the whole archive (~100k
+ * rows), so without this a cold now:v1 would make *every* concurrent request pay
+ * for a full scan until the next cron tick rewrote the key — enough traffic in
+ * that window would exhaust D1's daily row-read budget outright. Caching the
+ * result under a short TTL bounds it to one scan per TTL instead of one per
+ * request, and the key expires on its own once now:v1 is healthy again.
+ */
+async function totalFallback(env: Env): Promise<number> {
+  const cached = await env.KV.get(KEY.totalFallback)
+  if (cached !== null) return Number(cached)
+  const n = await countScrobbles(env.DB)
+  await env.KV.put(KEY.totalFallback, String(n), { expirationTtl: TOTAL_FALLBACK_TTL })
+  return n
+}
+
 async function getBundle(env: Env): Promise<Bundle> {
   const now = Math.floor(Date.now() / 1000)
   const [nowInfo, statsBlob, heatBlob] = await Promise.all([
@@ -163,8 +188,9 @@ async function getBundle(env: Env): Promise<Bundle> {
   }
 
   // The total rides along in now:v1 (Last.fm's own count). It's only missing on a
-  // cold read before the first cron run, where D1 can stand in.
-  const total = nowInfo.totalScrobbles || (await countScrobbles(env.DB))
+  // cold read before the first cron run, where D1 can stand in. `||` short-circuits,
+  // so the fallback costs nothing on the normal path.
+  const total = nowInfo.totalScrobbles || (await totalFallback(env))
 
   return {
     updatedAt: nowInfo.updatedAt,
@@ -206,24 +232,71 @@ function wantsText(request: Request, url: URL): boolean {
   return CLI_AGENT.test(ua)
 }
 
-function textResponse(body: string, cors: Record<string, string>): Response {
+// Both builders deliberately omit CORS: it varies by Origin and is applied by
+// withCors() after the cache, so a cached entry stays origin-independent.
+
+function textResponse(body: string): Response {
   return new Response(body, {
     headers: {
       'content-type': 'text/plain; charset=utf-8',
-      'cache-control': 'public, max-age=60',
-      ...cors,
+      'cache-control': `public, max-age=${EDGE_TTL}`,
     },
   })
 }
 
-function json(body: unknown, cors: Record<string, string>, maxAge: number): Response {
+function json(body: unknown, maxAge: number): Response {
   return new Response(JSON.stringify(body), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
       'cache-control': `public, max-age=${maxAge}`,
-      ...cors,
     },
   })
+}
+
+// ---- edge cache ----------------------------------------------------------
+//
+// Cloudflare does not cache Worker-generated responses on its own, so without
+// this every request executes the Worker and pays its KV reads — at 3 reads per
+// bundle that caps the free tier around 33k requests/day. It also collapses the
+// cold-KV rebuild paths in getBundle() from once-per-request to once-per-colo
+// per TTL, which is what keeps a traffic spike off D1.
+
+/**
+ * Cache key. Deliberately *not* the raw request:
+ *
+ *  - The variant is folded into the URL because one path can produce two bodies
+ *    (`/` is the terminal view for curl and a 404 for browsers).
+ *  - CORS headers are left off the cached body entirely and re-applied per
+ *    request, so the entry does not have to be duplicated per Origin.
+ */
+const cacheKey = (url: URL, variant: string): Request => {
+  const key = new URL(url.toString())
+  key.searchParams.set('__variant', variant)
+  return new Request(key.toString(), { method: 'GET' })
+}
+
+function withCors(res: Response, cors: Record<string, string>): Response {
+  const out = new Response(res.body, res)
+  for (const [k, v] of Object.entries(cors)) out.headers.set(k, v)
+  return out
+}
+
+/** Serve `build()` through the edge cache, adding this request's CORS on the way out. */
+async function cached(
+  url: URL,
+  variant: string,
+  ctx: ExecutionContext,
+  cors: Record<string, string>,
+  build: () => Promise<Response>,
+): Promise<Response> {
+  const key = cacheKey(url, variant)
+  const hit = await caches.default.match(key)
+  if (hit) return withCors(hit, cors)
+
+  const fresh = await build()
+  // Only success is worth storing; errors should retry immediately.
+  if (fresh.status === 200) ctx.waitUntil(caches.default.put(key, fresh.clone()))
+  return withCors(fresh, cors)
 }
 
 export default {
@@ -231,7 +304,7 @@ export default {
     ctx.waitUntil(tick(env))
   },
 
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const cors = corsHeaders(request, env)
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
 
@@ -239,29 +312,33 @@ export default {
     try {
       // `curl listening.cailinpitt.com` (or /listening) → the terminal view.
       if ((url.pathname === '/' || url.pathname === '/listening') && wantsText(request, url)) {
-        const bundle = await getBundle(env)
-        return textResponse(
-          renderText(bundle, {
-            // ?T disables color, matching wttr.in's convention.
-            color: !url.searchParams.has('T'),
-            window: url.searchParams.get('w') === '30d' || url.searchParams.has('30d') ? '30d' : '7d',
-            offset: Number(env.TZ_OFFSET_SECONDS) || 0,
-          }),
-          cors,
+        return cached(url, 'text', ctx, cors, async () =>
+          textResponse(
+            renderText(await getBundle(env), {
+              // ?T disables color, matching wttr.in's convention.
+              color: !url.searchParams.has('T'),
+              window:
+                url.searchParams.get('w') === '30d' || url.searchParams.has('30d') ? '30d' : '7d',
+              offset: Number(env.TZ_OFFSET_SECONDS) || 0,
+            }),
+          ),
         )
       }
       if (url.pathname === '/now.json') {
-        // Small, fresh payload for the homepage now-playing bar.
-        return json(await getNow(env), cors, 30)
+        // Deliberately uncached: one KV read, and this is the endpoint whose
+        // freshness is actually visible (the homepage now-playing bar).
+        return withCors(json(await getNow(env), 30), cors)
       }
       if (url.pathname === '/listening.json') {
-        return json(await getBundle(env), cors, 60)
+        return cached(url, 'json', ctx, cors, async () => json(await getBundle(env), EDGE_TTL))
       }
       if (url.pathname === '/days') {
-        const offset = Number(env.TZ_OFFSET_SECONDS) || 0
-        const before = Number(url.searchParams.get('before')) || Math.floor(Date.now() / 1000)
-        const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 5, 1), 14)
-        return json(await fetchOlderDays(env.DB, offset, before, limit), cors, 300)
+        return cached(url, 'days', ctx, cors, async () => {
+          const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+          const before = Number(url.searchParams.get('before')) || Math.floor(Date.now() / 1000)
+          const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 5, 1), 14)
+          return json(await fetchOlderDays(env.DB, offset, before, limit), 300)
+        })
       }
       return new Response('Not found', { status: 404, headers: cors })
     } catch (err) {

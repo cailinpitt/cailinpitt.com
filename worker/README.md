@@ -31,6 +31,27 @@ differs; `updatedAt` is excluded from that comparison since it would otherwise m
 every run look changed. Budget: a few hundred writes/day for `now:v1`, 96 for
 `stats:v1`, 4 for `heatmap:v1`.
 
+### The edge cache
+
+Cloudflare does **not** cache Worker-generated responses on its own, so before
+the Cache API was added every request executed the Worker and paid its 3 KV
+reads — which capped the free tier at roughly 33k requests/day (100k reads ÷ 3),
+well below the 100k Workers request limit. `/listening.json`, `/days` and the
+terminal view now go through `caches.default` with a 60s TTL, so repeat traffic
+costs no KV reads at all.
+
+Two things the cache key has to account for, both easy to get wrong:
+
+- **The variant is folded into the key URL**, because one path can produce two
+  different bodies — `/` is the terminal view for curl and a 404 for browsers.
+- **CORS headers are never stored.** They vary by `Origin`, so the cached body is
+  origin-independent and `withCors()` re-applies the right header per request.
+  Storing them would serve one visitor's `access-control-allow-origin` to
+  everyone behind the same cache entry.
+
+`/now.json` is deliberately left uncached: it is a single KV read, and it is the
+one endpoint whose staleness is visible (the homepage now-playing bar).
+
 Two things that look cheap but are not, if you are tempted to add them back:
 `SELECT COUNT(*)` over the archive reads ~100k D1 rows, so at the 15-minute cadence
 it would blow past D1's 5M row-reads/day; and a per-tick counter key in KV costs a
