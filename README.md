@@ -129,6 +129,19 @@ npm run publish:atproto -- --dry-run # preview (lists posts; no login, no writes
 - The `did`/AT-URIs in `content/atproto.json` are public identifiers — safe to commit.
 
 
+## Listening (`/listening`)
+
+The `/listening` page shows what I'm playing now, 7d/30d stats, a year heatmap,
+and a per-day scrobble log — sourced from Last.fm. The site stays static: a
+standalone Cloudflare Worker (`worker/`) ingests scrobbles into a D1 archive on a
+cron and serves a cached JSON bundle; the page fetches it in the browser.
+
+- **Worker setup + how it stays free:** see [`worker/README.md`](worker/README.md).
+- **Full-history backfill:** `node scripts/backfill-listening.mjs` (needs
+  `LASTFM_API_KEY` in `.env`), then load the generated SQL into D1 (see worker README).
+- **API base URL:** set `VITE_LISTENING_API` at build time (defaults to
+  `https://listening.cailinpitt.com`).
+
 ## Deploy
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and publishes to

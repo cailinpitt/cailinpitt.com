@@ -629,3 +629,403 @@ h3 {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---- /listening ---------------------------------------------------------
+   Breaks out a little wider than the reading column so the heatmap and the
+   top-lists have room; text blocks inside stay narrow for readability. */
+.listening {
+  width: min(56rem, 92vw);
+  margin-inline: calc(50% - min(56rem, 92vw) / 2);
+}
+.listening > section {
+  margin-top: 3rem;
+}
+.listening-header h1 {
+  font-size: var(--step-3);
+  margin: 0 0 0.4rem;
+}
+.listening-header .lead {
+  margin: 0;
+  max-width: var(--measure);
+}
+.listening .eyebrow {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.25rem;
+}
+.listening-error {
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+
+/* Now playing */
+.now-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: now-pulse 1.8s ease-in-out infinite;
+}
+@keyframes now-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.now-card {
+  display: flex;
+  gap: 1.1rem;
+  align-items: center;
+}
+.now-art,
+.rank-art {
+  border-radius: 4px;
+  background: var(--surface);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.now-art {
+  width: 88px;
+  height: 88px;
+}
+.now-meta {
+  min-width: 0;
+}
+.now-track {
+  margin: 0;
+  font-size: var(--step-1);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.now-artist {
+  margin: 0.2rem 0 0;
+  color: var(--fg);
+}
+.now-album,
+.now-when {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+/* Stats window + segmented control */
+.stats-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 1.25rem;
+}
+.stats-head .eyebrow {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.segmented {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  background: var(--surface);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+}
+.segmented button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: var(--step--1);
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.segmented button.active {
+  background: var(--bg);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 2rem;
+}
+.stat-tile {
+  padding: 1rem;
+  background: var(--surface);
+  border-radius: 6px;
+}
+.stat-tile dt {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stat-tile dd {
+  margin: 0.25rem 0 0;
+  font-size: var(--step-2);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* Top artists / albums / tracks */
+.top-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 40rem) {
+  .top-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .top-block:first-child {
+    grid-column: 1 / -1;
+  }
+}
+.top-title {
+  font-size: var(--step-1);
+  margin: 0 0 0.9rem;
+}
+.bar-list,
+.rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bar-list li {
+  display: grid;
+  grid-template-columns: minmax(6rem, 10rem) 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.35rem;
+}
+.bar-label {
+  font-size: var(--step--1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-track {
+  height: 0.85rem;
+  background: var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.bar-value {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rank-list li {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+.rank-art {
+  width: 40px;
+  height: 40px;
+}
+.rank-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.rank-primary,
+.rank-secondary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-primary {
+  font-size: var(--step-0);
+}
+.rank-secondary {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.rank-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Calendar heatmap — single-hue sequential ramp mixed from the accent. */
+.heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+.heatmap {
+  display: flex;
+  gap: 3px;
+  min-width: min-content;
+}
+.heat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.heat-cell {
+  width: 13px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--rule);
+}
+.heat-cell.empty {
+  background: transparent;
+}
+.heat-cell.l0 {
+  background: var(--rule);
+}
+.heat-cell.l1 {
+  background: color-mix(in oklab, var(--accent) 28%, var(--surface));
+}
+.heat-cell.l2 {
+  background: color-mix(in oklab, var(--accent) 52%, var(--surface));
+}
+.heat-cell.l3 {
+  background: color-mix(in oklab, var(--accent) 76%, var(--surface));
+}
+.heat-cell.l4 {
+  background: var(--accent);
+}
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 0.9rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.heat-legend span:first-child {
+  margin-right: 0.2rem;
+}
+.heat-legend span:last-child {
+  margin-left: 0.2rem;
+}
+
+/* Daily log */
+.log-day {
+  margin-bottom: 2rem;
+}
+.log-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.log-day-head h3 {
+  font-size: var(--step-1);
+  margin: 0;
+}
+.log-day-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.log-tracks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.log-tracks li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding-block: 0.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+.log-tracks time {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.log-track {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.log-artist {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.load-more {
+  display: block;
+  margin: 1.5rem auto 0;
+  padding: 0.6rem 1.4rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.load-more:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.load-more:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Placeholder art + loading skeleton */
+.art-placeholder {
+  display: block;
+  background: var(--surface);
+}
+.listening-skeleton > * {
+  background: var(--surface);
+  border-radius: 6px;
+  animation: sk-pulse 1.5s ease-in-out infinite;
+}
+.sk-card {
+  height: 88px;
+  margin-bottom: 2rem;
+}
+.sk-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  background: none;
+  animation: none;
+}
+.sk-tile {
+  height: 5rem;
+}
+.sk-block {
+  height: 12rem;
+}
+@keyframes sk-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

@@ -14,6 +14,7 @@ export const routes: RouteRecord[] = [
       { path: 'blog', lazy: () => import('./pages/BlogIndex') },
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },
+      { path: 'listening', lazy: () => import('./pages/Listening') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'privacy', lazy: () => import('./pages/Privacy') },
       // Photo galleries at their preserved Squarespace paths.

@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-listening",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-29",
+
+  // Serve the read API from a subdomain of the (Cloudflare-managed) zone. This
+  // auto-provisions the DNS record + cert. Remove this block to use the default
+  // *.workers.dev URL instead.
+  "routes": [{ "pattern": "listening.cailinpitt.com", "custom_domain": true }],
+
+  // Ingest Last.fm every minute (the smallest interval Cron Triggers allow).
+  "triggers": { "crons": ["* * * * *"] },
+
+  // Structured logs + traces in the dashboard. Sample everything at this volume.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    "LASTFM_USER": "ticketmasterceo",
+    // Fixed offset (seconds) used to bucket scrobbles into local calendar days.
+    // -18000 = UTC-5 (US Central, DST). Change to -21600 for standard time. A
+    // fixed offset means the day boundary can be off by an hour across a DST
+    // switch — negligible for a listening heatmap/log.
+    "TZ_OFFSET_SECONDS": "-18000",
+    // Comma-separated origins allowed to read the API (CORS).
+    "ALLOWED_ORIGIN": "https://cailinpitt.com,http://localhost:5173"
+  },
+
+  // Bindings. Fill in the ids after creating the resources (see README):
+  //   wrangler d1 create cailinpitt-listening
+  //   wrangler kv namespace create LISTENING
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-listening",
+      "database_id": "28520833-b3c2-4bdc-bd9b-fe9fe4b13f0b"
+    }
+  ],
+  "kv_namespaces": [{ "binding": "KV", "id": "1f44dec689514c81ae4557977f48f8f9" }]
+
+  // Secret (not stored here): wrangler secret put LASTFM_API_KEY
+}
