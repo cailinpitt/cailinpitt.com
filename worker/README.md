@@ -31,6 +31,31 @@ differs; `updatedAt` is excluded from that comparison since it would otherwise m
 every run look changed. Budget: a few hundred writes/day for `now:v1`, 96 for
 `stats:v1`, 4 for `heatmap:v1`.
 
+### How fresh each piece is
+
+Different parts of the bundle come from blobs on different cadences, which is the
+main thing to understand before changing any of it:
+
+| Piece | Blob | Behind by |
+|---|---|---|
+| now-playing / last-played | `now:v1` | ~1 min (cron) |
+| daily log (`recentDays`) | `stats:v1` + `now:v1` | ~1 min — see below |
+| 7d/30d windows | `stats:v1` | up to 15 min |
+| heatmap | `heatmap:v1` | up to 6 h |
+
+`recentDays` would naturally inherit `stats:v1`'s 15-minute cadence, which made
+the log visibly lag the now-playing bar by ~20 minutes. Instead `now:v1` carries
+the tail of the Last.fm response (`recent`), and `mergeRecent()` splices anything
+newer than the log's newest entry back in on read. This is free: ingest already
+fetches those scrobbles and already writes that blob when the track changes.
+
+Re-grouping in `mergeRecent()` is safe because `groupDays()` derives `count` from
+the tracks it is handed and `recentDays` always holds every track for its days;
+filtering on `uts` keeps it idempotent, since the Last.fm tail overlaps D1.
+
+Anything reading `now:v1` must treat `recent` as optional — blobs written before
+the field existed do not have it, and the cron only rewrites on a real change.
+
 ### The edge cache
 
 Cloudflare does **not** cache Worker-generated responses on its own, so before

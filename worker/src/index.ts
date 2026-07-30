@@ -14,6 +14,7 @@ import {
   countScrobbles,
   fetchLastPlayed,
   fetchOlderDays,
+  groupDays,
   type Bundle,
   type DayLog,
 } from './stats'
@@ -43,9 +44,19 @@ interface NowBlob {
   lastPlayed: Scrobble | null
   /** All-time count, straight from Last.fm's `@attr.total` — no COUNT(*) needed. */
   totalScrobbles: number
+  /**
+   * The tail of the Last.fm response, newest first. Rides along for free: ingest
+   * already fetches these and already writes this blob whenever the track
+   * changes. getBundle() merges them over the 15-minute-old recentDays so the
+   * log is current to ~1 min instead of lagging a quarter of an hour.
+   */
+  recent: Scrobble[]
   /** When this state last *changed* (not when the cron last ran) — see ingest(). */
   updatedAt: number
 }
+
+/** How many recent scrobbles to carry in now:v1 (Last.fm gives us 50 per pull). */
+const RECENT_CARRY = 40
 interface StatsBlob {
   windows: Bundle['windows']
   recentDays: DayLog[]
@@ -89,6 +100,7 @@ async function ingest(env: Env): Promise<void> {
     nowPlaying: recent.nowPlaying,
     lastPlayed: recent.scrobbles[0] ?? null,
     totalScrobbles: recent.total,
+    recent: recent.scrobbles.slice(0, RECENT_CARRY),
     updatedAt: Math.floor(Date.now() / 1000),
   }
 
@@ -143,6 +155,7 @@ async function getNow(env: Env): Promise<NowBlob> {
     nowPlaying: null,
     lastPlayed: await fetchLastPlayed(env.DB),
     totalScrobbles: 0,
+    recent: [],
     updatedAt: Math.floor(Date.now() / 1000),
   }
 }
@@ -200,9 +213,28 @@ async function getBundle(env: Env): Promise<Bundle> {
     lastPlayed: nowInfo.lastPlayed,
     windows: stats.windows,
     heatmap: heat.heatmap,
-    recentDays: stats.recentDays,
+    // stats.recentDays is up to HEAVY_INTERVAL old; now:v1 is ~1 min old.
+    recentDays: mergeRecent(stats.recentDays, nowInfo.recent, Number(env.TZ_OFFSET_SECONDS) || 0),
+    // Unchanged: the cursor points at the *oldest* day, which merging never touches.
     nextBefore: stats.nextBefore,
   }
+}
+
+/**
+ * Splice scrobbles newer than the log's newest entry back into the day groups.
+ *
+ * Re-grouping the whole list is lossless — groupDays() derives `count` from the
+ * tracks it is given, and recentDays always holds every track for its days — so
+ * this cannot double-count a scrobble already present. Filtering on `uts` is what
+ * keeps it idempotent: the Last.fm tail overlaps what D1 already has.
+ */
+function mergeRecent(days: DayLog[], recent: Scrobble[] | undefined, offset: number): DayLog[] {
+  // `recent` is absent from blobs written before this field existed, and stays
+  // absent until the cron next rewrites now:v1 — do not assume it is there.
+  const newest = days[0]?.tracks[0]?.uts ?? 0
+  const fresher = (recent ?? []).filter((s) => s.uts > newest).sort((a, b) => b.uts - a.uts)
+  if (!fresher.length) return days
+  return groupDays([...fresher, ...days.flatMap((d) => d.tracks)], offset)
 }
 
 // Any loopback port, so a dev server that lands on 5174 instead of 5173 still
@@ -327,7 +359,9 @@ export default {
       if (url.pathname === '/now.json') {
         // Deliberately uncached: one KV read, and this is the endpoint whose
         // freshness is actually visible (the homepage now-playing bar).
-        return withCors(json(await getNow(env), 30), cors)
+        // `recent` is projected out — the bar needs four fields, not 40 tracks.
+        const { nowPlaying, lastPlayed, totalScrobbles, updatedAt } = await getNow(env)
+        return withCors(json({ nowPlaying, lastPlayed, totalScrobbles, updatedAt }, 30), cors)
       }
       if (url.pathname === '/listening.json') {
         return cached(url, 'json', ctx, cors, async () => json(await getBundle(env), EDGE_TTL))
