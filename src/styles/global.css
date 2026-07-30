@@ -1040,7 +1040,9 @@ h3 {
   max-width: 100%;
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  /* Rounded rectangle, corners concentric with the album art (art radius +
+     the 0.45rem inset) so the square cover sits comfortably inside. */
+  border-radius: 10px;
   text-decoration: none;
   color: var(--fg);
   transition: border-color 0.15s ease;
