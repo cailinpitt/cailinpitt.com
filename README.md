@@ -37,7 +37,10 @@ Markdown body…
 
 - **Inline images** go in `public/images/<slug>/` and are referenced in markdown as
   `/images/<slug>/<file>`. Those paths are rewritten to Cloudflare R2 at render time, so images
-  are **never committed** (see below). After adding images, push them to R2: `npm run images:upload`.
+  are **never committed** (see below). After adding images, run `npm run images:publish` — it
+  checks the references and pushes the files to R2. `npm run images:sync` on its own reports
+  any image a post references but that isn't on disk (typo'd filename), plus any file in the
+  folder no post uses.
 - Markdown renders at build time (`react-markdown` + `remark-gfm`, with `rehype-raw` so embedded
   HTML like YouTube/Spotify iframes survives).
 - **Social card image:** `image:` in frontmatter is optional — if omitted, the first image in the
@@ -55,7 +58,7 @@ Markdown body…
 
 1. Create `content/blog/<slug>.md` with the frontmatter above.
 2. Drop any inline images in `public/images/<slug>/`, reference them as `/images/<slug>/<file>`,
-   then `npm run images:upload` (needs R2 creds in `.env`).
+   then `npm run images:publish` (needs R2 creds in `.env`).
 3. Preview locally: `npm run dev` (and optionally `npm run build` to sanity-check the prerender).
 4. Publish the standard.site record: `npm run publish:atproto` (needs Bluesky creds in `.env`),
    then **commit the updated `content/atproto.json`**.
@@ -70,31 +73,33 @@ are committed** — all of `public/images/` is gitignored. Galleries are defined
 `src/lib/galleries.ts`; the image lists live in `src/lib/gallery-images.json`.
 
 1. Put the full-size photos in `public/images/2026/` (all of `public/images/` is already gitignored).
-2. Add the image list to `src/lib/gallery-images.json` under a `"2026"` key:
-   ```json
-   "2026": [
-     { "src": "/images/2026/sunset.jpg", "alt": "Sunset over the river", "width": 4000, "height": 3000 }
-   ]
+2. ```bash
+   npm run images:publish   # = images:sync + images:upload; needs R2 creds in .env
    ```
-   `width`/`height` are optional but recommended (prevents layout shift). On macOS you can generate
-   the entries from the folder with the built-in `sips`:
-   ```bash
-   for f in public/images/2026/*; do
-     w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/{print $2}')
-     h=$(sips -g pixelHeight "$f" | awk '/pixelHeight/{print $2}')
-     printf '{ "src": "/images/2026/%s", "alt": "", "width": %s, "height": %s },\n' "$(basename "$f")" "$w" "$h"
-   done
-   ```
-3. Register the gallery in `src/lib/galleries.ts` (keep it newest-first):
-   ```ts
-   { path: '/2026', title: '2026', images: images['2026'] },
-   ```
-   The `/2026` route and the `/photos` index update automatically.
-4. Upload the photos to R2 (walks `public/images/`, pushes any new files; needs R2 creds in `.env`):
-   ```bash
-   npm run images:upload
-   ```
-5. Commit the **code** changes (`gallery-images.json`, `galleries.ts`) — never the photos — and push.
+3. Commit the **code** changes (`gallery-images.json`, `galleries.ts`) — never the photos — and push.
+
+That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeeping:
+
+- **Registers new galleries.** A `public/images/<year>/` folder with no gallery yet is added to
+  `galleryDefinitions` in `src/lib/galleries.ts`, in newest-first order. The `/2026` route and the
+  `/photos` index follow automatically. Galleries with a title that isn't the folder name
+  (`/latest-work` → "2017"), a `description`, or a `canonicalPath` alias stay hand-written — the
+  script only ever *adds* the plain year ones.
+- **Fills in the image list.** Each gallery's entries in `src/lib/gallery-images.json` are rebuilt
+  from the folder, with `width`/`height` read from the file headers (no native dependency; JPEG,
+  PNG, WebP, GIF and HEIC/AVIF). Existing entries keep their order and any alt text you've written,
+  so hand-tuning the running order or the alt of a photo survives re-runs; new files are appended
+  in natural filename order with a default `Photograph — <title>` alt.
+- **Never deletes silently.** A manifest entry whose file isn't on disk is kept and counted in the
+  output (you may just not have that photo locally). Pass `--prune` to actually drop them.
+- **Checks blog images** too — see [Add a blog post](#add-a-blog-post) above.
+
+Useful variants:
+
+```bash
+npm run images:sync -- --prune   # drop manifest entries whose file is gone
+npm run images:check             # report only, no writes; exits non-zero if out of date
+```
 
 > The original galleries were pulled from the old Squarespace site with `npm run galleries:download`
 > (Squarespace-specific). For new galleries, just drop files into `public/images/<gallery>/` as above.

@@ -12,7 +12,10 @@
     "migrate:posts": "node scripts/migrate-posts.mjs",
     "migrate:images": "node scripts/download-images.mjs",
     "galleries:download": "node scripts/download-galleries.mjs",
+    "images:sync": "node scripts/sync-images.mjs",
+    "images:check": "node scripts/sync-images.mjs --check",
     "images:upload": "node scripts/upload-r2.mjs",
+    "images:publish": "npm run images:sync && npm run images:upload",
     "publish:atproto": "node scripts/publish-atproto.mjs"
   },
   "dependencies": {

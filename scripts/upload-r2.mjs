@@ -14,7 +14,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -29,6 +29,7 @@ try {
 
 const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env
 const FORCE = process.env.FORCE === '1'
+const DRY_RUN = process.argv.includes('--dry-run')
 const CONCURRENCY = 8
 
 for (const [k, v] of Object.entries({ R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET })) {
@@ -47,20 +48,25 @@ const s3 = new S3Client({
   credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
 })
 
-async function exists(key) {
-  try {
-    await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }))
-    return true
-  } catch {
-    return false
-  }
+// One listing of everything already in the bucket, rather than a HEAD per file.
+async function remoteKeys() {
+  const keys = new Set()
+  let ContinuationToken
+  do {
+    const page = await s3.send(
+      new ListObjectsV2Command({ Bucket: R2_BUCKET, Prefix: 'images/', ContinuationToken }),
+    )
+    for (const obj of page.Contents ?? []) keys.add(obj.Key)
+    ContinuationToken = page.NextContinuationToken
+  } while (ContinuationToken)
+  return keys
 }
 
-async function uploadOne(src) {
+async function uploadOne(src, present) {
   const key = src.replace(/^\//, '') // "/images/2022/x.jpg" -> "images/2022/x.jpg"
   const file = path.join(PUBLIC, key)
   if (!existsSync(file)) return { key, status: 'missing-local' }
-  if (!FORCE && (await exists(key))) return { key, status: 'skip' }
+  if (!FORCE && present.has(key)) return { key, status: 'skip' }
   const body = await readFile(file)
   await s3.send(
     new PutObjectCommand({
@@ -101,9 +107,22 @@ async function allImageSrcs(dir = path.join(PUBLIC, 'images')) {
 async function main() {
   // Every image (blog + galleries) lives under public/images and is served from R2.
   const srcs = await allImageSrcs()
-  console.log(`Uploading ${srcs.length} images to r2://${R2_BUCKET}${FORCE ? ' (force)' : ''}…`)
+  const present = FORCE ? new Set() : await remoteKeys()
+  const todo = srcs.filter((src) => FORCE || !present.has(src.replace(/^\//, '')))
 
-  const results = await mapLimit(srcs, CONCURRENCY, uploadOne)
+  if (!todo.length) {
+    console.log(`✓ nothing to do — all ${srcs.length} local images are already in r2://${R2_BUCKET}`)
+    return
+  }
+  console.log(
+    `${srcs.length} local image(s), ${srcs.length - todo.length} already in r2://${R2_BUCKET}` +
+      ` — uploading ${todo.length}${FORCE ? ' (force: re-uploading everything)' : ''}…`,
+  )
+  for (const src of todo.slice(0, 10)) console.log(`  ${src}`)
+  if (todo.length > 10) console.log(`  …and ${todo.length - 10} more`)
+  if (DRY_RUN) return console.log('(--dry-run: nothing uploaded)')
+
+  const results = await mapLimit(todo, CONCURRENCY, (src) => uploadOne(src, present))
   const counts = results.reduce((acc, r) => ((acc[r.status] = (acc[r.status] || 0) + 1), acc), {})
   console.log('✓ done:', counts)
 }

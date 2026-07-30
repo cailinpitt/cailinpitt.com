@@ -26,6 +26,7 @@ export interface GalleryDefinition extends Omit<Gallery, 'images'> {
 // Route metadata stays in the client bundle; the much larger image manifest is
 // loaded by server-only route loaders in content.server.ts.
 export const galleryDefinitions: GalleryDefinition[] = [
+  { path: '/2026', title: '2026', imageKey: '2026' },
   { path: '/2022', title: '2022', imageKey: '2022' },
   { path: '/2021', title: '2021', imageKey: '2021' },
   { path: '/2020', title: '2020', imageKey: '2020' },
