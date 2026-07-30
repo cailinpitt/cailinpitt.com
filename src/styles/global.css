@@ -9,6 +9,7 @@
      The serif stack degrades to Palatino/Georgia where Iowan/Charter aren't present. */
   --font-serif: 'Iowan Old Style', Charter, Palatino, 'Palatino Linotype', Georgia, Cambria, serif;
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Fluid type scale (~1.25 major third), clamped between mobile and desktop. */
   --step--1: clamp(0.84rem, 0.81rem + 0.13vw, 0.92rem);
@@ -709,6 +710,56 @@ h3 {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 1.25rem;
+}
+
+/* Advertises the terminal view (curl listening.cailinpitt.com). */
+.curl-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 0.4rem 0.4rem 0.4rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  max-width: 100%;
+}
+.curl-hint code {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.curl-prompt {
+  color: var(--muted);
+  margin-right: 0.5rem;
+  user-select: none;
+}
+.curl-hint button {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.curl-hint button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .listening-error {
   color: var(--muted);
