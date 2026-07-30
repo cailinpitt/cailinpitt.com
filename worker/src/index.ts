@@ -178,11 +178,18 @@ async function getBundle(env: Env): Promise<Bundle> {
   }
 }
 
+// Any loopback port, so a dev server that lands on 5174 instead of 5173 still
+// works without editing wrangler.jsonc. Everything this API serves is already
+// public on the site, so the allowlist is about not being a free CORS backend
+// for other origins — not about guarding secrets.
+const LOOPBACK = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/
+
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const allowed = env.ALLOWED_ORIGIN.split(',').map((o) => o.trim())
   const origin = request.headers.get('origin') ?? ''
+  const ok = allowed.includes(origin) || LOOPBACK.test(origin)
   return {
-    'access-control-allow-origin': allowed.includes(origin) ? origin : allowed[0],
+    'access-control-allow-origin': ok ? origin : allowed[0],
     'access-control-allow-methods': 'GET, OPTIONS',
     vary: 'origin',
   }

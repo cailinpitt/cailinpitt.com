@@ -22,8 +22,11 @@
     // fixed offset means the day boundary can be off by an hour across a DST
     // switch — negligible for a listening heatmap/log.
     "TZ_OFFSET_SECONDS": "-18000",
-    // Comma-separated origins allowed to read the API (CORS).
-    "ALLOWED_ORIGIN": "https://cailinpitt.com,http://localhost:5173"
+    // Comma-separated origins allowed to read the API (CORS). Any http://localhost
+    // or 127.0.0.1 port is additionally allowed in code, so local dev needs no
+    // entry here regardless of which port Vite grabs. The first entry is the
+    // fallback sent to origins that don't match.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com"
   },
 
   // Bindings. Fill in the ids after creating the resources (see README):
