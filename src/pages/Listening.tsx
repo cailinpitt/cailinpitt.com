@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { ListenLinks } from '../components/ListenLinks'
+import { Art, StatTile, TopAlbums, TopArtists, TopTracks } from '../components/ListeningBits'
+import { listeningYears } from '../lib/listeningYears'
 import {
-  albumQuery,
   fetchBundle,
   fetchNow,
   fetchOlderDays,
+  fetchOnThisDay,
   formatDayLabel,
   formatNumber,
   formatRelative,
   formatTime,
   trackQuery,
-  type AlbumStat,
-  type ArtistStat,
   type Bundle,
   type DayLog,
   type Heatmap,
   type NowPlaying,
   type NowState,
+  type OnThisDay,
   type Scrobble,
   type StatWindow,
-  type TrackStat,
   type WindowKey,
 } from '../lib/listening'
 
@@ -135,11 +136,99 @@ export function Component() {
 
             <HeatmapSection heatmap={bundle.heatmap} />
 
+            <YearLinks />
+
+            <OnThisDaySection />
+
             <DailyLog initialDays={bundle.recentDays} initialCursor={bundle.nextBefore} />
           </>
         )}
       </section>
     </>
+  )
+}
+
+// ---- on this day ---------------------------------------------------------
+
+/**
+ * The same calendar day in previous years. Fetched separately from the bundle:
+ * it changes once a day, so it rides a 1-hour edge cache rather than the
+ * bundle's 60s, and a failure here must not take the rest of the page with it.
+ */
+function OnThisDaySection() {
+  const [data, setData] = useState<OnThisDay | null>(null)
+
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    fetchOnThisDay(controller.signal)
+      .then((d) => {
+        if (active) setData(d)
+      })
+      .catch(() => {
+        /* silently absent — this is a bonus section, not load-bearing */
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [])
+
+  if (!data?.years.length) return null
+
+  return (
+    <section className="on-this-day" aria-labelledby="otd-heading">
+      <h2 id="otd-heading" className="eyebrow">
+        On this day
+      </h2>
+      <ol className="otd-list">
+        {data.years.map((y) => (
+          <li key={y.year}>
+            <div className="otd-head">
+              <Link className="otd-year" to={`/listening/${y.year}`}>
+                {y.year}
+              </Link>
+              <span className="otd-count">
+                {formatNumber(y.count)} scrobble{y.count === 1 ? '' : 's'}
+                {y.topArtist && <> · mostly {y.topArtist}</>}
+              </span>
+            </div>
+            <ul className="otd-tracks">
+              {y.tracks.map((t) => (
+                <li key={`${t.uts}-${t.track}`}>
+                  <time dateTime={new Date(t.uts * 1000).toISOString()}>{formatTime(t.uts)}</time>
+                  <Art src={t.image} alt="" className="otd-art" />
+                  <span className="otd-meta">
+                    <span className="otd-track">{t.track}</span>
+                    <span className="otd-artist">{t.artist}</span>
+                  </span>
+                  <ListenLinks query={trackQuery(t.artist, t.track)} />
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+// ---- year links ----------------------------------------------------------
+
+function YearLinks() {
+  return (
+    <section className="year-links" aria-labelledby="years-heading">
+      <h2 id="years-heading" className="eyebrow">
+        By year
+      </h2>
+      <nav className="year-nav">
+        {listeningYears().map((y) => (
+          <Link key={y} to={`/listening/${y}`}>
+            {y}
+          </Link>
+        ))}
+      </nav>
+    </section>
   )
 }
 
@@ -275,78 +364,9 @@ function WindowStats({
   )
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="stat-tile">
-      <dt>{label}</dt>
-      <dd>{formatNumber(value)}</dd>
-    </div>
-  )
-}
 
-// Single-series magnitude → horizontal bars in the accent hue, baseline-anchored,
-// counts direct-labeled (no legend needed for one series).
-function TopArtists({ artists }: { artists: ArtistStat[] }) {
-  const max = artists[0]?.count ?? 1
-  return (
-    <div className="top-block">
-      <h3 className="top-title">Top artists</h3>
-      <ol className="bar-list">
-        {artists.map((a) => (
-          <li key={a.name}>
-            <span className="bar-label">{a.name}</span>
-            <span className="bar-track" aria-hidden="true">
-              <span className="bar-fill" style={{ width: `${(a.count / max) * 100}%` }} />
-            </span>
-            <span className="bar-value">{formatNumber(a.count)}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
 
-function TopAlbums({ albums }: { albums: AlbumStat[] }) {
-  return (
-    <div className="top-block">
-      <h3 className="top-title">Top albums</h3>
-      <ol className="rank-list">
-        {albums.map((a) => (
-          <li key={`${a.album}—${a.artist}`}>
-            <Art src={a.image} alt="" className="rank-art" />
-            <span className="rank-meta">
-              <span className="rank-primary">{a.album}</span>
-              <span className="rank-secondary">{a.artist}</span>
-            </span>
-            <span className="rank-count">{formatNumber(a.count)}</span>
-            <ListenLinks query={albumQuery(a.artist, a.album)} />
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
 
-function TopTracks({ tracks }: { tracks: TrackStat[] }) {
-  return (
-    <div className="top-block">
-      <h3 className="top-title">Top tracks</h3>
-      <ol className="rank-list">
-        {tracks.map((t) => (
-          <li key={`${t.track}—${t.artist}`}>
-            <Art src={t.image} alt="" className="rank-art" />
-            <span className="rank-meta">
-              <span className="rank-primary">{t.track}</span>
-              <span className="rank-secondary">{t.artist}</span>
-            </span>
-            <span className="rank-count">{formatNumber(t.count)}</span>
-            <ListenLinks query={trackQuery(t.artist, t.track)} />
-          </li>
-        ))}
-      </ol>
-    </div>
-  )
-}
 
 // ---- heatmap -------------------------------------------------------------
 
@@ -565,10 +585,6 @@ function mergeDays(existing: DayLog[], older: DayLog[]): DayLog[] {
 
 // ---- shared bits ---------------------------------------------------------
 
-function Art({ src, alt, className }: { src: string | null; alt: string; className: string }) {
-  if (!src) return <span className={`${className} art-placeholder`} aria-hidden="true" />
-  return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" />
-}
 
 function ListeningSkeleton() {
   return (
