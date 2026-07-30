@@ -75,6 +75,33 @@ Read endpoints:
 
 - `GET /listening.json` — the full bundle (now-playing, 7d/30d stats, heatmap, recent days).
 - `GET /days?before=<uts>&limit=<n>` — older daily logs for pagination.
+- `GET /` or `/listening` — the terminal view, when the User-Agent is a CLI fetcher.
+
+## The terminal view (`src/text.ts`)
+
+The wttr.in trick: `curl listening.cailinpitt.com` renders the same data as an
+80-column ANSI page instead of JSON.
+
+```bash
+curl listening.cailinpitt.com          # 7-day window, colour
+curl listening.cailinpitt.com?T        # no colour
+curl listening.cailinpitt.com?w=30d    # 30-day window
+```
+
+Dispatch is on User-Agent (`curl`, `wget`, `httpie`, `xh`, …) and only on `/` and
+`/listening` — `*.json` paths always return JSON, whoever asks, so scripts piping
+`curl … /listening.json` into `jq` are unaffected. Browsers hitting `/` still get
+the 404 they always did. Colour is on by default because curl cannot tell the
+server it is a TTY; `?T` opts out, following wttr.in.
+
+Two rendering details that are easy to regress:
+
+- Pad with `fit()` only for columns that have something to their right. On a
+  line's last field the padding lands *inside* the ANSI colour wrap, where no
+  later `trimEnd()` can reach it.
+- The 30-day sparkline takes `max(heatmap, recentDays)` per day. The heatmap only
+  recomputes every 6 h, so on its own it draws today — the cell people look at
+  first — as an empty day.
 
 ## Changing the timezone
 

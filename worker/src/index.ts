@@ -7,6 +7,7 @@
 //    /days endpoint for paginating older daily logs straight from D1.
 
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
+import { renderText } from './text'
 import {
   computeHeatmap,
   computeStats,
@@ -195,6 +196,26 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
+// Terminal client. Deliberately narrow: anything that is not
+// clearly a CLI fetcher gets the normal JSON/HTML behaviour.
+const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
+
+function wantsText(request: Request, url: URL): boolean {
+  if (url.searchParams.has('format') || url.searchParams.has('json')) return false
+  const ua = request.headers.get('user-agent') ?? ''
+  return CLI_AGENT.test(ua)
+}
+
+function textResponse(body: string, cors: Record<string, string>): Response {
+  return new Response(body, {
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=60',
+      ...cors,
+    },
+  })
+}
+
 function json(body: unknown, cors: Record<string, string>, maxAge: number): Response {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -216,6 +237,19 @@ export default {
 
     const url = new URL(request.url)
     try {
+      // `curl listening.cailinpitt.com` (or /listening) → the terminal view.
+      if ((url.pathname === '/' || url.pathname === '/listening') && wantsText(request, url)) {
+        const bundle = await getBundle(env)
+        return textResponse(
+          renderText(bundle, {
+            // ?T disables colour, matching wttr.in's convention.
+            color: !url.searchParams.has('T'),
+            window: url.searchParams.get('w') === '30d' || url.searchParams.has('30d') ? '30d' : '7d',
+            offset: Number(env.TZ_OFFSET_SECONDS) || 0,
+          }),
+          cors,
+        )
+      }
       if (url.pathname === '/now.json') {
         // Small, fresh payload for the homepage now-playing bar.
         return json(await getNow(env), cors, 30)
