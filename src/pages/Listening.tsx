@@ -4,6 +4,7 @@ import { ListenLinks } from '../components/ListenLinks'
 import {
   albumQuery,
   fetchBundle,
+  fetchNow,
   fetchOlderDays,
   formatDayLabel,
   formatNumber,
@@ -16,6 +17,7 @@ import {
   type DayLog,
   type Heatmap,
   type NowPlaying,
+  type NowState,
   type Scrobble,
   type StatWindow,
   type TrackStat,
@@ -24,10 +26,53 @@ import {
 
 const POLL_MS = 60_000
 
+/**
+ * Now-playing on its own clock.
+ *
+ * The bundle is edge-cached for 60s and is ~116 KB of aggregates that change
+ * every 15 minutes at best; now-playing changes every few minutes and is 521
+ * bytes. Polling /now.json separately keeps this card as fresh as the homepage
+ * bar — and because both read the same endpoint, the two cannot disagree.
+ *
+ * Falls back to the bundle's copy until the first response lands, so the card
+ * never flashes empty, and keeps the last good value if a poll fails.
+ */
+function useNowPlaying(fallback: NowState | null): NowState | null {
+  const [now, setNow] = useState<NowState | null>(null)
+
+  useEffect(() => {
+    let active = true
+    const controller = new AbortController()
+    const load = async () => {
+      try {
+        const data = await fetchNow(controller.signal)
+        if (active) setNow(data)
+      } catch {
+        /* keep the last good value; the bundle still backs this up */
+      }
+    }
+    void load()
+    const id = setInterval(load, POLL_MS)
+    return () => {
+      active = false
+      controller.abort()
+      clearInterval(id)
+    }
+  }, [])
+
+  return now ?? fallback
+}
+
 export function Component() {
   const [bundle, setBundle] = useState<Bundle | null>(null)
   const [error, setError] = useState(false)
   const [win, setWin] = useState<WindowKey>('7d')
+
+  const nowState = useNowPlaying(
+    bundle
+      ? { nowPlaying: bundle.nowPlaying, lastPlayed: bundle.lastPlayed, updatedAt: bundle.updatedAt }
+      : null,
+  )
 
   // Fetch on mount, then poll so "now playing" stays live.
   useEffect(() => {
@@ -77,7 +122,10 @@ export function Component() {
           <ListeningSkeleton />
         ) : (
           <>
-            <NowPlayingCard nowPlaying={bundle.nowPlaying} lastPlayed={bundle.lastPlayed} />
+            <NowPlayingCard
+              nowPlaying={nowState?.nowPlaying ?? null}
+              lastPlayed={nowState?.lastPlayed ?? null}
+            />
 
             <WindowStats
               windows={bundle.windows}
