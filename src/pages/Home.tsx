@@ -1,5 +1,6 @@
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { imageUrl } from '../lib/galleries'
@@ -75,7 +76,7 @@ export function Component() {
         publicationUri={publicationUri}
       />
       <section className="intro">
-        <h1>Artist, software engineer, and occasional writer.</h1>
+        <IdentityLine />
         <NowPlayingBar />
       </section>
 

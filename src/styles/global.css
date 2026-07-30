@@ -265,6 +265,52 @@ h3 {
   margin: 0;
 }
 
+/* Rotating self-description headline. The changing halves fade in on each
+   reroll; a subtle min-height keeps the layout from jumping as lines swap. */
+.identity-line {
+  min-height: calc(var(--step-2) * 1.25 * 3);
+}
+.identity-swap {
+  animation: identity-fade 0.5s ease;
+}
+/* Dashed underlines cue that these two halves rotate — distinct from the solid
+   underline used for links, so they don't read as clickable. */
+.identity-role,
+.identity-deed {
+  text-decoration: underline dashed;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+@keyframes identity-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.identity-shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.identity-shuffle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.identity-shuffle svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+
 .recent-projects > .eyebrow,
 .recent > .eyebrow,
 .recent-photos > .eyebrow {
