@@ -24,7 +24,6 @@ const KEY = {
   now: 'now:v1',
   stats: 'stats:v1',
   heatmap: 'heatmap:v1',
-  total: 'meta:total',
 } as const
 
 // ---- shapes stored in KV -------------------------------------------------
@@ -32,6 +31,9 @@ const KEY = {
 interface NowBlob {
   nowPlaying: NowPlaying | null
   lastPlayed: Scrobble | null
+  /** All-time count, straight from Last.fm's `@attr.total` — no COUNT(*) needed. */
+  totalScrobbles: number
+  /** When this state last *changed* (not when the cron last ran) — see ingest(). */
   updatedAt: number
 }
 interface StatsBlob {
@@ -50,6 +52,10 @@ const readJSON = <T>(env: Env, key: string): Promise<T | null> =>
 
 // ---- ingest + recompute --------------------------------------------------
 
+// The parts of the blob a reader can actually observe. `updatedAt` is deliberately
+// excluded: it ticks every run and would make every blob look "new".
+const nowIdentity = (b: NowBlob) => JSON.stringify([b.nowPlaying, b.lastPlayed, b.totalScrobbles])
+
 /** Pull recent scrobbles, insert the new ones, refresh now-playing + total. */
 async function ingest(env: Env): Promise<void> {
   const recent = await fetchRecentTracks({
@@ -58,37 +64,30 @@ async function ingest(env: Env): Promise<void> {
     limit: 50,
   })
 
-  let added = 0
   if (recent.scrobbles.length) {
     const stmt = env.DB.prepare(
       `INSERT OR IGNORE INTO scrobbles (uts, track, artist, album, mbid, image)
        VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
     )
-    const results = await env.DB.batch(
+    await env.DB.batch(
       recent.scrobbles.map((s) => stmt.bind(s.uts, s.track, s.artist, s.album, s.mbid, s.image)),
     )
-    added = results.reduce((n, r) => n + (r.meta?.changes ?? 0), 0)
   }
 
   // Last.fm returns newest-first, so scrobbles[0] is the most recent completed play.
-  const nowBlob: NowBlob = {
+  const next: NowBlob = {
     nowPlaying: recent.nowPlaying,
     lastPlayed: recent.scrobbles[0] ?? null,
+    totalScrobbles: recent.total,
     updatedAt: Math.floor(Date.now() / 1000),
   }
-  await env.KV.put(KEY.now, JSON.stringify(nowBlob))
-  await bumpTotal(env, added)
-}
 
-/** Keep the all-time count as a KV counter so we never COUNT(*) at 1/min. */
-async function bumpTotal(env: Env, added: number): Promise<void> {
-  const current = await env.KV.get(KEY.total)
-  if (current === null) {
-    // One-time seed from the archive (new scrobbles already inserted above).
-    const row = await env.DB.prepare('SELECT COUNT(*) AS n FROM scrobbles').first<{ n: number }>()
-    await env.KV.put(KEY.total, String(row?.n ?? 0))
-  } else if (added > 0) {
-    await env.KV.put(KEY.total, String(Number(current) + added))
+  // KV's free tier allows 1,000 writes/day; this cron fires 1,440 times. Most runs
+  // see the same track as the last one, so only write when something actually
+  // changed — a KV read is ~100x cheaper than the write it saves.
+  const prev = await readJSON<NowBlob>(env, KEY.now)
+  if (!prev || nowIdentity(prev) !== nowIdentity(next)) {
+    await env.KV.put(KEY.now, JSON.stringify(next))
   }
 }
 
@@ -128,16 +127,22 @@ async function getNow(env: Env): Promise<NowBlob> {
   const blob = await readJSON<NowBlob>(env, KEY.now)
   if (blob) return blob
   // now:v1 is owned by the cron; before its first run, fall back to D1's newest.
-  return { nowPlaying: null, lastPlayed: await fetchLastPlayed(env.DB), updatedAt: Math.floor(Date.now() / 1000) }
+  // totalScrobbles stays 0 here — only getBundle needs it, and it pays for the
+  // COUNT(*) itself rather than making every /now.json miss scan the archive.
+  return {
+    nowPlaying: null,
+    lastPlayed: await fetchLastPlayed(env.DB),
+    totalScrobbles: 0,
+    updatedAt: Math.floor(Date.now() / 1000),
+  }
 }
 
 async function getBundle(env: Env): Promise<Bundle> {
   const now = Math.floor(Date.now() / 1000)
-  const [nowInfo, statsBlob, heatBlob, totalStr] = await Promise.all([
+  const [nowInfo, statsBlob, heatBlob] = await Promise.all([
     getNow(env),
     readJSON<StatsBlob>(env, KEY.stats),
     readJSON<HeatmapBlob>(env, KEY.heatmap),
-    env.KV.get(KEY.total),
   ])
 
   // Cold KV (fresh deploy / evicted key): rebuild the missing piece straight from
@@ -156,16 +161,14 @@ async function getBundle(env: Env): Promise<Bundle> {
     await env.KV.put(KEY.heatmap, JSON.stringify(heat))
   }
 
-  let total = totalStr
-  if (total === null) {
-    total = String(await countScrobbles(env.DB))
-    await env.KV.put(KEY.total, total)
-  }
+  // The total rides along in now:v1 (Last.fm's own count). It's only missing on a
+  // cold read before the first cron run, where D1 can stand in.
+  const total = nowInfo.totalScrobbles || (await countScrobbles(env.DB))
 
   return {
     updatedAt: nowInfo.updatedAt,
     user: env.LASTFM_USER,
-    totalScrobbles: Number(total),
+    totalScrobbles: total,
     nowPlaying: nowInfo.nowPlaying,
     lastPlayed: nowInfo.lastPlayed,
     windows: stats.windows,

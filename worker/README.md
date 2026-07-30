@@ -15,13 +15,26 @@ The cron fires every minute, but only the cheap work runs that often:
 
 | Cadence | Work | Cost |
 |---|---|---|
-| every 1 min | fetch Last.fm, `INSERT OR IGNORE` new scrobbles, refresh now-playing (KV) | no table scans |
+| every 1 min | fetch Last.fm, `INSERT OR IGNORE` new scrobbles, refresh now-playing (KV) | no table scans; **KV write only when the track actually changed** |
 | every 15 min | recompute 7d/30d windows + recent daily logs | reads only rows in-window (`uts` index) |
 | every 6 h | recompute the year heatmap | ~one year of rows |
-| — | all-time total | KV counter, seeded once — never `COUNT(*)` at runtime |
+| — | all-time total | comes free with each Last.fm response (`@attr.total`) — never `COUNT(*)` at runtime |
 
 Well under D1's free limits (5 GB storage, 5M row-reads/day, 100k row-writes/day).
 Reads are served from KV, so page loads never touch D1 or Last.fm.
+
+**KV writes are the tight budget, not reads.** The free tier allows 100,000 reads
+but only **1,000 writes per day**, and the cron fires 1,440 times — so nothing on
+the per-minute path may write unconditionally. `ingest()` therefore reads `now:v1`
+and re-writes it only when the observable state (now-playing, last-played, total)
+differs; `updatedAt` is excluded from that comparison since it would otherwise make
+every run look changed. Budget: a few hundred writes/day for `now:v1`, 96 for
+`stats:v1`, 4 for `heatmap:v1`.
+
+Two things that look cheap but are not, if you are tempted to add them back:
+`SELECT COUNT(*)` over the archive reads ~100k D1 rows, so at the 15-minute cadence
+it would blow past D1's 5M row-reads/day; and a per-tick counter key in KV costs a
+write every time it moves.
 
 ## First-time setup
 
