@@ -116,10 +116,13 @@ export async function computeYear(
     .bind(start, end)
     .first<{ scrobbles: number; artists: number; albums: number; tracks: number }>()
 
+  // INDEXED BY for the same reason as windowStats(): GROUP BY artist otherwise
+  // makes SQLite scan idx_scrobbles_artist across the whole archive instead of
+  // range-scanning the year. See the note in stats.ts.
   const topArtists = await db
     .prepare(
       `SELECT artist AS name, COUNT(*) AS count, MAX(image) AS image
-         FROM scrobbles WHERE ${range}
+         FROM scrobbles INDEXED BY idx_scrobbles_uts WHERE ${range}
         GROUP BY artist ORDER BY count DESC, name LIMIT ?3`,
     )
     .bind(start, end, TOP_N)

@@ -78,10 +78,18 @@ async function windowStats(db: D1Database, since: number, days: number): Promise
     .bind(since)
     .first<{ scrobbles: number; artists: number; albums: number; tracks: number }>()
 
+  // INDEXED BY is load-bearing, not decoration. `GROUP BY artist` matches
+  // idx_scrobbles_artist exactly, so SQLite prefers it and produces
+  // "SCAN scrobbles USING INDEX idx_scrobbles_artist" — a full ~101k-row scan
+  // that ignores the uts range. At the 15-minute refresh cadence that measured
+  // 22.5M rows/day against a 5M/day budget. Pinning the uts index gives
+  // "SEARCH scrobbles USING INDEX idx_scrobbles_uts (uts>?)" and reads only the
+  // window (~2k rows). The album/track queries below group on columns with no
+  // matching index, so they already range-scan correctly.
   const topArtists = await db
     .prepare(
       `SELECT artist AS name, COUNT(*) AS count, MAX(image) AS image
-         FROM scrobbles WHERE uts >= ?1
+         FROM scrobbles INDEXED BY idx_scrobbles_uts WHERE uts >= ?1
         GROUP BY artist ORDER BY count DESC, name LIMIT ?2`,
     )
     .bind(since, TOP_N)

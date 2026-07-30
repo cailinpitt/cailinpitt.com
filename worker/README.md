@@ -16,7 +16,7 @@ The cron fires every minute, but only the cheap work runs that often:
 | Cadence | Work | Cost |
 |---|---|---|
 | every 1 min | fetch Last.fm, `INSERT OR IGNORE` new scrobbles, refresh now-playing (KV) | no table scans; **KV write only when the track actually changed** |
-| every 15 min | recompute 7d/30d windows + recent daily logs | reads only rows in-window (`uts` index) |
+| every 15 min | recompute 7d/30d windows + recent daily logs | reads only rows in-window — but **only because of `INDEXED BY`**, see below |
 | every 6 h | recompute the year heatmap | ~one year of rows |
 | — | all-time total | comes free with each Last.fm response (`@attr.total`) — never `COUNT(*)` at runtime |
 
@@ -76,6 +76,29 @@ Two things the cache key has to account for, both easy to get wrong:
 
 `/now.json` is deliberately left uncached: it is a single KV read, and it is the
 one endpoint whose staleness is visible (the homepage now-playing bar).
+
+### `GROUP BY artist` needs `INDEXED BY` — this one bites
+
+`GROUP BY artist` matches `idx_scrobbles_artist` exactly, so SQLite prefers that
+index and plans `SCAN scrobbles USING INDEX idx_scrobbles_artist` — a full
+~101k-row scan that **ignores the `uts` range in the WHERE clause entirely**. The
+query looks windowed and is not.
+
+At the 15-minute refresh cadence that measured **22.5M rows/day against a 5M/day
+free-tier budget**, silently, for as long as the worker had been deployed.
+Pinning the range index:
+
+```sql
+FROM scrobbles INDEXED BY idx_scrobbles_uts WHERE uts >= ?1 GROUP BY artist
+```
+
+gives `SEARCH scrobbles USING INDEX idx_scrobbles_uts (uts>?)` and 3,492 rows for
+the same 30-day result — 29× less. The album and track queries group on columns
+with no matching index, so they already range-scan correctly and need no hint.
+
+**Check `EXPLAIN QUERY PLAN` before deploying any new aggregate here.** "SCAN …
+USING INDEX" over a windowed query means the window is not being used. Measuring
+after deploying is how both of the expensive mistakes in this file got made.
 
 Two things that look cheap but are not, if you are tempted to add them back:
 `SELECT COUNT(*)` over the archive reads ~100k D1 rows, so at the 15-minute cadence
