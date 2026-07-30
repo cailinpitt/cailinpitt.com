@@ -1,5 +1,6 @@
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { NowPlayingBar } from '../components/NowPlayingBar'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { imageUrl } from '../lib/galleries'
 import type { GallerySummary } from '../lib/content.server'
@@ -75,6 +76,7 @@ export function Component() {
       />
       <section className="intro">
         <h1>Artist, software engineer, and occasional writer.</h1>
+        <NowPlayingBar />
       </section>
 
       <section className="recent-projects" aria-labelledby="projects-heading">

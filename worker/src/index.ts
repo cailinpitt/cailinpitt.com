@@ -123,10 +123,18 @@ async function tick(env: Env): Promise<void> {
 
 // ---- read API ------------------------------------------------------------
 
+/** Now-playing / last-played only. Cheap (one KV read) — used by the homepage bar. */
+async function getNow(env: Env): Promise<NowBlob> {
+  const blob = await readJSON<NowBlob>(env, KEY.now)
+  if (blob) return blob
+  // now:v1 is owned by the cron; before its first run, fall back to D1's newest.
+  return { nowPlaying: null, lastPlayed: await fetchLastPlayed(env.DB), updatedAt: Math.floor(Date.now() / 1000) }
+}
+
 async function getBundle(env: Env): Promise<Bundle> {
   const now = Math.floor(Date.now() / 1000)
-  const [nowBlob, statsBlob, heatBlob, totalStr] = await Promise.all([
-    readJSON<NowBlob>(env, KEY.now),
+  const [nowInfo, statsBlob, heatBlob, totalStr] = await Promise.all([
+    getNow(env),
     readJSON<StatsBlob>(env, KEY.stats),
     readJSON<HeatmapBlob>(env, KEY.heatmap),
     env.KV.get(KEY.total),
@@ -152,14 +160,6 @@ async function getBundle(env: Env): Promise<Bundle> {
   if (total === null) {
     total = String(await countScrobbles(env.DB))
     await env.KV.put(KEY.total, total)
-  }
-
-  // now:v1 is owned by the cron. If it isn't there yet, fall back to the newest
-  // row in D1 for "last played" (now-playing stays null until the cron runs).
-  const nowInfo = nowBlob ?? {
-    nowPlaying: null,
-    lastPlayed: await fetchLastPlayed(env.DB),
-    updatedAt: now,
   }
 
   return {
@@ -206,6 +206,10 @@ export default {
 
     const url = new URL(request.url)
     try {
+      if (url.pathname === '/now.json') {
+        // Small, fresh payload for the homepage now-playing bar.
+        return json(await getNow(env), cors, 30)
+      }
       if (url.pathname === '/listening.json') {
         return json(await getBundle(env), cors, 60)
       }

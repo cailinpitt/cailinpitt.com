@@ -67,6 +67,19 @@ export interface Bundle {
 
 export type WindowKey = '7d' | '30d'
 
+/** Lightweight now-playing payload for the homepage bar (see /now.json). */
+export interface NowState {
+  nowPlaying: NowPlaying | null
+  lastPlayed: Scrobble | null
+  updatedAt: number
+}
+
+export async function fetchNow(signal?: AbortSignal): Promise<NowState> {
+  const res = await fetch(`${API_BASE}/now.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<NowState>
+}
+
 export async function fetchBundle(signal?: AbortSignal): Promise<Bundle> {
   const res = await fetch(`${API_BASE}/listening.json`, { signal })
   if (!res.ok) throw new Error(`Listening API ${res.status}`)
