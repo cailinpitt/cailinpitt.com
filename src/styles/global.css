@@ -925,24 +925,67 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-/* Calendar heatmap — single-hue sequential ramp mixed from the accent. */
+/* Calendar heatmap — single-hue sequential ramp mixed from the accent.
+   --heat-cell/--heat-gap define the column pitch that the month labels are
+   positioned against, so the two can never drift apart. */
+/* Scoped to the whole section, not just the scroller: the Less/More legend below
+   reuses .heat-cell and would lose its size if the vars stopped at the grid. */
+.heatmap-section {
+  --heat-cell: 13px;
+  --heat-gap: 3px;
+  --heat-months-h: 1.15rem;
+}
 .heatmap-scroll {
   overflow-x: auto;
   padding-bottom: 0.25rem;
 }
+.heatmap-grid {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: min-content;
+}
+/* Weekday names, one slot per row, aligned to the grid by matching its gap and
+   clearing the month strip above it. */
+.heat-daynames {
+  display: flex;
+  flex-direction: column;
+  gap: var(--heat-gap);
+  padding-top: var(--heat-months-h);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--muted);
+}
+.heat-daynames span {
+  height: var(--heat-cell);
+  line-height: var(--heat-cell);
+  text-align: right;
+}
+.heat-months {
+  position: relative;
+  height: var(--heat-months-h);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: var(--muted);
+}
+.heat-months span {
+  position: absolute;
+  top: 0;
+  left: calc(var(--i) * (var(--heat-cell) + var(--heat-gap)));
+}
 .heatmap {
   display: flex;
-  gap: 3px;
+  gap: var(--heat-gap);
   min-width: min-content;
 }
 .heat-col {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--heat-gap);
 }
 .heat-cell {
-  width: 13px;
-  height: 13px;
+  width: var(--heat-cell);
+  height: var(--heat-cell);
   border-radius: 2px;
   background: var(--rule);
 }

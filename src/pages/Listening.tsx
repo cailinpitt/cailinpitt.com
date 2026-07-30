@@ -298,8 +298,35 @@ function buildWeeks(hm: Heatmap): (HeatCell | null)[][] {
   return weeks
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Rows run Sunday→Saturday (buildWeeks backs the start up to a Sunday).
+const DAY_NAMES = ['', 'Mon', '', 'Wed', '', 'Fri', '']
+
+/**
+ * Which week column each month label sits above. A column is a month's first
+ * *full* week when its Sunday falls on the 1st–7th, so labels line up with where
+ * the month visibly begins and the partial leading month stays unlabeled.
+ */
+function monthLabels(weeks: (HeatCell | null)[][]): { index: number; label: string }[] {
+  const out: { index: number; label: string }[] = []
+  let lastMonth = ''
+  weeks.forEach((wk, i) => {
+    const first = wk.find(Boolean)
+    if (!first) return
+    const d = new Date(`${first.key}T00:00:00Z`)
+    const month = `${d.getUTCFullYear()}-${d.getUTCMonth()}`
+    if (month !== lastMonth && d.getUTCDate() <= 7) {
+      out.push({ index: i, label: MONTH_NAMES[d.getUTCMonth()] })
+      lastMonth = month
+    }
+  })
+  return out
+}
+
 function HeatmapSection({ heatmap }: { heatmap: Heatmap }) {
   const weeks = useMemo(() => buildWeeks(heatmap), [heatmap])
+  const months = useMemo(() => monthLabels(weeks), [weeks])
   const total = useMemo(
     () => Object.values(heatmap.days).reduce((s, v) => s + v, 0),
     [heatmap],
@@ -310,22 +337,39 @@ function HeatmapSection({ heatmap }: { heatmap: Heatmap }) {
         Past year · {formatNumber(total)} scrobbles
       </h2>
       <div className="heatmap-scroll">
-        <div className="heatmap" role="img" aria-label={`Daily listening over the past year, ${formatNumber(total)} scrobbles`}>
-          {weeks.map((wk, i) => (
-            <div className="heat-col" key={i}>
-              {wk.map((cell, j) =>
-                cell ? (
-                  <div
-                    key={cell.key}
-                    className={`heat-cell l${cell.level}`}
-                    title={`${cell.key}: ${cell.count} play${cell.count === 1 ? '' : 's'}`}
-                  />
-                ) : (
-                  <div key={j} className="heat-cell empty" />
-                ),
-              )}
+        {/* Axis labels are decorative: the grid itself carries the description. */}
+        <div className="heatmap-grid">
+          <div className="heat-daynames" aria-hidden="true">
+            {DAY_NAMES.map((name, i) => (
+              <span key={i}>{name}</span>
+            ))}
+          </div>
+          <div className="heat-plot">
+            <div className="heat-months" aria-hidden="true">
+              {months.map((m) => (
+                <span key={m.index} style={{ '--i': m.index } as React.CSSProperties}>
+                  {m.label}
+                </span>
+              ))}
             </div>
-          ))}
+            <div className="heatmap" role="img" aria-label={`Daily listening over the past year, ${formatNumber(total)} scrobbles`}>
+              {weeks.map((wk, i) => (
+                <div className="heat-col" key={i}>
+                  {wk.map((cell, j) =>
+                    cell ? (
+                      <div
+                        key={cell.key}
+                        className={`heat-cell l${cell.level}`}
+                        title={`${cell.key}: ${cell.count} play${cell.count === 1 ? '' : 's'}`}
+                      />
+                    ) : (
+                      <div key={j} className="heat-cell empty" />
+                    ),
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div className="heat-legend" aria-hidden="true">
