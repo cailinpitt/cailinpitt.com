@@ -134,6 +134,20 @@ export function groupDays(rows: Scrobble[], offset: number): DayLog[] {
 
 const ROW_COLS = 'uts, track, artist, album, mbid, image'
 
+/** All-time count — used to seed the KV counter when it's missing. */
+export async function countScrobbles(db: D1Database): Promise<number> {
+  const row = await db.prepare('SELECT COUNT(*) AS n FROM scrobbles').first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+/** Newest scrobble in the archive (read-path fallback for "last played"). */
+export async function fetchLastPlayed(db: D1Database): Promise<Scrobble | null> {
+  return (
+    (await db.prepare(`SELECT ${ROW_COLS} FROM scrobbles ORDER BY uts DESC LIMIT 1`).first<Scrobble>()) ??
+    null
+  )
+}
+
 /** Older per-day logs for pagination (?before=<uts>). */
 export async function fetchOlderDays(
   db: D1Database,

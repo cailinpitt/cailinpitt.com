@@ -10,6 +10,8 @@ import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import {
   computeHeatmap,
   computeStats,
+  countScrobbles,
+  fetchLastPlayed,
   fetchOlderDays,
   type Bundle,
   type DayLog,
@@ -104,7 +106,12 @@ async function refreshHeatmap(env: Env): Promise<void> {
 
 /** One cron tick: always ingest; recompute the rest only when stale. */
 async function tick(env: Env): Promise<void> {
-  await ingest(env)
+  // A Last.fm hiccup during ingest must not stop the D1-derived refreshes below.
+  try {
+    await ingest(env)
+  } catch (err) {
+    console.log(JSON.stringify({ level: 'warn', stage: 'ingest', error: String(err) }))
+  }
   const now = Math.floor(Date.now() / 1000)
 
   const stats = await readJSON<StatsBlob>(env, KEY.stats)
@@ -117,34 +124,54 @@ async function tick(env: Env): Promise<void> {
 // ---- read API ------------------------------------------------------------
 
 async function getBundle(env: Env): Promise<Bundle> {
-  let [nowBlob, stats, heat, total] = await Promise.all([
+  const now = Math.floor(Date.now() / 1000)
+  const [nowBlob, statsBlob, heatBlob, totalStr] = await Promise.all([
     readJSON<NowBlob>(env, KEY.now),
     readJSON<StatsBlob>(env, KEY.stats),
     readJSON<HeatmapBlob>(env, KEY.heatmap),
     env.KV.get(KEY.total),
   ])
 
-  // Cold start (KV empty): build everything once, then re-read.
-  if (!nowBlob || !stats || !heat) {
-    await tick(env)
-    ;[nowBlob, stats, heat, total] = await Promise.all([
-      readJSON<NowBlob>(env, KEY.now),
-      readJSON<StatsBlob>(env, KEY.stats),
-      readJSON<HeatmapBlob>(env, KEY.heatmap),
-      env.KV.get(KEY.total),
-    ])
+  // Cold KV (fresh deploy / evicted key): rebuild the missing piece straight from
+  // D1 and cache it back. The read path never calls Last.fm, so a Last.fm outage
+  // can never make a page load fail — worst case now-playing is briefly stale.
+  let stats = statsBlob
+  if (!stats) {
+    const computed = await computeStats(env.DB, env)
+    stats = { ...computed, computedAt: now }
+    await env.KV.put(KEY.stats, JSON.stringify(stats))
+  }
+
+  let heat = heatBlob
+  if (!heat) {
+    heat = { heatmap: await computeHeatmap(env.DB, env), computedAt: now }
+    await env.KV.put(KEY.heatmap, JSON.stringify(heat))
+  }
+
+  let total = totalStr
+  if (total === null) {
+    total = String(await countScrobbles(env.DB))
+    await env.KV.put(KEY.total, total)
+  }
+
+  // now:v1 is owned by the cron. If it isn't there yet, fall back to the newest
+  // row in D1 for "last played" (now-playing stays null until the cron runs).
+  const nowInfo = nowBlob ?? {
+    nowPlaying: null,
+    lastPlayed: await fetchLastPlayed(env.DB),
+    updatedAt: now,
   }
 
   return {
-    updatedAt: nowBlob?.updatedAt ?? Math.floor(Date.now() / 1000),
+    updatedAt: nowInfo.updatedAt,
     user: env.LASTFM_USER,
-    totalScrobbles: Number(total ?? 0),
-    nowPlaying: nowBlob?.nowPlaying ?? null,
-    lastPlayed: nowBlob?.lastPlayed ?? null,
-    windows: stats!.windows,
-    heatmap: heat!.heatmap,
-    recentDays: stats!.recentDays,
-    nextBefore: stats!.nextBefore,
+    totalScrobbles: Number(total),
+    nowPlaying: nowInfo.nowPlaying,
+    lastPlayed: nowInfo.lastPlayed,
+    windows: stats.windows,
+    heatmap: heat.heatmap,
+    recentDays: stats.recentDays,
+    nextBefore: stats.nextBefore,
   }
 }
 
