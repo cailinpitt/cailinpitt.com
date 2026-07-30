@@ -197,17 +197,30 @@ async function syncGallery(key, existing, title) {
   const out = []
   const added = []
   let sized = 0
+  let renamed = 0
 
   // Existing entries first, in their current (possibly hand-tuned) order.
   for (const image of existing) {
-    const file = path.join(ROOT, 'public', image.src)
+    let entry = image
+    // A gallery that just moved to originals/ has its files replaced by renditions:
+    // same stem, new extension. Follow the rename so the running order and alt text
+    // survive instead of the entry being pruned and re-appended alphabetically.
+    if (!existsSync(path.join(ROOT, 'public', image.src))) {
+      const rendition = image.src.replace(/\.[^.]+$/, '.webp')
+      if (rendition !== image.src && existsSync(path.join(ROOT, 'public', rendition))) {
+        entry = { ...entry, src: rendition }
+        delete entry.width
+        delete entry.height // re-measured below; the rendition may be a different size
+        renamed++
+      }
+    }
+    const file = path.join(ROOT, 'public', entry.src)
     const onDisk = existsSync(file)
     if (!onDisk && PRUNE) continue
-    let entry = image
     if (onDisk) {
-      const thumb = thumbFor(image.src)
-      if (thumb && thumb !== image.thumb) entry = { ...entry, thumb }
-      if (!image.width || !image.height) {
+      const thumb = thumbFor(entry.src)
+      if (thumb && thumb !== entry.thumb) entry = { ...entry, thumb }
+      if (!entry.width || !entry.height) {
         const size = await imageSize(file)
         if (size) {
           entry = { ...entry, ...size }
@@ -216,7 +229,7 @@ async function syncGallery(key, existing, title) {
       }
     }
     out.push(entry)
-    seen.add(path.basename(image.src))
+    seen.add(path.basename(entry.src))
   }
 
   // Then anything new on disk, in natural filename order.
@@ -231,7 +244,7 @@ async function syncGallery(key, existing, title) {
 
   const missing = out.filter((image) => !existsSync(path.join(ROOT, 'public', image.src))).length
   const pruned = PRUNE ? existing.length - (out.length - added.length) : 0
-  return { images: out, added, pruned, missing, sized }
+  return { images: out, added, pruned, missing, sized, renamed }
 }
 
 // --- blog images -------------------------------------------------------------
@@ -302,10 +315,11 @@ async function main() {
   for (const { imageKey, title } of definitions) {
     if (next[imageKey]) continue // aliases (e.g. /past-work → 2022) share a key
     const existing = manifest[imageKey] ?? []
-    const { images, added, pruned, missing, sized } = await syncGallery(imageKey, existing, title || imageKey)
+    const { images, added, pruned, missing, sized, renamed } = await syncGallery(imageKey, existing, title || imageKey)
     next[imageKey] = images
     const notes = [
       added.length && `+${added.length} new`,
+      renamed && `${renamed} → renditions`,
       pruned && `-${pruned} pruned`,
       sized && `${sized} sized`,
       missing && `${missing} not on disk`,
