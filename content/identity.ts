@@ -28,5 +28,5 @@ export const descriptions = [
   'is trying to bike every street in Atlanta',
   'loves taking roadtrips',
   'wants to visit every state',
-  'helping empower people to efficiently operate their restaurants',
+  'is helping empower people to efficiently operate their restaurants',
 ]
