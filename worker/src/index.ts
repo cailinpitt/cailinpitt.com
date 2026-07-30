@@ -7,7 +7,15 @@
 //    /days endpoint for paginating older daily logs straight from D1.
 
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
-import { renderText } from './text'
+import { renderText, renderYear } from './text'
+import {
+  computeArtistDebuts,
+  computeOnThisDay,
+  computeYear,
+  listYears,
+  type OnThisDay,
+  type YearReview,
+} from './year'
 import {
   computeHeatmap,
   computeStats,
@@ -29,7 +37,27 @@ const KEY = {
   // Cold-path only, and TTL'd — NOT the old per-tick meta:total counter. See
   // totalFallback(). Written at most once per TTL, and only when now:v1 is absent.
   totalFallback: 'meta:total:fallback',
+  years: 'years:v1',
+  debuts: 'debuts:v1',
+  year: (y: number) => `year:v1:${y}`,
+  onThisDay: (date: string) => `onthisday:v1:${date}`,
 } as const
+
+const DAY = 86_400
+
+/**
+ * A finished year can never change, so its blob is written once and kept. Only
+ * the year in progress is recomputed, twice a day — an annual summary has no
+ * business moving faster than that, and each pass is ~60k D1 row reads.
+ */
+const YEAR_INTERVAL = 12 * 60 * 60
+
+/**
+ * Edge TTL for the archival endpoints. These are derived from data that changes
+ * at most twice a day, so caching them for a minute (like the live bundle) would
+ * spend Worker invocations and KV reads re-serving identical bytes.
+ */
+const ARCHIVE_EDGE_TTL = 3600
 
 /** How long the cold-path COUNT(*) result is reused for. KV minimum is 60s. */
 const TOTAL_FALLBACK_TTL = 300
@@ -240,6 +268,75 @@ function mergeRecent(days: DayLog[], recent: Scrobble[] | undefined, offset: num
   return groupDays([...fresher, ...days.flatMap((d) => d.tracks)], offset)
 }
 
+// ---- year in review + on this day ---------------------------------------
+
+const tzOffset = (env: Env) => Number(env.TZ_OFFSET_SECONDS) || 0
+
+/** Which years have scrobbles. Cheap to derive (MIN/MAX are index seeks) but cached anyway. */
+async function getYears(env: Env): Promise<number[]> {
+  const cached = await readJSON<number[]>(env, KEY.years)
+  if (cached) return cached
+  const years = await listYears(env.DB, tzOffset(env))
+  // A day: the list only changes at New Year, or the first time a backfill lands.
+  await env.KV.put(KEY.years, JSON.stringify(years), { expirationTtl: DAY })
+  return years
+}
+
+/**
+ * Artist debut counts per year — one ~100k-row scan that serves every year, so it
+ * is cached for a day rather than recomputed inside each year's build. Without
+ * this, computing all six years would repeat the same scan six times.
+ */
+async function getDebuts(env: Env): Promise<Record<string, number>> {
+  const cached = await readJSON<Record<string, number>>(env, KEY.debuts)
+  if (cached) return cached
+  const debuts = await computeArtistDebuts(env.DB, tzOffset(env))
+  await env.KV.put(KEY.debuts, JSON.stringify(debuts), { expirationTtl: DAY })
+  return debuts
+}
+
+interface YearBlob {
+  review: YearReview
+  computedAt: number
+}
+
+async function getYear(env: Env, year: number): Promise<YearReview | null> {
+  const years = await getYears(env)
+  if (!years.includes(year)) return null
+
+  const now = Math.floor(Date.now() / 1000)
+  const blob = await readJSON<YearBlob>(env, KEY.year(year))
+  // `complete` years are immutable — never recompute one, whatever its age.
+  if (blob && (blob.review.complete || now - blob.computedAt < YEAR_INTERVAL)) return blob.review
+
+  const debuts = await getDebuts(env)
+  const review = await computeYear(env.DB, tzOffset(env), year, now, debuts[String(year)] ?? 0)
+  await env.KV.put(KEY.year(year), JSON.stringify({ review, computedAt: now } satisfies YearBlob))
+  return review
+}
+
+/** Seconds until the next local midnight — how long an "on this day" blob stays valid. */
+function untilLocalMidnight(now: number, offset: number): number {
+  const elapsed = (now + offset) % 86_400
+  return Math.max(60, 86_400 - elapsed)
+}
+
+async function getOnThisDay(env: Env): Promise<OnThisDay> {
+  const offset = tzOffset(env)
+  const now = Math.floor(Date.now() / 1000)
+  const date = new Date((now + offset) * 1000).toISOString().slice(5, 10)
+
+  const cached = await readJSON<OnThisDay>(env, KEY.onThisDay(date))
+  if (cached) return cached
+
+  const result = await computeOnThisDay(env.DB, offset, now, await getYears(env))
+  // Expires at local midnight, so tomorrow's date recomputes exactly once.
+  await env.KV.put(KEY.onThisDay(date), JSON.stringify(result), {
+    expirationTtl: untilLocalMidnight(now, offset),
+  })
+  return result
+}
+
 // Any loopback port, so a dev server that lands on 5174 instead of 5173 still
 // works without editing wrangler.jsonc. Everything this API serves is already
 // public on the site, so the allowlist is about not being a free CORS backend
@@ -359,6 +456,39 @@ export default {
           ),
         )
       }
+      // A bare year — /2025 — is the year in review, in whichever form fits.
+      const yearMatch = url.pathname.match(/^\/(\d{4})(\.json)?$/)
+      if (yearMatch) {
+        const year = Number(yearMatch[1])
+        const asJson = Boolean(yearMatch[2])
+        // Mirrors the /listening rule: curl gets text, a browser gets the page.
+        if (!asJson && !wantsText(request, url)) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              location: `${SITE_LISTENING}/${year}`,
+              'cache-control': 'no-store',
+              ...cors,
+            },
+          })
+        }
+        const review = await getYear(env, year)
+        if (!review) {
+          return new Response(`No scrobbles for ${year}\n`, { status: 404, headers: cors })
+        }
+        return cached(url, asJson ? 'year-json' : 'year-text', ctx, cors, async () =>
+          asJson
+            ? json(review, ARCHIVE_EDGE_TTL)
+            : textResponse(renderYear(review, !url.searchParams.has('T'))),
+        )
+      }
+      if (url.pathname === '/years.json') {
+        return cached(url, 'years', ctx, cors, async () => json(await getYears(env), ARCHIVE_EDGE_TTL))
+      }
+      if (url.pathname === '/on-this-day.json') {
+        return cached(url, 'otd', ctx, cors, async () => json(await getOnThisDay(env), ARCHIVE_EDGE_TTL))
+      }
+
       // Same paths in a browser: send them to the real page instead of a 404.
       //
       // 302 and no-store, deliberately. This response is User-Agent dependent, so

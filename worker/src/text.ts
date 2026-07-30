@@ -6,6 +6,7 @@
 
 import type { Bundle, StatWindow } from './stats'
 import type { Scrobble } from './lastfm'
+import type { YearReview } from './year'
 
 const WIDTH = 72
 const BAR_WIDTH = 26
@@ -231,6 +232,83 @@ function footer(b: Bundle, c: Ink): string[] {
     `  ${c.faint('?T for no color · ?w=30d for the 30-day window · /listening.json for JSON')}`,
     '',
   ]
+}
+
+// ---- year in review ------------------------------------------------------
+
+const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+
+/** Twelve months as a labelled bar row — the shape of the year at a glance. */
+function monthBars(months: number[], c: Ink): string[] {
+  const max = months.reduce((m, v) => (v > m ? v : m), 0)
+  const rows = months.map((n, i) => {
+    const label = c.dim(MONTH_INITIALS[i])
+    const fill = c.accent(bar(n, max, 30).padEnd(30))
+    return `    ${label} ${fill} ${c.bold(String(n).padStart(5))}`
+  })
+  return ['', `  ${c.accentDim('by month')}`, ...rows]
+}
+
+export function renderYear(y: YearReview, color: boolean): string {
+  const c = ink(color)
+  const title = `cailinpitt.com/listening · ${y.year}${y.complete ? '' : ' (in progress)'}`
+  const inner = WIDTH - 4
+
+  const headline = [
+    `${num(y.scrobbles)} scrobbles`,
+    `${num(y.artists)} artists`,
+    `${num(y.albums)} albums`,
+    `${y.perDay}/day`,
+  ]
+  const second = [
+    `${num(y.activeDays)} days with music`,
+    `${num(y.newArtists)} new artists`,
+  ]
+
+  const lines = [
+    '',
+    `  ${c.accent('┌' + '─'.repeat(inner) + '┐')}`,
+    `  ${c.accent('│')}${c.bold(' ' + fit(title, inner - 1))}${c.accent('│')}`,
+    `  ${c.accent('└' + '─'.repeat(inner) + '┘')}`,
+    '',
+    `  ${c.dim(headline.join(' · '))}`,
+    `  ${c.dim(second.join(' · '))}`,
+  ]
+
+  if (y.busiestDay) {
+    lines.push(
+      `  ${c.dim(`busiest day ${y.busiestDay.date} — ${num(y.busiestDay.count)} scrobbles`)}`,
+    )
+  }
+  if (y.firstScrobble) {
+    lines.push('', `  ${c.accentDim('first play of the year')}`)
+    lines.push(`    ${c.bold(clip(y.firstScrobble.track, WIDTH - 6))}`)
+    lines.push(`    ${c.dim(clip(y.firstScrobble.artist, WIDTH - 6))}`)
+  }
+
+  lines.push(...topArtists({ topArtists: y.topArtists } as StatWindow, c))
+  lines.push(
+    ...topList(
+      'top albums',
+      y.topAlbums.map((a) => ({ primary: a.album, secondary: a.artist, count: a.count })),
+      c,
+    ),
+  )
+  lines.push(
+    ...topList(
+      'top tracks',
+      y.topTracks.map((t) => ({ primary: t.track, secondary: t.artist, count: t.count })),
+      c,
+    ),
+  )
+  lines.push(...monthBars(y.months, c))
+  lines.push(
+    '',
+    `  ${c.dim('─'.repeat(WIDTH - 4))}`,
+    `  ${c.faint('?T for no color · /' + y.year + '.json for JSON · / for the current view')}`,
+    '',
+  )
+  return lines.join('\n')
 }
 
 // ---- entry point ---------------------------------------------------------

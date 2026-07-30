@@ -67,6 +67,55 @@ export interface Bundle {
 
 export type WindowKey = '7d' | '30d'
 
+export interface YearReview {
+  year: number
+  scrobbles: number
+  artists: number
+  albums: number
+  tracks: number
+  activeDays: number
+  perDay: number
+  newArtists: number
+  topArtists: ArtistStat[]
+  topAlbums: AlbumStat[]
+  topTracks: TrackStat[]
+  /** Twelve counts, January first. */
+  months: number[]
+  busiestDay: { date: string; count: number } | null
+  firstScrobble: Scrobble | null
+  complete: boolean
+}
+
+export interface OnThisDayYear {
+  year: number
+  count: number
+  topArtist: string | null
+  tracks: Scrobble[]
+}
+
+export interface OnThisDay {
+  date: string
+  years: OnThisDayYear[]
+}
+
+export async function fetchYear(year: number, signal?: AbortSignal): Promise<YearReview> {
+  const res = await fetch(`${API_BASE}/${year}.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<YearReview>
+}
+
+export async function fetchYears(signal?: AbortSignal): Promise<number[]> {
+  const res = await fetch(`${API_BASE}/years.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<number[]>
+}
+
+export async function fetchOnThisDay(signal?: AbortSignal): Promise<OnThisDay> {
+  const res = await fetch(`${API_BASE}/on-this-day.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<OnThisDay>
+}
+
 /** Lightweight now-playing payload for the homepage bar (see /now.json). */
 export interface NowState {
   nowPlaying: NowPlaying | null
