@@ -392,6 +392,7 @@ function DailyLog({
             {day.tracks.map((t) => (
               <li key={`${t.uts}-${t.track}`}>
                 <time dateTime={new Date(t.uts * 1000).toISOString()}>{formatTime(t.uts)}</time>
+                <Art src={t.image} alt="" className="log-art" />
                 <span className="log-main">
                   <span className="log-track">{t.track}</span>
                   <span className="log-artist">{t.artist}</span>
