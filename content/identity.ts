@@ -17,6 +17,7 @@ export const identities = [
   'a weightlifter',
   'a Midwesterner',
   'a public transit lover',
+  'a he/they',
 ]
 
 export const descriptions = [
