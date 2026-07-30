@@ -57,7 +57,15 @@ export function Component() {
                 aria-label={`Enlarge${img.alt ? `: ${img.alt}` : ''}`}
               >
                 <img
-                  src={imageUrl(img.src)}
+                  // The grid cell is ~280–400px wide, so the small rendition is what
+                  // should load here; the full size is only for the lightbox.
+                  src={imageUrl(img.thumb ?? img.src)}
+                  srcSet={
+                    img.thumb && img.width
+                      ? `${imageUrl(img.thumb)} 1000w, ${imageUrl(img.src)} ${img.width}w`
+                      : undefined
+                  }
+                  sizes="(max-width: 700px) 92vw, 400px"
                   alt={img.alt}
                   width={img.width}
                   height={img.height}

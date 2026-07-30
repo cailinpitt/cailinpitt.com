@@ -40,7 +40,7 @@ export function Component() {
               <Link to={g.path}>
                 {cover && (
                   <img
-                    src={imageUrl(cover.src)}
+                    src={imageUrl(cover.thumb ?? cover.src)}
                     alt=""
                     width={cover.width}
                     height={cover.height}

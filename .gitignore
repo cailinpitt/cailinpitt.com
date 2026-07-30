@@ -26,6 +26,11 @@ squarespace-backup/
 # copies; push them to R2 with `npm run images:upload`.
 /public/images/
 
+# Camera originals. Purely a local working directory: `npm run images:sync` reads
+# these and writes the web-sized renditions into public/images/. Never committed,
+# never uploaded, never built into the site.
+/originals/
+
 # Local env (R2 credentials, image base URL, etc.)
 .env
 .env.local

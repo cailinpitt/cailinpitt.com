@@ -132,7 +132,7 @@ export function Component() {
               <li key={g.path}>
                 <Link to={g.path} aria-label={`Photos — ${g.title}`}>
                   <img
-                    src={imageUrl(g.cover?.src)}
+                    src={imageUrl(g.cover?.thumb ?? g.cover?.src)}
                     alt=""
                     width={g.cover?.width}
                     height={g.cover?.height}

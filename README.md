@@ -35,12 +35,13 @@ image: /images/post-slug/cover.jpg   # optional cover / social image
 Markdown body…
 ```
 
-- **Inline images** go in `public/images/<slug>/` and are referenced in markdown as
-  `/images/<slug>/<file>`. Those paths are rewritten to Cloudflare R2 at render time, so images
-  are **never committed** (see below). After adding images, run `npm run images:publish` — it
-  checks the references and pushes the files to R2. `npm run images:sync` on its own reports
-  any image a post references but that isn't on disk (typo'd filename), plus any file in the
-  folder no post uses.
+- **Inline images**: drop the originals in `originals/<slug>/` and run `npm run images:publish` —
+  each one is compressed to a 1600px WebP at `public/images/<slug>/<name>.webp` and pushed to R2.
+  Reference that path in markdown as `/images/<slug>/<name>.webp` (note the extension changes).
+  Those paths are rewritten to Cloudflare R2 at render time, so images are **never committed**
+  (see below). `npm run images:sync` also reports any image a post references but that isn't on
+  disk — suggesting the `.webp` name when that's the mismatch — plus files nothing references.
+  Images already under `public/images/<slug>/` with no original are left alone.
 - Markdown renders at build time (`react-markdown` + `remark-gfm`, with `rehype-raw` so embedded
   HTML like YouTube/Spotify iframes survives).
 - **Social card image:** `image:` in frontmatter is optional — if omitted, the first image in the
@@ -72,7 +73,7 @@ All images (blog + galleries) are served from Cloudflare R2 (`images.cailinpitt.
 are committed** — all of `public/images/` is gitignored. Galleries are defined in
 `src/lib/galleries.ts`; the image lists live in `src/lib/gallery-images.json`.
 
-1. Put the full-size photos in `public/images/2026/` (all of `public/images/` is already gitignored).
+1. Put the full-size photos straight off the camera in `originals/2026/`.
 2. ```bash
    npm run images:publish   # = images:sync + images:upload; needs R2 creds in .env
    ```
@@ -80,26 +81,52 @@ are committed** — all of `public/images/` is gitignored. Galleries are defined
 
 That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeeping:
 
+- **Compresses.** Every original under `originals/<folder>/` is encoded to WebP in
+  `public/images/<folder>/`: a 2560px full size for the lightbox and a 1000px `-1000.webp`
+  for the grid (quality 82, EXIF orientation baked in, EXIF metadata dropped). 2026 went from
+  119 MB of camera files to 18 MB served, of which the grid only loads the 3 MB of thumbnails.
+  Re-encoding is skipped when a rendition is newer than its original; `--reencode` forces it.
 - **Registers new galleries.** A `public/images/<year>/` folder with no gallery yet is added to
   `galleryDefinitions` in `src/lib/galleries.ts`, in newest-first order. The `/2026` route and the
   `/photos` index follow automatically. Galleries with a title that isn't the folder name
   (`/latest-work` → "2017"), a `description`, or a `canonicalPath` alias stay hand-written — the
   script only ever *adds* the plain year ones.
 - **Fills in the image list.** Each gallery's entries in `src/lib/gallery-images.json` are rebuilt
-  from the folder, with `width`/`height` read from the file headers (no native dependency; JPEG,
-  PNG, WebP, GIF and HEIC/AVIF). Existing entries keep their order and any alt text you've written,
+  from the folder — `src` (full size), `thumb` (grid) and `width`/`height` read from the file
+  headers. Existing entries keep their order and any alt text you've written,
   so hand-tuning the running order or the alt of a photo survives re-runs; new files are appended
   in natural filename order with a default `Photograph — <title>` alt.
 - **Never deletes silently.** A manifest entry whose file isn't on disk is kept and counted in the
   output (you may just not have that photo locally). Pass `--prune` to actually drop them.
 - **Checks blog images** too — see [Add a blog post](#add-a-blog-post) above.
 
+`originals/` is gitignored and lives outside `public/`, so camera files are never committed,
+never uploaded to R2, and never built into the site — only the renditions are. It is a local
+working directory, **not a backup**: keep your originals wherever you normally keep them.
+
+The older galleries (2014–2022, `/latest*`) predate this and have no originals — they're the
+2500px JPEGs pulled from Squarespace, already web-sized, and sync leaves them exactly as they
+are (no `thumb`, so the grid falls back to `src`). To bring one into the pipeline, move
+`public/images/<key>/` to `originals/<key>/` and re-run; note that changes those images' URLs
+and leaves the old objects orphaned in R2.
+
 Useful variants:
 
 ```bash
-npm run images:sync -- --prune   # drop manifest entries whose file is gone
-npm run images:check             # report only, no writes; exits non-zero if out of date
+npm run images:sync -- --prune     # drop manifest entries whose file is gone
+npm run images:sync -- --reencode  # rebuild every rendition (e.g. after changing quality)
+npm run images:check               # report only, no writes; exits non-zero if out of date
+npm run images:upload -- --dry-run # show what would upload to R2, upload nothing
+npm run images:prune               # list R2 objects nothing references (dry run)
+npm run images:prune -- --delete   # …and delete them
 ```
+
+`images:prune` is what cleans up after a gallery switches to new renditions: the superseded
+objects stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest
+and every `/images/...` path in the blog markdown, and refuses to delete if anything referenced
+is missing from the bucket (so a half-finished upload can't look like a bucket full of orphans).
+Note that deleted objects can still serve from Cloudflare's edge cache for a while — the upload
+sets `immutable` — so purge the URL in the dashboard if you need it gone immediately.
 
 > The original galleries were pulled from the old Squarespace site with `npm run galleries:download`
 > (Squarespace-specific). For new galleries, just drop files into `public/images/<gallery>/` as above.

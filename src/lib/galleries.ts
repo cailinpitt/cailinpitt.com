@@ -1,7 +1,14 @@
 export interface GalleryImage {
+  /** Full-size rendition — what the lightbox loads. */
   src: string
   alt: string
-  /** Explicit original dimensions to set the aspect ratio and prevent layout shift. */
+  /**
+   * Smaller rendition for the grid, generated alongside `src` by
+   * `npm run images:sync`. Absent on the older galleries, which are already
+   * web-sized; those fall back to `src`.
+   */
+  thumb?: string
+  /** Explicit dimensions of `src`, to set the aspect ratio and prevent layout shift. */
   width?: number
   height?: number
 }

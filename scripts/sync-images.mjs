@@ -19,7 +19,7 @@
 //
 // Images themselves are never committed; push them to R2 with `npm run images:upload`.
 
-import { readFile, writeFile, readdir } from 'node:fs/promises'
+import { readFile, writeFile, readdir, mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,6 +28,7 @@ import { imageSize } from './image-size.mjs'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const IMAGES_DIR = path.join(ROOT, 'public', 'images')
+const ORIGINALS_DIR = path.join(ROOT, 'originals')
 const BLOG_DIR = path.join(ROOT, 'content', 'blog')
 const MANIFEST = path.join(ROOT, 'src', 'lib', 'gallery-images.json')
 const GALLERIES_TS = path.join(ROOT, 'src', 'lib', 'galleries.ts')
@@ -35,9 +36,18 @@ const GALLERIES_TS = path.join(ROOT, 'src', 'lib', 'galleries.ts')
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif', '.heic', '.heif'])
 const YEAR = /^\d{4}$/
 
+// Web renditions written from originals/. Galleries get a full size for the lightbox
+// plus a grid thumbnail; blog images only ever render at content width, so one size.
+const THUMB_WIDTH = 1000
+const THUMB_SUFFIX = `-${THUMB_WIDTH}.webp`
+const FULL_WIDTH = 2560
+const BLOG_WIDTH = 1600
+const QUALITY = 82
+
 const args = process.argv.slice(2)
 const PRUNE = args.includes('--prune')
 const CHECK = args.includes('--check')
+const REENCODE = args.includes('--reencode') // redo renditions even if they look current
 
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 
@@ -53,6 +63,88 @@ async function imageFolders() {
   if (!existsSync(IMAGES_DIR)) return []
   const entries = await readdir(IMAGES_DIR, { withFileTypes: true })
   return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort(collator.compare)
+}
+
+// --- renditions (originals/ -> public/images/) --------------------------------
+
+/** True when `out` exists and is at least as new as `src`. */
+async function isCurrent(src, out) {
+  if (REENCODE || !existsSync(out)) return false
+  const [a, b] = await Promise.all([stat(src), stat(out)])
+  return b.mtimeMs >= a.mtimeMs
+}
+
+/**
+ * Encode every original under originals/<folder>/ into web-sized WebP in
+ * public/images/<folder>/. Originals are never uploaded or committed — these
+ * renditions are what the site serves.
+ */
+async function deriveFolder(sharp, folder, isGallery) {
+  const from = path.join(ORIGINALS_DIR, folder)
+  const to = path.join(IMAGES_DIR, folder)
+  const files = await imageFiles(from)
+  if (!files.length) return { encoded: 0, bytesIn: 0, bytesOut: 0 }
+  await mkdir(to, { recursive: true })
+
+  let encoded = 0
+  let bytesIn = 0
+  let bytesOut = 0
+  for (const name of files) {
+    const src = path.join(from, name)
+    const base = name.replace(/\.[^.]+$/, '')
+    // Galleries: full (lightbox) + thumb (grid). Blog: one content-width rendition.
+    const jobs = isGallery
+      ? [
+          { out: path.join(to, `${base}.webp`), width: FULL_WIDTH },
+          { out: path.join(to, `${base}${THUMB_SUFFIX}`), width: THUMB_WIDTH },
+        ]
+      : [{ out: path.join(to, `${base}.webp`), width: BLOG_WIDTH }]
+
+    for (const { out, width } of jobs) {
+      if (await isCurrent(src, out)) continue
+      await sharp(src)
+        .rotate() // bake in EXIF orientation; the tag is dropped with the metadata
+        .resize({ width, height: width, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: QUALITY })
+        .toFile(out)
+      encoded++
+      bytesOut += (await stat(out)).size
+    }
+    bytesIn += (await stat(src)).size
+  }
+  return { encoded, bytesIn, bytesOut }
+}
+
+const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
+
+async function deriveAll(galleryKeys) {
+  if (!existsSync(ORIGINALS_DIR)) return false
+  const folders = (await readdir(ORIGINALS_DIR, { withFileTypes: true }))
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort(collator.compare)
+  if (!folders.length) return false
+
+  let sharp
+  try {
+    ;({ default: sharp } = await import('sharp'))
+  } catch {
+    console.error('✗ originals/ needs `sharp` to encode web renditions — run `npm install`.')
+    process.exit(1)
+  }
+
+  let any = false
+  for (const folder of folders) {
+    // A year folder is a gallery even before it's registered; anything else is a post.
+    const isGallery = galleryKeys.has(folder) || YEAR.test(folder)
+    const { encoded, bytesIn, bytesOut } = await deriveFolder(sharp, folder, isGallery)
+    if (!encoded) continue
+    any = true
+    console.log(
+      `  ${folder}: encoded ${encoded} rendition(s) — ${mb(bytesIn)} of originals → ${mb(bytesOut)} served`,
+    )
+  }
+  return any
 }
 
 // --- galleries.ts ------------------------------------------------------------
@@ -89,9 +181,17 @@ function withGallery(source, year) {
 
 // --- manifest ----------------------------------------------------------------
 
+/** The grid rendition for an image, when one has been generated next to it. */
+function thumbFor(src) {
+  const thumb = src.replace(/\.[^.]+$/, THUMB_SUFFIX)
+  return existsSync(path.join(ROOT, 'public', thumb)) ? thumb : undefined
+}
+
 async function syncGallery(key, existing, title) {
   const dir = path.join(IMAGES_DIR, key)
-  const files = existsSync(dir) ? await imageFiles(dir) : []
+  const all = existsSync(dir) ? await imageFiles(dir) : []
+  // Thumbnails ride along on their full-size entry rather than being images of their own.
+  const files = all.filter((name) => !name.endsWith(THUMB_SUFFIX))
   const bySrc = new Map(existing.map((image) => [image.src, image]))
   const seen = new Set()
   const out = []
@@ -103,16 +203,19 @@ async function syncGallery(key, existing, title) {
     const file = path.join(ROOT, 'public', image.src)
     const onDisk = existsSync(file)
     if (!onDisk && PRUNE) continue
-    if (onDisk && (!image.width || !image.height)) {
-      const size = await imageSize(file)
-      if (size) {
-        out.push({ ...image, ...size })
-        sized++
-        seen.add(path.basename(image.src))
-        continue
+    let entry = image
+    if (onDisk) {
+      const thumb = thumbFor(image.src)
+      if (thumb && thumb !== image.thumb) entry = { ...entry, thumb }
+      if (!image.width || !image.height) {
+        const size = await imageSize(file)
+        if (size) {
+          entry = { ...entry, ...size }
+          sized++
+        }
       }
     }
-    out.push(image)
+    out.push(entry)
     seen.add(path.basename(image.src))
   }
 
@@ -122,7 +225,7 @@ async function syncGallery(key, existing, title) {
     if (bySrc.has(src) || seen.has(name)) continue
     const size = await imageSize(path.join(dir, name))
     if (!size) console.warn(`  ! could not read dimensions: ${src}`)
-    out.push({ src, alt: `Photograph — ${title}`, ...(size ?? {}) })
+    out.push({ src, alt: `Photograph — ${title}`, thumb: thumbFor(src), ...(size ?? {}) })
     added.push(src)
   }
 
@@ -157,7 +260,12 @@ async function checkBlogImages(folders, galleryKeys) {
 
   if (missing.length) {
     console.log(`\n✗ ${missing.length} blog image(s) referenced but not on disk:`)
-    for (const m of missing) console.log(`    ${m.src}  (${m.post})`)
+    for (const m of missing) {
+      // Most often the post still points at the original filename/extension.
+      const web = m.src.replace(/\.[^.]+$/, '.webp')
+      const hint = web !== m.src && existsSync(path.join(ROOT, 'public', web)) ? ` → use ${web}` : ''
+      console.log(`    ${m.src}  (${m.post})${hint}`)
+    }
   }
   if (unreferenced.length) {
     console.log(`\n· ${unreferenced.length} blog image(s) on disk that no post references:`)
@@ -172,11 +280,14 @@ async function checkBlogImages(folders, galleryKeys) {
 async function main() {
   let galleriesSource = await readFile(GALLERIES_TS, 'utf8')
   const manifest = JSON.parse(await readFile(MANIFEST, 'utf8'))
+  const registered = new Set(parseDefinitions(galleriesSource).entries.map((e) => e.imageKey))
+
+  // Compress anything new in originals/ into the web renditions the site serves.
+  const encoded = CHECK ? false : await deriveAll(registered)
   const folders = await imageFolders()
 
   // Register year folders that don't have a gallery yet (newest last, so each
   // insertion lands above the previous one).
-  const registered = new Set(parseDefinitions(galleriesSource).entries.map((e) => e.imageKey))
   const newYears = folders.filter((f) => YEAR.test(f) && !registered.has(f)).sort(collator.compare)
   for (const year of newYears) {
     galleriesSource = withGallery(galleriesSource, year)
@@ -229,7 +340,9 @@ async function main() {
 
   if (manifestChanged || newYears.length) {
     console.log('\n✓ updated src/lib/gallery-images.json' + (newYears.length ? ' + src/lib/galleries.ts' : ''))
-    console.log('  next: npm run images:upload   (push the photos to R2)')
+    console.log('  next: npm run images:upload   (push the renditions to R2)')
+  } else if (encoded) {
+    console.log('\n✓ renditions up to date; manifest unchanged')
   } else {
     console.log('\n✓ already up to date')
   }
