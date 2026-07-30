@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seo } from '../components/Seo'
+import { ListenLinks } from '../components/ListenLinks'
 import {
+  albumQuery,
   fetchBundle,
   fetchOlderDays,
   formatDayLabel,
   formatNumber,
   formatRelative,
   formatTime,
+  trackQuery,
   type AlbumStat,
   type ArtistStat,
   type Bundle,
@@ -124,6 +127,7 @@ function NowPlayingCard({
           {!live && lastPlayed && (
             <p className="now-when">{formatRelative(lastPlayed.uts)}</p>
           )}
+          <ListenLinks query={trackQuery(track.artist, track.track)} className="now-listen" />
         </div>
       </div>
     </section>
@@ -224,6 +228,7 @@ function TopAlbums({ albums }: { albums: AlbumStat[] }) {
               <span className="rank-secondary">{a.artist}</span>
             </span>
             <span className="rank-count">{formatNumber(a.count)}</span>
+            <ListenLinks query={albumQuery(a.artist, a.album)} />
           </li>
         ))}
       </ol>
@@ -244,6 +249,7 @@ function TopTracks({ tracks }: { tracks: TrackStat[] }) {
               <span className="rank-secondary">{t.artist}</span>
             </span>
             <span className="rank-count">{formatNumber(t.count)}</span>
+            <ListenLinks query={trackQuery(t.artist, t.track)} />
           </li>
         ))}
       </ol>
@@ -386,8 +392,11 @@ function DailyLog({
             {day.tracks.map((t) => (
               <li key={`${t.uts}-${t.track}`}>
                 <time dateTime={new Date(t.uts * 1000).toISOString()}>{formatTime(t.uts)}</time>
-                <span className="log-track">{t.track}</span>
-                <span className="log-artist">{t.artist}</span>
+                <span className="log-main">
+                  <span className="log-track">{t.track}</span>
+                  <span className="log-artist">{t.artist}</span>
+                </span>
+                <ListenLinks query={trackQuery(t.artist, t.track)} />
               </li>
             ))}
           </ol>

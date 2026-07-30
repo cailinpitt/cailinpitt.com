@@ -96,6 +96,19 @@ export async function fetchOlderDays(
   return res.json() as Promise<{ days: DayLog[]; nextBefore: number | null }>
 }
 
+// ---- music service search links ------------------------------------------
+// Search links (not exact-track deep links) so every song resolves with no API
+// keys or per-track lookups — the service opens a prefilled search.
+
+export const spotifySearchUrl = (query: string) =>
+  `https://open.spotify.com/search/${encodeURIComponent(query)}`
+
+export const appleMusicSearchUrl = (query: string) =>
+  `https://music.apple.com/search?term=${encodeURIComponent(query)}`
+
+export const trackQuery = (artist: string, track: string) => `${artist} ${track}`
+export const albumQuery = (artist: string, album: string) => `${artist} ${album}`
+
 // ---- formatting ----------------------------------------------------------
 
 const timeFmt = new Intl.DateTimeFormat('en-US', {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchNow, formatRelative, type NowState } from '../lib/listening'
+import { fetchNow, formatRelative, trackQuery, type NowState } from '../lib/listening'
+import { ListenLinks } from './ListenLinks'
 
 const POLL_MS = 60_000
 
@@ -37,30 +38,30 @@ export function NowPlayingBar() {
   const live = Boolean(now?.nowPlaying)
 
   return (
-    <Link className="now-bar" to="/listening" aria-label="Listening">
-      {track.image ? (
-        <img className="now-bar-art" src={track.image} alt="" loading="lazy" decoding="async" />
-      ) : (
-        <span className="now-bar-art art-placeholder" aria-hidden="true" />
-      )}
-      <span className="now-bar-text">
-        <span className="now-bar-label">
-          {live ? (
-            <>
-              <span className="now-dot" aria-hidden="true" /> Now playing
-            </>
-          ) : (
-            <>Last played · {formatRelative(now!.lastPlayed!.uts)}</>
-          )}
+    <div className="now-bar">
+      <Link className="now-bar-main" to="/listening" aria-label="Listening">
+        {track.image ? (
+          <img className="now-bar-art" src={track.image} alt="" loading="lazy" decoding="async" />
+        ) : (
+          <span className="now-bar-art art-placeholder" aria-hidden="true" />
+        )}
+        <span className="now-bar-text">
+          <span className="now-bar-label">
+            {live ? (
+              <>
+                <span className="now-dot" aria-hidden="true" /> Now playing
+              </>
+            ) : (
+              <>Last played · {formatRelative(now!.lastPlayed!.uts)}</>
+            )}
+          </span>
+          <span className="now-bar-track">
+            <span className="now-bar-title">{track.track}</span>
+            <span className="now-bar-artist">{track.artist}</span>
+          </span>
         </span>
-        <span className="now-bar-track">
-          <span className="now-bar-title">{track.track}</span>
-          <span className="now-bar-artist">{track.artist}</span>
-        </span>
-      </span>
-      <span className="now-bar-go" aria-hidden="true">
-        →
-      </span>
-    </Link>
+      </Link>
+      <ListenLinks query={trackQuery(track.artist, track.track)} className="now-bar-links" />
+    </div>
   )
 }
