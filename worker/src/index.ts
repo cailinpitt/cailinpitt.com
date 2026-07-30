@@ -37,6 +37,9 @@ const TOTAL_FALLBACK_TTL = 300
 /** Edge-cache lifetime for the read endpoints. */
 const EDGE_TTL = 60
 
+/** Where a browser landing on the terminal endpoint gets sent. */
+const SITE_LISTENING = 'https://cailinpitt.com/listening'
+
 // ---- shapes stored in KV -------------------------------------------------
 
 interface NowBlob {
@@ -355,6 +358,17 @@ export default {
             }),
           ),
         )
+      }
+      // Same paths in a browser: send them to the real page instead of a 404.
+      //
+      // 302 and no-store, deliberately. This response is User-Agent dependent, so
+      // a permanent or shared-cached redirect could later be replayed to a client
+      // that wanted the terminal view — which would break `curl` for that URL.
+      if (url.pathname === '/' || url.pathname === '/listening') {
+        return new Response(null, {
+          status: 302,
+          headers: { location: SITE_LISTENING, 'cache-control': 'no-store', ...cors },
+        })
       }
       if (url.pathname === '/now.json') {
         // Deliberately uncached: one KV read, and this is the endpoint whose

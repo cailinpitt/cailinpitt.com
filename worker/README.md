@@ -136,9 +136,15 @@ curl listening.cailinpitt.com?w=30d    # 30-day window
 
 Dispatch is on User-Agent (`curl`, `wget`, `httpie`, `xh`, …) and only on `/` and
 `/listening` — `*.json` paths always return JSON, whoever asks, so scripts piping
-`curl … /listening.json` into `jq` are unaffected. Browsers hitting `/` still get
-the 404 they always did. Color is on by default because curl cannot tell the
-server it is a TTY; `?T` opts out, following wttr.in.
+`curl … /listening.json` into `jq` are unaffected. Color is on by default because
+curl cannot tell the server it is a TTY; `?T` opts out, following wttr.in.
+
+A browser on those same paths gets a 302 to `cailinpitt.com/listening` rather
+than a 404. It is a 302 with `no-store` on purpose: the response varies by
+User-Agent, so a permanent or shared-cached redirect could later be replayed to a
+client that wanted the terminal view and would break `curl` for that URL. Only
+the text variant is ever written to the edge cache, keyed with `__variant=text`,
+so the two can never be served to the wrong client.
 
 Two rendering details that are easy to regress:
 
