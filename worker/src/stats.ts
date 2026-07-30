@@ -63,6 +63,9 @@ export function localDay(uts: number, offsetSeconds: number): string {
   return new Date((uts + offsetSeconds) * 1000).toISOString().slice(0, 10)
 }
 
+/** How many rows each "top" list carries. Ten made the three columns too busy. */
+const TOP_N = 5
+
 async function windowStats(db: D1Database, since: number, days: number): Promise<StatWindow> {
   const counts = await db
     .prepare(
@@ -79,27 +82,27 @@ async function windowStats(db: D1Database, since: number, days: number): Promise
     .prepare(
       `SELECT artist AS name, COUNT(*) AS count, MAX(image) AS image
          FROM scrobbles WHERE uts >= ?1
-        GROUP BY artist ORDER BY count DESC, name LIMIT 10`,
+        GROUP BY artist ORDER BY count DESC, name LIMIT ?2`,
     )
-    .bind(since)
+    .bind(since, TOP_N)
     .all<ArtistStat>()
 
   const topAlbums = await db
     .prepare(
       `SELECT album, artist, COUNT(*) AS count, MAX(image) AS image
          FROM scrobbles WHERE uts >= ?1 AND album <> ''
-        GROUP BY album, artist ORDER BY count DESC, album LIMIT 10`,
+        GROUP BY album, artist ORDER BY count DESC, album LIMIT ?2`,
     )
-    .bind(since)
+    .bind(since, TOP_N)
     .all<AlbumStat>()
 
   const topTracks = await db
     .prepare(
       `SELECT track, artist, COUNT(*) AS count, MAX(image) AS image
          FROM scrobbles WHERE uts >= ?1
-        GROUP BY track, artist ORDER BY count DESC, track LIMIT 10`,
+        GROUP BY track, artist ORDER BY count DESC, track LIMIT ?2`,
     )
-    .bind(since)
+    .bind(since, TOP_N)
     .all<TrackStat>()
 
   const scrobbles = counts?.scrobbles ?? 0
