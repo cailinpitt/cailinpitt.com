@@ -77,12 +77,16 @@ export function Component() {
       />
       <section className="intro">
         <IdentityLine />
+        <h2 className="eyebrow">🎧 Last played</h2>
         <NowPlayingBar />
+        <p className="more">
+          <Link to="/listening">Listening log →</Link>
+        </p>
       </section>
 
       <section className="recent-projects" aria-labelledby="projects-heading">
         <h2 id="projects-heading" className="eyebrow">
-          Current projects
+          🧑‍💻 Current projects
         </h2>
         <ul className="project-previews">
           {featuredProjects.map((project) => (
@@ -102,7 +106,7 @@ export function Component() {
       {recent.length > 0 && (
         <section className="recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="eyebrow">
-            Recent writing
+            ✍️ Recent writing
           </h2>
           <ul className="post-list">
             {recent.map((p) => (
@@ -121,7 +125,7 @@ export function Component() {
       {recentGalleries.length > 0 && (
         <section className="recent-photos" aria-labelledby="photos-heading">
           <h2 id="photos-heading" className="eyebrow">
-            Recent photos
+            📸 Recent photos
           </h2>
           <ul className="photo-previews">
             {recentGalleries.map((g) => (

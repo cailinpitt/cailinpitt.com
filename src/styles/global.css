@@ -266,9 +266,11 @@ h3 {
 }
 
 /* Rotating self-description headline. The changing halves fade in on each
-   reroll; a subtle min-height keeps the layout from jumping as lines swap. */
+   reroll. Reserve ~4 lines of height (5em = 4 × the 1.25 line-height, in em so
+   it tracks the responsive font size) so the sentence can grow and shrink
+   without the shuffle button below it hopping up and down. */
 .identity-line {
-  min-height: calc(var(--step-2) * 1.25 * 3);
+  min-height: 5em;
 }
 .identity-swap {
   animation: identity-fade 0.5s ease;
@@ -313,26 +315,35 @@ h3 {
 
 .recent-projects > .eyebrow,
 .recent > .eyebrow,
-.recent-photos > .eyebrow {
+.recent-photos > .eyebrow,
+.intro > .eyebrow {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 0.25rem;
 }
+/* The "Last played" header sits below the shuffle button, so it also needs
+   space above it (the section headers get their spacing from section margins). */
+.intro > .eyebrow {
+  margin-top: 2.5rem;
+}
 .recent-projects .more,
 .recent .more,
-.recent-photos .more {
+.recent-photos .more,
+.intro .more {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   margin-top: 1.5rem;
 }
 .recent-projects .more a,
 .recent .more a,
-.recent-photos .more a {
+.recent-photos .more a,
+.intro .more a {
   text-decoration: none;
 }
 .recent-projects .more a:hover,
 .recent .more a:hover,
-.recent-photos .more a:hover {
+.recent-photos .more a:hover,
+.intro .more a:hover {
   text-decoration: underline;
 }
 
