@@ -134,10 +134,19 @@ input *URLs* and *Safari web pages*. Each one gets
 **"Save to reading"** — URL `https://reading.cailinpitt.com/ingest`, method
 **POST**, Request Body **JSON** with key `url` = **Shortcut Input**.
 
-**"Save to reading with note"** — same, but add an **Ask for Input** action
-(Text, prompt "Note?") *before* Get Contents of URL, and give the JSON body a
-second key `note` = **Provided Input**. This is the one to use when you want to
-say why you saved something; it prompts, then saves.
+**"Save to reading with note"** — same, plus an **Ask for Input** action (Text,
+prompt "Note?") and a second JSON key `note` = that action's output.
+
+> Order matters, and this is easy to get wrong: Shortcuts defaults every
+> action's input to the *previous action's output*. If **Ask for Input** sits
+> above **Get URLs from Input**, that action silently starts looking for a url
+> inside the note you typed, `url` comes out empty, and the API rejects the body.
+> Either keep **Get URLs from Input** first, or set its input explicitly to
+> **Shortcut Input** rather than leaving the default.
+
+Saving a link you already saved is a no-op *except* for the note — an explicit
+note is always written, so this works whether or not the article was logged
+earlier. The response says `noted: true` when that happens.
 
 **"Remove from reading"** — same URL, method **DELETE**, JSON body with just
 `url` = **Shortcut Input**. Share the page again and pick this to undo a save.

@@ -41,6 +41,8 @@ export interface IngestResult {
   url: string
   /** False when the article was already logged — the original date is kept. */
   stored: boolean
+  /** True when a note was written, whether the article was new or not. */
+  noted?: boolean
 }
 
 // ---- url handling --------------------------------------------------------
@@ -107,7 +109,19 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
   // Check before enriching: a duplicate shouldn't cost a page fetch and an
   // image mirror, and on the free plan subrequests are the scarce resource.
   const existing = await env.DB.prepare('SELECT id FROM articles WHERE id = ?1').bind(id).first()
-  if (existing) return { id, url, stored: false }
+  if (existing) {
+    // Saving an article you already saved is a no-op — except for the note. A
+    // note is something you deliberately typed, so dropping it on the floor
+    // because the link was already logged loses real input. This is exactly the
+    // "saved it earlier, came back to say why" case, and it must not require
+    // knowing that a PATCH exists.
+    const note = cleanNote(input.note)
+    if (note) {
+      await env.DB.prepare('UPDATE articles SET note = ?2 WHERE id = ?1').bind(id, note).run()
+      return { id, url, stored: false, noted: true }
+    }
+    return { id, url, stored: false }
+  }
 
   const meta = await fetchMetadata(url)
   const image = await mirrorImage(env, meta.image)
