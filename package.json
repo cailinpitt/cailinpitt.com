@@ -22,6 +22,7 @@
     "reading:sync": "node scripts/reading-sync.mjs"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@atproto/api": "^0.20.16",
     "@aws-sdk/client-s3": "^3.1073.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

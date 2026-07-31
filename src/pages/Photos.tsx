@@ -32,6 +32,9 @@ export function Component() {
         })}
       />
       <h1>Photos</h1>
+      <p className="more photos-map-link">
+        <Link to="/photos/map">📍 Photo map →</Link>
+      </p>
       <ul className="gallery-index">
         {years.map((g) => {
           const cover = g.cover

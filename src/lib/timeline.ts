@@ -44,6 +44,8 @@ export interface DatedPhoto {
   src: string
   thumb?: string
   alt: string
+  /** [lat, lon] rounded to ~1.1km, when the original recorded a position. */
+  place?: number[]
 }
 
 export interface TimelineDay {
@@ -79,6 +81,7 @@ export function datedPhotos(galleries: Gallery[]): DatedPhoto[] {
         src: image.src,
         thumb: image.thumb,
         alt: image.alt,
+        ...(image.exif?.place ? { place: image.exif.place } : {}),
       })
     }
   }

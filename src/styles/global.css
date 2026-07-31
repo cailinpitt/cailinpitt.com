@@ -1986,3 +1986,66 @@ a.book-link:hover .book-title {
   flex-direction: column;
   gap: 1.25rem;
 }
+
+/* ---- /photos/map --------------------------------------------------------
+   Leaflet + OpenStreetMap tiles. Leaflet ships its own stylesheet (imported by
+   the page); everything here is the surrounding chrome and the popup. */
+.photos-map-link {
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+}
+.photo-map .lead {
+  max-width: var(--measure);
+}
+.map-canvas {
+  width: min(var(--measure-wide), 92vw);
+  /* Same margin-based centering as the gallery grid — see the note there about
+     why this isn't a transform. */
+  margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
+  height: min(70vh, 40rem);
+  margin-top: 2rem;
+  border-radius: 3px;
+  background: var(--surface);
+  /* Leaflet panes stack above the header's z-index otherwise. */
+  z-index: 0;
+}
+
+/* OSM tiles are drawn for light backgrounds, so a dark page gets a glaring
+   white slab. Inverting and re-rotating the hue keeps roads and water reading
+   correctly while sitting in the page's palette. Markers are drawn in an
+   overlay pane above this, so they keep their real colour. */
+:root[data-theme='dark'] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+  }
+}
+
+.map-popup {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.map-popup a {
+  display: block;
+  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.map-popup img {
+  display: block;
+  width: 100%;
+  max-width: 12rem;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.map-popup span {
+  display: block;
+  margin-top: 0.3rem;
+}

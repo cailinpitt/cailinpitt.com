@@ -220,6 +220,26 @@ bundle in the browser.
 - **API base URL:** set `VITE_READING_API` at build time (defaults to
   `https://reading.cailinpitt.com`).
 
+## Photo map (`/photos/map`)
+
+Plots every photo that carries a location — i.e. the galleries built from `originals/`,
+since the coordinates come from the EXIF that `images:sync` records. Photos sharing a
+rounded coordinate collapse into one pin, and each popup links into the gallery lightbox
+at that frame.
+
+- **Leaflet** (BSD-2-Clause, bundled from npm — no CDN) with raster tiles from
+  **OpenStreetMap**. Both are free with no account, no API key, and no billing to
+  misconfigure; the attribution line the tile policy requires is on the map.
+- Leaflet reads `window` on import, so it's pulled in inside the effect rather than at
+  module scope — the page shell prerenders like any other and the map fills in after
+  mount. Vite splits it into its own JS **and** CSS chunk, so no other page loads it.
+- Pins are `circleMarker`s (drawn, not images), which sidesteps Leaflet's bundler-hostile
+  default marker icon URLs and lets them take the site's accent colour.
+- In dark mode the tile pane is inverted and hue-rotated, since OSM's tiles are drawn for
+  light backgrounds. Markers live in a pane above it and keep their real colour.
+- Positions are rounded to ~1.1km (see [above](#add-a-photo-gallery-eg-2026)), which the
+  page says plainly — a pin marks a neighbourhood, not a spot.
+
 ## Log (`/log`)
 
 One row per day, merging all five activity streams: scrobbles, saved articles, books
