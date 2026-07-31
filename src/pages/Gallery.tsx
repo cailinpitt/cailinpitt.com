@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLoaderData, useSearchParams, type LoaderFunctionArgs } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { imageUrl, type Gallery as GalleryData } from '../lib/galleries'
+import { formatCapture, formatSettings } from '../lib/exif'
 import { pageSchema } from '../lib/structuredData'
 
 export async function loader({ request }: LoaderFunctionArgs): Promise<GalleryData | null> {
@@ -40,6 +41,8 @@ export function Component() {
   const raw = mounted ? Number(params.get('photo')) : NaN
   const index = Number.isInteger(raw) && raw >= 1 && raw <= count ? raw - 1 : null
   const active = index != null ? gallery.images[index] : null
+  const capture = formatCapture(active?.exif)
+  const settings = formatSettings(active?.exif)
 
   const show = useCallback(
     (next: number | null) => {
@@ -179,6 +182,10 @@ export function Component() {
             <img src={imageUrl(active.src)} alt={active.alt} />
             <figcaption>
               {active.alt && <span className="lightbox-alt">{active.alt}</span>}
+              {/* Only the galleries built from originals/ carry capture data;
+                  the rest fall through to just the counter. */}
+              {capture && <span className="lightbox-capture">{capture}</span>}
+              {settings && <span className="lightbox-settings">{settings}</span>}
               <span className="lightbox-counter">
                 {index + 1} / {count}
               </span>

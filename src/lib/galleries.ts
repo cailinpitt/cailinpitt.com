@@ -1,3 +1,5 @@
+import type { PhotoExif } from './exif'
+
 export interface GalleryImage {
   /** Full-size rendition — what the lightbox loads. */
   src: string
@@ -11,6 +13,11 @@ export interface GalleryImage {
   /** Explicit dimensions of `src`, to set the aspect ratio and prevent layout shift. */
   width?: number
   height?: number
+  /**
+   * Capture metadata read from the original by `npm run images:sync`. Absent on
+   * the galleries that predate originals/ — their files arrived EXIF-stripped.
+   */
+  exif?: PhotoExif
 }
 
 export interface Gallery {

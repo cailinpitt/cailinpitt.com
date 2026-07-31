@@ -2882,168 +2882,456 @@
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/dji_fly_20260718_193222_326_1784421155290_photo-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-07-18T19:32:23",
+        "camera": "FC3170",
+        "fNumber": 2.8,
+        "exposure": 0.005555555555555556,
+        "iso": 100,
+        "focalLength": 4.5,
+        "place": [
+          41.99,
+          -87.66
+        ]
+      }
     },
     {
       "src": "/images/2026/dji_fly_20260718_193238_327_1784421170450_photo.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/dji_fly_20260718_193238_327_1784421170450_photo-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-07-18T19:32:39",
+        "camera": "FC3170",
+        "fNumber": 2.8,
+        "exposure": 0.005,
+        "iso": 100,
+        "focalLength": 4.5,
+        "place": [
+          41.99,
+          -87.66
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0004.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0004-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-03-27T15:25:27",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.016666666666666666,
+        "iso": 100,
+        "focalLength": 5.96,
+        "place": [
+          41.88,
+          -87.62
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0255.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0255-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-04-12T10:39:28",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00021598272138228941,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.79,
+          -87.58
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0289.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0289-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-04-16T10:27:02",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00018698578908002991,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.83,
+          -87.63
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0385.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0385-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-04-20T19:51:37",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.016666666666666666,
+        "iso": 125,
+        "focalLength": 5.96,
+        "place": [
+          41.92,
+          -87.65
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0414.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0414-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-04-24T19:31:07",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.0028169014084507044,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.9,
+          -87.65
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0524.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0524-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-05-02T16:30:38",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.0003599712023038157,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.88,
+          -87.81
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0577.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0577-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-05-08T08:35:23",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00020601565718994644,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.91,
+          -87.63
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0593.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0593-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-05-08T22:51:54",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.06666666666666667,
+        "iso": 4000,
+        "focalLength": 5.96,
+        "place": [
+          41.99,
+          -87.67
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0647.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0647-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-05-10T15:02:36",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00015800284405119292,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.83,
+          -87.63
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_0959.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_0959-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-05-29T15:21:47",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.016666666666666666,
+        "iso": 160,
+        "focalLength": 5.96,
+        "place": [
+          41.94,
+          -87.68
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1090.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1090-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-06-06T13:24:10",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00036900369003690036,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          33.76,
+          -84.42
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1379.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1379-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-06-27T16:08:48",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.00013000520020800833,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          41.92,
+          -87.64
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1647.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1647-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-07-14T11:36:40",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.004347826086956522,
+        "iso": 40,
+        "focalLength": 5.96,
+        "place": [
+          41.99,
+          -87.67
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1694.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1694-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-07-18T09:11:51",
+        "camera": "iPhone 15",
+        "fNumber": 2.4,
+        "exposure": 0.0015060240963855422,
+        "iso": 25,
+        "focalLength": 1.54,
+        "place": [
+          41.89,
+          -87.62
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1825.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1825-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-07-25T09:29:52",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.0004269854824935952,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          34.04,
+          -118.26
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1860.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1860-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-07-25T18:40:28",
+        "camera": "iPhone 15",
+        "fNumber": 2.4,
+        "exposure": 0.010101010101010102,
+        "iso": 80,
+        "focalLength": 1.54,
+        "place": [
+          34.06,
+          -118.23
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1886.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1886-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-07-26T18:32:34",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.0005899705014749262,
+        "iso": 50,
+        "focalLength": 5.96,
+        "place": [
+          34.06,
+          -118.28
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1914.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1914-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-07-28T20:13:31",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.008264462809917356,
+        "iso": 64,
+        "focalLength": 5.96,
+        "place": [
+          34.12,
+          -118.3
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_1919.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_1919-1000.webp",
       "width": 2560,
-      "height": 1920
+      "height": 1920,
+      "exif": {
+        "shot": "2026-07-28T20:20:47",
+        "camera": "iPhone 15",
+        "fNumber": 1.6,
+        "exposure": 0.02857142857142857,
+        "iso": 640,
+        "focalLength": 5.96,
+        "place": [
+          34.12,
+          -118.3
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_7208.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_7208-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-01-13T16:50:58",
+        "camera": "iPhone 16 Pro",
+        "fNumber": 1.7799999713880652,
+        "exposure": 0.010416666666666666,
+        "iso": 200,
+        "focalLength": 6.764999865652793,
+        "place": [
+          41.99,
+          -87.65
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_7891.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_7891-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-03-01T13:12:58",
+        "camera": "iPhone 16 Pro",
+        "fNumber": 1.7799999713880652,
+        "exposure": 0.008264462809917356,
+        "iso": 50,
+        "focalLength": 6.764999865652793,
+        "place": [
+          41.99,
+          -87.67
+        ]
+      }
     },
     {
       "src": "/images/2026/IMG_7960.webp",
       "alt": "Photograph — 2026",
       "thumb": "/images/2026/IMG_7960-1000.webp",
       "width": 1920,
-      "height": 2560
+      "height": 2560,
+      "exif": {
+        "shot": "2026-03-14T15:43:30",
+        "camera": "iPhone 16 Pro",
+        "fNumber": 2.2,
+        "exposure": 0.016666666666666666,
+        "iso": 400,
+        "focalLength": 2.220000028611935,
+        "place": [
+          41.84,
+          -87.68
+        ]
+      }
     }
   ],
   "latest-work": [

@@ -101,9 +101,23 @@ That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeepin
   headers. Existing entries keep their order and any alt text you've written,
   so hand-tuning the running order or the alt of a photo survives re-runs; new files are appended
   in natural filename order with a default `Photograph — <title>` alt.
+- **Records capture metadata.** Each entry also gets an `exif` object read from the *original*
+  (the renditions are encoded with EXIF stripped): capture date, camera, aperture, shutter, ISO,
+  focal length, and a coarse location. The lightbox shows it as a caption. Only galleries built
+  from `originals/` have any — the pre-2026 photos came out of Squarespace already stripped, so
+  they carry none and the caption just omits those lines. Like alt text, it's read once and then
+  left alone, so a hand-edit sticks (useful when a camera reports a model code rather than a name
+  — the drone identifies itself as `FC3170`). `--reexif` forces a re-read of every photo.
 - **Never deletes silently.** A manifest entry whose file isn't on disk is kept and counted in the
   output (you may just not have that photo locally). Pass `--prune` to actually drop them.
 - **Checks blog images** too — see [Add a blog post](#add-a-blog-post) above.
+
+> **On location data.** `gallery-images.json` is committed and served to browsers, so anything
+> in it is public and permanent. GPS coordinates are therefore rounded to 2 decimal places
+> (~1.1 km) on the way in — enough to place a photo on a map or name a neighbourhood, not enough
+> to point at an address. Full precision stays in the originals, which are gitignored and never
+> uploaded. If you'd rather publish nothing at all, drop the `place` field in
+> `scripts/exif.mjs` and re-run with `--reexif`; it will clear the recorded values.
 
 `originals/` is gitignored and lives outside `public/`, so camera files are never committed,
 never uploaded to R2, and never built into the site — only the renditions are. It is a local
@@ -119,6 +133,7 @@ Useful variants:
 
 ```bash
 npm run images:sync -- --prune     # drop manifest entries whose file is gone
+npm run images:sync -- --reexif    # re-read capture metadata from the originals
 npm run images:sync -- --reencode  # rebuild every rendition (e.g. after changing quality)
 npm run images:check               # report only, no writes; exits non-zero if out of date
 npm run images:upload -- --dry-run # show what would upload to R2, upload nothing

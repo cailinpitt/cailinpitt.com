@@ -4,13 +4,16 @@
 //   npm run images:sync            # update the gallery manifest + register new galleries
 //   npm run images:sync -- --prune # also drop manifest entries whose file is gone
 //   npm run images:sync -- --check # report only, exit 1 if anything is out of date (CI)
+//   npm run images:sync -- --reexif # re-read capture metadata from the originals
 //   npm run images:publish         # sync, then upload to R2
 //
 // What it does:
 //   1. Gallery folders (public/images/<year>, plus any imageKey already registered in
 //      src/lib/galleries.ts) are written into src/lib/gallery-images.json with real
-//      width/height read off disk. Existing entries keep their order and hand-written
-//      alt text; new files are appended in natural filename order.
+//      width/height read off disk, plus capture metadata (date, camera, exposure,
+//      coarse location) read from the matching original. Existing entries keep their
+//      order, hand-written alt text, and any metadata already recorded; new files are
+//      appended in natural filename order.
 //   2. A year folder with no gallery registered yet is added to `galleryDefinitions`
 //      in src/lib/galleries.ts, newest-first. Non-year galleries stay hand-written.
 //   3. Blog folders (public/images/<post-slug>) are checked against the markdown:
@@ -24,6 +27,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { imageSize } from './image-size.mjs'
+import { readPhotoExif } from './exif.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
@@ -48,6 +52,7 @@ const args = process.argv.slice(2)
 const PRUNE = args.includes('--prune')
 const CHECK = args.includes('--check')
 const REENCODE = args.includes('--reencode') // redo renditions even if they look current
+const REEXIF = args.includes('--reexif') // re-read capture metadata from the originals
 
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 
@@ -63,6 +68,20 @@ async function imageFolders() {
   if (!existsSync(IMAGES_DIR)) return []
   const entries = await readdir(IMAGES_DIR, { withFileTypes: true })
   return entries.filter((e) => e.isDirectory()).map((e) => e.name).sort(collator.compare)
+}
+
+// sharp is only needed where originals/ is involved (encoding renditions, reading
+// EXIF), so it's imported on demand and memoized rather than required up front.
+let sharpModule
+async function loadSharp() {
+  if (sharpModule === undefined) {
+    try {
+      ;({ default: sharpModule } = await import('sharp'))
+    } catch {
+      sharpModule = null
+    }
+  }
+  return sharpModule
 }
 
 // --- renditions (originals/ -> public/images/) --------------------------------
@@ -125,10 +144,8 @@ async function deriveAll(galleryKeys) {
     .sort(collator.compare)
   if (!folders.length) return false
 
-  let sharp
-  try {
-    ;({ default: sharp } = await import('sharp'))
-  } catch {
+  const sharp = await loadSharp()
+  if (!sharp) {
     console.error('✗ originals/ needs `sharp` to encode web renditions — run `npm install`.')
     process.exit(1)
   }
@@ -187,9 +204,48 @@ function thumbFor(src) {
   return existsSync(path.join(ROOT, 'public', thumb)) ? thumb : undefined
 }
 
+/**
+ * Map each original's filename stem to its path, so a manifest entry pointing at
+ * `/images/2026/IMG_0004.webp` can find `originals/2026/IMG_0004.jpeg` — the
+ * rendition has no EXIF of its own, having been encoded without metadata.
+ */
+async function originalsByStem(key) {
+  const dir = path.join(ORIGINALS_DIR, key)
+  if (!existsSync(dir)) return new Map()
+  const entries = await imageFiles(dir)
+  return new Map(entries.map((name) => [name.replace(/\.[^.]+$/, ''), path.join(dir, name)]))
+}
+
 async function syncGallery(key, existing, title) {
   const dir = path.join(IMAGES_DIR, key)
   const all = existsSync(dir) ? await imageFiles(dir) : []
+  const originals = await originalsByStem(key)
+  const sharp = originals.size ? await loadSharp() : null
+
+  /**
+   * Capture metadata for a manifest entry. Re-read only when the entry has none
+   * (or --reexif/--reencode force it): once written it's stable, and the whole
+   * point is that it survives even if the original later leaves this machine.
+   */
+  const exifFor = async (entry) => {
+    if (!sharp) return entry.exif
+    if (entry.exif && !REENCODE && !REEXIF) return entry.exif
+    const original = originals.get(path.basename(entry.src).replace(/\.[^.]+$/, ''))
+    if (!original) return entry.exif
+    // May be undefined, which clears a value an earlier run recorded — the point
+    // of --reexif is to be able to fix metadata that was read wrong.
+    return (await readPhotoExif(sharp, original)) ?? undefined
+  }
+
+  /** Apply a fresh read to an entry, adding or removing the key as needed. */
+  const withExif = (entry, exif) => {
+    if (exif === entry.exif) return entry
+    const next = { ...entry }
+    if (exif) next.exif = exif
+    else delete next.exif
+    return next
+  }
+
   // Thumbnails ride along on their full-size entry rather than being images of their own.
   const files = all.filter((name) => !name.endsWith(THUMB_SUFFIX))
   const bySrc = new Map(existing.map((image) => [image.src, image]))
@@ -198,6 +254,8 @@ async function syncGallery(key, existing, title) {
   const added = []
   let sized = 0
   let renamed = 0
+  let tagged = 0
+  let cleared = 0
 
   // Existing entries first, in their current (possibly hand-tuned) order.
   for (const image of existing) {
@@ -227,6 +285,12 @@ async function syncGallery(key, existing, title) {
           sized++
         }
       }
+      const exif = await exifFor(entry)
+      if (exif !== entry.exif) {
+        if (exif) tagged++
+        else cleared++
+        entry = withExif(entry, exif)
+      }
     }
     out.push(entry)
     seen.add(path.basename(entry.src))
@@ -238,13 +302,21 @@ async function syncGallery(key, existing, title) {
     if (bySrc.has(src) || seen.has(name)) continue
     const size = await imageSize(path.join(dir, name))
     if (!size) console.warn(`  ! could not read dimensions: ${src}`)
-    out.push({ src, alt: `Photograph — ${title}`, thumb: thumbFor(src), ...(size ?? {}) })
+    const exif = await exifFor({ src })
+    if (exif) tagged++
+    out.push({
+      src,
+      alt: `Photograph — ${title}`,
+      thumb: thumbFor(src),
+      ...(size ?? {}),
+      ...(exif ? { exif } : {}),
+    })
     added.push(src)
   }
 
   const missing = out.filter((image) => !existsSync(path.join(ROOT, 'public', image.src))).length
   const pruned = PRUNE ? existing.length - (out.length - added.length) : 0
-  return { images: out, added, pruned, missing, sized, renamed }
+  return { images: out, added, pruned, missing, sized, renamed, tagged, cleared }
 }
 
 // --- blog images -------------------------------------------------------------
@@ -315,13 +387,15 @@ async function main() {
   for (const { imageKey, title } of definitions) {
     if (next[imageKey]) continue // aliases (e.g. /past-work → 2022) share a key
     const existing = manifest[imageKey] ?? []
-    const { images, added, pruned, missing, sized, renamed } = await syncGallery(imageKey, existing, title || imageKey)
+    const { images, added, pruned, missing, sized, renamed, tagged, cleared } = await syncGallery(imageKey, existing, title || imageKey)
     next[imageKey] = images
     const notes = [
       added.length && `+${added.length} new`,
       renamed && `${renamed} → renditions`,
       pruned && `-${pruned} pruned`,
       sized && `${sized} sized`,
+      tagged && `${tagged} exif`,
+      cleared && `-${cleared} exif dropped`,
       missing && `${missing} not on disk`,
     ].filter(Boolean)
     console.log(`  ${imageKey}: ${images.length} image(s)${notes.length ? ` (${notes.join(', ')})` : ''}`)
