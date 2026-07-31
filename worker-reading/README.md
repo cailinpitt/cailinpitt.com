@@ -134,15 +134,21 @@ input *URLs* and *Safari web pages*. Each one gets
 **"Save to reading"** — URL `https://reading.cailinpitt.com/ingest`, method
 **POST**, Request Body **JSON** with key `url` = **Shortcut Input**.
 
-**"Save to reading with note"** — same, plus an **Ask for Input** action (Text,
-prompt "Note?") and a second JSON key `note` = that action's output.
+**"Save to reading with note"** — the same three actions, in this order:
 
-> Order matters, and this is easy to get wrong: Shortcuts defaults every
-> action's input to the *previous action's output*. If **Ask for Input** sits
-> above **Get URLs from Input**, that action silently starts looking for a url
-> inside the note you typed, `url` comes out empty, and the API rejects the body.
-> Either keep **Get URLs from Input** first, or set its input explicitly to
-> **Shortcut Input** rather than leaving the default.
+```
+1. Get URLs from Input          ← must be FIRST
+2. Ask for Text  "Note?"
+3. Get Contents of URL          url → URLs, note → Ask for Input
+```
+
+> Order is load-bearing. Shortcuts defaults every action's input to the
+> *previous action's output*, so if **Ask for Input** sits above **Get URLs from
+> Input**, that action starts hunting for a url inside the note you typed,
+> `url` arrives empty, and the API rejects the body. Keeping **Get URLs from
+> Input** first is the fix — the variable picker does not reliably offer
+> "Shortcut Input" as a choice, so relying on the default is the dependable way
+> to get it.
 
 Saving a link you already saved is a no-op *except* for the note — an explicit
 note is always written, so this works whether or not the article was logged
