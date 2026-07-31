@@ -170,6 +170,14 @@ export async function fetchLastPlayed(db: D1Database): Promise<Scrobble | null> 
   )
 }
 
+/**
+ * Rows to pull per day asked for. The archive's heaviest day is ~155 scrobbles,
+ * so this clears it comfortably; a heavier day is not a correctness problem
+ * either, since it just splits across two pages and the client merges same-dated
+ * days back together.
+ */
+const ROWS_PER_DAY = 250
+
 /** Older per-day logs for pagination (?before=<uts>). */
 export async function fetchOlderDays(
   db: D1Database,
@@ -177,16 +185,21 @@ export async function fetchOlderDays(
   before: number,
   maxDays: number,
 ): Promise<{ days: DayLog[]; nextBefore: number | null }> {
-  // Pull a generous chunk of rows below the cursor, then slice to whole days.
+  // Scale the chunk to what was actually asked for rather than a flat 2,000 —
+  // the on-this-day expansion wants a single day and was reading 2,000 rows for
+  // it. A row cap rather than a time bound on purpose: gaps in listening cost
+  // nothing, because the index walk descends through uts and simply finds no
+  // rows for silent days, so this stays correct across a month of silence.
+  const limit = maxDays * ROWS_PER_DAY
   const rows = await db
-    .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts < ?1 ORDER BY uts DESC LIMIT 2000`)
-    .bind(before)
+    .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts < ?1 ORDER BY uts DESC LIMIT ?2`)
+    .bind(before, limit)
     .all<Scrobble>()
 
   const grouped = groupDays(rows.results, offset)
   const days = grouped.slice(0, maxDays)
   // More to load if we filled the page, or the chunk itself was truncated.
-  const more = grouped.length > maxDays || rows.results.length === 2000
+  const more = grouped.length > maxDays || rows.results.length === limit
   const last = days.at(-1)
   const nextBefore = more && last ? last.tracks.at(-1)!.uts : null
   return { days, nextBefore }
