@@ -43,6 +43,19 @@ export function formatShotDate(shot?: string): string | null {
   return Number.isNaN(parsed.getTime()) ? null : dateFmt.format(parsed)
 }
 
+const shortDateFmt = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
+
+/** "Jul 18" — the compact form, for labels over a thumbnail. */
+export function formatShotDateShort(shot?: string): string | null {
+  if (!shot) return null
+  const parsed = new Date(`${shot.slice(0, 10)}T12:00:00Z`)
+  return Number.isNaN(parsed.getTime()) ? null : shortDateFmt.format(parsed)
+}
+
 /** Trim a trailing ".0" so f/8 doesn't render as "f/8.0". */
 const trim = (value: number, places: number) =>
   Number(value.toFixed(places)).toString()

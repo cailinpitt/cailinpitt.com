@@ -195,6 +195,25 @@ cron and serves a cached JSON bundle; the page fetches it in the browser.
   `LASTFM_API_KEY` in `.env`), then load the generated SQL into D1 (see worker README).
 - **API base URL:** set `VITE_LISTENING_API` at build time (defaults to
   `https://listening.cailinpitt.com`).
+- **`/sparkline.json`** serves 90 daily counts for the homepage sparkline — a projection
+  of the heatmap blob the cron already computes, so it costs one KV read and no D1. Today's
+  bar inherits the heatmap's ~6h cadence and can read low against a day still in progress.
+  **Requires deploying the Worker** (`cd worker && npx wrangler deploy`); until then it 404s
+  and the sparkline simply doesn't render.
+
+## Homepage
+
+Mostly static, with three things that change on their own:
+
+- **🎧 Last played** — the now-playing bar (polls `/now.json` every 60s), a 90-day
+  sparkline, and an "on this day" line drawn from `/on-this-day.json`, which the listening
+  Worker already built for `/listening`. All three render nothing until their fetch lands
+  and nothing at all if it fails, so the prerendered shell never depends on them.
+- **📸 Recent photos** shows the four most recent *photographs*, by capture date, each
+  linking into the gallery lightbox at that frame. It previously showed the four newest
+  *galleries'* cover images, so the heading was untrue — a 2020 cover under "Recent
+  photos" — and it only changed when a whole gallery was added. Galleries with no capture
+  dates fall back to covers, so the section can't vanish.
 
 ## Reading (`/reading`)
 

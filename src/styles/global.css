@@ -2075,3 +2075,55 @@ a.book-link:hover .book-title {
   display: block;
   margin-top: 0.3rem;
 }
+
+/* ---- homepage listening extras -----------------------------------------
+   A 90-day sparkline and an "on this day" line under the now-playing bar, so
+   the homepage differs day to day without anything being written. Both are
+   client-fetched and render nothing until they have data. */
+.sparkline {
+  display: block;
+  margin-top: 0.9rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+.sparkline svg {
+  display: block;
+  width: 100%;
+  height: 26px;
+}
+.sparkline rect {
+  fill: currentColor;
+}
+/* Days with nothing played: a baseline tick, so a gap reads as a quiet day
+   rather than as missing data. */
+.sparkline rect.is-empty {
+  fill: var(--rule);
+}
+.sparkline-caption {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.sparkline:hover .sparkline-caption {
+  color: var(--accent);
+}
+
+.on-this-day-line {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.on-this-day-line a {
+  color: inherit;
+  text-decoration: none;
+}
+.on-this-day-line a:hover {
+  color: var(--accent);
+}
+.on-this-day-when {
+  font-weight: 600;
+  color: var(--fg);
+}

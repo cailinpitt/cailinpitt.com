@@ -2,15 +2,55 @@ import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
+import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { imageUrl } from '../lib/galleries'
+import { formatShotDateShort } from '../lib/exif'
 import type { GallerySummary } from '../lib/content.server'
+import type { DatedPhoto } from '../lib/timeline'
 import { homeSchema } from '../lib/structuredData'
+
+/** A thumbnail in the "Recent photos" strip, from either source below. */
+interface PhotoPreview {
+  href: string
+  src: string
+  /** Capture date for a real photo, gallery title for a cover fallback. */
+  label: string
+}
+
+/**
+ * The four most recent photographs. This used to be the four newest *galleries*
+ * showing their cover image, which meant a heading that said "Recent photos" over
+ * a cover from 2020 that only changed when a whole gallery was added. Capture
+ * dates make the real thing possible, and each thumbnail can link straight to
+ * that frame in the lightbox.
+ *
+ * Galleries with no capture dates (everything pre-2026, which arrived from
+ * Squarespace EXIF-stripped) still fall back to covers, so the section can't
+ * vanish on a repo whose photos carry no metadata.
+ */
+function toPreviews(photos: DatedPhoto[], galleries: GallerySummary[]): PhotoPreview[] {
+  if (photos.length) {
+    return photos.slice(0, 4).map((photo) => ({
+      href: `${photo.galleryPath}?photo=${photo.index}`,
+      src: photo.thumb ?? photo.src,
+      label: formatShotDateShort(photo.date) ?? photo.galleryTitle,
+    }))
+  }
+  return galleries
+    .filter((gallery) => !gallery.canonicalPath && gallery.cover)
+    .slice(0, 4)
+    .map((gallery) => ({
+      href: gallery.path,
+      src: gallery.cover?.thumb ?? gallery.cover?.src ?? '',
+      label: gallery.title,
+    }))
+}
 
 interface HomeData {
   recent: PostSummary[]
-  recentGalleries: GallerySummary[]
+  recentPhotos: PhotoPreview[]
   publicationUri: string | null
 }
 
@@ -35,38 +75,31 @@ const featuredProjects = [
 export async function loader(): Promise<HomeData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadGallerySummaries, loadPostSummaries, loadPublicationUri } = await import(
-      '../lib/content.client'
-    )
-    const posts = loadPostSummaries()
-    const galleries = loadGallerySummaries()
+    const { loadDatedPhotos, loadGallerySummaries, loadPostSummaries, loadPublicationUri } =
+      await import('../lib/content.client')
     return {
-      recent: posts.slice(0, 5),
-      recentGalleries: galleries
-        .filter((gallery) => !gallery.canonicalPath && gallery.cover)
-        .slice(0, 4),
+      recent: loadPostSummaries().slice(0, 5),
+      recentPhotos: toPreviews(loadDatedPhotos(), loadGallerySummaries()),
       publicationUri: loadPublicationUri(),
     }
   }
-  const { loadGallerySummaries, loadPostSummaries, loadPublicationUri } = await import(
-    '../lib/content.server'
-  )
-  const [posts, galleries, publicationUri] = await Promise.all([
+  const { loadDatedPhotos, loadGallerySummaries, loadPostSummaries, loadPublicationUri } =
+    await import('../lib/content.server')
+  const [posts, photos, galleries, publicationUri] = await Promise.all([
     loadPostSummaries(),
+    loadDatedPhotos(),
     loadGallerySummaries(),
     loadPublicationUri(),
   ])
   return {
     recent: posts.slice(0, 5),
-    recentGalleries: galleries
-      .filter((gallery) => !gallery.canonicalPath && gallery.cover)
-      .slice(0, 4),
+    recentPhotos: toPreviews(photos, galleries),
     publicationUri,
   }
 }
 
 export function Component() {
-  const { recent, recentGalleries, publicationUri } = useLoaderData() as HomeData
+  const { recent, recentPhotos, publicationUri } = useLoaderData() as HomeData
   return (
     <>
       <Seo
@@ -80,6 +113,8 @@ export function Component() {
         <IdentityLine />
         <h2 className="eyebrow">🎧 Last played</h2>
         <NowPlayingBar />
+        <ListeningSparkline />
+        <OnThisDayLine />
         <p className="more">
           <Link to="/listening">Listening log →</Link>
         </p>
@@ -129,24 +164,17 @@ export function Component() {
         </section>
       )}
 
-      {recentGalleries.length > 0 && (
+      {recentPhotos.length > 0 && (
         <section className="recent-photos" aria-labelledby="photos-heading">
           <h2 id="photos-heading" className="eyebrow">
             📸 Recent photos
           </h2>
           <ul className="photo-previews">
-            {recentGalleries.map((g) => (
-              <li key={g.path}>
-                <Link to={g.path} aria-label={`Photos — ${g.title}`}>
-                  <img
-                    src={imageUrl(g.cover?.thumb ?? g.cover?.src)}
-                    alt=""
-                    width={g.cover?.width}
-                    height={g.cover?.height}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                  <span className="photo-preview-label">{g.title}</span>
+            {recentPhotos.map((photo) => (
+              <li key={photo.href}>
+                <Link to={photo.href} aria-label={`Photo — ${photo.label}`}>
+                  <img src={imageUrl(photo.src)} alt="" loading="lazy" decoding="async" />
+                  <span className="photo-preview-label">{photo.label}</span>
                 </Link>
               </li>
             ))}

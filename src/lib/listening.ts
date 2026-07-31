@@ -127,6 +127,19 @@ export async function fetchNow(signal?: AbortSignal): Promise<NowState> {
   return res.json() as Promise<NowState>
 }
 
+/** 90 daily scrobble counts for the homepage sparkline (see /sparkline.json). */
+export interface Sparkline {
+  /** YYYY-MM-DD of the first (oldest) count. */
+  from: string
+  days: number[]
+}
+
+export async function fetchSparkline(signal?: AbortSignal): Promise<Sparkline> {
+  const res = await fetch(`${API_BASE}/sparkline.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<Sparkline>
+}
+
 export async function fetchBundle(signal?: AbortSignal): Promise<Bundle> {
   const res = await fetch(`${API_BASE}/listening.json`, { signal })
   if (!res.ok) throw new Error(`Listening API ${res.status}`)

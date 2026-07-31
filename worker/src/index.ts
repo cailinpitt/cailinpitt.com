@@ -23,6 +23,7 @@ import {
   fetchLastPlayed,
   fetchOlderDays,
   groupDays,
+  localDay,
   type Bundle,
   type DayLog,
 } from './stats'
@@ -240,6 +241,40 @@ async function totalFallback(env: Env): Promise<number> {
   const n = await countScrobbles(env.DB)
   await env.KV.put(KEY.totalFallback, String(n), { expirationTtl: TOTAL_FALLBACK_TTL })
   return n
+}
+
+/** How many days the homepage sparkline covers. */
+const SPARK_DAYS = 90
+
+/**
+ * Daily counts for the last ~3 months, oldest first — the homepage sparkline.
+ *
+ * A projection of the heatmap blob the cron already computes, so this costs one
+ * KV read and no D1 at all. It exists as its own endpoint because the homepage
+ * would otherwise have to pull the whole /listening.json bundle (top lists,
+ * windows, 40 tracks a day) to draw one 90-point line, and it can't ride on
+ * /now.json, which is deliberately uncached and kept to four fields.
+ *
+ * Today's bar inherits the heatmap's ~6h cadence, so it can read low against a
+ * day still in progress. That's the right trade here — a shape over 90 days
+ * doesn't need minute freshness, and paying for a D1 scan to get it would.
+ */
+async function getSparkline(env: Env): Promise<{ from: string; days: number[] }> {
+  const blob = await readJSON<HeatmapBlob>(env, KEY.heatmap)
+  const heatmap = blob?.heatmap ?? (await computeHeatmap(env.DB, env))
+  const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+  const now = Math.floor(Date.now() / 1000)
+
+  // Walk calendar days rather than the blob's keys: a day with no scrobbles has
+  // no entry there, and the line needs its zero to keep the spacing honest.
+  const days: number[] = []
+  let from = ''
+  for (let i = SPARK_DAYS - 1; i >= 0; i--) {
+    const key = localDay(now - i * 86_400, offset)
+    if (!from) from = key
+    days.push(heatmap.days[key] ?? 0)
+  }
+  return { from, days }
 }
 
 async function getBundle(env: Env): Promise<Bundle> {
@@ -541,6 +576,11 @@ export default {
         // `recent` is projected out — the bar needs four fields, not 40 tracks.
         const { nowPlaying, lastPlayed, totalScrobbles, updatedAt } = await getNow(env)
         return withCors(json({ nowPlaying, lastPlayed, totalScrobbles, updatedAt }, 30), cors)
+      }
+      if (url.pathname === '/sparkline.json') {
+        return cached(url, 'spark', ctx, cors, async () =>
+          json(await getSparkline(env), EDGE_TTL),
+        )
       }
       if (url.pathname === '/listening.json') {
         return cached(url, 'json', ctx, cors, async () => json(await getBundle(env), EDGE_TTL))
