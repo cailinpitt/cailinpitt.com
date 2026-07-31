@@ -9,13 +9,21 @@ const POLL_MS = 60_000
  * Compact now-playing / last-played strip for the homepage. Client-fetched from
  * the lightweight /now.json endpoint; renders nothing until it has data (so the
  * prerendered shell and any API hiccup just leave the homepage clean).
+ *
+ * Polling pauses while the tab is hidden. /now.json is the one endpoint left
+ * uncached at the edge — a KV read per request by design, since its freshness is
+ * what's visible here — so a forgotten background tab was quietly spending 1,440
+ * reads a day to update something nobody was looking at. Refreshing on the way
+ * back keeps it current the moment it's on screen again.
  */
 export function NowPlayingBar() {
   const [now, setNow] = useState<NowState | null>(null)
 
   useEffect(() => {
     let active = true
+    let id: ReturnType<typeof setInterval> | undefined
     const controller = new AbortController()
+
     const load = async () => {
       try {
         const data = await fetchNow(controller.signal)
@@ -24,12 +32,34 @@ export function NowPlayingBar() {
         /* leave the bar hidden on error */
       }
     }
+
+    const stop = () => {
+      if (id) clearInterval(id)
+      id = undefined
+    }
+    const start = () => {
+      stop()
+      id = setInterval(load, POLL_MS)
+    }
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop()
+      } else {
+        void load()
+        start()
+      }
+    }
+
     void load()
-    const id = setInterval(load, POLL_MS)
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
       active = false
       controller.abort()
-      clearInterval(id)
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

@@ -261,7 +261,14 @@ const SPARK_DAYS = 90
  */
 async function getSparkline(env: Env): Promise<{ from: string; days: number[] }> {
   const blob = await readJSON<HeatmapBlob>(env, KEY.heatmap)
-  const heatmap = blob?.heatmap ?? (await computeHeatmap(env.DB, env))
+  // No D1 fallback, deliberately — unlike getBundle, which rebuilds a cold blob.
+  // computeHeatmap scans a year of rows, and this endpoint sits on the homepage:
+  // on a cold or evicted key that would be a full-year scan on every 60s cache
+  // miss until the next cron tick, up to six hours away. The sparkline is
+  // decoration, so it does without until the cron fills the blob in, and the
+  // client hides an empty series.
+  if (!blob) return { from: '', days: [] }
+  const heatmap = blob.heatmap
   const offset = Number(env.TZ_OFFSET_SECONDS) || 0
   const now = Math.floor(Date.now() / 1000)
 
