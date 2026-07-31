@@ -1731,3 +1731,13 @@ a.book-link:hover .book-title {
   height: 51px;
   border-radius: 3px;
 }
+/* Social cards are landscape; the article bar shows one beside the book bar. */
+.now-bar-art.is-card {
+  width: 56px;
+  height: 34px;
+  border-radius: 3px;
+}
+/* Stacked bars sit close together, not a full 1.5rem apart. */
+.now-bar + .now-bar {
+  margin-top: 0.6rem;
+}

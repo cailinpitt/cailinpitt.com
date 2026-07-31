@@ -231,6 +231,13 @@ export interface ReadingNow {
   currentlyReading: Book[]
   /** Shown when nothing is in progress, so the strip is never empty. */
   lastFinished: Book | null
+  /**
+   * The most recent article, but only if it was saved *today* — Cailin's today,
+   * bucketed against TZ_OFFSET_SECONDS the same way the listening Worker buckets
+   * its days. Null on a day with nothing saved, and the homepage simply omits
+   * the card rather than showing a stale one from last week.
+   */
+  todaysArticle: Article | null
   updatedAt: number
 }
 
@@ -241,8 +248,11 @@ export interface ReadingNow {
  * site (every homepage visit) and has no business reading 49 rows to render one
  * book — the same reasoning behind the listening Worker's /now.json.
  */
-export async function buildNow(db: D1Database): Promise<ReadingNow> {
-  const [current, finished] = await Promise.all([
+export async function buildNow(db: D1Database, offsetSeconds: number): Promise<ReadingNow> {
+  const now = Math.floor(Date.now() / 1000)
+  const startOfToday = Math.floor((now + offsetSeconds) / 86400) * 86400 - offsetSeconds
+
+  const [current, finished, article] = await Promise.all([
     db
       .prepare(
         `SELECT ${BOOK_COLS} FROM books WHERE status_id = 2
@@ -256,12 +266,20 @@ export async function buildNow(db: D1Database): Promise<ReadingNow> {
          ORDER BY finished_at DESC, user_book_id DESC, read_id DESC LIMIT 1`,
       )
       .first<BookRow>(),
+    db
+      .prepare(
+        `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
+         WHERE read_at >= ?1 ORDER BY read_at DESC, id DESC LIMIT 1`,
+      )
+      .bind(startOfToday)
+      .first<ArticleRow>(),
   ])
 
   return {
     currentlyReading: (current.results ?? []).map(toBook),
     lastFinished: finished ? toBook(finished) : null,
-    updatedAt: Math.floor(Date.now() / 1000),
+    todaysArticle: article ? toArticle(article) : null,
+    updatedAt: now,
   }
 }
 

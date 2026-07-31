@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { formatTime } from '../lib/datetime'
 import { fetchReadingNow, formatBookDate, readingImage, type ReadingNow } from '../lib/reading'
 
 /**
@@ -25,39 +26,78 @@ export function ReadingBar() {
   // Fall back to the last finished book so the strip isn't empty between books.
   const reading = now?.currentlyReading?.[0]
   const book = reading ?? now?.lastFinished
-  if (!book) return null
+  const article = now?.todaysArticle
+  if (!book && !article) return null
 
-  const finishedOn = formatBookDate(book.finishedAt)
+  const finishedOn = book ? formatBookDate(book.finishedAt) : null
   const others = (now?.currentlyReading?.length ?? 0) - 1
 
   return (
-    <div className="now-bar">
-      <Link className="now-bar-main" to="/reading" aria-label="Reading">
-        {book.cover ? (
-          <img
-            className="now-bar-art is-cover"
-            src={readingImage(book.cover) ?? undefined}
-            alt=""
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <span className="now-bar-art is-cover art-placeholder" aria-hidden="true" />
-        )}
-        <span className="now-bar-text">
-          <span className="now-bar-label">
-            {reading
-              ? `Currently reading${others > 0 ? ` · +${others} more` : ''}`
-              : finishedOn
-                ? `Last finished · ${finishedOn}`
-                : 'Last finished'}
-          </span>
-          <span className="now-bar-track">
-            <span className="now-bar-title">{book.title}</span>
-            {book.authors && <span className="now-bar-artist">{book.authors}</span>}
-          </span>
-        </span>
-      </Link>
-    </div>
+    <>
+      {book && (
+        <div className="now-bar">
+          <Link className="now-bar-main" to="/reading" aria-label="Reading">
+            {book.cover ? (
+              <img
+                className="now-bar-art is-cover"
+                src={readingImage(book.cover) ?? undefined}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <span className="now-bar-art is-cover art-placeholder" aria-hidden="true" />
+            )}
+            <span className="now-bar-text">
+              <span className="now-bar-label">
+                {reading
+                  ? `Currently reading${others > 0 ? ` · +${others} more` : ''}`
+                  : finishedOn
+                    ? `Last finished · ${finishedOn}`
+                    : 'Last finished'}
+              </span>
+              <span className="now-bar-track">
+                <span className="now-bar-title">{book.title}</span>
+                {book.authors && <span className="now-bar-artist">{book.authors}</span>}
+              </span>
+            </span>
+          </Link>
+        </div>
+      )}
+
+      {/* Only present on a day something was actually saved — the endpoint
+          returns null otherwise rather than surfacing a stale link. This one
+          points at the article itself; the "Reading log →" link below covers
+          getting to the rest. */}
+      {article && (
+        <div className="now-bar">
+          <a
+            className="now-bar-main"
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {article.image ? (
+              <img
+                className="now-bar-art is-card"
+                src={readingImage(article.image) ?? undefined}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
+            )}
+            <span className="now-bar-text">
+              <span className="now-bar-label">Read today · {formatTime(article.readAt)}</span>
+              <span className="now-bar-track">
+                <span className="now-bar-title">{article.title ?? article.url}</span>
+                {article.site && <span className="now-bar-artist">{article.site}</span>}
+              </span>
+            </span>
+          </a>
+        </div>
+      )}
+    </>
   )
 }

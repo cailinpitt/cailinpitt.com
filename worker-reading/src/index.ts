@@ -250,7 +250,7 @@ export default {
 
       // Small payload for the homepage strip — see buildNow().
       if (url.pathname === '/now.json') {
-        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), EDGE_TTL))
+        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB, Number(env.TZ_OFFSET_SECONDS) || 0), EDGE_TTL))
       }
 
       if (url.pathname === '/books') {

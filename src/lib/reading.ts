@@ -73,6 +73,8 @@ export interface ReadingNow {
   currentlyReading: Book[]
   /** Shown when nothing is in progress, so the strip is never empty. */
   lastFinished: Book | null
+  /** Most recent article, but only if saved today. Null on a quiet day. */
+  todaysArticle: Article | null
   updatedAt: number
 }
 
