@@ -451,6 +451,74 @@ h3 {
   text-transform: uppercase;
 }
 
+/* Tags — chips under a post header, and the cloud at the foot of /blog */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.9rem 0 0;
+}
+.tag-list a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tag-list a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.tag-count-badge {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
+.tag-index {
+  margin-top: 3.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+.tag-list.is-cloud {
+  margin-top: 1rem;
+}
+
+/* Tag page header */
+.tag-eyebrow {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tag-eyebrow a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.tag-eyebrow a:hover {
+  color: var(--accent);
+}
+.tag-count {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 /* Article */
 .post {
   max-width: var(--measure);
@@ -657,26 +725,78 @@ h3 {
   margin-inline: auto;
   border-radius: 3px;
 }
+.lightbox-figure {
+  margin: 0;
+}
 .lightbox figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem 0.9rem;
   font-family: var(--font-sans);
   font-size: var(--step--1);
   color: #d8d4cd;
   text-align: center;
   margin-top: 0.6rem;
 }
-.lightbox-close {
+.lightbox-counter {
+  color: #9d9891;
+  font-variant-numeric: tabular-nums;
+}
+.lightbox-close,
+.lightbox-nav {
   position: fixed;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgb(0 0 0 / 0.5);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.lightbox-close:hover,
+.lightbox-nav:hover {
+  background: rgb(0 0 0 / 0.75);
+}
+.lightbox-close {
   top: 1rem;
   right: 1rem;
   width: 2.5rem;
   height: 2.5rem;
   font-size: 1.5rem;
   line-height: 1;
-  color: #fff;
-  background: rgb(0 0 0 / 0.5);
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
+}
+/* Paging controls sit against the viewport edges rather than the image, so they
+   stay put as photos of different aspect ratios swap in and out. */
+.lightbox-nav {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3rem;
+  height: 3rem;
+  padding-bottom: 0.2rem; /* optically center the chevron glyph */
+  font-size: 2.25rem;
+  line-height: 1;
+}
+.lightbox-nav.is-prev {
+  left: 1rem;
+}
+.lightbox-nav.is-next {
+  right: 1rem;
+}
+@media (max-width: 700px) {
+  .lightbox-nav {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.75rem;
+  }
+  .lightbox-nav.is-prev {
+    left: 0.4rem;
+  }
+  .lightbox-nav.is-next {
+    right: 0.4rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

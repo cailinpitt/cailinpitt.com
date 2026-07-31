@@ -62,6 +62,20 @@ const graph = (...nodes: Json[]): Json => ({
   '@graph': nodes,
 })
 
+/** Newest-first list of posts, shared by the blog index and the tag pages. */
+const itemListNode = (id: string, posts: PostSummary[]): Json => ({
+  '@type': 'ItemList',
+  '@id': id,
+  itemListOrder: 'https://schema.org/ItemListOrderDescending',
+  numberOfItems: posts.length,
+  itemListElement: posts.map((post, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    url: abs(post.path),
+    name: post.title,
+  })),
+})
+
 const pageNode = ({ path, title, description, image, type = 'WebPage' }: PageSchemaOptions): Json => {
   const url = abs(path)
   return {
@@ -128,24 +142,22 @@ export function blogIndexSchema(posts: PostSummary[]): Json {
   blog.mainEntityOfPage = ref(pageId)
   blog.blogPost = posts.map((post) => ref(`${abs(post.path)}#blogposting`))
 
-  return graph(
-    personNode(),
-    websiteNode(),
-    blog,
-    page,
-    {
-      '@type': 'ItemList',
-      '@id': listId,
-      itemListOrder: 'https://schema.org/ItemListOrderDescending',
-      numberOfItems: posts.length,
-      itemListElement: posts.map((post, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        url: abs(post.path),
-        name: post.title,
-      })),
-    },
-  )
+  return graph(personNode(), websiteNode(), blog, page, itemListNode(listId, posts))
+}
+
+/** A `/blog/tag/<slug>` page: the same shape as the index, narrowed to one tag. */
+export function blogTagSchema(label: string, path: string, posts: PostSummary[]): Json {
+  const listId = `${abs(path)}#posts`
+  const page = pageNode({
+    path,
+    title: `Posts tagged “${label}”`,
+    description: `Writing by ${AUTHOR} tagged “${label}”.`,
+    type: 'CollectionPage',
+  })
+  page.about = ref(BLOG_ID)
+  page.mainEntity = ref(listId)
+
+  return graph(personNode(), websiteNode(), blogNode(), page, itemListNode(listId, posts))
 }
 
 export function blogPostSchema(post: Post): Json {

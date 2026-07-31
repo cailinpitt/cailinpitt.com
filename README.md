@@ -44,6 +44,11 @@ Markdown body…
   Images already under `public/images/<slug>/` with no original are left alone.
 - Markdown renders at build time (`react-markdown` + `remark-gfm`, with `rehype-raw` so embedded
   HTML like YouTube/Spotify iframes survives).
+- **Tags** are free text. Each one becomes a chip under the post header and gets a prerendered
+  `/blog/tag/<slug>` page, listed in the tag cloud at the foot of `/blog`. Pages are generated
+  only for tags actually in use, so nothing needs registering — but note that a typo makes a new
+  one-post tag. Grouping is by slug (`"Year in Review"` → `year-in-review`), so casing differences
+  can't split a tag in two; the spelling shown is the one from the most recent post using it.
 - **Social card image:** `image:` in frontmatter is optional — if omitted, the first image in the
   body is used as the `og:image`/`twitter:image` thumbnail (e.g. when sharing on Bluesky). Set
   `image:` explicitly only if you want a specific cover.

@@ -5,6 +5,7 @@ import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
 import { formatDate, type Post, type PostSummary } from '../lib/posts'
+import { tagPath } from '../lib/tags'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
 
 // Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
@@ -68,6 +69,15 @@ export function Component() {
             <time dateTime={post.date} className="post-date">
               {formatDate(post.date)}
             </time>
+          )}
+          {post.tags.length > 0 && (
+            <ul className="tag-list" aria-label="Tags">
+              {post.tags.map((tag) => (
+                <li key={tag}>
+                  <Link to={tagPath(tag)}>{tag}</Link>
+                </li>
+              ))}
+            </ul>
           )}
         </header>
         <div className="post-body">

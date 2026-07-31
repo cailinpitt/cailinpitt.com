@@ -13,6 +13,7 @@ export const routes: RouteRecord[] = [
     children: [
       { index: true, lazy: () => import('./pages/Home') },
       { path: 'blog', lazy: () => import('./pages/BlogIndex') },
+      { path: 'blog/tag/:tag', lazy: () => import('./pages/BlogTag') },
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },
       { path: 'listening', lazy: () => import('./pages/Listening') },
