@@ -77,6 +77,34 @@ Two things the cache key has to account for, both easy to get wrong:
 `/now.json` is deliberately left uncached: it is a single KV read, and it is the
 one endpoint whose staleness is visible (the homepage now-playing bar).
 
+### Queries per invocation is a real ceiling
+
+The Free plan allows **50 D1 queries per Worker invocation**, and `batch()` counts
+each statement in it separately. Ingest used to send one `INSERT OR IGNORE` per
+scrobble — up to 50 — and then `computeStats()` and `computeHeatmap()` ran in the
+same invocation. Measured at **70,258 insert statements in 24h to write 428
+rows**: ~49 per tick, right at the ceiling, with the refreshes tipping some ticks
+over it. The symptom was a refresh count of 141/day where 192 was expected.
+
+Ingest now filters to scrobbles newer than the last one it saw (with an hour of
+overlap, since Last.fm can deliver late and `INSERT OR IGNORE` makes the overlap
+free) and packs the rest into multi-row `INSERT`s. **100 bound parameters per
+query** is a hard D1 limit, so with 6 columns that is 16 rows per statement. A
+normal tick is now zero or one statement.
+
+### Aggregate in the Worker when the window is small
+
+7d/30d used to be four SQL aggregates per window — eight queries re-reading the
+same rows, plus a ninth for the log. The 30-day window is only ~1,600 rows and
+strictly contains both the 7-day window and the 11 days of log rows, so
+`computeStats()` fetches it **once** and folds all three out of it in JS. Nine
+queries became one, and ~10k rows read became ~1.6k.
+
+Verified equal to the SQL it replaced against a fixed window: scrobbles, artists,
+albums, tracks and the top-5 artists all matched exactly. If you change
+`windowStats()`, re-run that comparison — `COUNT(DISTINCT album)` counts album
+*names*, not name+artist, and it is easy to "fix" that into a discrepancy.
+
 ### `GROUP BY artist` needs `INDEXED BY` — this one bites
 
 `GROUP BY artist` matches `idx_scrobbles_artist` exactly, so SQLite prefers that

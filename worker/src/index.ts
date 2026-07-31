@@ -108,6 +108,39 @@ const readJSON = <T>(env: Env, key: string): Promise<T | null> =>
 // excluded: it ticks every run and would make every blob look "new".
 const nowIdentity = (b: NowBlob) => JSON.stringify([b.nowPlaying, b.lastPlayed, b.totalScrobbles])
 
+/**
+ * Re-offer this much overlap on every pull. Last.fm can deliver a scrobble late
+ * or slightly out of order, so filtering strictly on "newer than the last one we
+ * saw" would drop it permanently. INSERT OR IGNORE makes the overlap free.
+ */
+const INGEST_GRACE = 3600
+
+/** 100 bound parameters per query is a hard D1 limit; 6 columns → 16 rows. */
+const INSERT_CHUNK = 16
+
+const INSERT_COLS = 6
+
+/** One multi-row INSERT per chunk, instead of one statement per scrobble. */
+function insertStatements(env: Env, rows: Scrobble[]): D1PreparedStatement[] {
+  const out: D1PreparedStatement[] = []
+  for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+    const chunk = rows.slice(i, i + INSERT_CHUNK)
+    const tuples = chunk
+      .map((_, j) => {
+        const b = j * INSERT_COLS
+        return `(?${b + 1}, ?${b + 2}, ?${b + 3}, ?${b + 4}, ?${b + 5}, ?${b + 6})`
+      })
+      .join(', ')
+    out.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO scrobbles (uts, track, artist, album, mbid, image)
+         VALUES ${tuples}`,
+      ).bind(...chunk.flatMap((s) => [s.uts, s.track, s.artist, s.album, s.mbid, s.image])),
+    )
+  }
+  return out
+}
+
 /** Pull recent scrobbles, insert the new ones, refresh now-playing + total. */
 async function ingest(env: Env): Promise<void> {
   const recent = await fetchRecentTracks({
@@ -116,15 +149,18 @@ async function ingest(env: Env): Promise<void> {
     limit: 50,
   })
 
-  if (recent.scrobbles.length) {
-    const stmt = env.DB.prepare(
-      `INSERT OR IGNORE INTO scrobbles (uts, track, artist, album, mbid, image)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
-    )
-    await env.DB.batch(
-      recent.scrobbles.map((s) => stmt.bind(s.uts, s.track, s.artist, s.album, s.mbid, s.image)),
-    )
-  }
+  // Read now:v1 up front: it tells us how far we already got, which is what lets
+  // us skip re-offering 50 rows we already have.
+  const prev = await readJSON<NowBlob>(env, KEY.now)
+
+  // The Free plan allows 50 D1 queries per Worker invocation and a batch() counts
+  // each statement separately. Sending one statement per scrobble meant ~49 per
+  // tick — at the ceiling, with computeStats() and computeHeatmap() still to run
+  // in the same invocation. Filtering to what is actually new and packing the
+  // rest into multi-row INSERTs takes a normal tick to zero or one statement.
+  const since = prev?.lastPlayed ? prev.lastPlayed.uts - INGEST_GRACE : 0
+  const fresh = recent.scrobbles.filter((s) => s.uts > since)
+  if (fresh.length) await env.DB.batch(insertStatements(env, fresh))
 
   // Last.fm returns newest-first, so scrobbles[0] is the most recent completed play.
   const next: NowBlob = {
@@ -138,7 +174,6 @@ async function ingest(env: Env): Promise<void> {
   // KV's free tier allows 1,000 writes/day; this cron fires 1,440 times. Most runs
   // see the same track as the last one, so only write when something actually
   // changed — a KV read is ~100x cheaper than the write it saves.
-  const prev = await readJSON<NowBlob>(env, KEY.now)
   if (!prev || nowIdentity(prev) !== nowIdentity(next)) {
     await env.KV.put(KEY.now, JSON.stringify(next))
   }

@@ -66,63 +66,74 @@ export function localDay(uts: number, offsetSeconds: number): string {
 /** How many rows each "top" list carries. Ten made the three columns too busy. */
 const TOP_N = 5
 
-async function windowStats(db: D1Database, since: number, days: number): Promise<StatWindow> {
-  const counts = await db
-    .prepare(
-      `SELECT COUNT(*)                                            AS scrobbles,
-              COUNT(DISTINCT artist)                              AS artists,
-              COUNT(DISTINCT CASE WHEN album <> '' THEN album END) AS albums,
-              COUNT(DISTINCT track || char(31) || artist)         AS tracks
-         FROM scrobbles WHERE uts >= ?1`,
-    )
-    .bind(since)
-    .first<{ scrobbles: number; artists: number; albums: number; tracks: number }>()
+/** Top-N by play count, ties broken on the label so the order is stable. */
+function topOf<T>(
+  counts: Map<string, { count: number; image: string | null; label: string; row: T }>,
+): (T & { count: number; image: string | null })[] {
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, TOP_N)
+    .map((e) => ({ ...e.row, count: e.count, image: e.image }))
+}
 
-  // INDEXED BY is load-bearing, not decoration. `GROUP BY artist` matches
-  // idx_scrobbles_artist exactly, so SQLite prefers it and produces
-  // "SCAN scrobbles USING INDEX idx_scrobbles_artist" — a full ~101k-row scan
-  // that ignores the uts range. At the 15-minute refresh cadence that measured
-  // 22.5M rows/day against a 5M/day budget. Pinning the uts index gives
-  // "SEARCH scrobbles USING INDEX idx_scrobbles_uts (uts>?)" and reads only the
-  // window (~2k rows). The album/track queries below group on columns with no
-  // matching index, so they already range-scan correctly.
-  const topArtists = await db
-    .prepare(
-      `SELECT artist AS name, COUNT(*) AS count, MAX(image) AS image
-         FROM scrobbles INDEXED BY idx_scrobbles_uts WHERE uts >= ?1
-        GROUP BY artist ORDER BY count DESC, name LIMIT ?2`,
-    )
-    .bind(since, TOP_N)
-    .all<ArtistStat>()
+/**
+ * Aggregate one window from rows already in memory.
+ *
+ * This used to be four SQL aggregates per window, eight across 7d and 30d, each
+ * re-reading rows the others had just read — ~10k rows per refresh, 96 times a
+ * day. The 30-day window is only ~2k rows, so fetching it once and folding both
+ * windows out of it in JS is both fewer queries (8 → 1) and fewer rows (5x).
+ *
+ * It also removes the INDEXED BY hazard entirely: there is no GROUP BY left for
+ * the planner to satisfy with the wrong index.
+ */
+export function windowStats(rows: Scrobble[], since: number, days: number): StatWindow {
+  const artists = new Map<string, { count: number; image: string | null; label: string; row: { name: string } }>()
+  const albums = new Map<string, { count: number; image: string | null; label: string; row: { album: string; artist: string } }>()
+  const tracks = new Map<string, { count: number; image: string | null; label: string; row: { track: string; artist: string } }>()
 
-  const topAlbums = await db
-    .prepare(
-      `SELECT album, artist, COUNT(*) AS count, MAX(image) AS image
-         FROM scrobbles WHERE uts >= ?1 AND album <> ''
-        GROUP BY album, artist ORDER BY count DESC, album LIMIT ?2`,
-    )
-    .bind(since, TOP_N)
-    .all<AlbumStat>()
+  let scrobbles = 0
+  const albumKeys = new Set<string>()
 
-  const topTracks = await db
-    .prepare(
-      `SELECT track, artist, COUNT(*) AS count, MAX(image) AS image
-         FROM scrobbles WHERE uts >= ?1
-        GROUP BY track, artist ORDER BY count DESC, track LIMIT ?2`,
-    )
-    .bind(since, TOP_N)
-    .all<TrackStat>()
+  const bump = <T>(
+    map: Map<string, { count: number; image: string | null; label: string; row: T }>,
+    key: string,
+    label: string,
+    row: T,
+    image: string | null,
+  ) => {
+    const hit = map.get(key)
+    if (hit) {
+      hit.count++
+      // Match SQL's MAX(image): keep the largest, so a row with null art doesn't
+      // wipe out cover art seen on another play of the same thing.
+      if (image && (!hit.image || image > hit.image)) hit.image = image
+    } else {
+      map.set(key, { count: 1, image, label, row })
+    }
+  }
 
-  const scrobbles = counts?.scrobbles ?? 0
+  for (const r of rows) {
+    if (r.uts < since) continue
+    scrobbles++
+    bump(artists, r.artist, r.artist, { name: r.artist }, r.image)
+    bump(tracks, `${r.track}${r.artist}`, r.track, { track: r.track, artist: r.artist }, r.image)
+    if (r.album) {
+      bump(albums, `${r.album}${r.artist}`, r.album, { album: r.album, artist: r.artist }, r.image)
+      albumKeys.add(r.album)
+    }
+  }
+
   return {
     scrobbles,
-    artists: counts?.artists ?? 0,
-    albums: counts?.albums ?? 0,
-    tracks: counts?.tracks ?? 0,
+    artists: artists.size,
+    // COUNT(DISTINCT album) in the old SQL counted album *names*, not name+artist.
+    albums: albumKeys.size,
+    tracks: tracks.size,
     perDay: Math.round((scrobbles / days) * 10) / 10,
-    topArtists: topArtists.results,
-    topAlbums: topAlbums.results,
-    topTracks: topTracks.results,
+    topArtists: topOf(artists) as ArtistStat[],
+    topAlbums: topOf(albums) as AlbumStat[],
+    topTracks: topOf(tracks) as TrackStat[],
   }
 }
 
@@ -182,9 +193,12 @@ export async function fetchOlderDays(
 }
 
 /**
- * 7d + 30d windows plus the recent per-day logs. Recomputed on the "heavy"
- * cadence (every ~15 min): each query is bounded by the `uts` index, so it reads
- * only rows inside the window, never the whole archive.
+ * 7d + 30d windows plus the recent per-day logs, from a *single* query.
+ *
+ * The 30-day window is the widest thing here (~2k rows) and strictly contains
+ * both the 7-day window and the 11 days of log rows, so one fetch feeds all
+ * three. That replaces nine queries with one and reads the rows once instead of
+ * three times over.
  */
 export async function computeStats(
   db: D1Database,
@@ -194,15 +208,16 @@ export async function computeStats(
   const now = Math.floor(Date.now() / 1000)
   const recentDayCount = 10
 
-  const [window7, window30] = await Promise.all([
-    windowStats(db, now - 7 * DAY, 7),
-    windowStats(db, now - 30 * DAY, 30),
-  ])
-
-  const logRows = await db
+  const all = await db
     .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts >= ?1 ORDER BY uts DESC`)
-    .bind(now - (recentDayCount + 1) * DAY)
+    .bind(now - 30 * DAY)
     .all<Scrobble>()
+
+  const window7 = windowStats(all.results, now - 7 * DAY, 7)
+  const window30 = windowStats(all.results, now - 30 * DAY, 30)
+
+  // The log needs 11 days, well inside the 30 already fetched.
+  const logRows = { results: all.results.filter((r) => r.uts >= now - (recentDayCount + 1) * DAY) }
   const recentDays = groupDays(logRows.results, offset).slice(0, recentDayCount)
   const nextBefore = recentDays.at(-1)?.tracks.at(-1)?.uts ?? null
 
