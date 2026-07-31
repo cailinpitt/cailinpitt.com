@@ -23,6 +23,7 @@ export const routes: RouteRecord[] = [
         // the listening API so a Worker outage can't fail an unrelated deploy.
         getStaticPaths: () => listeningYears().map((y) => `/listening/${y}`),
       },
+      { path: 'reading', lazy: () => import('./pages/Reading') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'privacy', lazy: () => import('./pages/Privacy') },
       // Photo galleries at their preserved Squarespace paths.

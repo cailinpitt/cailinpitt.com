@@ -125,6 +125,8 @@ npm run images:prune -- --delete   # …and delete them
 objects stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest
 and every `/images/...` path in the blog markdown, and refuses to delete if anything referenced
 is missing from the bucket (so a half-finished upload can't look like a bucket full of orphans).
+Anything under `PROTECTED_PREFIXES` (currently `images/reading/`) is never touched — those objects
+belong to the reading Worker and are referenced from its D1 database, which this script can't see.
 Note that deleted objects can still serve from Cloudflare's edge cache for a while — the upload
 sets `immutable` — so purge the URL in the dashboard if you need it gone immediately.
 
@@ -173,6 +175,30 @@ cron and serves a cached JSON bundle; the page fetches it in the browser.
   `LASTFM_API_KEY` in `.env`), then load the generated SQL into D1 (see worker README).
 - **API base URL:** set `VITE_LISTENING_API` at build time (defaults to
   `https://listening.cailinpitt.com`).
+
+## Reading (`/reading`)
+
+The `/reading` page shows books (from [hardcover.app](https://hardcover.app)) and
+articles, with cover art and social cards. Same shape as `/listening`: a standalone
+Cloudflare Worker (`worker-reading/`) owns the data and the page fetches a JSON
+bundle in the browser.
+
+- **Books** are synced from Hardcover's GraphQL API on a daily cron into D1. The
+  sync is a full replace, so the first run imports the entire history — there is no
+  backfill script to run.
+- **Articles** are pushed to an authenticated `POST /ingest` on the Worker, which
+  fetches the page's `og:` metadata and social card and logs it. Saved from an
+  iOS/macOS share-sheet Shortcut or a desktop bookmarklet — one tap from any app.
+- **Images** (covers + social cards) are mirrored into the same R2 bucket as the
+  photos, under `images/reading/`. Because those objects are referenced from D1
+  rather than from the repo, `scripts/prune-r2.mjs` carries a `PROTECTED_PREFIXES`
+  guard so `images:prune` can never delete them.
+- **Setup, design notes, and how to test each piece separately:** see
+  [`worker-reading/README.md`](worker-reading/README.md).
+- **Check the Hardcover query without deploying:** `npm run reading:probe`
+  (needs `HARDCOVER_TOKEN` in `.env`).
+- **API base URL:** set `VITE_READING_API` at build time (defaults to
+  `https://reading.cailinpitt.com`).
 
 ## Deploy
 

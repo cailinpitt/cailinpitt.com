@@ -17,7 +17,9 @@
     "images:upload": "node scripts/upload-r2.mjs",
     "images:prune": "node scripts/prune-r2.mjs",
     "images:publish": "npm run images:sync && npm run images:upload",
-    "publish:atproto": "node scripts/publish-atproto.mjs"
+    "publish:atproto": "node scripts/publish-atproto.mjs",
+    "reading:probe": "node scripts/hardcover-probe.mjs",
+    "reading:sync": "node scripts/reading-sync.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

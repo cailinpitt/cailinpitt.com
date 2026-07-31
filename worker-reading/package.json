@@ -1,0 +1,21 @@
+{
+  "name": "cailinpitt-reading-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "// dev:remote": "Real D1 + R2, and exposes /__scheduled to fire the sync on demand. Needs `npm run deploy` to have run once, so the custom domain exists.",
+    "dev:remote": "wrangler dev --remote --test-scheduled",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "schema:local": "wrangler d1 execute cailinpitt-reading --local --file=schema.sql",
+    "schema:remote": "wrangler d1 execute cailinpitt-reading --remote --file=schema.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "typescript": "^5.7.0",
+    "wrangler": "^3.99.0"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-reading",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-30",
+
+  // Read API on a subdomain of the (Cloudflare-managed) zone, same as the
+  // listening worker. Auto-provisions the DNS record + cert.
+  "routes": [{ "pattern": "reading.cailinpitt.com", "custom_domain": true }],
+
+  // Books only change when Cailin finishes one, so a daily pull is plenty —
+  // unlike the listening worker, nothing here needs a per-minute cron. Articles
+  // are pushed to /ingest, not pulled on this schedule. 09:00 UTC ≈ 04:00 Central.
+  "triggers": { "crons": ["0 9 * * *"] },
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // Fixed offset (seconds) used to bucket article reads into local calendar
+    // days. -18000 = UTC-5 (US Central, DST); -21600 for standard time. Matches
+    // the listening worker — see its README on the DST caveat.
+    "TZ_OFFSET_SECONDS": "-18000",
+    // Comma-separated origins allowed to read the API (CORS). Any http://localhost
+    // or 127.0.0.1 port is additionally allowed in code, so local dev needs no
+    // entry here. The first entry is the fallback sent to non-matching origins.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Book covers mirrored to R2 per sync run. A free-plan invocation gets 50
+    // subrequests (R2/KV/D1 binding calls included) and each mirror costs 2.
+    // The rest of a sync spends ~8 (one `me` query, one GraphQL page per 100
+    // books, one D1 read, one D1 batch), so 18 mirrors = 44 with headroom for
+    // the library to keep growing. Whatever is left over is picked up by the
+    // next run; those books show a placeholder until then. On Workers Paid
+    // (10,000 subrequests) raise this past the library size and it all mirrors
+    // in a single pass.
+    "MIRROR_BUDGET": "18"
+  },
+
+  // Bindings. Fill in the id after creating the database (see README):
+  //   wrangler d1 create cailinpitt-reading
+  //
+  // Note there is no KV namespace here, unlike the listening worker. At a few
+  // hundred books the bundle is built from D1 on demand behind the edge cache —
+  // precomputed blobs would be complexity with no payoff. See src/store.ts.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-reading",
+      "database_id": "e021880d-0025-41ed-b897-2efdeea5d1f9"
+    }
+  ],
+
+  // The same bucket the photo galleries use, bound directly (no S3 credentials).
+  // Book covers and article social images are mirrored under images/reading/.
+  //
+  // preview_bucket_name is the *same* bucket on purpose. `wrangler dev --remote`
+  // refuses to start without it, and pointing it at a throwaway bucket would
+  // defeat the point: the initial cover backfill is run through `wrangler dev
+  // --remote` and has to land in the bucket the site actually serves. This is
+  // safe because keys are content-addressed (a SHA-256 of the source url) and
+  // uploaded immutable, so a dev run can only ever rewrite a key with the same
+  // bytes — it cannot corrupt or displace anything, including the photo galleries.
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "cailinpitt-photos",
+      "preview_bucket_name": "cailinpitt-photos"
+    }
+  ]
+
+  // Secrets (not stored here):
+  //   wrangler secret put HARDCOVER_TOKEN
+  //   wrangler secret put ARTICLE_ADDRESS
+}

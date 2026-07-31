@@ -7,9 +7,11 @@ node_modules/
 dist/
 *.local
 
-# Cloudflare Worker (listening API) build/runtime artifacts
+# Cloudflare Worker (listening + reading APIs) build/runtime artifacts
 worker/.wrangler/
 worker/.dev.vars
+worker-reading/.wrangler/
+worker-reading/.dev.vars
 scripts/backfill.sql
 scripts/backfill.sql.progress.json
 

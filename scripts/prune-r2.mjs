@@ -7,10 +7,10 @@
 //   npm run images:prune -- --prefix images/2026/ --delete
 //
 // "Referenced" = every `src`/`thumb` in src/lib/gallery-images.json plus every
-// /images/... path in content/blog/*.md. As a safety check it refuses to delete
-// unless every referenced object is already present in the bucket (i.e. you've run
-// `npm run images:upload` first) — otherwise a half-finished upload would look like
-// a bucket full of orphans.
+// /images/... path in content/blog/*.md, plus anything under PROTECTED_PREFIXES.
+// As a safety check it refuses to delete unless every referenced object is
+// already present in the bucket (i.e. you've run `npm run images:upload` first) —
+// otherwise a half-finished upload would look like a bucket full of orphans.
 
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
@@ -46,6 +46,20 @@ const s3 = new S3Client({
 const asKey = (src) => src.replace(/^\//, '')
 const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
 
+/**
+ * Key prefixes this script must never touch.
+ *
+ * Everything else it keeps is discovered by reading the repo, so an object is
+ * "orphaned" precisely when nothing in the repo points at it. Book covers and
+ * article social cards are different: the reading Worker (worker-reading/)
+ * writes them and records the paths in its D1 database, which is invisible from
+ * here. Without this guard every one of them would look orphaned and a
+ * `--delete` run would wipe live images off /reading.
+ */
+const PROTECTED_PREFIXES = ['images/reading/']
+
+const isProtected = (key) => PROTECTED_PREFIXES.some((prefix) => key.startsWith(prefix))
+
 /** Every image key the built site can ask for. */
 async function referencedKeys() {
   const keep = new Set()
@@ -80,13 +94,20 @@ async function main() {
   const keep = await referencedKeys()
   const remote = await listBucket(PREFIX)
   const present = new Set(remote.map((o) => o.Key))
-  const orphans = remote.filter((o) => !keep.has(o.Key))
+  const orphans = remote.filter((o) => !keep.has(o.Key) && !isProtected(o.Key))
   const bytes = orphans.reduce((sum, o) => sum + o.Size, 0)
+  const protectedCount = remote.filter((o) => isProtected(o.Key)).length
 
   console.log(
     `r2://${R2_BUCKET}/${PREFIX}: ${remote.length} object(s), ` +
       `${remote.length - orphans.length} referenced, ${orphans.length} orphaned (${mb(bytes)})`,
   )
+  if (protectedCount) {
+    console.log(
+      `  (${protectedCount} of those are under ${PROTECTED_PREFIXES.join(', ')} — ` +
+        `owned by worker-reading, never pruned from here)`,
+    )
+  }
   if (!orphans.length) return
   for (const o of orphans.slice(0, 15)) console.log(`  ${o.Key}  ${mb(o.Size)}`)
   if (orphans.length > 15) console.log(`  …and ${orphans.length - 15} more`)
