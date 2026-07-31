@@ -220,6 +220,30 @@ bundle in the browser.
 - **API base URL:** set `VITE_READING_API` at build time (defaults to
   `https://reading.cailinpitt.com`).
 
+## Log (`/log`)
+
+One row per day, merging all five activity streams: scrobbles, saved articles, books
+started/finished, published posts, and photos taken. Nothing new is stored — the page
+fetches the same `/listening.json` and `/reading.json` bundles the other two pages use
+and merges them in the browser against the posts and photos compiled into the build
+(`src/lib/timeline.ts`).
+
+- **How far back it goes** is set by the listening days, the densest stream and the only
+  one worth a real cursor. Everything else is filtered into that window, and "load older"
+  pulls another block of days and tops the other streams up to match. Once listening is
+  exhausted there's no floor and the rest of the history shows — currently ~77 rows back
+  to 2015.
+- **A day with no scrobbles still gets a row** if anything else happened on it. The
+  listening days seed the timeline; they don't limit it.
+- **Photos only appear from 2026 on**, since placing one in time needs the capture date
+  recorded by `images:sync` (see [above](#add-a-photo-gallery-eg-2026)) and the older
+  galleries came out of Squarespace EXIF-stripped. Each thumbnail links straight into the
+  gallery lightbox at that frame.
+- **Day bucketing is inherited from each stream, not recomputed** — the Worker groups
+  scrobbles into US Central days while articles bucket in the viewer's zone, so the two
+  disagree at the margins for a visitor far from Central. See the note at the top of
+  `src/lib/datetime.ts`; it's a property of the data, not something this page can fix.
+
 ## Deploy
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and publishes to

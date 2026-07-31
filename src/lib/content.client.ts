@@ -5,6 +5,7 @@
 import atprotoData from '../../content/atproto.json'
 import galleryManifest from './gallery-images.json'
 import { galleryDefinitions, type Gallery, type GalleryImage } from './galleries'
+import { datedPhotos, type DatedPhoto } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
 import type { GallerySummary } from './content.server'
 
@@ -43,4 +44,8 @@ export function loadGallerySummaries(): GallerySummary[] {
     ...gallery,
     cover: images[0],
   }))
+}
+
+export function loadDatedPhotos(): DatedPhoto[] {
+  return datedPhotos(loadGalleries())
 }

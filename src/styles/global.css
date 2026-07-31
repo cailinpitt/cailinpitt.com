@@ -1866,3 +1866,123 @@ a.book-link:hover .book-title {
 .now-bar + .now-bar {
   margin-top: 0.6rem;
 }
+
+/* ---- /log ---------------------------------------------------------------
+   One row per day, merging listening / reading / writing / photos. Slightly
+   wider than the reading column so a day's events don't wrap awkwardly, but
+   narrower than the galleries — it's still a text page. */
+.log {
+  width: min(48rem, 92vw);
+  margin-inline: calc(50% - min(48rem, 92vw) / 2);
+}
+.log h1 {
+  font-size: var(--step-3);
+  margin-bottom: 0.5rem;
+}
+.log .lead {
+  margin-top: 0;
+}
+.log-error {
+  color: var(--muted);
+}
+
+.log-days {
+  list-style: none;
+  margin: 2.5rem 0 0;
+  padding: 0;
+}
+.log-day {
+  padding-block: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+.log-day:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+.log-date {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.9rem;
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  font-weight: 600;
+}
+.log-year {
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.log-event {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+.log-icon {
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.log-label {
+  font-weight: 600;
+}
+.log-detail {
+  color: var(--muted);
+}
+.log-event a {
+  color: var(--fg);
+  text-decoration-color: var(--rule);
+}
+.log-event a:hover {
+  color: var(--accent);
+}
+
+/* Article titles under their count line. */
+.log-sublist {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.log-thumbs {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+.log-thumbs img {
+  display: block;
+  width: 5rem;
+  height: 3.5rem;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--surface);
+  transition: opacity 0.2s ease;
+}
+.log-thumbs a:hover img {
+  opacity: 0.85;
+}
+
+.log-skeleton {
+  margin-top: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}

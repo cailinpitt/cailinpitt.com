@@ -1,4 +1,5 @@
 import { galleryDefinitions, type Gallery, type GalleryImage } from './galleries'
+import { datedPhotos, type DatedPhoto } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
 
 export interface GallerySummary extends Omit<Gallery, 'images'> {
@@ -55,4 +56,8 @@ export async function loadGallerySummaries(): Promise<GallerySummary[]> {
     ...gallery,
     cover: images[0],
   }))
+}
+
+export async function loadDatedPhotos(): Promise<DatedPhoto[]> {
+  return datedPhotos(await loadGalleries())
 }

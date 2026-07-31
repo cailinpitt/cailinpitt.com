@@ -25,6 +25,7 @@ export const routes: RouteRecord[] = [
         getStaticPaths: () => listeningYears().map((y) => `/listening/${y}`),
       },
       { path: 'reading', lazy: () => import('./pages/Reading') },
+      { path: 'log', lazy: () => import('./pages/Log') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'privacy', lazy: () => import('./pages/Privacy') },
       // Photo galleries at their preserved Squarespace paths.
