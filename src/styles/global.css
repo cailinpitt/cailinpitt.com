@@ -2013,7 +2013,7 @@ a.book-link:hover .book-title {
 /* OSM tiles are drawn for light backgrounds, so a dark page gets a glaring
    white slab. Inverting and re-rotating the hue keeps roads and water reading
    correctly while sitting in the page's palette. Markers are drawn in an
-   overlay pane above this, so they keep their real colour. */
+   overlay pane above this, so they keep their real color. */
 :root[data-theme='dark'] .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
 }

@@ -12,8 +12,8 @@
 import exifReader from 'exif-reader'
 
 /**
- * Coordinates are rounded to 2 decimal places — about 1.1 km. That's enough to
- * place a photo on a map or name the neighbourhood, and not enough to point at
+ * Coordinates are rounded to 2 decimal places — about 0.7 miles. That's enough
+ * to place a photo on a map or name the neighborhood, and not enough to point at
  * a house. The manifest is committed and served to browsers, so this rounding is
  * the privacy boundary: full precision stays in the originals, which are
  * gitignored and never uploaded.

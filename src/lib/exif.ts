@@ -18,7 +18,7 @@ export interface PhotoExif {
   /** Actual focal length in mm, not 35mm-equivalent. */
   focalLength?: number
   /**
-   * [lat, lon], rounded to ~1.1km. Deliberately coarse — see scripts/exif.mjs.
+   * [lat, lon], rounded to ~0.7 miles. Deliberately coarse — see scripts/exif.mjs.
    * Not a tuple type: the manifest is a JSON import, which infers number[], and
    * widening here beats casting the whole manifest through `unknown`.
    */

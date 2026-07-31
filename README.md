@@ -114,7 +114,7 @@ That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeepin
 
 > **On location data.** `gallery-images.json` is committed and served to browsers, so anything
 > in it is public and permanent. GPS coordinates are therefore rounded to 2 decimal places
-> (~1.1 km) on the way in — enough to place a photo on a map or name a neighbourhood, not enough
+> (~0.7 miles) on the way in — enough to place a photo on a map or name a neighborhood, not enough
 > to point at an address. Full precision stays in the originals, which are gitignored and never
 > uploaded. If you'd rather publish nothing at all, drop the `place` field in
 > `scripts/exif.mjs` and re-run with `--reexif`; it will clear the recorded values.
@@ -234,11 +234,11 @@ at that frame.
   module scope — the page shell prerenders like any other and the map fills in after
   mount. Vite splits it into its own JS **and** CSS chunk, so no other page loads it.
 - Pins are `circleMarker`s (drawn, not images), which sidesteps Leaflet's bundler-hostile
-  default marker icon URLs and lets them take the site's accent colour.
+  default marker icon URLs and lets them take the site's accent color.
 - In dark mode the tile pane is inverted and hue-rotated, since OSM's tiles are drawn for
-  light backgrounds. Markers live in a pane above it and keep their real colour.
-- Positions are rounded to ~1.1km (see [above](#add-a-photo-gallery-eg-2026)), which the
-  page says plainly — a pin marks a neighbourhood, not a spot.
+  light backgrounds. Markers live in a pane above it and keep their real color.
+- Positions are rounded to ~0.7 miles (see [above](#add-a-photo-gallery-eg-2026)), which the
+  page says plainly — a pin marks a neighborhood, not a spot.
 
 ## Log (`/log`)
 

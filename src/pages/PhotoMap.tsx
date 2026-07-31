@@ -80,11 +80,11 @@ export function Component() {
     const container = containerRef.current
     if (!container || pins.length === 0) return
     let map: import('leaflet').Map | undefined
-    let cancelled = false
+    let canceled = false
 
     import('leaflet')
       .then(({ default: L }) => {
-        if (cancelled || !containerRef.current) return
+        if (canceled || !containerRef.current) return
         map = L.map(container, { scrollWheelZoom: false })
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 18,
@@ -94,7 +94,7 @@ export function Component() {
 
         // circleMarker rather than the default pin: it's drawn, not an image, so
         // it sidesteps Leaflet's bundler-hostile marker icon URLs entirely — and
-        // it takes the site's accent colour.
+        // it takes the site's accent color.
         for (const pin of pins) {
           L.circleMarker([pin.lat, pin.lon], {
             radius: 7,
@@ -113,11 +113,11 @@ export function Component() {
         )
       })
       .catch(() => {
-        if (!cancelled) setFailed(true)
+        if (!canceled) setFailed(true)
       })
 
     return () => {
-      cancelled = true
+      canceled = true
       map?.remove()
     }
   }, [pins])
@@ -143,8 +143,8 @@ export function Component() {
       <h1>Photo map</h1>
       <p className="lead">
         {photos.length} photo{photos.length === 1 ? '' : 's'} across {pins.length} place
-        {pins.length === 1 ? '' : 's'}. Positions are rounded to about a kilometre, so a pin
-        marks a neighbourhood rather than a spot.
+        {pins.length === 1 ? '' : 's'}. Positions are rounded to about a mile, so a pin
+        marks a neighborhood rather than a spot.
       </p>
 
       {pins.length === 0 ? (

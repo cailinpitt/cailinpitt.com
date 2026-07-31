@@ -44,7 +44,7 @@ export interface DatedPhoto {
   src: string
   thumb?: string
   alt: string
-  /** [lat, lon] rounded to ~1.1km, when the original recorded a position. */
+  /** [lat, lon] rounded to ~0.7 miles, when the original recorded a position. */
   place?: number[]
 }
 

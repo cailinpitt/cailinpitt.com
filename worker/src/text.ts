@@ -12,7 +12,7 @@ const WIDTH = 72
 const BAR_WIDTH = 26
 const LABEL_WIDTH = 22
 
-// 256-color approximations of the site's palette: --accent #e3925b, plus greys.
+// 256-color approximations of the site's palette: --accent #e3925b, plus grays.
 const CODES = {
   accent: '\x1b[38;5;173m',
   accentDim: '\x1b[38;5;137m',

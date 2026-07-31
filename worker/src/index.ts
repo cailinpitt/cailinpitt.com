@@ -390,7 +390,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 }
 
 // Terminal client. Deliberately narrow: anything that is not
-// clearly a CLI fetcher gets the normal JSON/HTML behaviour.
+// clearly a CLI fetcher gets the normal JSON/HTML behavior.
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {

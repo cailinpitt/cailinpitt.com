@@ -151,7 +151,7 @@ export function Component() {
 // ---- pagination ----------------------------------------------------------
 
 /**
- * Shared "load older" behaviour for the two paginated sections.
+ * Shared "load older" behavior for the two paginated sections.
  *
  * Both lists are newest-first behind an opaque cursor, so the only things that
  * differ are which endpoint to call and how to key an item for deduping.
