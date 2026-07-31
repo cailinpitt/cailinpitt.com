@@ -1990,9 +1990,35 @@ a.book-link:hover .book-title {
 /* ---- /photos/map --------------------------------------------------------
    Leaflet + OpenStreetMap tiles. Leaflet ships its own stylesheet (imported by
    the page); everything here is the surrounding chrome and the popup. */
+/* Sits under the /photos heading. A chip rather than a bare link: it's the only
+   way into the map, and `.more` (the homepage's small-link style) is scoped to
+   those sections, so it would land here as unstyled serif body text. */
 .photos-map-link {
-  margin-top: -0.5rem;
-  margin-bottom: 1.5rem;
+  margin: -0.75rem 0 1.75rem;
+}
+.photos-map-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.photos-map-link a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.photos-map-link svg {
+  width: 1em;
+  height: 1em;
+  flex: none;
 }
 .photo-map .lead {
   max-width: var(--measure);
