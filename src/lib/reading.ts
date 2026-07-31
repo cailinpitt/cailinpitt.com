@@ -68,6 +68,20 @@ export interface ReadingBundle extends ArticlePage {
   }
 }
 
+/** Lightweight payload for the homepage strip (see /now.json). */
+export interface ReadingNow {
+  currentlyReading: Book[]
+  /** Shown when nothing is in progress, so the strip is never empty. */
+  lastFinished: Book | null
+  updatedAt: number
+}
+
+export async function fetchReadingNow(signal?: AbortSignal): Promise<ReadingNow> {
+  const res = await fetch(`${API_BASE}/now.json`, { signal })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  return res.json() as Promise<ReadingNow>
+}
+
 export async function fetchReading(signal?: AbortSignal): Promise<ReadingBundle> {
   const res = await fetch(`${API_BASE}/reading.json`, { signal })
   if (!res.ok) throw new Error(`Reading API ${res.status}`)

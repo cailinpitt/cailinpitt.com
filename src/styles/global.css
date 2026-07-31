@@ -1724,3 +1724,10 @@ a.book-link:hover .book-title {
   background: var(--surface);
   color: var(--fg);
 }
+
+/* The reading bar reuses .now-bar; book covers are 2:3, not square like art. */
+.now-bar-art.is-cover {
+  width: 34px;
+  height: 51px;
+  border-radius: 3px;
+}

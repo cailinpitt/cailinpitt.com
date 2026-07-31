@@ -2,6 +2,7 @@ import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
+import { ReadingBar } from '../components/ReadingBar'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { imageUrl } from '../lib/galleries'
 import type { GallerySummary } from '../lib/content.server'
@@ -81,6 +82,12 @@ export function Component() {
         <NowPlayingBar />
         <p className="more">
           <Link to="/listening">Listening log →</Link>
+        </p>
+
+        <h2 className="eyebrow">📖 Reading</h2>
+        <ReadingBar />
+        <p className="more">
+          <Link to="/reading">Reading log →</Link>
         </p>
       </section>
 

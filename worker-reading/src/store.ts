@@ -225,6 +225,46 @@ export async function fetchArticles(
   }
 }
 
+// ---- the homepage strip --------------------------------------------------
+
+export interface ReadingNow {
+  currentlyReading: Book[]
+  /** Shown when nothing is in progress, so the strip is never empty. */
+  lastFinished: Book | null
+  updatedAt: number
+}
+
+/**
+ * Four rows, for the homepage bar.
+ *
+ * Deliberately not the full bundle: this is the most-requested endpoint on the
+ * site (every homepage visit) and has no business reading 49 rows to render one
+ * book — the same reasoning behind the listening Worker's /now.json.
+ */
+export async function buildNow(db: D1Database): Promise<ReadingNow> {
+  const [current, finished] = await Promise.all([
+    db
+      .prepare(
+        `SELECT ${BOOK_COLS} FROM books WHERE status_id = 2
+         ORDER BY started_at IS NULL, started_at DESC LIMIT 3`,
+      )
+      .all<BookRow>(),
+    db
+      .prepare(
+        `SELECT ${BOOK_COLS} FROM books
+         WHERE status_id = 3 AND finished_at IS NOT NULL
+         ORDER BY finished_at DESC, user_book_id DESC, read_id DESC LIMIT 1`,
+      )
+      .first<BookRow>(),
+  ])
+
+  return {
+    currentlyReading: (current.results ?? []).map(toBook),
+    lastFinished: finished ? toBook(finished) : null,
+    updatedAt: Math.floor(Date.now() / 1000),
+  }
+}
+
 // ---- the bundle ----------------------------------------------------------
 
 interface YearTotals {

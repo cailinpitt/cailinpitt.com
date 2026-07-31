@@ -10,7 +10,14 @@
 //    at the top of src/store.ts).
 
 import { annotateArticle, deleteArticle, ingestArticle, resolveId } from './articles'
-import { ARTICLE_PAGE, BOOK_PAGE, buildBundle, fetchArticles, fetchFinishedBooks } from './store'
+import {
+  ARTICLE_PAGE,
+  BOOK_PAGE,
+  buildBundle,
+  buildNow,
+  fetchArticles,
+  fetchFinishedBooks,
+} from './store'
 import { syncBooks } from './sync'
 
 /** Edge-cache lifetime. The underlying data changes daily, or when you save one. */
@@ -239,6 +246,11 @@ export default {
         return cached(url, 'bundle', ctx, cors, async () =>
           json(await buildBundle(env.DB, localYear(Number(env.TZ_OFFSET_SECONDS) || 0)), EDGE_TTL),
         )
+      }
+
+      // Small payload for the homepage strip — see buildNow().
+      if (url.pathname === '/now.json') {
+        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), EDGE_TTL))
       }
 
       if (url.pathname === '/books') {
