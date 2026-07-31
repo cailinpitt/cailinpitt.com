@@ -3,10 +3,6 @@
 
 const API_BASE = import.meta.env.VITE_LISTENING_API ?? 'https://listening.cailinpitt.com'
 
-// Cailin's scrobbles are bucketed into days in US Central; format times/dates in
-// the same zone so the log reads coherently regardless of the viewer's location.
-const TZ = 'America/Chicago'
-
 export interface NowPlaying {
   track: string
   artist: string
@@ -44,7 +40,9 @@ export interface StatWindow {
   topTracks: TrackStat[]
 }
 export interface DayLog {
-  date: string // YYYY-MM-DD (US Central)
+  // YYYY-MM-DD. Bucketed by the Worker against a fixed US Central offset, so
+  // this is Cailin's calendar day; times inside it render in the viewer's zone.
+  date: string
   count: number
   tracks: Scrobble[]
 }
@@ -159,49 +157,8 @@ export const trackQuery = (artist: string, track: string) => `${artist} ${track}
 export const albumQuery = (artist: string, album: string) => `${artist} ${album}`
 
 // ---- formatting ----------------------------------------------------------
+//
+// Shared with /reading, so it lives in datetime.ts. Re-exported here because
+// this module is where the listening page has always imported it from.
 
-const timeFmt = new Intl.DateTimeFormat('en-US', {
-  hour: 'numeric',
-  minute: '2-digit',
-  timeZone: TZ,
-})
-const dayFmt = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  timeZone: TZ,
-})
-const numFmt = new Intl.NumberFormat('en-US')
-
-export const formatNumber = (n: number) => numFmt.format(n)
-export const formatTime = (uts: number) => timeFmt.format(uts * 1000)
-
-/** "Today" / "Yesterday" / "Monday, June 9" from a YYYY-MM-DD (US Central) key. */
-export function formatDayLabel(date: string): string {
-  const todayKey = keyForOffset(0)
-  const yesterdayKey = keyForOffset(-1)
-  if (date === todayKey) return 'Today'
-  if (date === yesterdayKey) return 'Yesterday'
-  // Parse the date-only key as noon UTC to avoid it slipping across a boundary.
-  return dayFmt.format(new Date(`${date}T12:00:00Z`))
-}
-
-function keyForOffset(days: number): string {
-  const d = new Date(Date.now() + days * 86_400_000)
-  // en-CA gives an ISO-ish YYYY-MM-DD, in the target zone.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(d)
-}
-
-/** Compact "just now / 5m ago / 3h ago / 2d ago" from unix seconds. */
-export function formatRelative(uts: number): string {
-  const secs = Math.max(0, Math.floor(Date.now() / 1000) - uts)
-  if (secs < 60) return 'just now'
-  const mins = Math.floor(secs / 60)
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  return months < 12 ? `${months}mo ago` : `${Math.floor(months / 12)}y ago`
-}
+export { formatDayLabel, formatNumber, formatRelative, formatTime } from './datetime'
