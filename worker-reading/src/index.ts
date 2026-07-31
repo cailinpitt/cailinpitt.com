@@ -58,6 +58,25 @@ const INGEST_CORS: Record<string, string> = {
   'access-control-max-age': '86400',
 }
 
+/**
+ * Read a JSON field that should be text, tolerating a single-element array.
+ *
+ * The iOS Shortcut builds its body from `Get URLs from Input`, which produces a
+ * *list* — Shortcuts serializes that as `{"url": ["https://…"]}` rather than a
+ * bare string. Requiring a string there rejected the request with an error that
+ * pointed at the body while the Shortcut looked perfectly correct on screen.
+ * Coercing here is cheaper than asking every caller to add a "Get Item from
+ * List" step they have no reason to expect.
+ */
+function asText(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null
+  if (Array.isArray(value)) {
+    const first = value.find((v) => typeof v === 'string' && v.trim())
+    return typeof first === 'string' ? first.trim() : null
+  }
+  return null
+}
+
 /** The local calendar year, for the "this year" counts. */
 function localYear(offsetSeconds: number): number {
   return new Date((Date.now() / 1000 + offsetSeconds) * 1000).getUTCFullYear()
@@ -170,13 +189,17 @@ export default {
           note?: unknown
           append?: unknown
         } | null
-        const target = typeof payload?.url === 'string' ? payload.url : null
-        const givenId = typeof payload?.id === 'string' ? payload.id : null
-        const note = typeof payload?.note === 'string' ? payload.note : null
+        const target = asText(payload?.url)
+        const givenId = asText(payload?.id)
+        const note = asText(payload?.note)
 
         if (request.method === 'POST') {
           if (!target) {
-            return jsonNoStore({ error: 'expected a JSON body with a "url" string' }, 400, cors)
+            return jsonNoStore(
+              { error: 'expected a JSON body with a "url" string', received: payload?.url ?? null },
+              400,
+              cors,
+            )
           }
           const result = await ingestArticle(env, { url: target, note })
           if (!result) return jsonNoStore({ error: `not a usable url: ${target}` }, 400, cors)
