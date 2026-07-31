@@ -55,13 +55,17 @@ const ROW_COLS = 'uts, track, artist, album, mbid, image'
 
 /** Years with at least one scrobble, oldest first. */
 export async function listYears(db: D1Database, offset: number): Promise<number[]> {
-  // MIN/MAX on an indexed column are index seeks, not scans.
-  const row = await db
-    .prepare('SELECT MIN(uts) AS lo, MAX(uts) AS hi FROM scrobbles')
-    .first<{ lo: number | null; hi: number | null }>()
-  if (!row?.lo || !row?.hi) return []
-  const first = new Date((row.lo + offset) * 1000).getUTCFullYear()
-  const last = new Date((row.hi + offset) * 1000).getUTCFullYear()
+  // Two queries, deliberately. SQLite only optimizes a *single* MIN or MAX per
+  // query into an index seek; asking for both in one statement plans
+  // "SCAN scrobbles USING COVERING INDEX idx_scrobbles_uts" and measured at
+  // 100,829 rows. Split, each is a "SEARCH" that touches one row.
+  const [lo, hi] = await Promise.all([
+    db.prepare('SELECT MIN(uts) AS v FROM scrobbles').first<{ v: number | null }>(),
+    db.prepare('SELECT MAX(uts) AS v FROM scrobbles').first<{ v: number | null }>(),
+  ])
+  if (!lo?.v || !hi?.v) return []
+  const first = new Date((lo.v + offset) * 1000).getUTCFullYear()
+  const last = new Date((hi.v + offset) * 1000).getUTCFullYear()
   const years: number[] = []
   for (let y = first; y <= last; y++) years.push(y)
   return years
