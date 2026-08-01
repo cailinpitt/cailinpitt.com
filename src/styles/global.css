@@ -2250,7 +2250,30 @@ a.book-link:hover .book-title {
   cursor: pointer;
 }
 
-/* ---- /colophon ----------------------------------------------------------- */
+/* ---- /colophon -----------------------------------------------------------
+   The tile grid is shared with /listening, which sizes it for four tiles of
+   four-digit window counts. The colophon puts six tiles in the same 40rem
+   measure, one of them a six-figure scrobble total — at the inherited size the
+   number ran past its tile and under the next one. So: a smaller value, room to
+   breathe, and three columns once there's width for them, which also lands six
+   tiles as a tidy 3 + 3 instead of 4 + 2. */
+.stat-tiles.is-compact {
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+}
+@media (min-width: 34rem) {
+  .stat-tiles.is-compact {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.stat-tiles.is-compact .stat-tile {
+  padding: 0.85rem;
+}
+.stat-tiles.is-compact dd {
+  font-size: var(--step-1);
+  /* Same-width digits, so the six tiles don't sit at six different rhythms. */
+  font-variant-numeric: tabular-nums;
+}
+
 .stat-note {
   margin-top: -1rem;
   color: var(--muted);

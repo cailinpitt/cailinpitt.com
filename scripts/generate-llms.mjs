@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Generate dist/llms.txt (curated index) and dist/llms-full.txt (full text) from
-// content/projects.md and content/blog/*.md. Runs after `npm run build` (part of
-// the "postbuild" script).
+// content/projects.md, content/colophon.md, and content/blog/*.md. Runs after
+// `npm run build` (part of the "postbuild" script).
 // Format follows the llms.txt convention — see https://llmstxt.org.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises'
@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const PROJECTS = path.join(ROOT, 'content', 'projects.md')
+const COLOPHON = path.join(ROOT, 'content', 'colophon.md')
+const GALLERIES = path.join(ROOT, 'src', 'lib', 'gallery-images.json')
 const BLOG = path.join(ROOT, 'content', 'blog')
 const DIST = path.join(ROOT, 'dist')
 const SITE = 'https://cailinpitt.com'
@@ -61,6 +63,48 @@ function cleanBody(body) {
     .trim()
 }
 
+/**
+ * The counts content/colophon.md quotes as {{placeholders}}, so this file can
+ * carry the same prose the page shows instead of raw template syntax.
+ *
+ * The page gets these from the route loader; here they're read straight off the
+ * gallery manifest, which is keyed by *image key* — and the one alias gallery
+ * (/past-work → /2022) shares 2022's key, so counting keys can't double-count
+ * the way counting routes would. Word count is deliberately absent: the prose
+ * doesn't currently quote it, and mirroring countWords() from src/lib/posts.ts
+ * would be real logic kept in two places for no reader's benefit. If the prose
+ * starts using it, fillTemplate below will say so loudly rather than quietly
+ * shipping "{{words}}".
+ */
+async function colophonValues(posts) {
+  const manifest = JSON.parse(await readFile(GALLERIES, 'utf8'))
+  const images = Object.values(manifest).flat()
+  return {
+    posts: posts.length,
+    galleries: Object.keys(manifest).length,
+    photos: images.length,
+    located: images.filter((img) => img.exif?.place?.length === 2).length,
+  }
+}
+
+// Mirrors fillTemplate in src/lib/colophon.ts — same two forms: {{key}} for a
+// value, {{#key}}…{{/key}} for a block kept only when that count is non-zero.
+function fillTemplate(body, values) {
+  const present = (key) => {
+    const value = values[key]
+    return value !== undefined && value !== '' && value !== 0
+  }
+  return body
+    .replace(/\{\{#(\w+)\}\}\s*([\s\S]*?)\s*\{\{\/\1\}\}/g, (match, key, inner) =>
+      key in values ? (present(key) ? inner : '') : match,
+    )
+    .replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      const value = values[key]
+      if (value === undefined) return match
+      return typeof value === 'number' ? value.toLocaleString('en-US') : value
+    })
+}
+
 async function main() {
   if (!existsSync(DIST)) {
     console.error('✗ No dist/ — run `npm run build` first.')
@@ -85,6 +129,20 @@ async function main() {
   }
   posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 
+  const colophonRaw = parseFrontmatter(await readFile(COLOPHON, 'utf8'))
+  const colophonBody = fillTemplate(colophonRaw.body, await colophonValues(posts))
+  // A placeholder that survived means the prose asked for a count this script
+  // doesn't know how to compute. Fail rather than publish the template syntax to
+  // the one file whose whole audience reads it literally.
+  const unresolved = colophonBody.match(/\{\{[^}]*\}\}/g)
+  if (unresolved) {
+    console.error(
+      `✗ content/colophon.md uses ${[...new Set(unresolved)].join(', ')}, which generate-llms.mjs ` +
+        'cannot fill. Add it to colophonValues() in this script.',
+    )
+    process.exit(1)
+  }
+
   const index = [
     `# ${SITE_NAME}`,
     '',
@@ -93,6 +151,10 @@ async function main() {
     '## Projects',
     '',
     `- [${projects.data.title ?? 'Projects'}](${SITE}/projects)${projects.data.description ? `: ${projects.data.description}` : ''}`,
+    '',
+    '## About this site',
+    '',
+    `- [${colophonRaw.data.title ?? 'Colophon'}](${SITE}/colophon)${colophonRaw.data.description ? `: ${colophonRaw.data.description}` : ''}`,
     '',
     '## Blog',
     '',
@@ -112,6 +174,13 @@ async function main() {
     '',
     cleanBody(projects.body),
     '',
+    '---',
+    '',
+    `# ${colophonRaw.data.title ?? 'Colophon'}`,
+    `${SITE}/colophon`,
+    '',
+    cleanBody(colophonBody),
+    '',
     ...posts.flatMap((p) => [
       '---',
       '',
@@ -125,7 +194,7 @@ async function main() {
 
   await writeFile(path.join(DIST, 'llms.txt'), index, 'utf8')
   await writeFile(path.join(DIST, 'llms-full.txt'), full, 'utf8')
-  console.log(`✓ llms.txt + llms-full.txt (${posts.length} posts)`)
+  console.log(`✓ llms.txt + llms-full.txt (${posts.length} posts, projects, colophon)`)
 }
 
 main().catch((err) => {

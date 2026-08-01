@@ -139,7 +139,7 @@ export function Component() {
         </header>
 
         <div className="post-body">
-          <dl className="stat-tiles">
+          <dl className="stat-tiles is-compact">
             <StatTile label="Posts" value={data.posts} />
             <StatTile label="Words" value={data.words} />
             <StatTile label="Photos" value={data.photos} />
