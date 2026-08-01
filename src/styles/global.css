@@ -171,7 +171,11 @@ img {
 .nav-links,
 .social-links {
   display: flex;
-  gap: 1.5rem;
+  /* Wrap, or the row of links is a single unbreakable line that pushes the page
+     wider than the viewport on a narrow screen — six items plus the theme
+     toggle is already past that on a small phone. */
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -181,6 +185,14 @@ img {
   align-items: center;
   font-size: var(--step--1);
   letter-spacing: 0.02em;
+}
+
+/* Tighten the spacing before wrapping, so the links stay on one line as long as
+   they reasonably can rather than dropping one item onto a lonely second row. */
+@media (max-width: 34rem) {
+  .nav-links {
+    gap: 0.4rem 0.9rem;
+  }
 }
 .nav-links a {
   text-decoration: none;
