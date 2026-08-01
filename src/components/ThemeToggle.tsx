@@ -20,9 +20,44 @@ function storedTheme(): Theme {
   return 'system'
 }
 
+// The colors index.html shipped, per tag, captured before we overwrite them.
+const systemColors = new WeakMap<HTMLMetaElement, string>()
+
+/**
+ * Keep the browser chrome tint in step with the theme actually in effect.
+ *
+ * index.html ships two media-scoped <meta name="theme-color"> tags. That's the
+ * right answer for System, and the only one that works with JS off — but a media
+ * query can't see the manual override, so a visitor forcing Dark on a light OS
+ * would get a paper-colored toolbar above a dark page. Writing the resolved
+ * background into *both* tags makes whichever one matches carry the right color;
+ * returning to System restores what the markup said.
+ *
+ * The value is read from the stylesheet rather than repeated here, so the two
+ * can't drift. That's also why this runs after mount instead of in the pre-paint
+ * script in index.html, where the CSS hasn't loaded and --bg reads empty: the
+ * cost is that an overridden theme keeps the media-matched tint for the first
+ * frames, which tints browser chrome and nothing on the page.
+ */
+function syncThemeColor(theme: Theme) {
+  const tags = document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+  for (const tag of tags) {
+    if (!systemColors.has(tag)) systemColors.set(tag, tag.content)
+  }
+  if (theme === 'system') {
+    for (const tag of tags) tag.content = systemColors.get(tag) ?? tag.content
+    return
+  }
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  if (!bg) return
+  for (const tag of tags) tag.content = bg
+}
+
 function apply(theme: Theme) {
   if (theme === 'system') delete document.documentElement.dataset.theme
   else document.documentElement.dataset.theme = theme
+  // After the attribute, so --bg resolves to the theme being applied.
+  syncThemeColor(theme)
   try {
     if (theme === 'system') localStorage.removeItem('theme')
     else localStorage.setItem('theme', theme)
@@ -57,7 +92,11 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>('system')
 
   useEffect(() => {
-    setTheme(storedTheme())
+    const stored = storedTheme()
+    setTheme(stored)
+    // The pre-paint script in index.html already set data-theme; this catches up
+    // the chrome tint, which it can't do before the stylesheet exists.
+    syncThemeColor(stored)
   }, [])
 
   const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]

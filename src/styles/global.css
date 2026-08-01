@@ -208,7 +208,10 @@ img {
   text-underline-offset: 0.3em;
 }
 
-.theme-toggle {
+/* The two icon buttons at the end of the nav — search and theme. One rule for
+   both so they can't end up different sizes next to each other. */
+.theme-toggle,
+.palette-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -222,10 +225,12 @@ img {
   cursor: pointer;
   border-radius: 5px;
 }
-.theme-toggle:hover {
+.theme-toggle:hover,
+.palette-trigger:hover {
   color: var(--accent);
 }
-.theme-toggle svg {
+.theme-toggle svg,
+.palette-trigger svg {
   display: block;
   width: 1.2rem;
   height: 1.2rem;
@@ -2182,6 +2187,226 @@ a.book-link:hover .book-title {
   color: var(--fg);
 }
 
+/* ---- /blog filter + year sections ---------------------------------------
+   The archive is one flat list of ~35 posts; the filter narrows it and the year
+   headings give the eye somewhere to land while scrolling past a decade. */
+.post-filter {
+  margin-top: 1.25rem;
+}
+.post-filter input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.4;
+}
+.post-filter input::placeholder {
+  color: var(--muted);
+}
+.post-filter input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.post-count {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.post-year + .post-year {
+  margin-top: 2.25rem;
+}
+.year-heading {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-empty {
+  color: var(--muted);
+}
+/* A link in prose, not a control: it's a way out of an empty list, not the
+   page's business. */
+.post-empty button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+/* ---- /colophon ----------------------------------------------------------- */
+.stat-note {
+  margin-top: -1rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+
+/* Inline code and blocks. Introduced for the colophon's curl lines; blog posts
+   with code in them get it too. */
+.post-body code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--surface);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.post-body pre {
+  overflow-x: auto;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  line-height: 1.6;
+}
+/* The block already carries the background; nesting a second one inside it
+   draws a box around every line. */
+.post-body pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ---- command palette (⌘K) ------------------------------------------------
+   Jump to any page, post, gallery, or tag. A native <dialog>, like the gallery
+   lightbox — showModal() brings focus trapping and Escape with it. */
+.palette {
+  width: min(38rem, 92vw);
+  /* Near the top rather than centered: the list grows downward, and a centered
+     box would walk up the screen as results arrive. */
+  margin: 12vh auto auto;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.28);
+  overflow: hidden;
+}
+.palette::backdrop {
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.palette-input {
+  display: block;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: none;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+}
+.palette-input::placeholder {
+  color: var(--muted);
+}
+/* The field is autofocused and is the only one in the dialog, so an outline
+   around it says nothing the caret doesn't; the accent rule marks it instead. */
+.palette-input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+.palette-results {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 0;
+  max-height: min(46vh, 24rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.palette-results li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+.palette-results li.is-active {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+.palette-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+.palette-results li.is-active .palette-label {
+  color: var(--accent);
+}
+.palette-sub,
+.palette-kind {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.palette-kind {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.palette-empty,
+.palette-hint {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.palette-hint {
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.palette-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+/* No physical keyboard to hint about, and the shorter viewport wants the rows. */
+@media (max-width: 34rem) {
+  .palette {
+    margin-top: 6vh;
+  }
+  .palette-hint {
+    display: none;
+  }
+  .palette-kind {
+    display: none;
+  }
+}
+
 /* ---- print ---------------------------------------------------------------
    Aimed at the blog post — the one page anyone prints or saves as a PDF. The
    site chrome comes off, the palette is forced light regardless of the reader's
@@ -2231,7 +2456,10 @@ a.book-link:hover .book-title {
   .segmented,
   .now-bar,
   .sparkline,
-  .photos-map-link {
+  .photos-map-link,
+  .palette,
+  .palette-trigger,
+  .post-filter {
     display: none !important;
   }
 

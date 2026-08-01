@@ -206,6 +206,52 @@ cron and serves a cached JSON bundle; the page fetches it in the browser.
   **Requires deploying the Worker** (`cd worker && npx wrangler deploy`); until then it 404s
   and the sparkline simply doesn't render.
 
+## Blog index (`/blog`)
+
+The list is grouped into year sections, and rows inside a section show only the month and
+day since the year is in the heading above them (the `datetime` attribute still carries the
+whole date). A filter above the list narrows by title, summary, tag, or date — every
+whitespace-separated term has to match, so "music 2019" narrows rather than widening.
+
+Matching is a substring scan over a map built once from the posts already on the page:
+~35 posts needs no search index, no dependency, and no fetch. With JavaScript off the input
+goes inert and the full list is still there, because it's in the prerendered HTML.
+
+## Color theme
+
+Light/dark follows `prefers-color-scheme`; the header toggle cycles System → Light → Dark,
+stores the choice in `localStorage`, and applies it as `data-theme` on `<html>`. A tiny
+inline script in `index.html` applies a stored choice before first paint.
+
+`index.html` also ships two media-scoped `<meta name="theme-color">` tags — the browser
+chrome matches the **page background**, not the accent, so the toolbar reads as an extension
+of the paper. A media query can't see the manual override, so `ThemeToggle` rewrites both
+tags with the resolved `--bg` when a theme is forced, and restores them for System. The
+value is read from the stylesheet rather than repeated in JS, which is also why it happens
+after mount: in the pre-paint script the CSS isn't loaded and `--bg` reads empty. The cost
+is that an overridden theme keeps the media-matched tint for the first few frames — which
+tints browser chrome and nothing on the page.
+
+## Search (⌘K)
+
+Every page carries a command palette — **⌘K** / **Ctrl-K**, or **/** when you aren't already
+typing, or the magnifier in the header. It jumps to any page, post, gallery, or tag.
+
+- **The index is compiled in, not fetched.** A small Vite plugin
+  (`cailinpitt:site-index` in `vite.config.ts`) reads `content/blog/*.md` at build time and
+  inlines the frontmatter — path, title, date, tags — as the `virtual:site-index` module.
+  That's ~100 bytes per post and no request, where an eager `import.meta.glob` would have
+  shipped every post's *body* to the browser and a generated JSON file would have cost a
+  round trip before the palette could open. Bodies are never included; the plugin uses the
+  same frontmatter parser as the site (`src/lib/frontmatter.ts`), so it can't disagree with
+  the rendered pages about what a post is called.
+- Adding a post needs nothing done here — it's in the palette on the next build. In dev the
+  module is invalidated when anything under `content/blog/` changes.
+- Pages are listed by hand in `PAGES` in `src/components/CommandPalette.tsx`; **a new route
+  needs adding there** (galleries and tags are derived, so those don't).
+- It's a native `<dialog>` opened with `showModal()`, like the gallery lightbox — focus
+  trapping and Escape come with it rather than being reimplemented.
+
 ## Homepage
 
 Mostly static, with three things that change on their own:
@@ -219,6 +265,54 @@ Mostly static, with three things that change on their own:
   *galleries'* cover images, so the heading was untrue — a 2020 cover under "Recent
   photos" — and it only changed when a whole gallery was added. Galleries with no capture
   dates fall back to covers, so the section can't vanish.
+
+## Colophon (`/colophon`)
+
+A "how this is built" page, linked from the footer. **The prose lives in
+`content/colophon.md`** — edit that, not the page component (same arrangement as
+`content/projects.md`; `title`, `lead`, and `description` come from its frontmatter).
+
+Above it sits a row of counters: posts, words, and photos are counted at **build time**
+from the same content the pages render from; scrobbles, books, and articles are fetched in
+the browser from the two Workers when the page loads. Each live tile renders only once its
+number lands, so a Worker being down costs the page three tiles and nothing else.
+
+### Numbers in the prose
+
+The body can quote the build-time counts, substituted by `fillTemplate` in
+`src/lib/colophon.ts` before the Markdown is rendered. Two forms, and deliberately no more —
+it's a fill-in-the-blanks step, not a template language:
+
+```markdown
+{{photos}} photographs across {{galleries}} galleries…
+
+{{#located}}
+{{located}} of them carry a location…
+{{/located}}
+```
+
+- Available keys: `posts`, `words`, `photos`, `galleries`, `located` — whatever `ColophonData`
+  carries. Numbers are thousands-separated. `posts` and `words` also feed the tiles, so they
+  stay defined whether or not the prose quotes them.
+- `{{#key}}…{{/key}}` keeps its contents only when that count is non-zero. That exists
+  because "0 of them carry a location" is a sentence that shouldn't be published — a repo
+  whose photos carry no EXIF just doesn't get that paragraph.
+- An unknown placeholder is **left in the text**, not blanked, so a typo shows up as
+  `{{photoss}}` the first time you preview the page rather than quietly deleting half a
+  sentence.
+- Root-relative links in the body render as client-side `<Link>`s; external ones are plain
+  anchors.
+
+### Where the live numbers come from
+
+- Scrobbles come from the listening Worker's `/now.json`, which already carries Last.fm's
+  own all-time total — no `COUNT(*)`, and the smallest endpoint on the site. The field is
+  optional in `NowState` so a Worker deployed before it existed reads as *absent* rather
+  than as zero.
+- Books and articles come from `/reading.json` (the counts aren't on the reading Worker's
+  smaller endpoint).
+- Photo counts skip alias galleries (`/past-work` → `/2022`), which would otherwise count
+  the same photos twice.
 
 ## Reading (`/reading`)
 

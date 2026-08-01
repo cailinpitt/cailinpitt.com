@@ -107,3 +107,35 @@ export function formatDate(iso: string): string {
   if (Number.isNaN(d.getTime())) return iso
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
+
+/**
+ * "March 3" — the same date with the year dropped, for lists that already carry
+ * the year in a heading above the row (see /blog). Falls back to the full date
+ * if the string won't parse, so a row never renders empty.
+ */
+export function formatMonthDay(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso.includes('T') ? iso : `${iso}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+}
+
+/** The calendar year of a post, from the ISO date. Empty when it has none. */
+export const postYear = (iso: string): string => iso.slice(0, 4)
+
+/**
+ * Posts split into year sections, keeping the order they arrive in (newest
+ * first). Posts with no parsable year land in an "Undated" group rather than
+ * being dropped — the archive is old enough to have one, and the newest-first
+ * sort puts an empty date last, so that group falls at the end on its own.
+ */
+export function postsByYear<T extends PostSummary>(posts: T[]): { year: string; posts: T[] }[] {
+  const groups: { year: string; posts: T[] }[] = []
+  for (const post of posts) {
+    const year = /^\d{4}$/.test(postYear(post.date)) ? postYear(post.date) : 'Undated'
+    const last = groups[groups.length - 1]
+    if (last?.year === year) last.posts.push(post)
+    else groups.push({ year, posts: [post] })
+  }
+  return groups
+}

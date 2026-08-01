@@ -8,7 +8,12 @@
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#b3541e" />
+    <!-- Browser chrome tint. Matches the page background rather than the accent, so
+         the toolbar reads as an extension of the paper instead of a clay band above
+         it. Two media-scoped tags cover System with no JS; a manual override can't
+         be seen by a media query, so ThemeToggle rewrites these after mount. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f4" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#141312" />
     <!-- Apply the saved color theme before first paint to avoid a flash of the wrong
          theme (FOUC). Mirrors src/components/ThemeToggle.tsx. System = no attribute. -->
     <script>

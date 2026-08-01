@@ -118,6 +118,13 @@ export async function fetchOnThisDay(signal?: AbortSignal): Promise<OnThisDay> {
 export interface NowState {
   nowPlaying: NowPlaying | null
   lastPlayed: Scrobble | null
+  /**
+   * All-time scrobbles, straight from Last.fm's own total — no COUNT(*) behind
+   * it, which is why the cheapest endpoint can afford to carry it. Optional
+   * because a Worker deployed before it was added simply omits the field, and a
+   * missing counter should read as absent rather than as zero.
+   */
+  totalScrobbles?: number
   updatedAt: number
 }
 
