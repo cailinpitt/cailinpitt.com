@@ -78,6 +78,39 @@ function safeUrl(url: string | null | undefined): string | null {
   return /^https?:\/\//i.test(clean) ? clean : null
 }
 
+/**
+ * Query parameters that carry no meaning, only telemetry. Dropping them keeps the
+ * URL working while cutting the worst offenders roughly in half — a Substack link
+ * arrives at 143 characters and leaves at 62.
+ *
+ * Strictly an allowlist of known-dead keys. Never strip unrecognised parameters:
+ * plenty of sites put the actual article id in one, and a URL that looks tidy but
+ * 404s is worse than a long one.
+ */
+const TRACKING_PARAMS = [
+  /^utm_/i,
+  /^(fbclid|gclid|mc_cid|mc_eid|igshid|ref_src|ref_url|__twitter_impression)$/i,
+  // Substack appends all of these to every share link.
+  /^(isFreemail|post_id|publication_id|triedRedirect|r)$/i,
+]
+
+/** Drop telemetry parameters, and the '?' entirely if nothing survives. */
+function tidyUrl(url: string): string {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return url
+  }
+  if (!parsed.search) return url
+
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (TRACKING_PARAMS.some((re) => re.test(key))) parsed.searchParams.delete(key)
+  }
+  const query = parsed.searchParams.toString()
+  return `${parsed.origin}${parsed.pathname}${query ? `?${query}` : ''}${parsed.hash}`
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**
@@ -239,17 +272,18 @@ function articlesSection(articles: Article[], c: Ink, offset: number): string[] 
       lastDate = date
     }
     const time = c.dim(clockTime(article.readAt, offset))
-    const site = clip(article.site ?? '', 18)
-    // Only pad the title when the site column is actually there to its right —
-    // fit() on a last field leaves trailing spaces inside the color wrap, which
-    // no later trim can reach. Plenty of saved links have no og:site_name.
-    const title = site ? fit(article.title ?? article.url, 34) : clip(article.title ?? article.url, 34)
-    lines.push(`      ${time}  ${title}${site ? ` ${c.dim(site)}` : ''}`)
+    // No site column: it is the first thing in the URL on the next line, and
+    // dropping it buys ~20 columns of title, which is where truncation actually
+    // costs you something.
+    const title = clip(article.title ?? article.url, WIDTH - 17)
+    lines.push(`      ${time}  ${title}`)
 
     const url = safeUrl(article.url)
-    // 15 spaces lines the URL up under the title: 6 of indent, the 7-column time
-    // (clockTime pads the hour), then the 2 separating it from the title.
-    if (url) lines.push(`               ${c.faint(url)}`)
+    // Indented 8, not aligned under the title at 15. A URL is the one thing here
+    // that genuinely benefits from the extra columns, and it cannot be wrapped by
+    // hand — inserting a newline mid-URL is what makes it uncopyable, which is the
+    // whole reason it is printed rather than hyperlinked.
+    if (url) lines.push(`        ${c.faint(tidyUrl(url))}`)
   }
   return ['', `  ${c.accentDim('recently saved')}`, ...lines]
 }
