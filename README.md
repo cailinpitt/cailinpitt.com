@@ -361,7 +361,7 @@ at that frame.
 - Positions are rounded to ~0.7 miles (see [above](#add-a-photo-gallery-eg-2026)), which the
   page says plainly — a pin marks a neighborhood, not a spot.
 
-## Log (`/log`)
+## Timeline (`/timeline`)
 
 One row per day, merging all five activity streams: scrobbles, saved articles, books
 started/finished, published posts, and photos taken. Nothing new is stored — the page

@@ -25,7 +25,7 @@ export const routes: RouteRecord[] = [
         getStaticPaths: () => listeningYears().map((y) => `/listening/${y}`),
       },
       { path: 'reading', lazy: () => import('./pages/Reading') },
-      { path: 'log', lazy: () => import('./pages/Log') },
+      { path: 'timeline', lazy: () => import('./pages/Timeline') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'photos/map', lazy: () => import('./pages/PhotoMap') },
       { path: 'colophon', lazy: () => import('./pages/Colophon') },

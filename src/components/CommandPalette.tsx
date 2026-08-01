@@ -42,7 +42,14 @@ const PAGES: Entry[] = [
   { id: 'page:/projects', label: 'Projects', kind: 'Page', to: '/projects', keywords: 'software code apps' },
   { id: 'page:/listening', label: 'Listening', kind: 'Page', to: '/listening', keywords: 'music scrobbles last.fm now playing' },
   { id: 'page:/reading', label: 'Reading', kind: 'Page', to: '/reading', keywords: 'books articles hardcover' },
-  { id: 'page:/log', label: 'Log', kind: 'Page', to: '/log', keywords: 'timeline activity days' },
+  {
+    id: 'page:/timeline',
+    label: 'Timeline',
+    kind: 'Page',
+    to: '/timeline',
+    // "log" stays a keyword: the page answered to that name until 2026.
+    keywords: 'log activity days',
+  },
   { id: 'page:/colophon', label: 'Colophon', kind: 'Page', to: '/colophon', keywords: 'about built stack how' },
   { id: 'page:/privacy', label: 'Privacy', kind: 'Page', to: '/privacy', keywords: 'cookies tracking data' },
 ]

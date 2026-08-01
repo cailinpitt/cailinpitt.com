@@ -1,4 +1,4 @@
-// Merging the site's five activity streams into one day-per-row timeline (/log).
+// Merging the site's five activity streams into one day-per-row timeline (/timeline).
 //
 // The streams live in three places and none of them knows about the others:
 // scrobbles come from the listening Worker, articles and books from the reading

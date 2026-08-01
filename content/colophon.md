@@ -19,7 +19,7 @@ Every blog post is also published to my Bluesky account as a [standard.site](htt
 
 ## Moving parts
 
-Two [Cloudflare Workers](https://www.cloudflare.com/products/workers/) (`Listening` and `Reading`) power the data used by [listening](/listening), [reading](/reading), [log](/log), and the [homepage](/): `Listening` pulls scrobbles from Last.fm into a [D1](https://www.cloudflare.com/products/d1/) archive on a cron schedule. `Reading` pulls read books from my [Hardcover](https://hardcover.app) account daily and takes saved articles I send from my phone and personal computer via a POST request I make to an authenticated endpoint in this worker. Each serves a cached JSON bundle the page fetches in the browser.
+Two [Cloudflare Workers](https://www.cloudflare.com/products/workers/) (`Listening` and `Reading`) power the data used by [listening](/listening), [reading](/reading), [timeline](/timeline), and the [homepage](/): `Listening` pulls scrobbles from Last.fm into a [D1](https://www.cloudflare.com/products/d1/) archive on a cron schedule. `Reading` pulls read books from my [Hardcover](https://hardcover.app) account daily and takes saved articles I send from my phone and personal computer via a POST request I make to an authenticated endpoint in this worker. Each serves a cached JSON bundle the page fetches in the browser.
 
 The `Listening` Worker keeps its precomputed aggregates in [KV](https://www.cloudflare.com/products/kv/), so answering a request means reading a few small blobs rather than scanning the whole scrobble archive. Those are rebuilt on the cron, on slower cadences the further back they reach. The `Reading` Worker doesn't use KV at all since book and article data is written less frequently than my music data.
 

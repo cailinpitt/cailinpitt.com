@@ -1926,38 +1926,38 @@ a.book-link:hover .book-title {
   margin-top: 0.6rem;
 }
 
-/* ---- /log ---------------------------------------------------------------
+/* ---- /timeline ----------------------------------------------------------
    One row per day, merging listening / reading / writing / photos. Slightly
    wider than the reading column so a day's events don't wrap awkwardly, but
    narrower than the galleries — it's still a text page. */
-.log {
+.timeline {
   width: min(48rem, 92vw);
   margin-inline: calc(50% - min(48rem, 92vw) / 2);
 }
-.log h1 {
+.timeline h1 {
   font-size: var(--step-3);
   margin-bottom: 0.5rem;
 }
-.log .lead {
+.timeline .lead {
   margin-top: 0;
 }
-.log-error {
+.timeline-error {
   color: var(--muted);
 }
 
-.log-days {
+.timeline-days {
   list-style: none;
   margin: 2.5rem 0 0;
   padding: 0;
 }
-.log-day {
+.timeline-day {
   padding-block: 1.5rem;
   border-top: 1px solid var(--rule);
 }
-.log-day:last-child {
+.timeline-day:last-child {
   border-bottom: 1px solid var(--rule);
 }
-.log-date {
+.timeline-date {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -1967,14 +1967,14 @@ a.book-link:hover .book-title {
   font-size: var(--step-0);
   font-weight: 600;
 }
-.log-year {
+.timeline-year {
   color: var(--muted);
   font-size: var(--step--1);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
-.log-events {
+.timeline-events {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1982,7 +1982,7 @@ a.book-link:hover .book-title {
   flex-direction: column;
   gap: 0.55rem;
 }
-.log-event {
+.timeline-event {
   display: grid;
   grid-template-columns: 1.5rem 1fr;
   gap: 0.5rem;
@@ -1990,26 +1990,26 @@ a.book-link:hover .book-title {
   font-size: var(--step--1);
   line-height: 1.5;
 }
-.log-icon {
+.timeline-icon {
   font-size: 0.9em;
   line-height: 1.6;
 }
-.log-label {
+.timeline-label {
   font-weight: 600;
 }
-.log-detail {
+.timeline-detail {
   color: var(--muted);
 }
-.log-event a {
+.timeline-event a {
   color: var(--fg);
   text-decoration-color: var(--rule);
 }
-.log-event a:hover {
+.timeline-event a:hover {
   color: var(--accent);
 }
 
 /* Article titles under their count line. */
-.log-sublist {
+.timeline-sublist {
   list-style: none;
   margin: 0.3rem 0 0;
   padding: 0;
@@ -2018,7 +2018,7 @@ a.book-link:hover .book-title {
   gap: 0.25rem;
 }
 
-.log-thumbs {
+.timeline-thumbs {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
@@ -2026,7 +2026,7 @@ a.book-link:hover .book-title {
   margin: 0.5rem 0 0;
   padding: 0;
 }
-.log-thumbs img {
+.timeline-thumbs img {
   display: block;
   width: 5rem;
   height: 3.5rem;
@@ -2035,11 +2035,11 @@ a.book-link:hover .book-title {
   background: var(--surface);
   transition: opacity 0.2s ease;
 }
-.log-thumbs a:hover img {
+.timeline-thumbs a:hover img {
   opacity: 0.85;
 }
 
-.log-skeleton {
+.timeline-skeleton {
   margin-top: 2.5rem;
   display: flex;
   flex-direction: column;

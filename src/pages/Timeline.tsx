@@ -16,7 +16,7 @@ import type { PostSummary } from '../lib/posts'
 import { buildTimeline, type DatedPhoto, type TimelineDay } from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
 
-interface LogData {
+interface TimelineData {
   posts: PostSummary[]
   photos: DatedPhoto[]
 }
@@ -26,7 +26,7 @@ const DAY_PAGE = 14
 /** Stops a runaway top-up if a cursor never drains. 10 pages is ~200 items. */
 const TOP_UP_LIMIT = 10
 
-export async function loader(): Promise<LogData | null> {
+export async function loader(): Promise<TimelineData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
     const { loadDatedPhotos, loadPostSummaries } = await import('../lib/content.client')
@@ -162,24 +162,24 @@ function useTimeline(posts: PostSummary[], photos: DatedPhoto[]) {
 }
 
 export function Component() {
-  const { posts, photos } = useLoaderData() as LogData
+  const { posts, photos } = useLoaderData() as TimelineData
   const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos)
 
   return (
-    <div className="log">
+    <div className="timeline">
       <Seo
-        title="Log"
+        title="Timeline"
         description="Everything Cailin Pitt listened to, read, wrote, and photographed, day by day."
-        path="/log"
+        path="/timeline"
         jsonLd={pageSchema({
-          path: '/log',
-          title: 'Log',
+          path: '/timeline',
+          title: 'Timeline',
           description:
             'Everything Cailin Pitt listened to, read, wrote, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
-      <h1>Log</h1>
+      <h1>Timeline</h1>
       <p className="lead">
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
         <Link to="/reading">reading</Link>, <Link to="/blog">writing</Link>, and{' '}
@@ -187,18 +187,18 @@ export function Component() {
       </p>
 
       {error && !ready ? (
-        <p className="log-error">Could not load the log right now. Try again later.</p>
+        <p className="timeline-error">Could not load the timeline right now. Try again later.</p>
       ) : !ready ? (
-        <div className="log-skeleton" aria-hidden="true">
+        <div className="timeline-skeleton" aria-hidden="true">
           <div className="sk-block" />
           <div className="sk-block" />
           <div className="sk-block" />
         </div>
       ) : (
         <>
-          <ol className="log-days">
+          <ol className="timeline-days">
             {timeline.map((day) => (
-              <LogDay key={day.date} day={day} />
+              <TimelineRow key={day.date} day={day} />
             ))}
           </ol>
           {hasMore && (
@@ -212,42 +212,42 @@ export function Component() {
   )
 }
 
-function LogDay({ day }: { day: TimelineDay }) {
+function TimelineRow({ day }: { day: TimelineDay }) {
   return (
-    <li className="log-day">
-      <h2 className="log-date">
+    <li className="timeline-day">
+      <h2 className="timeline-date">
         {formatDayLabel(day.date)}
-        <span className="log-year">{day.date.slice(0, 4)}</span>
+        <span className="timeline-year">{day.date.slice(0, 4)}</span>
       </h2>
-      <ul className="log-events">
+      <ul className="timeline-events">
         {day.scrobbles > 0 && (
-          <li className="log-event">
-            <span className="log-icon" aria-hidden="true">
+          <li className="timeline-event">
+            <span className="timeline-icon" aria-hidden="true">
               🎧
             </span>
             <span>
               <Link to="/listening">{formatNumber(day.scrobbles)} scrobbles</Link>
-              {day.topArtist && <span className="log-detail"> · top: {day.topArtist}</span>}
+              {day.topArtist && <span className="timeline-detail"> · top: {day.topArtist}</span>}
             </span>
           </li>
         )}
 
         {day.articles.length > 0 && (
-          <li className="log-event">
-            <span className="log-icon" aria-hidden="true">
+          <li className="timeline-event">
+            <span className="timeline-icon" aria-hidden="true">
               🔗
             </span>
             <span>
-              <span className="log-label">
+              <span className="timeline-label">
                 {day.articles.length} {day.articles.length === 1 ? 'article' : 'articles'} saved
               </span>
-              <ul className="log-sublist">
+              <ul className="timeline-sublist">
                 {day.articles.map((article) => (
                   <li key={article.id}>
                     <a href={article.url} target="_blank" rel="noopener noreferrer">
                       {article.title ?? article.url}
                     </a>
-                    <span className="log-detail">
+                    <span className="timeline-detail">
                       {article.site && ` — ${article.site}`} · {formatTime(article.readAt)}
                     </span>
                   </li>
@@ -265,27 +265,27 @@ function LogDay({ day }: { day: TimelineDay }) {
         ))}
 
         {day.posts.map((post) => (
-          <li className="log-event" key={post.path}>
-            <span className="log-icon" aria-hidden="true">
+          <li className="timeline-event" key={post.path}>
+            <span className="timeline-icon" aria-hidden="true">
               ✍️
             </span>
             <span>
-              <span className="log-label">Published</span> <Link to={post.path}>{post.title}</Link>
+              <span className="timeline-label">Published</span> <Link to={post.path}>{post.title}</Link>
             </span>
           </li>
         ))}
 
         {day.photos.length > 0 && (
-          <li className="log-event">
-            <span className="log-icon" aria-hidden="true">
+          <li className="timeline-event">
+            <span className="timeline-icon" aria-hidden="true">
               📸
             </span>
             <span>
-              <span className="log-label">
+              <span className="timeline-label">
                 {day.photos.length} {day.photos.length === 1 ? 'photo' : 'photos'}
               </span>{' '}
               <Link to={day.photos[0].galleryPath}>{day.photos[0].galleryTitle}</Link>
-              <ul className="log-thumbs">
+              <ul className="timeline-thumbs">
                 {day.photos.map((photo) => (
                   <li key={photo.src}>
                     {/* Straight into the lightbox at that frame. */}
@@ -311,12 +311,12 @@ function LogDay({ day }: { day: TimelineDay }) {
 function BookEvent({ book, verb }: { book: Book; verb: 'Finished' | 'Started' }) {
   const href = hardcoverUrl(book)
   return (
-    <li className="log-event">
-      <span className="log-icon" aria-hidden="true">
+    <li className="timeline-event">
+      <span className="timeline-icon" aria-hidden="true">
         📚
       </span>
       <span>
-        <span className="log-label">{verb}</span>{' '}
+        <span className="timeline-label">{verb}</span>{' '}
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer">
             {book.title}
@@ -324,7 +324,7 @@ function BookEvent({ book, verb }: { book: Book; verb: 'Finished' | 'Started' })
         ) : (
           book.title
         )}
-        {book.authors && <span className="log-detail"> — {book.authors}</span>}
+        {book.authors && <span className="timeline-detail"> — {book.authors}</span>}
       </span>
     </li>
   )

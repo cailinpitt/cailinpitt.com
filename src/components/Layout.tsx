@@ -47,7 +47,7 @@ export function Layout() {
               <NavLink to="/blog">Blog</NavLink>
             </li>
             <li>
-              <NavLink to="/log">Log</NavLink>
+              <NavLink to="/timeline">Timeline</NavLink>
             </li>
             <li>
               <CommandPaletteTrigger onClick={openPalette} />
