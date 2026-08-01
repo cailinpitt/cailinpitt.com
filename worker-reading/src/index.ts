@@ -204,8 +204,11 @@ export default {
         return cached(url, 'text', ctx, cors, async () =>
           textResponse(
             renderText(await buildBundle(env.DB, localYear(offset)), {
-              // ?T disables color, matching wttr.in's convention.
+              // ?T disables color, matching wttr.in's convention. It also turns
+              // off OSC 8 hyperlinks: ?T means plain text, and anyone piping
+              // this to a file or a dumb terminal wants neither escape.
               color: !url.searchParams.has('T'),
+              links: !url.searchParams.has('T'),
               offset,
               year: localYear(offset),
             }),

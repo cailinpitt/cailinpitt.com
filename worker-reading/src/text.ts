@@ -60,6 +60,27 @@ const fit = (s: string, n: number): string => clip(s, n).padEnd(n)
 
 const num = (n: number) => n.toLocaleString('en-US')
 
+/** Where a Hardcover slug points. Books without one simply render unlinked. */
+const bookUrl = (slug: string | null) => (slug ? `https://hardcover.app/books/${slug}` : null)
+
+/**
+ * OSC 8 hyperlink: makes the label clickable in iTerm2, WezTerm, kitty, GNOME
+ * Terminal and Windows Terminal. Terminals without support ignore the sequence
+ * and print the label unchanged, and it occupies zero columns — so wrap text
+ * that has *already* been clip()/fit()ed, exactly like the color codes.
+ *
+ * Article URLs arrive from /ingest, so strip C0/C1 control characters before
+ * embedding: an ESC or BEL inside the URL would terminate the sequence early and
+ * let saved data write arbitrary escapes to the reader's terminal.
+ */
+function link(url: string | null | undefined, label: string, enabled: boolean): string {
+  if (!enabled || !url) return label
+  // Only http(s): a saved javascript:/file: URL must never become clickable.
+  const safe = url.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+  if (!/^https?:\/\//i.test(safe)) return label
+  return `\x1b]8;;${safe}\x1b\\${label}\x1b]8;;\x1b\\`
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /**
@@ -136,7 +157,7 @@ function header(c: Ink): string[] {
  * the view is never blank between books — the same choice the homepage strip
  * makes.
  */
-function currentSection(b: ReadingBundle, c: Ink, now: number): string[] {
+function currentSection(b: ReadingBundle, c: Ink, now: number, links: boolean): string[] {
   const reading = b.currentlyReading.length > 0
   const books = reading ? b.currentlyReading.slice(0, 3) : b.finishedBooks.slice(0, 1)
   if (!books.length) return []
@@ -163,7 +184,7 @@ function currentSection(b: ReadingBundle, c: Ink, now: number): string[] {
       .filter(Boolean)
       .join(' · ')
 
-    lines.push(`     ${c.bold(clip(book.title, WIDTH - 7))}`)
+    lines.push(`     ${link(bookUrl(book.slug), c.bold(clip(book.title, WIDTH - 7)), links)}`)
     if (detail) lines.push(`     ${c.dim(clip(detail, WIDTH - 7))}`)
   }
   return lines
@@ -186,13 +207,15 @@ function statsSection(b: ReadingBundle, c: Ink, year: number): string[] {
   ]
 }
 
-function finishedSection(books: Book[], c: Ink): string[] {
+function finishedSection(books: Book[], c: Ink, links: boolean): string[] {
   const rows = books.filter((book) => book.finishedAt).slice(0, FINISHED_ROWS)
   if (!rows.length) return []
 
   const lines = rows.map((book, i) => {
     const rank = c.faint(String(i + 1).padStart(2) + '.')
-    const title = fit(book.title, 30)
+    // Wrap *after* fit(): the escape is zero-width, so padding must be computed
+    // on the bare text or every column after it shifts.
+    const title = link(bookUrl(book.slug), fit(book.title, 30), links)
     const authors = c.dim(fit(book.authors ?? '', 20))
     const rating = c.accent(stars(book.rating))
     return `   ${rank} ${title} ${authors} ${rating} ${c.faint(shortDate(book.finishedAt))}`
@@ -201,7 +224,7 @@ function finishedSection(books: Book[], c: Ink): string[] {
 }
 
 /** Saved articles, grouped under their local date like the listening log's days. */
-function articlesSection(articles: Article[], c: Ink, offset: number): string[] {
+function articlesSection(articles: Article[], c: Ink, offset: number, links: boolean): string[] {
   const rows = articles.slice(0, ARTICLE_ROWS)
   if (!rows.length) return []
 
@@ -218,7 +241,8 @@ function articlesSection(articles: Article[], c: Ink, offset: number): string[] 
     // Only pad the title when the site column is actually there to its right —
     // fit() on a last field leaves trailing spaces inside the color wrap, which
     // no later trim can reach. Plenty of saved links have no og:site_name.
-    const title = site ? fit(article.title ?? article.url, 34) : clip(article.title ?? article.url, 34)
+    const label = site ? fit(article.title ?? article.url, 34) : clip(article.title ?? article.url, 34)
+    const title = link(article.url, label, links)
     lines.push(`      ${time}  ${title}${site ? ` ${c.dim(site)}` : ''}`)
   }
   return ['', `  ${c.accentDim('recently saved')}`, ...lines]
@@ -242,6 +266,11 @@ export interface TextOptions {
   offset: number
   /** Local calendar year, for the "this year" row. */
   year: number
+  /**
+   * Emit OSC 8 hyperlinks. Tied to `color`: ?T means "plain text please", and
+   * someone piping this to a file wants neither escape.
+   */
+  links: boolean
 }
 
 export function renderText(b: ReadingBundle, opts: TextOptions): string {
@@ -250,10 +279,10 @@ export function renderText(b: ReadingBundle, opts: TextOptions): string {
 
   return [
     ...header(c),
-    ...currentSection(b, c, now),
+    ...currentSection(b, c, now, opts.links),
     ...statsSection(b, c, opts.year),
-    ...finishedSection(b.finishedBooks, c),
-    ...articlesSection(b.articles, c, opts.offset),
+    ...finishedSection(b.finishedBooks, c, opts.links),
+    ...articlesSection(b.articles, c, opts.offset, opts.links),
     ...footer(c),
   ].join('\n')
 }
