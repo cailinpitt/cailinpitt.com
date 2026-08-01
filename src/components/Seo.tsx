@@ -3,14 +3,34 @@ import { Head } from 'vite-react-ssg'
 const SITE_URL = 'https://cailinpitt.com'
 const SITE_NAME = 'Cailin Pitt'
 
+/**
+ * What only the page itself knows about its social card. Emitted as a hint for
+ * scripts/generate-og.mjs, which renders the card from the built HTML at deploy
+ * time; everything else on the card (title, description) it reads off the tags
+ * below, so the two can't drift apart.
+ */
+interface OgCard {
+  /** Section label in the card's top-right. Defaults to one derived from the path. */
+  kicker?: string
+  /** Footer line — a post's date and reading time, a gallery's photo count. */
+  meta?: string
+  /** Absolute URL of a photograph to run full-bleed behind the title. */
+  photo?: string
+}
+
 interface SeoProps {
   title: string
   description?: string
   /** Page path, e.g. /blog/2023/3/3/slug. Used for canonical + og:url. */
   path?: string
-  /** Absolute or root-relative image path for social cards. */
+  /**
+   * Override the social card. Pages don't normally set this: each one gets a
+   * generated card at /og<path>.jpg. Absolute or root-relative.
+   */
   image?: string
   imageAlt?: string
+  /** Page-specific details for the generated card. */
+  card?: OgCard
   type?: 'website' | 'article'
   /** schema.org JSON-LD to embed (a single object or an array of them). */
   jsonLd?: object | object[]
@@ -25,6 +45,12 @@ const serializeJsonLd = (data: object | object[]) =>
   JSON.stringify(data).replace(/</g, '\\u003c')
 
 /**
+ * Where this page's generated card lives. Mirrors cardFile() in
+ * scripts/generate-og.mjs — the two must agree, or pages point at a 404.
+ */
+const ogCardPath = (path: string) => `/og/${path === '/' ? 'index' : path.replace(/^\//, '')}.jpg`
+
+/**
  * Per-page <title>, meta description, canonical, and Open Graph / Twitter tags.
  * Covers the build-time metadata items from specification.website. Rendered into
  * <head> at prerender time by vite-react-ssg's <Head>.
@@ -33,8 +59,9 @@ export function Seo({
   title,
   description,
   path = '/',
-  image = '/social-card.png',
+  image,
   imageAlt,
+  card,
   type = 'website',
   jsonLd,
   publicationUri,
@@ -42,7 +69,9 @@ export function Seo({
 }: SeoProps) {
   const url = `${SITE_URL}${path}`
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
-  const img = image ? (image.startsWith('http') ? image : `${SITE_URL}${image}`) : undefined
+  const src = image ?? ogCardPath(path)
+  const img = src.startsWith('http') ? src : `${SITE_URL}${src}`
+  const generated = !image
 
   return (
     <Head>
@@ -55,16 +84,19 @@ export function Seo({
       <meta property="og:title" content={fullTitle} />
       {description && <meta property="og:description" content={description} />}
       <meta property="og:url" content={url} />
-      {img && <meta property="og:image" content={img} />}
-      {img && <meta property="og:image:alt" content={imageAlt ?? fullTitle} />}
-      {image === '/social-card.png' && <meta property="og:image:width" content="1200" />}
-      {image === '/social-card.png' && <meta property="og:image:height" content="630" />}
+      <meta property="og:image" content={img} />
+      <meta property="og:image:alt" content={imageAlt ?? fullTitle} />
+      {generated && <meta property="og:image:width" content="1200" />}
+      {generated && <meta property="og:image:height" content="630" />}
 
-      <meta name="twitter:card" content={img ? 'summary_large_image' : 'summary'} />
+      <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       {description && <meta name="twitter:description" content={description} />}
-      {img && <meta name="twitter:image" content={img} />}
-      {img && <meta name="twitter:image:alt" content={imageAlt ?? fullTitle} />}
+      <meta name="twitter:image" content={img} />
+      <meta name="twitter:image:alt" content={imageAlt ?? fullTitle} />
+
+      {/* Build-time hint for scripts/generate-og.mjs; ignored by everything else. */}
+      {generated && card && <meta name="og-card" content={JSON.stringify(card)} />}
 
       {jsonLd && (
         <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>

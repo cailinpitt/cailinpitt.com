@@ -9,7 +9,7 @@ statically prerendered, deployed to GitHub Pages.
 npm install
 npm run dev        # local dev server
 npm run typecheck  # tsc --noEmit
-npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt)
+npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt, og cards)
 npm run preview    # serve the built dist/
 ```
 
@@ -49,9 +49,10 @@ Markdown body…
   only for tags actually in use, so nothing needs registering — but note that a typo makes a new
   one-post tag. Grouping is by slug (`"Year in Review"` → `year-in-review`), so casing differences
   can't split a tag in two; the spelling shown is the one from the most recent post using it.
-- **Social card image:** `image:` in frontmatter is optional — if omitted, the first image in the
-  body is used as the `og:image`/`twitter:image` thumbnail (e.g. when sharing on Bluesky). Set
-  `image:` explicitly only if you want a specific cover.
+- **Social card:** every page gets its own card rendered at build time (see
+  [Social cards](#social-cards)). For a post, `image:` in frontmatter picks the photograph that
+  runs behind the title; if omitted, the first image in the body is used. A post with no images
+  at all gets the paper card instead — nothing to set.
 - **standard.site (Bluesky):** each post also gets an AT Protocol record so it renders as a
   first-class document in the Bluesky ecosystem. This is **not automatic** — you must run
   `npm run publish:atproto` and commit the updated `content/atproto.json` (see the checklist and
@@ -384,6 +385,31 @@ and merges them in the browser against the posts and photos compiled into the bu
   scrobbles into US Central days while articles bucket in the viewer's zone, so the two
   disagree at the margins for a visitor far from Central. See the note at the top of
   `src/lib/datetime.ts`; it's a property of the data, not something this page can fix.
+
+## Social cards
+
+Every prerendered page gets its own 1200×630 Open Graph card at `/og/<path>.jpg`, written by
+`scripts/generate-og.mjs` as part of `postbuild` (`npm run og` re-runs it against an existing
+`dist/`; `npm run og -- --only /blog/…` does a single page, and `--out .og-preview` writes
+somewhere you can look at without touching the build).
+
+- **Two layouts.** Pages with a photograph — blog posts with images, gallery years — put it
+  full-bleed under an ink scrim with the title over it. Everything else gets the paper card:
+  the site's paper/ink palette, a clay spine off the left edge, the title and description
+  between two hairline rules.
+- **Copy comes from the built HTML.** The script reads each page's own `og:title` and
+  `og:description` rather than re-deriving them, so a card can't drift from the page it
+  belongs to. Anything only the page knows — its kicker, its date and reading time, which
+  photo to use — `<Seo card={{…}}>` emits as a `<meta name="og-card">` hint for the script
+  to pick up (`src/components/Seo.tsx`).
+- **Photographs are fetched from R2** at build time, falling back to a local `public/images`
+  copy when there is one. If a photo can't be fetched the page quietly gets the paper card
+  instead — a broken image URL doesn't fail a deploy.
+- **Type is Source Serif 4 + Inter**, not the site's own Iowan Old Style/`system-ui`, which a
+  Linux runner doesn't have. They ship as `.woff` in `node_modules`, so no font binaries live
+  in the repo; satori converts glyphs to paths, so nothing needs fonts at render time.
+- Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the
+  script. They must agree, or pages point at a 404.
 
 ## Deploy
 

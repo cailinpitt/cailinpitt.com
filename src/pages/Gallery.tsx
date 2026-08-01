@@ -88,7 +88,11 @@ export function Component() {
         title={gallery.title}
         description={gallery.description ?? `Photography — ${gallery.title}.`}
         path={gallery.canonicalPath ?? gallery.path}
-        image={gallery.images[0] ? imageUrl(gallery.images[0].src) : undefined}
+        card={{
+          kicker: 'Photographs',
+          meta: `${count} ${count === 1 ? 'photograph' : 'photographs'}`,
+          photo: gallery.images[0] ? imageUrl(gallery.images[0].src) : undefined,
+        }}
         jsonLd={pageSchema({
           path: gallery.canonicalPath ?? gallery.path,
           title: gallery.title,

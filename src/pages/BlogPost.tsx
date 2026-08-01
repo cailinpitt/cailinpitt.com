@@ -51,7 +51,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
 export function Component() {
   const { post, newer, older, related, publicationUri } = useLoaderData() as BlogPostData
   // Fall back to the first image in the body so posts without an explicit `image:`
-  // frontmatter field still get a social-card thumbnail (matches the JSON-LD cover).
+  // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
   const readingTime = formatReadingTime(post.words)
   return (
@@ -60,7 +60,11 @@ export function Component() {
         title={post.title}
         description={post.description}
         path={post.path}
-        image={imageUrl(cover)}
+        card={{
+          kicker: post.tags[0] ?? 'Writing',
+          meta: [formatDate(post.date), readingTime].filter(Boolean).join(' · '),
+          photo: imageUrl(cover),
+        }}
         type="article"
         jsonLd={blogPostSchema(post)}
         publicationUri={publicationUri}

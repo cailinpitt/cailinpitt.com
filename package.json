@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite-react-ssg build",
-    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-atproto.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "migrate:posts": "node scripts/migrate-posts.mjs",
@@ -19,7 +19,8 @@
     "images:publish": "npm run images:sync && npm run images:upload",
     "publish:atproto": "node scripts/publish-atproto.mjs",
     "reading:probe": "node scripts/hardcover-probe.mjs",
-    "reading:sync": "node scripts/reading-sync.mjs"
+    "reading:sync": "node scripts/reading-sync.mjs",
+    "og": "node scripts/generate-og.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -34,12 +35,16 @@
   "devDependencies": {
     "@atproto/api": "^0.20.16",
     "@aws-sdk/client-s3": "^3.1073.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
     "exif-reader": "^2.0.3",
+    "satori": "^0.29.0",
     "sharp": "^0.35.3",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2",
