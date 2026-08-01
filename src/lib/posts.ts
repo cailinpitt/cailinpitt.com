@@ -16,6 +16,8 @@ export interface Post {
   description?: string
   /** AT-URI of this post's site.standard.document record, if published (Phase 8). */
   atUri?: string
+  /** Prose word count, computed at build time by countWords(). */
+  words: number
   /** Markdown body */
   body: string
 }
@@ -27,6 +29,56 @@ export interface AtprotoData {
   publication: string | null
   documents: Record<string, string>
 }
+
+/**
+ * Prose words in a markdown body, for the reading-time estimate.
+ *
+ * Everything that isn't read aloud comes out first: code (which nobody reads at
+ * prose speed), embedded HTML (a Spotify iframe is not 40 words), image syntax,
+ * and link targets — though link *text* stays, since it's part of the sentence.
+ * What survives is split on whitespace and filtered to tokens carrying at least
+ * one letter or digit, which drops the punctuation left behind by the stripping.
+ */
+export function countWords(body: string): number {
+  const prose = body
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[#*_>~|=+-]/g, ' ')
+  let words = 0
+  for (const token of prose.split(/\s+/)) {
+    if (/[\p{L}\p{N}]/u.test(token)) words += 1
+  }
+  return words
+}
+
+/** Words per minute. The usual figure for adult reading of general prose. */
+const WPM = 200
+
+/**
+ * Below this, there is no estimate worth showing.
+ *
+ * Several posts are photo essays or embed lists with almost no prose — the
+ * travel posts carry none at all. Rounding those up to "1 min read" states
+ * something untrue about a page you can take in at a glance, so they get no
+ * label instead. 100 words is half a minute at the rate above.
+ */
+const MIN_ESTIMATE_WORDS = 100
+
+/** Whether a post has enough prose for a reading estimate to mean anything. */
+export const hasReadingEstimate = (words: number): boolean => words >= MIN_ESTIMATE_WORDS
+
+/** Minutes to read `words`, never less than one — "0 min read" helps nobody. */
+export const readingMinutes = (words: number): number => Math.max(1, Math.round(words / WPM))
+
+/** "5 min read" for a post with prose in it, null for one without. */
+export const formatReadingTime = (words: number): string | null =>
+  hasReadingEstimate(words) ? `${readingMinutes(words)} min read` : null
 
 export function toPost(filePath: string, raw: string, atproto?: AtprotoData): Post {
   const { data, body } = parseFrontmatter(raw)
@@ -42,6 +94,9 @@ export function toPost(filePath: string, raw: string, atproto?: AtprotoData): Po
     image: data.image as string | undefined,
     description: data.description as string | undefined,
     atUri: atproto?.documents[path],
+    // Counted here so it rides along on PostSummary, which drops the body: the
+    // listings and the JSON-LD would otherwise have no way to get at it.
+    words: countWords(body),
     body,
   }
 }

@@ -56,6 +56,11 @@ Markdown body…
   first-class document in the Bluesky ecosystem. This is **not automatic** — you must run
   `npm run publish:atproto` and commit the updated `content/atproto.json` (see the checklist and
   the [standard.site](#standardsite--bluesky) section below).
+- **Reading time** is counted at build time from the prose in the body — code, embedded HTML,
+  image syntax, and link targets don't count, link text does. Posts under 100 words show no
+  estimate at all, which is why the travel photo essays don't claim to be a "1 min read".
+- **Related posts** — up to three posts sharing the most tags with this one, above the
+  newer/older nav. A post with no tags gets none, rather than three arbitrary ones.
 - Otherwise posts are picked up automatically (glob of `content/blog/*.md`). The post shows up
   on `/blog`, the home "Recent writing", `sitemap.xml`, and `llms.txt`, gets JSON-LD, and is
   prerendered to a real HTML file at `path` (so old bookmarks keep working). No routing to wire.
@@ -232,6 +237,9 @@ bundle in the browser.
   photos, under `images/reading/`. Because those objects are referenced from D1
   rather than from the repo, `scripts/prune-r2.mjs` carries a `PROTECTED_PREFIXES`
   guard so `images:prune` can never delete them.
+- **Terminal view:** `curl reading.cailinpitt.com` renders the same data as an
+  ANSI page, like `/listening` does. Dispatch is on User-Agent, so `/reading.json`
+  is unaffected; `?T` turns off color.
 - **Setup, design notes, and how to test each piece separately:** see
   [`worker-reading/README.md`](worker-reading/README.md).
 - **Check the Hardcover query without deploying:** `npm run reading:probe`

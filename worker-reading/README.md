@@ -365,7 +365,8 @@ normalization rules directly.
   The cursor is `<read_at>:<id>`, composite because two articles mailed in the
   same second are possible and a bare timestamp cursor would drop one at the
   page boundary.
-- `GET /` — 302 to `cailinpitt.com/reading`, `no-store`.
+- `GET /` or `/reading` — the terminal view, when the User-Agent is a CLI fetcher;
+  otherwise a 302 to `cailinpitt.com/reading`, `no-store`.
 - `POST /ingest` — saves an article. Body `{"url": "…", "note": "…"}`.
 - `PATCH /ingest` — sets or (with `"append": true`) extends its note.
 - `DELETE /ingest` — removes it.
@@ -375,6 +376,32 @@ normalization rules directly.
 - `POST /sync` — runs the Hardcover sync now. Requires
   `authorization: Bearer $ADMIN_TOKEN`; 401s otherwise, with a constant-time
   comparison so the token can't be recovered by timing. Never cached.
+
+## The terminal view (`src/text.ts`)
+
+`curl reading.cailinpitt.com` renders the bundle as a 72-column ANSI page rather
+than JSON — the counterpart to the listening worker's, and the same wttr.in
+trick. See [`worker/README.md`](../worker/README.md#the-terminal-view-srctextts)
+for the dispatch rules; they are identical here:
+
+```bash
+curl reading.cailinpitt.com     # color
+curl reading.cailinpitt.com?T   # no color
+```
+
+Dispatch is on User-Agent and only on `/` and `/reading`, so `/reading.json` and
+the rest always return JSON whoever asks. A browser on those paths still gets the
+302 — which is why it carries `no-store`, now that the response varies by
+User-Agent. Only the text variant is written to the edge cache (`__variant=text`).
+
+What it shows: what you're reading now (falling back to the last book finished,
+so the top is never blank between books), this year and all-time counts, the last
+8 books finished with ratings, and the last 8 articles saved grouped by day.
+
+The renderer is a deliberate copy of the listening worker's helpers (`clip`,
+`fit`, `ink`, `stars`) rather than a shared module — the two Workers are separate
+packages with separate deploys, and a shared package would couple them for about
+60 lines of string padding.
 
 ## R2
 

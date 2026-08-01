@@ -19,6 +19,7 @@ import {
   fetchFinishedBooks,
 } from './store'
 import { syncBooks } from './sync'
+import { renderText } from './text'
 
 /** Edge-cache lifetime. The underlying data changes daily, or when you save one. */
 const EDGE_TTL = 300
@@ -112,6 +113,26 @@ function json(body: unknown, maxAge: number): Response {
   })
 }
 
+// Terminal client. Deliberately narrow: anything that is not clearly a CLI
+// fetcher gets the normal redirect. Mirrors the listening worker's rule.
+const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
+
+function wantsText(request: Request, url: URL): boolean {
+  if (url.searchParams.has('format') || url.searchParams.has('json')) return false
+  const ua = request.headers.get('user-agent') ?? ''
+  return CLI_AGENT.test(ua)
+}
+
+/** Like json(): omits CORS so the cached entry stays origin-independent. */
+function textResponse(body: string): Response {
+  return new Response(body, {
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': `public, max-age=${EDGE_TTL}`,
+    },
+  })
+}
+
 /** For the mutating endpoints: never cached, CORS applied directly. */
 function jsonNoStore(body: unknown, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
@@ -175,6 +196,23 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
 
     try {
+      // `curl reading.cailinpitt.com` (or /reading) → the terminal view, the
+      // counterpart to the listening worker's. Checked before the redirect
+      // below, which is what a browser on the same path gets instead.
+      if ((url.pathname === '/' || url.pathname === '/reading') && wantsText(request, url)) {
+        const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+        return cached(url, 'text', ctx, cors, async () =>
+          textResponse(
+            renderText(await buildBundle(env.DB, localYear(offset)), {
+              // ?T disables color, matching wttr.in's convention.
+              color: !url.searchParams.has('T'),
+              offset,
+              year: localYear(offset),
+            }),
+          ),
+        )
+      }
+
       // The article endpoint. One path, three verbs, all keyed by url (or id):
       //   POST   save it            PATCH  note it            DELETE  drop it
       // The share-sheet Shortcuts and the bookmarklets all talk to this.
@@ -293,6 +331,11 @@ export default {
       }
 
       // A browser on the bare API host gets sent to the real page, not a 404.
+      //
+      // 302 and no-store, deliberately. This response is User-Agent dependent
+      // now that the terminal view shares the path, so a permanent or
+      // shared-cached redirect could later be replayed to a client that wanted
+      // the text — which would break `curl` for that URL.
       if (url.pathname === '/' || url.pathname === '/reading') {
         return new Response(null, {
           status: 302,

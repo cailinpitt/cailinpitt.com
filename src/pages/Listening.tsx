@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { CurlHint } from '../components/CurlHint'
 import { ListenLinks } from '../components/ListenLinks'
 import { Art, StatTile, TopAlbums, TopArtists, TopTracks } from '../components/ListeningBits'
 import { listeningYears } from '../lib/listeningYears'
@@ -115,7 +116,7 @@ export function Component() {
               ? `${formatNumber(bundle.totalScrobbles)} scrobbles and counting, tracked via Last.fm.`
               : 'What I have on, tracked via Last.fm.'}
           </p>
-          <CurlHint />
+          <CurlHint command="curl listening.cailinpitt.com" />
         </header>
 
         {error && !bundle ? (
@@ -292,48 +293,6 @@ function YearLinks() {
         ))}
       </nav>
     </section>
-  )
-}
-
-// ---- curl hint -----------------------------------------------------------
-
-const CURL_COMMAND = 'curl listening.cailinpitt.com'
-
-/** Advertises the terminal view. The `$` is presentational — never copied. */
-function CurlHint() {
-  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
-
-  useEffect(() => {
-    if (state === 'idle') return
-    const id = setTimeout(() => setState('idle'), 2000)
-    return () => clearTimeout(id)
-  }, [state])
-
-  const copy = async () => {
-    try {
-      // Absent outside secure contexts, so this can genuinely be unavailable.
-      await navigator.clipboard.writeText(CURL_COMMAND)
-      setState('copied')
-    } catch {
-      setState('failed')
-    }
-  }
-
-  return (
-    <div className="curl-hint">
-      <code>
-        <span className="curl-prompt" aria-hidden="true">
-          $
-        </span>
-        {CURL_COMMAND}
-      </code>
-      <button type="button" onClick={copy} aria-label={`Copy "${CURL_COMMAND}" to clipboard`}>
-        {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : 'Copy'}
-      </button>
-      <span role="status" aria-live="polite" className="visually-hidden">
-        {state === 'copied' ? 'Copied to clipboard' : state === 'failed' ? 'Copy failed' : ''}
-      </span>
-    </div>
   )
 }
 

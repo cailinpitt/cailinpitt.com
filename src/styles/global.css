@@ -542,12 +542,29 @@ h3 {
   font-size: var(--step-3);
   margin: 0 0 0.5rem;
 }
-.post-date {
+/* Date and reading time on one line under the title. */
+.post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
   color: var(--muted);
   font-family: var(--font-sans);
   font-size: var(--step--1);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+.post-date {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+/* The separator belongs to the pair, not to either half — a post with no date
+   in its frontmatter shows the reading time alone, with no leading dot. */
+.post-date + .post-reading-time::before {
+  content: '·';
+  margin-right: 0.5rem;
 }
 .post-body > * + * {
   margin-top: var(--flow);
@@ -592,6 +609,30 @@ h3 {
   aspect-ratio: 16 / 9;
   width: 100%;
   border: 0;
+}
+
+/* Posts sharing tags with this one. Sits above the chronological nav: it is the
+   more useful of the two, and the prev/next pair reads as the end of the page. */
+.related-posts {
+  max-width: var(--measure);
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+.related-posts .post-list {
+  margin-top: 0.75rem;
+}
+/* The section already has a rule above it; a second one under the last row
+   would close a box the design doesn't otherwise draw. */
+.related-posts .post-list li:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+/* Related sets its own rule, so the nav below it doesn't need a second one. */
+.related-posts + .post-navigation {
+  margin-top: 2rem;
+  padding-top: 0;
+  border-top: 0;
 }
 
 /* Chronological navigation between posts. */
@@ -852,7 +893,8 @@ h3 {
   margin-bottom: 1.25rem;
 }
 
-/* Advertises the terminal view (curl listening.cailinpitt.com). */
+/* Advertises a page's terminal view — `curl listening.cailinpitt.com` on
+   /listening, `curl reading.cailinpitt.com` on /reading. */
 .curl-hint {
   display: inline-flex;
   align-items: center;
@@ -2138,4 +2180,132 @@ a.book-link:hover .book-title {
 .on-this-day-when {
   font-weight: 600;
   color: var(--fg);
+}
+
+/* ---- print ---------------------------------------------------------------
+   Aimed at the blog post — the one page anyone prints or saves as a PDF. The
+   site chrome comes off, the palette is forced light regardless of the reader's
+   theme (dark backgrounds waste a cartridge and print gray), and link targets
+   are spelled out, since a printed underline goes nowhere. */
+@media print {
+  /* Beat the dark-scheme block *and* the data-theme override, both of which
+     outrank a bare :root here. */
+  :root,
+  :root[data-theme='dark'],
+  :root[data-theme='light'] {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --fg: #000000;
+    --muted: #444444;
+    --rule: #cccccc;
+    --accent: #000000;
+    --accent-fg: #ffffff;
+  }
+
+  @page {
+    margin: 0.75in;
+  }
+
+  html,
+  body {
+    background: #fff;
+    color: #000;
+    /* Keep the few remaining backgrounds (code, chips) from being dropped. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Navigation, controls, and anything that only makes sense on screen. */
+  .skip-link,
+  .site-header,
+  .site-footer,
+  .theme-toggle,
+  .identity-shuffle,
+  .post-navigation,
+  .related-posts,
+  .curl-hint,
+  .load-more,
+  .lightbox,
+  .lightbox-nav,
+  .lightbox-close,
+  .segmented,
+  .now-bar,
+  .sparkline,
+  .photos-map-link {
+    display: none !important;
+  }
+
+  .site-main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* The reading measure is a screen constraint; on paper the page box already
+     sets the line length. */
+  .post,
+  .post-header,
+  .post-body {
+    max-width: none;
+  }
+
+  .post-header h1 {
+    /* Nothing above it on paper, so the title doesn't need the screen's lead-in. */
+    margin-top: 0;
+  }
+
+  /* Don't strand a heading at the foot of a page. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p,
+  blockquote,
+  figure,
+  li {
+    break-inside: avoid-page;
+    orphans: 2;
+    widows: 2;
+  }
+
+  .post-body img {
+    max-width: 100%;
+    height: auto;
+    break-inside: avoid;
+  }
+
+  /* An embed is a live player; on paper it's an empty box. */
+  .post-body iframe {
+    display: none;
+  }
+
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  /* Spell out where a link went. Root-relative hrefs get the domain back, and
+     in-page anchors are skipped — they point at something already on the sheet. */
+  .post-body a[href^='http']::after {
+    content: ' <' attr(href) '>';
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  .post-body a[href^='/']::after {
+    content: ' <https://cailinpitt.com' attr(href) '>';
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  /* Galleries break out of the measure with a negative margin on screen; on
+     paper that pushes them off the sheet. */
+  .gallery-grid {
+    width: auto;
+    margin-inline: 0;
+  }
 }

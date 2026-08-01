@@ -4,8 +4,8 @@ import rehypeRaw from 'rehype-raw'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
-import { formatDate, type Post, type PostSummary } from '../lib/posts'
-import { tagPath } from '../lib/tags'
+import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
+import { relatedPosts, tagPath } from '../lib/tags'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
 
 // Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
@@ -19,6 +19,8 @@ interface BlogPostData {
   post: Post
   older?: PostSummary
   newer?: PostSummary
+  /** Posts sharing tags with this one; empty when it has none. */
+  related: PostSummary[]
   publicationUri: string | null
 }
 
@@ -41,15 +43,17 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
     post: posts[index],
     newer: posts[index - 1] ? summary(posts[index - 1]) : undefined,
     older: posts[index + 1] ? summary(posts[index + 1]) : undefined,
+    related: relatedPosts(posts.map(summary), posts[index]),
     publicationUri: await source.loadPublicationUri(),
   }
 }
 
 export function Component() {
-  const { post, newer, older, publicationUri } = useLoaderData() as BlogPostData
+  const { post, newer, older, related, publicationUri } = useLoaderData() as BlogPostData
   // Fall back to the first image in the body so posts without an explicit `image:`
   // frontmatter field still get a social-card thumbnail (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
+  const readingTime = formatReadingTime(post.words)
   return (
     <>
       <Seo
@@ -65,10 +69,15 @@ export function Component() {
       <article className="post">
         <header className="post-header">
           <h1>{post.title}</h1>
-          {post.date && (
-            <time dateTime={post.date} className="post-date">
-              {formatDate(post.date)}
-            </time>
+          {(post.date || readingTime) && (
+            <p className="post-meta">
+              {post.date && (
+                <time dateTime={post.date} className="post-date">
+                  {formatDate(post.date)}
+                </time>
+              )}
+              {readingTime && <span className="post-reading-time">{readingTime}</span>}
+            </p>
           )}
           {post.tags.length > 0 && (
             <ul className="tag-list" aria-label="Tags">
@@ -90,6 +99,22 @@ export function Component() {
           </Markdown>
         </div>
       </article>
+      {related.length > 0 && (
+        <aside className="related-posts" aria-labelledby="related-heading">
+          <h2 id="related-heading" className="eyebrow">
+            🔗 Related posts
+          </h2>
+          <ul className="post-list">
+            {related.map((p) => (
+              <li key={p.path}>
+                <time dateTime={p.date}>{formatDate(p.date)}</time>
+                <Link to={p.path}>{p.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
+
       {(newer || older) && (
         <nav className="post-navigation" aria-label="More posts">
           {newer ? (

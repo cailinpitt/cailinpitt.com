@@ -1,5 +1,5 @@
 import { imageUrl } from './images'
-import type { Post, PostSummary } from './posts'
+import { hasReadingEstimate, readingMinutes, type Post, type PostSummary } from './posts'
 
 // Connected schema.org JSON-LD graphs. Stable @ids let each page describe how
 // its Person, WebSite, Blog, WebPage, and content nodes relate to one another.
@@ -191,6 +191,11 @@ export function blogPostSchema(post: Post): Json {
       isPartOf: ref(BLOG_ID),
       datePublished: post.date,
       ...(post.updated ? { dateModified: post.updated } : {}),
+      // wordCount is measured, so it goes out whenever there is one. timeRequired
+      // is the same estimate the page shows, as an ISO 8601 duration — so it is
+      // held to the same threshold, and the two can never disagree.
+      ...(post.words ? { wordCount: post.words } : {}),
+      ...(hasReadingEstimate(post.words) ? { timeRequired: `PT${readingMinutes(post.words)}M` } : {}),
       ...(post.description ? { description: post.description } : {}),
       ...(image
         ? {

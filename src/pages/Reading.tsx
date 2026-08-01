@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { CurlHint } from '../components/CurlHint'
 import { StatTile } from '../components/ListeningBits'
 import { ArticleCard, BookCard } from '../components/ReadingBits'
 import { dayKey, formatDayLabel } from '../lib/datetime'
@@ -64,6 +65,7 @@ export function Component() {
         </a>
         . Articles are ones I saved as I read them.
       </p>
+      <CurlHint command="curl reading.cailinpitt.com" />
 
       {error && !bundle ? (
         <p className="reading-error">Could not load reading data right now. Try again later.</p>
