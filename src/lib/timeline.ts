@@ -28,25 +28,10 @@
 // timestamps the aggregates don't carry.
 
 import { dayKey } from './datetime'
-import type { Gallery } from './galleries'
+import type { Photo } from './photos'
 import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
 import type { DayLog } from './listening'
-
-/** A photo placed in time by the capture date recorded in its EXIF. */
-export interface DatedPhoto {
-  /** YYYY-MM-DD, from the capture wall clock. */
-  date: string
-  galleryTitle: string
-  galleryPath: string
-  /** 1-based position in its gallery, for the lightbox deep link (?photo=N). */
-  index: number
-  src: string
-  thumb?: string
-  alt: string
-  /** [lat, lon] rounded to ~0.7 miles, when the original recorded a position. */
-  place?: number[]
-}
 
 export interface TimelineDay {
   date: string
@@ -57,35 +42,17 @@ export interface TimelineDay {
   booksFinished: Book[]
   booksStarted: Book[]
   posts: PostSummary[]
-  photos: DatedPhoto[]
+  photos: Photo[]
 }
 
 /**
- * Photos that can be placed on a timeline at all — only the galleries built from
- * originals/ carry a capture date. The pre-2026 galleries came out of Squarespace
- * EXIF-stripped, so they simply never appear here.
+ * Photos that can be placed on a timeline at all — the ones whose date is a real
+ * capture time. Everything before 2026 came out of Squarespace EXIF-stripped and
+ * carries an approximate date good only to the year (see src/lib/photos.ts), and
+ * a day-per-row page has nowhere to put that: they'd all pile onto January 1st.
  */
-export function datedPhotos(galleries: Gallery[]): DatedPhoto[] {
-  const out: DatedPhoto[] = []
-  for (const gallery of galleries) {
-    // Alias galleries (e.g. /past-work → /2022) would double every photo.
-    if (gallery.canonicalPath) continue
-    for (const [i, image] of gallery.images.entries()) {
-      const shot = image.exif?.shot
-      if (!shot) continue
-      out.push({
-        date: shot.slice(0, 10),
-        galleryTitle: gallery.title,
-        galleryPath: gallery.path,
-        index: i + 1,
-        src: image.src,
-        thumb: image.thumb,
-        alt: image.alt,
-        ...(image.exif?.place ? { place: image.exif.place } : {}),
-      })
-    }
-  }
-  return out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+export function datedPhotos(photos: Photo[]): Photo[] {
+  return photos.filter((photo) => !photo.approx)
 }
 
 /** The most-played artist in a day's tracks, or null if the day carries none. */
@@ -108,7 +75,7 @@ export interface TimelineSources {
   articles: Article[]
   books: Book[]
   posts: PostSummary[]
-  photos: DatedPhoto[]
+  photos: Photo[]
   /**
    * Oldest day to include, YYYY-MM-DD. Days older than this are dropped, because
    * the streams that reach past it are only partly loaded and a row built from
@@ -167,7 +134,7 @@ export function buildTimeline({
   }
 
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
-  for (const photo of photos) dayFor(photo.date)?.photos.push(photo)
+  for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
   return [...byDate.values()]
     .filter(

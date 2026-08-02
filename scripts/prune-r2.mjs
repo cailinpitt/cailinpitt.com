@@ -6,7 +6,7 @@
 //   npm run images:prune -- --delete  # actually delete
 //   npm run images:prune -- --prefix images/2026/ --delete
 //
-// "Referenced" = every `src`/`thumb` in src/lib/gallery-images.json plus every
+// "Referenced" = every `src`/`thumb` in src/lib/photos.json plus every
 // /images/... path in content/blog/*.md, plus anything under PROTECTED_PREFIXES.
 // As a safety check it refuses to delete unless every referenced object is
 // already present in the bucket (i.e. you've run `npm run images:upload` first) —
@@ -63,11 +63,9 @@ const isProtected = (key) => PROTECTED_PREFIXES.some((prefix) => key.startsWith(
 /** Every image key the built site can ask for. */
 async function referencedKeys() {
   const keep = new Set()
-  const manifest = JSON.parse(await readFile(path.join(ROOT, 'src/lib/gallery-images.json'), 'utf8'))
-  for (const images of Object.values(manifest)) {
-    for (const image of images) {
-      for (const src of [image.src, image.thumb]) if (src) keep.add(asKey(src))
-    }
+  const photos = JSON.parse(await readFile(path.join(ROOT, 'src/lib/photos.json'), 'utf8'))
+  for (const photo of photos) {
+    for (const src of [photo.src, photo.thumb]) if (src) keep.add(asKey(src))
   }
   const blog = path.join(ROOT, 'content/blog')
   for (const file of (await readdir(blog)).filter((f) => f.endsWith('.md'))) {

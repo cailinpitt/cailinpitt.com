@@ -1,4 +1,5 @@
 import { imageUrl } from './images'
+import { formatPhotoDate, type Photo } from './photos'
 import { hasReadingEstimate, readingMinutes, type Post, type PostSummary } from './posts'
 
 // Connected schema.org JSON-LD graphs. Stable @ids let each page describe how
@@ -125,6 +126,36 @@ export function homeSchema(): Json {
 
 export function pageSchema(options: PageSchemaOptions): Json {
   return graph(personNode(), websiteNode(), pageNode(options))
+}
+
+/**
+ * A single photograph's page. The photo is the point of the page, so it goes out
+ * as a real ImageObject rather than only as the page's primary image.
+ *
+ * `dateCreated` is emitted only for a photo with a capture time. Most of the
+ * archive carries an approximate date good to the year (see src/lib/photos.ts),
+ * and a schema consumer has no way to know that — better to say nothing than to
+ * publish a day that was never a day.
+ */
+export function photoSchema(photo: Photo): Json {
+  const path = `/photos/${photo.id}`
+  const url = abs(path)
+  const imageId = `${url}#photo`
+  const page = pageNode({ path, title: formatPhotoDate(photo), description: photo.alt, image: photo.src })
+  page.mainEntity = ref(imageId)
+
+  return graph(personNode(), websiteNode(), page, {
+    '@type': 'ImageObject',
+    '@id': imageId,
+    contentUrl: imageUrl(photo.src),
+    name: formatPhotoDate(photo),
+    description: photo.alt,
+    creator: ref(PERSON_ID),
+    mainEntityOfPage: ref(`${url}#webpage`),
+    ...(photo.approx ? {} : { dateCreated: photo.date }),
+    ...(photo.width ? { width: photo.width } : {}),
+    ...(photo.height ? { height: photo.height } : {}),
+  })
 }
 
 export function blogIndexSchema(posts: PostSummary[]): Json {

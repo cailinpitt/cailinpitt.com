@@ -1,11 +1,8 @@
 import type { RouteRecord } from 'vite-react-ssg'
 import { Layout } from './components/Layout'
 import { RouteError } from './components/RouteError'
-import { galleryDefinitions } from './lib/galleries'
+import { photoIds } from 'virtual:site-index'
 import { listeningYears } from './lib/listeningYears'
-
-// Child paths are relative (no leading slash) under the '/' layout route.
-const stripSlash = (p: string) => p.replace(/^\//, '')
 
 /**
  * Give every page the same error boundary.
@@ -43,13 +40,16 @@ export const routes: RouteRecord[] = [
       { path: 'guestbook', lazy: () => import('./pages/Guestbook') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'photos/map', lazy: () => import('./pages/PhotoMap') },
+      {
+        path: 'photos/:id',
+        lazy: () => import('./pages/PhotoDetail'),
+        // Every photograph gets its own prerendered page. The ids come from the
+        // build-time index rather than the manifest itself, so the browser build
+        // doesn't carry a list of five hundred slugs it will never read.
+        getStaticPaths: () => photoIds.map((id) => `/photos/${id}`),
+      },
       { path: 'colophon', lazy: () => import('./pages/Colophon') },
       { path: 'privacy', lazy: () => import('./pages/Privacy') },
-      // Photo galleries at their preserved Squarespace paths.
-      ...galleryDefinitions.map((gallery) => ({
-        path: stripSlash(gallery.path),
-        lazy: () => import('./pages/Gallery'),
-      })),
       // Catch-all (dynamic; skipped by the SSG prerenderer, served via 404.html).
       { path: '*', lazy: () => import('./pages/NotFound') },
     ]),

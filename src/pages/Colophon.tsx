@@ -22,35 +22,31 @@ interface ColophonData {
   posts: number
   words: number
   photos: number
-  galleries: number
+  years: number
   located: number
 }
 
 export async function loader(): Promise<ColophonData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadGalleries, loadPostSummaries } = await import('../lib/content.client')
-    return summarize(loadPostSummaries(), loadGalleries())
+    const { loadPhotos, loadPostSummaries } = await import('../lib/content.client')
+    return summarize(loadPostSummaries(), loadPhotos())
   }
-  const { loadGalleries, loadPostSummaries } = await import('../lib/content.server')
-  const [posts, galleries] = await Promise.all([loadPostSummaries(), loadGalleries()])
-  return summarize(posts, galleries)
+  const { loadPhotos, loadPostSummaries } = await import('../lib/content.server')
+  const [posts, photos] = await Promise.all([loadPostSummaries(), loadPhotos()])
+  return summarize(posts, photos)
 }
 
 function summarize(
   posts: { words: number }[],
-  galleries: { canonicalPath?: string; images: { exif?: { place?: number[] } }[] }[],
+  photos: { year: string; exif?: { place?: number[] } }[],
 ): ColophonData {
-  // Alias galleries (/past-work → /2022) point at another gallery's images, so
-  // counting them would count those photos twice.
-  const real = galleries.filter((gallery) => !gallery.canonicalPath)
-  const images = real.flatMap((gallery) => gallery.images)
   return {
     posts: posts.length,
     words: posts.reduce((total, post) => total + post.words, 0),
-    photos: images.length,
-    galleries: real.length,
-    located: images.filter((image) => image.exif?.place?.length === 2).length,
+    photos: photos.length,
+    years: new Set(photos.map((photo) => photo.year)).size,
+    located: photos.filter((photo) => photo.exif?.place?.length === 2).length,
   }
 }
 

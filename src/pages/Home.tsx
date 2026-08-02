@@ -5,47 +5,24 @@ import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
 import { formatDate, type PostSummary } from '../lib/posts'
-import { imageUrl } from '../lib/galleries'
-import { formatShotDateShort } from '../lib/exif'
-import type { GallerySummary } from '../lib/content.server'
-import type { DatedPhoto } from '../lib/timeline'
+import { formatPhotoDateShort, imageUrl, type Photo } from '../lib/photos'
 import { homeSchema } from '../lib/structuredData'
 
-/** A thumbnail in the "Recent photos" strip, from either source below. */
+/** A thumbnail in the "Recent photos" strip. */
 interface PhotoPreview {
   href: string
   src: string
-  /** Capture date for a real photo, gallery title for a cover fallback. */
+  /** "Jul 18" for a photo with a capture time, else its year. */
   label: string
 }
 
-/**
- * The four most recent photographs. This used to be the four newest *galleries*
- * showing their cover image, which meant a heading that said "Recent photos" over
- * a cover from 2020 that only changed when a whole gallery was added. Capture
- * dates make the real thing possible, and each thumbnail can link straight to
- * that frame in the lightbox.
- *
- * Galleries with no capture dates (everything pre-2026, which arrived from
- * Squarespace EXIF-stripped) still fall back to covers, so the section can't
- * vanish on a repo whose photos carry no metadata.
- */
-function toPreviews(photos: DatedPhoto[], galleries: GallerySummary[]): PhotoPreview[] {
-  if (photos.length) {
-    return photos.slice(0, 4).map((photo) => ({
-      href: `${photo.galleryPath}?photo=${photo.index}`,
-      src: photo.thumb ?? photo.src,
-      label: formatShotDateShort(photo.date) ?? photo.galleryTitle,
-    }))
-  }
-  return galleries
-    .filter((gallery) => !gallery.canonicalPath && gallery.cover)
-    .slice(0, 4)
-    .map((gallery) => ({
-      href: gallery.path,
-      src: gallery.cover?.thumb ?? gallery.cover?.src ?? '',
-      label: gallery.title,
-    }))
+/** The four newest photographs in the feed, each linking to its own page. */
+function toPreviews(photos: Photo[]): PhotoPreview[] {
+  return photos.slice(0, 4).map((photo) => ({
+    href: `/photos/${photo.id}`,
+    src: photo.thumb ?? photo.src,
+    label: formatPhotoDateShort(photo),
+  }))
 }
 
 interface HomeData {
@@ -75,25 +52,24 @@ const featuredProjects = [
 export async function loader(): Promise<HomeData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadDatedPhotos, loadGallerySummaries, loadPostSummaries, loadPublicationUri } =
+    const { loadPhotos, loadPostSummaries, loadPublicationUri } =
       await import('../lib/content.client')
     return {
       recent: loadPostSummaries().slice(0, 5),
-      recentPhotos: toPreviews(loadDatedPhotos(), loadGallerySummaries()),
+      recentPhotos: toPreviews(loadPhotos()),
       publicationUri: loadPublicationUri(),
     }
   }
-  const { loadDatedPhotos, loadGallerySummaries, loadPostSummaries, loadPublicationUri } =
+  const { loadPhotos, loadPostSummaries, loadPublicationUri } =
     await import('../lib/content.server')
-  const [posts, photos, galleries, publicationUri] = await Promise.all([
+  const [posts, photos, publicationUri] = await Promise.all([
     loadPostSummaries(),
-    loadDatedPhotos(),
-    loadGallerySummaries(),
+    loadPhotos(),
     loadPublicationUri(),
   ])
   return {
     recent: posts.slice(0, 5),
-    recentPhotos: toPreviews(photos, galleries),
+    recentPhotos: toPreviews(photos),
     publicationUri,
   }
 }

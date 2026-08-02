@@ -12,4 +12,11 @@ declare module 'virtual:site-index' {
     date: string
     tags: string[]
   }[]
+  /**
+   * Every photo's permalink slug, for the prerenderer's static paths. Empty in
+   * the browser build — see the plugin.
+   */
+  export const photoIds: string[]
+  /** Years the photo feed covers, newest first. */
+  export const photoYears: string[]
 }

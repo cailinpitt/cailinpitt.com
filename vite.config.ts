@@ -21,16 +21,28 @@ const RESOLVED_ID = '\0virtual:site-index'
  * So the frontmatter is read at build time and inlined as a module — roughly a
  * hundred bytes per post, no bodies, no fetch. It uses the same parser the site
  * does, so it can't disagree with the rendered pages about what a post is called.
+ *
+ * It also carries two things about the photo feed:
+ *
+ *   photoIds    every photo's permalink slug, which App.tsx hands to the
+ *               prerenderer as the static paths for /photos/:id. Emitted **only
+ *               into the SSR build** — the browser has no use for five hundred
+ *               ids, and shipping them would cost more than the palette saves.
+ *   photoYears  the years the feed covers, which the palette does need.
  */
 function siteIndex(): Plugin {
   const dir = path.join(process.cwd(), 'content', 'blog')
+  const manifest = path.join(process.cwd(), 'src', 'lib', 'photos.json')
 
   return {
     name: 'cailinpitt:site-index',
     resolveId: (id) => (id === VIRTUAL_ID ? RESOLVED_ID : undefined),
 
-    async load(id) {
+    async load(id, options) {
       if (id !== RESOLVED_ID) return
+      const photos = JSON.parse(await readFile(manifest, 'utf8')) as { id: string; year: string }[]
+      const photoIds = options?.ssr ? photos.map((photo) => photo.id) : []
+      const photoYears = [...new Set(photos.map((photo) => photo.year))].sort().reverse()
       const files = (await readdir(dir)).filter((file) => file.endsWith('.md'))
       const posts = await Promise.all(
         files.map(async (file) => {
@@ -46,15 +58,20 @@ function siteIndex(): Plugin {
       )
       // Newest first, matching every other list of posts on the site.
       posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-      return `export const posts = ${JSON.stringify(posts)}\n`
+      return (
+        `export const posts = ${JSON.stringify(posts)}\n` +
+        `export const photoIds = ${JSON.stringify(photoIds)}\n` +
+        `export const photoYears = ${JSON.stringify(photoYears)}\n`
+      )
     },
 
     // In dev the module is generated once, and would otherwise go stale the
-    // moment a post is added or retitled.
+    // moment a post is added or a photo synced.
     configureServer(server: ViteDevServer) {
       server.watcher.add(dir)
+      server.watcher.add(manifest)
       const refresh = (file: string) => {
-        if (!file.startsWith(dir) || !file.endsWith('.md')) return
+        if (file !== manifest && (!file.startsWith(dir) || !file.endsWith('.md'))) return
         const mod = server.moduleGraph.getModuleById(RESOLVED_ID)
         if (mod) server.moduleGraph.invalidateModule(mod)
         server.hot.send({ type: 'full-reload' })

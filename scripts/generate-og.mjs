@@ -15,6 +15,11 @@
 // Two layouts, both 1200x630 (see src/components/Seo.tsx for where they're linked):
 //   - photo: pages with a photograph — full-bleed image under an ink scrim.
 //   - paper: everything else — the site's paper/ink palette, clay spine, hairline rules.
+//
+// A page that names its own og:image is skipped entirely: it has a card already
+// and doesn't want a generated one. That is how the ~500 photo permalinks stay
+// cheap — each of those shares the photograph itself, so rendering a card apiece
+// would be most of a deploy for no gain.
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -254,6 +259,9 @@ const metaContent = (html, attr, name) => {
 function cardSpec(html, route) {
   const fullTitle = metaContent(html, 'property', 'og:title') ?? metaContent(html, 'name', 'twitter:title')
   if (!fullTitle) return null
+  // Pages that bring their own image — see the header.
+  const image = metaContent(html, 'property', 'og:image')
+  if (image && !image.includes(`/og/${cardFile(route)}`)) return null
   // <Seo> appends the site name to every title but the home page's.
   const title = fullTitle.replace(new RegExp(`\\s+—\\s+${SITE_NAME}$`), '')
   const hint = JSON.parse(metaContent(html, 'name', 'og-card') ?? '{}')
@@ -304,7 +312,9 @@ async function main() {
     written += 1
   }
   const where = path.relative(ROOT, outDir)
-  console.log(`✓ ${written} og cards in ${where}/ (${photos} over photographs)`)
+  console.log(
+    `✓ ${written} og cards in ${where}/ (${photos} over photographs, ${files.length - written} pages skipped)`,
+  )
 }
 
 main().catch((err) => {

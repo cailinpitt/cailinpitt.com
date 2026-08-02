@@ -1,34 +1,67 @@
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { imageUrl } from '../lib/galleries'
-import type { GallerySummary } from '../lib/content.server'
+import { imageUrl, photoYearBreaks, type Photo, yearAnchor } from '../lib/photos'
 import { pageSchema } from '../lib/structuredData'
 
-export async function loader(): Promise<GallerySummary[] | null> {
+// The feed: every photograph on the site in one square grid, newest first.
+//
+// There is no pagination and no infinite scroll — all of them are in the
+// prerendered html, and `loading="lazy"` means the browser only fetches the few
+// screens' worth it actually needs. That keeps the page working without
+// JavaScript, keeps Cmd-F useful, and keeps the year anchors real links.
+
+/**
+ * What a tile needs, and nothing else. The full manifest entry carries capture
+ * metadata and dates that only a photo's own page shows, and this list is five
+ * hundred long — carrying those into the prerendered loader data would double it
+ * for nothing.
+ */
+type FeedPhoto = Pick<Photo, 'id' | 'src' | 'thumb' | 'alt' | 'year' | 'width' | 'height'>
+
+const toTile = ({ id, src, thumb, alt, year, width, height }: Photo): FeedPhoto => ({
+  id,
+  src,
+  thumb,
+  alt,
+  year,
+  width,
+  height,
+})
+
+export async function loader(): Promise<FeedPhoto[] | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    return (await import('../lib/content.client')).loadGallerySummaries()
+    return (await import('../lib/content.client')).loadPhotos().map(toTile)
   }
-  const { loadGallerySummaries } = await import('../lib/content.server')
-  return loadGallerySummaries()
+  const { loadPhotos } = await import('../lib/content.server')
+  return (await loadPhotos()).map(toTile)
 }
 
 export function Component() {
-  const galleries = useLoaderData() as GallerySummary[]
-  // Skip alias galleries (e.g. /past-work, which mirrors /2022).
-  const years = galleries.filter((g) => !g.canonicalPath)
+  const photos = useLoaderData() as FeedPhoto[]
+  const count = photos.length
+  // Which tiles start a new year. They carry the only anchors on the page, so
+  // /photos#y2019 still lands somewhere sensible now that /2019 is gone.
+  const breaks = photoYearBreaks(photos)
+  const description = 'Photographs by Cailin Pitt.'
 
   return (
-    <div className="gallery">
+    <div className="photos">
       <Seo
         title="Photos"
-        description="Photography by Cailin Pitt — yearly archives."
+        description={description}
         path="/photos"
+        card={{
+          kicker: 'Photographs',
+          meta: `${count} ${count === 1 ? 'photograph' : 'photographs'}`,
+          photo: photos[0] ? imageUrl(photos[0].src) : undefined,
+        }}
         jsonLd={pageSchema({
           path: '/photos',
           title: 'Photos',
-          description: 'Photography by Cailin Pitt — yearly archives.',
-          type: 'CollectionPage',
+          description,
+          image: photos[0]?.src,
+          type: 'ImageGallery',
         })}
       />
       <h1>Photos</h1>
@@ -51,28 +84,30 @@ export function Component() {
           Photo map
         </Link>
       </p>
-      <ul className="gallery-index">
-        {years.map((g) => {
-          const cover = g.cover
-          return (
-            <li key={g.path}>
-              <Link to={g.path}>
-                {cover && (
-                  <img
-                    src={imageUrl(cover.thumb ?? cover.src)}
-                    alt=""
-                    width={cover.width}
-                    height={cover.height}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                )}
-                <span className="gallery-index-label">{g.title}</span>
+
+      {count === 0 ? (
+        <p className="photos-empty">Photos coming soon.</p>
+      ) : (
+        <ul className="photo-feed">
+          {photos.map((photo) => (
+            <li key={photo.id} id={breaks.has(photo.id) ? yearAnchor(photo.year) : undefined}>
+              <Link to={`/photos/${photo.id}`}>
+                <img
+                  // Tiles are square and ~200px wide at most, so the 1000px grid
+                  // rendition is what should load here; the full size belongs to
+                  // the photo's own page.
+                  src={imageUrl(photo.thumb ?? photo.src)}
+                  alt={photo.alt}
+                  width={photo.width}
+                  height={photo.height}
+                  loading="lazy"
+                  decoding="async"
+                />
               </Link>
             </li>
-          )
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

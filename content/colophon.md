@@ -37,7 +37,7 @@ curl guestbook.cailinpitt.com
 
 ## Photographs
 
-{{photos}} photographs across {{galleries}} galleries, served from [Cloudflare R2](https://www.cloudflare.com/products/r2/). A local script compresses each original photo to WebP and uploads them to a bucket, so no photo is ever committed to the repo. EXIF data is read from original photos and included on the website (camera type and settings).
+{{photos}} photographs spanning {{years}} years, served from [Cloudflare R2](https://www.cloudflare.com/products/r2/). A local script compresses each original photo to WebP and uploads them to a bucket, so no photo is ever committed to the repo. EXIF data is read from original photos and included on the website (camera type and settings).
 
 {{#located}}
 {{located}} of them carry a location, shown on the [photo map](/photos/map). Photo locations are at a neighborhood level and not the exact spot a photo was taken.

@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const PROJECTS = path.join(ROOT, 'content', 'projects.md')
 const COLOPHON = path.join(ROOT, 'content', 'colophon.md')
-const GALLERIES = path.join(ROOT, 'src', 'lib', 'gallery-images.json')
+const PHOTOS = path.join(ROOT, 'src', 'lib', 'photos.json')
 const BLOG = path.join(ROOT, 'content', 'blog')
 const DIST = path.join(ROOT, 'dist')
 const SITE = 'https://cailinpitt.com'
@@ -68,22 +68,20 @@ function cleanBody(body) {
  * carry the same prose the page shows instead of raw template syntax.
  *
  * The page gets these from the route loader; here they're read straight off the
- * gallery manifest, which is keyed by *image key* — and the one alias gallery
- * (/past-work → /2022) shares 2022's key, so counting keys can't double-count
- * the way counting routes would. Word count is deliberately absent: the prose
+ * photo manifest, which is one flat list of every photo. Word count is
+ * deliberately absent: the prose
  * doesn't currently quote it, and mirroring countWords() from src/lib/posts.ts
  * would be real logic kept in two places for no reader's benefit. If the prose
  * starts using it, fillTemplate below will say so loudly rather than quietly
  * shipping "{{words}}".
  */
 async function colophonValues(posts) {
-  const manifest = JSON.parse(await readFile(GALLERIES, 'utf8'))
-  const images = Object.values(manifest).flat()
+  const photos = JSON.parse(await readFile(PHOTOS, 'utf8'))
   return {
     posts: posts.length,
-    galleries: Object.keys(manifest).length,
-    photos: images.length,
-    located: images.filter((img) => img.exif?.place?.length === 2).length,
+    photos: photos.length,
+    years: new Set(photos.map((photo) => photo.year)).size,
+    located: photos.filter((photo) => photo.exif?.place?.length === 2).length,
   }
 }
 

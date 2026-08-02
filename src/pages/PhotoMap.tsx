@@ -2,10 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import { Seo } from '../components/Seo'
-import { imageUrl } from '../lib/images'
-import { formatShotDate } from '../lib/exif'
+import { formatPhotoDate, imageUrl, type Photo } from '../lib/photos'
 import { pageSchema } from '../lib/structuredData'
-import type { DatedPhoto } from '../lib/timeline'
 
 // Where the photos were taken, from the coordinates images:sync reads off each
 // original. Leaflet renders the map and OpenStreetMap serves the tiles — both
@@ -18,17 +16,17 @@ import type { DatedPhoto } from '../lib/timeline'
 // fills in after mount.
 
 interface MapData {
-  photos: DatedPhoto[]
+  photos: Photo[]
 }
 
 export async function loader(): Promise<MapData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadDatedPhotos } = await import('../lib/content.client')
-    return { photos: loadDatedPhotos().filter((photo) => photo.place) }
+    const { loadPhotos } = await import('../lib/content.client')
+    return { photos: loadPhotos().filter((photo) => photo.exif?.place) }
   }
-  const { loadDatedPhotos } = await import('../lib/content.server')
-  return { photos: (await loadDatedPhotos()).filter((photo) => photo.place) }
+  const { loadPhotos } = await import('../lib/content.server')
+  return { photos: (await loadPhotos()).filter((photo) => photo.exif?.place) }
 }
 
 /** Photos sharing a rounded coordinate, so overlapping pins become one marker. */
@@ -36,13 +34,13 @@ interface Pin {
   key: string
   lat: number
   lon: number
-  photos: DatedPhoto[]
+  photos: Photo[]
 }
 
-function toPins(photos: DatedPhoto[]): Pin[] {
+function toPins(photos: Photo[]): Pin[] {
   const byPlace = new Map<string, Pin>()
   for (const photo of photos) {
-    const [lat, lon] = photo.place ?? []
+    const [lat, lon] = photo.exif?.place ?? []
     if (lat == null || lon == null) continue
     const key = `${lat},${lon}`
     const pin = byPlace.get(key)
@@ -55,15 +53,15 @@ function toPins(photos: DatedPhoto[]): Pin[] {
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-/** Popup contents: the photos at this spot, each linking into the lightbox. */
+/** Popup contents: the photos at this spot, each linking to its own page. */
 function popupHtml(pin: Pin): string {
   const items = pin.photos
     .map((photo) => {
-      const href = `${photo.galleryPath}?photo=${photo.index}`
-      const date = formatShotDate(photo.date)
+      const href = `/photos/${photo.id}`
+      const date = formatPhotoDate(photo)
       return `<li><a href="${escapeHtml(href)}">
         <img src="${escapeHtml(imageUrl(photo.thumb ?? photo.src) ?? '')}" alt="${escapeHtml(photo.alt)}" loading="lazy" />
-        <span>${escapeHtml(date ?? photo.galleryTitle)}</span>
+        <span>${escapeHtml(date)}</span>
       </a></li>`
     })
     .join('')
@@ -125,7 +123,7 @@ export function Component() {
   const description = 'A map of where Cailin Pitt has taken photographs.'
 
   return (
-    <div className="gallery photo-map">
+    <div className="photos photo-map">
       <Seo
         title="Photo map"
         description={description}
@@ -148,11 +146,11 @@ export function Component() {
       </p>
 
       {pins.length === 0 ? (
-        <p className="gallery-empty">
-          No photos carry a location yet — only galleries built from originals do.
+        <p className="photos-empty">
+          No photos carry a location yet — only the ones whose originals recorded one do.
         </p>
       ) : failed ? (
-        <p className="gallery-empty">The map could not load. Try again later.</p>
+        <p className="photos-empty">The map could not load. Try again later.</p>
       ) : (
         <div className="map-canvas" ref={containerRef} />
       )}

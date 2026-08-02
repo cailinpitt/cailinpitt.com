@@ -12,13 +12,14 @@ import {
   type Article,
   type Book,
 } from '../lib/reading'
+import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
-import { buildTimeline, type DatedPhoto, type TimelineDay } from '../lib/timeline'
+import { buildTimeline, type TimelineDay } from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
 
 interface TimelineData {
   posts: PostSummary[]
-  photos: DatedPhoto[]
+  photos: Photo[]
 }
 
 /** Listening days pulled per page. The Worker caps /days at 14. */
@@ -66,7 +67,7 @@ async function topUp<T>(
 
 const bookDate = (book: Book) => book.finishedAt?.slice(0, 10) ?? book.startedAt?.slice(0, 10) ?? null
 
-function useTimeline(posts: PostSummary[], photos: DatedPhoto[]) {
+function useTimeline(posts: PostSummary[], photos: Photo[]) {
   const [days, setDays] = useState<DayLog[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [books, setBooks] = useState<Book[]>([])
@@ -284,12 +285,12 @@ function TimelineRow({ day }: { day: TimelineDay }) {
               <span className="timeline-label">
                 {day.photos.length} {day.photos.length === 1 ? 'photo' : 'photos'}
               </span>{' '}
-              <Link to={day.photos[0].galleryPath}>{day.photos[0].galleryTitle}</Link>
+              <Link to="/photos">in the feed</Link>
               <ul className="timeline-thumbs">
                 {day.photos.map((photo) => (
-                  <li key={photo.src}>
-                    {/* Straight into the lightbox at that frame. */}
-                    <Link to={`${photo.galleryPath}?photo=${photo.index}`}>
+                  <li key={photo.id}>
+                    {/* Straight to that photo's own page. */}
+                    <Link to={`/photos/${photo.id}`}>
                       <img
                         src={imageUrl(photo.thumb ?? photo.src)}
                         alt={photo.alt}

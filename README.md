@@ -85,62 +85,83 @@ Markdown body…
 6. _Optional:_ re-share the post link on Bluesky — link cards are cached per-URL, so a fresh post
    forces Bluesky to re-fetch the new thumbnail/record.
 
-### Add a photo gallery (e.g. 2026)
+### Add photos
 
-All images (blog + galleries) are served from Cloudflare R2 (`images.cailinpitt.com`) and **none
-are committed** — all of `public/images/` is gitignored. Galleries are defined in
-`src/lib/galleries.ts`; the image lists live in `src/lib/gallery-images.json`.
+All images (blog + photos) are served from Cloudflare R2 (`images.cailinpitt.com`) and **none
+are committed** — all of `public/images/` is gitignored. Photos are one flat, chronological feed
+at `/photos`, described by `src/lib/photos.json`; there is no gallery registry to edit.
 
-1. Put the full-size photos straight off the camera in `originals/2026/`.
+1. Put the full-size photos straight off the camera in `originals/2026/` — a four-digit folder
+   name is the whole rule for "this is a photo, not a blog image".
 2. ```bash
    npm run images:publish   # = images:sync + images:upload; needs R2 creds in .env
    ```
-3. Commit the **code** changes (`gallery-images.json`, `galleries.ts`) — never the photos — and push.
+3. Commit the **code** change (`src/lib/photos.json`) — never the photos — and push.
 
 That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeeping:
 
 - **Compresses.** Every original under `originals/<folder>/` is encoded to WebP in
-  `public/images/<folder>/`: a 2560px full size for the lightbox and a 1000px `-1000.webp`
-  for the grid (quality 82, EXIF orientation baked in, EXIF metadata dropped). 2026 went from
-  119 MB of camera files to 18 MB served, of which the grid only loads the 3 MB of thumbnails.
-  Re-encoding is skipped when a rendition is newer than its original; `--reencode` forces it.
-- **Registers new galleries.** A `public/images/<year>/` folder with no gallery yet is added to
-  `galleryDefinitions` in `src/lib/galleries.ts`, in newest-first order. The `/2026` route and the
-  `/photos` index follow automatically. Galleries with a title that isn't the folder name
-  (`/latest-work` → "2017"), a `description`, or a `canonicalPath` alias stay hand-written — the
-  script only ever *adds* the plain year ones.
-- **Fills in the image list.** Each gallery's entries in `src/lib/gallery-images.json` are rebuilt
-  from the folder — `src` (full size), `thumb` (grid) and `width`/`height` read from the file
-  headers. Existing entries keep their order and any alt text you've written,
-  so hand-tuning the running order or the alt of a photo survives re-runs; new files are appended
-  in natural filename order with a default `Photograph — <title>` alt.
+  `public/images/<folder>/`: a 2560px full size for the photo's own page and a 1000px
+  `-1000.webp` for the feed grid (quality 82, EXIF orientation baked in, EXIF metadata dropped).
+  2026 went from 119 MB of camera files to 18 MB served, of which the feed only loads the 3 MB of
+  thumbnails. Re-encoding is skipped when a rendition is newer than its original; `--reencode`
+  forces it.
+- **Fills in the feed.** `src/lib/photos.json` is rebuilt from what's on disk: `src` (full size),
+  `thumb` (grid), and `width`/`height` read from the file headers. Existing entries keep their
+  id, alt text, date, and metadata, so a hand-edit survives re-runs; new files are appended and
+  the whole list is sorted newest-first.
+- **Assigns a permalink.** Each photo gets an `id` — `<year>-<filename>`, e.g. `2019-img-0116` —
+  the first time it's seen, and it is **never recomputed**: it is the URL of `/photos/<id>`, so
+  renaming the file on disk later must not 404 the page. A filename that repeats within a year
+  takes a `-2` suffix.
 - **Records capture metadata.** Each entry also gets an `exif` object read from the *original*
   (the renditions are encoded with EXIF stripped): capture date, camera, aperture, shutter, ISO,
-  focal length, and a coarse location. The lightbox shows it as a caption. Only galleries built
-  from `originals/` have any — the pre-2026 photos came out of Squarespace already stripped, so
-  they carry none and the caption just omits those lines. Like alt text, it's read once and then
-  left alone, so a hand-edit sticks (useful when a camera reports a model code rather than a name
-  — the drone identifies itself as `FC3170`). `--reexif` forces a re-read of every photo.
+  focal length, and a coarse location. The photo's page shows it as a caption. Like alt text, it's
+  read once and then left alone, so a hand-edit sticks (useful when a camera reports a model code
+  rather than a name — the drone identifies itself as `FC3170`). `--reexif` forces a re-read.
+- **Dates every photo**, because the feed is ordered by date and nothing may be undated. In order:
+  the EXIF capture time; else whatever the manifest already says; else January 1st of the folder's
+  year. Everything but the first is marked `approx`, which the site renders as a bare year — see
+  [Dates before 2026](#dates-before-2026).
 - **Never deletes silently.** A manifest entry whose file isn't on disk is kept and counted in the
   output (you may just not have that photo locally). Pass `--prune` to actually drop them.
 - **Checks blog images** too — see [Add a blog post](#add-a-blog-post) above.
 
-> **On location data.** `gallery-images.json` is committed and served to browsers, so anything
-> in it is public and permanent. GPS coordinates are therefore rounded to 2 decimal places
-> (~0.7 miles) on the way in — enough to place a photo on a map or name a neighborhood, not enough
-> to point at an address. Full precision stays in the originals, which are gitignored and never
-> uploaded. If you'd rather publish nothing at all, drop the `place` field in
-> `scripts/exif.mjs` and re-run with `--reexif`; it will clear the recorded values.
+> **On location data.** `photos.json` is committed and served to browsers, so anything in it is
+> public and permanent. GPS coordinates are therefore rounded to 2 decimal places (~0.7 miles) on
+> the way in — enough to place a photo on a map or name a neighborhood, not enough to point at an
+> address. Full precision stays in the originals, which are gitignored and never uploaded. If you'd
+> rather publish nothing at all, drop the `place` field in `scripts/exif.mjs` and re-run with
+> `--reexif`; it will clear the recorded values.
 
 `originals/` is gitignored and lives outside `public/`, so camera files are never committed,
 never uploaded to R2, and never built into the site — only the renditions are. It is a local
 working directory, **not a backup**: keep your originals wherever you normally keep them.
 
-The older galleries (2014–2022, `/latest*`) predate this and have no originals — they're the
-2500px JPEGs pulled from Squarespace, already web-sized, and sync leaves them exactly as they
-are (no `thumb`, so the grid falls back to `src`). To bring one into the pipeline, move
-`public/images/<key>/` to `originals/<key>/` and re-run; note that changes those images' URLs
-and leaves the old objects orphaned in R2.
+#### Dates before 2026
+
+Only the 2026 photos carry EXIF: everything older came back from Squarespace with its metadata
+stripped. A feed sorted by date has nowhere to put an undated photo, so those dates were recovered
+from the Squarespace export, where each CDN URL embeds the file's **upload** time:
+
+```bash
+npm run photos:backfill        # scripts/backfill-photo-dates.mjs; --dry-run to look first
+```
+
+That reached 454 of the 460 older photos. It is not when they were taken, so:
+
+- the entry is flagged `approx`, and the site prints only the year for those — never a day it
+  can't stand behind;
+- the photo keeps the **year of the folder it's filed under**, not the year of the recovered
+  upload (a 2014 photo posted in 2016 stays a 2014 photo). The upload time orders that year's
+  photos among themselves and does nothing else. That's why a manifest entry carries both `year`
+  and `date`;
+- `/timeline` skips approximate photos entirely — it's a day-per-row page, and they'd all pile
+  onto January 1st.
+
+The script only ever replaces the January-1st placeholder, so it's safe to re-run and safe to
+hand-correct a date afterward. To fix one photo, edit its `date` in `src/lib/photos.json` (drop
+`approx` if you know the real day) — sync won't overwrite it.
 
 Useful variants:
 
@@ -154,17 +175,14 @@ npm run images:prune               # list R2 objects nothing references (dry run
 npm run images:prune -- --delete   # …and delete them
 ```
 
-`images:prune` is what cleans up after a gallery switches to new renditions: the superseded
-objects stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest
-and every `/images/...` path in the blog markdown, and refuses to delete if anything referenced
-is missing from the bucket (so a half-finished upload can't look like a bucket full of orphans).
+`images:prune` is what cleans up after photos switch to new renditions: the superseded objects
+stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest and every
+`/images/...` path in the blog markdown, and refuses to delete if anything referenced is missing
+from the bucket (so a half-finished upload can't look like a bucket full of orphans).
 Anything under `PROTECTED_PREFIXES` (currently `images/reading/`) is never touched — those objects
 belong to the reading Worker and are referenced from its D1 database, which this script can't see.
 Note that deleted objects can still serve from Cloudflare's edge cache for a while — the upload
 sets `immutable` — so purge the URL in the dashboard if you need it gone immediately.
-
-> The original galleries were pulled from the old Squarespace site with `npm run galleries:download`
-> (Squarespace-specific). For new galleries, just drop files into `public/images/<gallery>/` as above.
 
 ### standard.site / Bluesky
 
@@ -266,11 +284,14 @@ tints browser chrome and nothing on the page.
 ## Search (⌘K)
 
 Every page carries a command palette — **⌘K** / **Ctrl-K**, or **/** when you aren't already
-typing, or the magnifier in the header. It jumps to any page, post, gallery, or tag.
+typing, or the magnifier in the header. It jumps to any page, post, photo year, or tag.
 
 - **The index is compiled in, not fetched.** A small Vite plugin
   (`cailinpitt:site-index` in `vite.config.ts`) reads `content/blog/*.md` at build time and
   inlines the frontmatter — path, title, date, tags — as the `virtual:site-index` module.
+  The same module carries the photo feed's years, and (for the prerenderer only) every
+  photo's permalink id; the browser build gets an empty list, since five hundred slugs are
+  no use to it.
   That's ~100 bytes per post and no request, where an eager `import.meta.glob` would have
   shipped every post's *body* to the browser and a generated JSON file would have cost a
   round trip before the palette could open. Bodies are never included; the plugin uses the
@@ -279,13 +300,13 @@ typing, or the magnifier in the header. It jumps to any page, post, gallery, or 
 - Adding a post needs nothing done here — it's in the palette on the next build. In dev the
   module is invalidated when anything under `content/blog/` changes.
 - Pages are listed by hand in `PAGES` in `src/components/CommandPalette.tsx`; **a new route
-  needs adding there** (galleries and tags are derived, so those don't). Forgetting is caught
+  needs adding there** (photo years and tags are derived, so those don't). Forgetting is caught
   by `tests/command-palette.test.ts`, which holds the list against the routes in `App.tsx` in
   both directions — a page missing from the palette, and an entry pointing at a route that no
   longer exists. It can't guess a label or the words someone would search for, so it fails
   rather than deriving the list.
-- It's a native `<dialog>` opened with `showModal()`, like the gallery lightbox — focus
-  trapping and Escape come with it rather than being reimplemented.
+- It's a native `<dialog>` opened with `showModal()` — focus trapping and Escape come with
+  it rather than being reimplemented.
 
 ## Homepage
 
@@ -295,11 +316,8 @@ Mostly static, with three things that change on their own:
   sparkline, and an "on this day" line drawn from `/on-this-day.json`, which the listening
   Worker already built for `/listening`. All three render nothing until their fetch lands
   and nothing at all if it fails, so the prerendered shell never depends on them.
-- **📸 Recent photos** shows the four most recent *photographs*, by capture date, each
-  linking into the gallery lightbox at that frame. It previously showed the four newest
-  *galleries'* cover images, so the heading was untrue — a 2020 cover under "Recent
-  photos" — and it only changed when a whole gallery was added. Galleries with no capture
-  dates fall back to covers, so the section can't vanish.
+- **📸 Recent photos** shows the first four photographs in the feed, each linking to its own
+  page. The label under each is the capture day when there is one, else the year.
 
 ## Colophon (`/colophon`)
 
@@ -319,14 +337,14 @@ The body can quote the build-time counts, substituted by `fillTemplate` in
 it's a fill-in-the-blanks step, not a template language:
 
 ```markdown
-{{photos}} photographs across {{galleries}} galleries…
+{{photos}} photographs spanning {{years}} years…
 
 {{#located}}
 {{located}} of them carry a location…
 {{/located}}
 ```
 
-- Available keys: `posts`, `words`, `photos`, `galleries`, `located` — whatever `ColophonData`
+- Available keys: `posts`, `words`, `photos`, `years`, `located` — whatever `ColophonData`
   carries. Numbers are thousands-separated. `posts` and `words` also feed the tiles, so they
   stay defined whether or not the prose quotes them.
 - `{{#key}}…{{/key}}` keeps its contents only when that count is non-zero. That exists
@@ -346,8 +364,8 @@ it's a fill-in-the-blanks step, not a template language:
   than as zero.
 - Books and articles come from `/reading.json` (the counts aren't on the reading Worker's
   smaller endpoint).
-- Photo counts skip alias galleries (`/past-work` → `/2022`), which would otherwise count
-  the same photos twice.
+- Photo counts are just the length of `src/lib/photos.json` — one flat list, nothing to
+  double-count.
 
 ## Reading (`/reading`)
 
@@ -413,12 +431,33 @@ the site that accepts **writes from the public**.
   `https://guestbook.cailinpitt.com`). The Turnstile **site** key is public and lives
   in `src/lib/guestbook.ts` and `worker-guestbook/wrangler.jsonc`; keep the two in sync.
 
+## Photos (`/photos`)
+
+One feed, Instagram-style: every photograph on the site in a single three-column grid of
+squares, newest first, with no pagination and no infinite scroll. There are no galleries —
+`/2019`, `/latest`, `/past-work` and the rest are gone, and those URLs now 404.
+
+- **Every photo has its own page** at `/photos/<id>` — prerendered like everything else, with
+  the photograph at full size, its date, camera and settings, a link to the map when it has
+  coordinates, and previous/next links (←/→ also page through the feed). The old
+  `/2019?photo=12` lightbox is gone; a frame is a page now, so it can be linked and shared.
+- **The whole feed is in the prerendered HTML.** ~500 lazy-loaded `<img>` tags gzip to about
+  20 KB, which buys a page that works with JavaScript off, that Cmd-F can search, and whose
+  year anchors (`/photos#y2019`, what the palette's year entries point at) are real links.
+  The loader data carries only what a tile needs — no EXIF, no dates — since that would double
+  it for nothing.
+- **Ordering** is by year, then by date within the year. Year leads because a pre-2026 date can
+  be a recovered *upload* time that landed in the following year; see
+  [Dates before 2026](#dates-before-2026).
+- **The social card for a photo page is the photograph itself.** `<Seo image>` names it directly,
+  and `scripts/generate-og.mjs` skips any page that brings its own `og:image` — otherwise a
+  deploy would render ~500 cards, which is most of a build for no gain.
+
 ## Photo map (`/photos/map`)
 
-Plots every photo that carries a location — i.e. the galleries built from `originals/`,
-since the coordinates come from the EXIF that `images:sync` records. Photos sharing a
-rounded coordinate collapse into one pin, and each popup links into the gallery lightbox
-at that frame.
+Plots every photo that carries a location — i.e. the 2026 ones, since the coordinates come
+from the EXIF that `images:sync` records. Photos sharing a rounded coordinate collapse into
+one pin, and each popup links to that photo's page.
 
 - **Leaflet** (BSD-2-Clause, bundled from npm — no CDN) with raster tiles from
   **OpenStreetMap**. Both are free with no account, no API key, and no billing to
@@ -430,7 +469,7 @@ at that frame.
   default marker icon URLs and lets them take the site's accent color.
 - In dark mode the tile pane is inverted and hue-rotated, since OSM's tiles are drawn for
   light backgrounds. Markers live in a pane above it and keep their real color.
-- Positions are rounded to ~0.7 miles (see [above](#add-a-photo-gallery-eg-2026)), which the
+- Positions are rounded to ~0.7 miles (see [above](#add-photos)), which the
   page says plainly — a pin marks a neighborhood, not a spot.
 
 ## Timeline (`/timeline`)
@@ -448,10 +487,9 @@ and merges them in the browser against the posts and photos compiled into the bu
   to 2015.
 - **A day with no scrobbles still gets a row** if anything else happened on it. The
   listening days seed the timeline; they don't limit it.
-- **Photos only appear from 2026 on**, since placing one in time needs the capture date
-  recorded by `images:sync` (see [above](#add-a-photo-gallery-eg-2026)) and the older
-  galleries came out of Squarespace EXIF-stripped. Each thumbnail links straight into the
-  gallery lightbox at that frame.
+- **Photos only appear from 2026 on**, since placing one on a day needs a real capture date
+  and everything older carries only an approximate one (see [above](#dates-before-2026)).
+  Each thumbnail links to that photo's page.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups
   scrobbles into US Central days while articles bucket in the viewer's zone, so the two
   disagree at the margins for a visitor far from Central. See the note at the top of
@@ -464,7 +502,7 @@ Every prerendered page gets its own 1200×630 Open Graph card at `/og/<path>.jpg
 `dist/`; `npm run og -- --only /blog/…` does a single page, and `--out .og-preview` writes
 somewhere you can look at without touching the build).
 
-- **Two layouts.** Pages with a photograph — blog posts with images, gallery years — put it
+- **Two layouts.** Pages with a photograph — blog posts with images, the photo feed — put it
   full-bleed under an ink scrim with the title over it. Everything else gets the paper card:
   the site's paper/ink palette, a clay spine off the left edge, the title and description
   between two hairline rules.
@@ -509,6 +547,12 @@ What's covered, and why each one:
   lives in `worker-guestbook/`, which has no test setup of its own, but it's pure, so it's
   tested from here.
 - **`command-palette`** — the hand-written page list, held against the router (see [Search](#search-k)).
+- **`photos`** — the two rules the feed can't get wrong: a photo's `id` is a public URL that must
+  never move (so the slugging and its collision suffix are pinned), and the feed's order is year
+  first, date second. It tests `scripts/photo-manifest.mjs` — the sync script's date/id rules,
+  extracted so they're testable without touching disk — alongside the site's own sort, and checks
+  the two agree, because a manifest written in one order and rendered in another would put photos
+  in the wrong place with nothing looking broken.
 
 The workflow runs `typecheck` → `test` → `build`, so a broken invariant stops a deploy rather
 than shipping.

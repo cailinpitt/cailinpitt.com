@@ -2,12 +2,10 @@ import { useCallback, useState } from 'react'
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
 import { ThemeToggle } from './ThemeToggle'
-import { galleryDefinitions } from '../lib/galleries'
 
 export function Layout() {
   const { pathname } = useLocation()
-  const photosActive =
-    pathname === '/photos' || galleryDefinitions.some((gallery) => gallery.path === pathname)
+  const photosActive = pathname === '/photos' || pathname.startsWith('/photos/')
 
   // The palette's trigger belongs in the nav and its dialog does not, so the open
   // state is held here rather than inside either half.

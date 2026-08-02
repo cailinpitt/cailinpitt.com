@@ -3,11 +3,10 @@
 // these eager Markdown imports are removed from the production client build.
 
 import atprotoData from '../../content/atproto.json'
-import galleryManifest from './gallery-images.json'
-import { galleryDefinitions, type Gallery, type GalleryImage } from './galleries'
-import { datedPhotos, type DatedPhoto } from './timeline'
+import photoManifest from './photos.json'
+import { byNewest, type Photo } from './photos'
+import { datedPhotos } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
-import type { GallerySummary } from './content.server'
 
 const rawPosts = import.meta.glob('/content/blog/*.md', {
   query: '?raw',
@@ -31,21 +30,10 @@ export function loadPublicationUri(): string | null {
   return atproto.publication
 }
 
-export function loadGalleries(): Gallery[] {
-  const manifest = galleryManifest as Record<string, GalleryImage[]>
-  return galleryDefinitions.map(({ imageKey, ...gallery }) => ({
-    ...gallery,
-    images: manifest[imageKey] ?? [],
-  }))
+export function loadPhotos(): Photo[] {
+  return [...(photoManifest as Photo[])].sort(byNewest)
 }
 
-export function loadGallerySummaries(): GallerySummary[] {
-  return loadGalleries().map(({ images, ...gallery }) => ({
-    ...gallery,
-    cover: images[0],
-  }))
-}
-
-export function loadDatedPhotos(): DatedPhoto[] {
-  return datedPhotos(loadGalleries())
+export function loadDatedPhotos(): Photo[] {
+  return datedPhotos(loadPhotos())
 }

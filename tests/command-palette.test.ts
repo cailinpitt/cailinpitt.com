@@ -2,27 +2,23 @@ import { describe, expect, it } from 'vitest'
 import type { RouteRecord } from 'vite-react-ssg'
 import { routes } from '../src/App'
 import { PAGES } from '../src/components/CommandPalette'
-import { galleryDefinitions } from '../src/lib/galleries'
 
 // The palette's page list is hand-written (see the comment on PAGES), and a page
 // missing from it is invisible from ⌘K while looking perfectly fine everywhere
-// else. Posts, galleries, and tags are derived from content, so they can't drift
-// — only this list can, and only when a route is added or removed.
+// else. Posts, photo years, and tags are derived from content, so they can't
+// drift — only this list can, and only when a route is added or removed.
 
 const children = (routes[0].children ?? []) as RouteRecord[]
-const galleryPaths = new Set(galleryDefinitions.map((gallery) => gallery.path))
 
 /**
  * The routes a visitor could be told to search for: no parameterized routes (a
- * post or tag has no single URL), no catch-all, and no galleries — those are
- * derived into the palette from galleryDefinitions already.
+ * post, a tag, or a single photo has no one URL) and no catch-all.
  */
 const staticRoutes = children.flatMap((route) => {
   if ('index' in route && route.index) return ['/']
   const routePath = (route as { path?: string }).path
   if (!routePath || routePath.includes(':') || routePath === '*') return []
-  const full = `/${routePath.replace(/^\//, '')}`
-  return galleryPaths.has(full) ? [] : [full]
+  return [`/${routePath.replace(/^\//, '')}`]
 })
 
 describe('the command palette page list', () => {

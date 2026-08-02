@@ -22,7 +22,8 @@
   /* Spacing + measure */
   --space: 1.5rem;
   --measure: 40rem; /* single reading column */
-  --measure-wide: 72rem; /* gallery breakout */
+  --measure-wide: 72rem; /* wide breakout */
+  --measure-feed: 58rem; /* photo feed — three ~300px squares */
   --flow: 1.3em; /* vertical rhythm between flow elements */
 
   /* Color — warm paper / ink, one restrained clay accent */
@@ -441,7 +442,7 @@ h3 {
   line-height: 1.5;
 }
 
-/* Recent photos — compact cover previews linking to the yearly galleries */
+/* Recent photos — compact previews linking into the feed */
 .recent-photos {
   margin-top: 3rem;
 }
@@ -753,195 +754,99 @@ h3 {
   text-transform: uppercase;
 }
 
-/* Galleries — break out wider than the reading column */
-.gallery h1 {
+/* The photo feed — one square grid of everything, newest first, breaking out
+   wider than the reading column. */
+.photos h1 {
   font-size: var(--step-3);
   margin-bottom: 1.5rem;
 }
-.gallery-grid {
-  width: min(var(--measure-wide), 92vw);
+.photo-feed {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 0;
+  /* Narrower than the site's wide breakout: three columns of ~300px is what
+     makes a grid of squares read as a feed rather than a contact sheet. */
+  width: min(var(--measure-feed), 92vw);
   /* Center the wide breakout without `transform` — a transformed element creates a
      persistent GPU compositing layer that Safari/WebKit can fail to clear when the
      element is unmounted during client-side navigation, leaving a "ghost" of the
-     gallery painted over the next page. Margin-based centering has no such layer. */
-  margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
+     feed painted over the next page. Margin-based centering has no such layer. */
+  margin-inline: calc(50% - min(var(--measure-feed), 92vw) / 2);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
-  gap: 0.6rem;
+  /* Three across at every width, which is what makes it read as a feed rather
+     than a gallery; the tiles simply get smaller on a phone. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
 }
-.gallery-grid figure {
-  margin: 0;
-}
-.gallery-grid button {
+.photo-feed a {
   display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
   background: var(--surface);
-  cursor: zoom-in;
-  border-radius: 3px;
   overflow: hidden;
 }
-.gallery-grid img {
+.photo-feed img {
   display: block;
   width: 100%;
   height: 100%;
+  /* Square crop from the center — the tile is a thumbnail, and the photo's own
+     page is where its real proportions live. */
+  aspect-ratio: 1;
   object-fit: cover;
-  aspect-ratio: 3 / 2;
   transition: opacity 0.2s ease, transform 0.4s ease;
 }
-.gallery-grid button:hover img {
+.photo-feed a:hover img {
   opacity: 0.92;
-  transform: scale(1.02);
+  transform: scale(1.03);
 }
-.gallery-empty {
+.photos-empty {
   color: var(--muted);
   font-style: italic;
 }
 
-/* Photos index — year cards with a cover image */
-.gallery-index {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* One photograph, at its own URL */
+.photo-detail figure {
+  margin: 1.5rem 0 0;
   width: min(var(--measure-wide), 92vw);
-  /* Center the wide breakout without `transform` — a transformed element creates a
-     persistent GPU compositing layer that Safari/WebKit can fail to clear when the
-     element is unmounted during client-side navigation, leaving a "ghost" of the
-     gallery painted over the next page. Margin-based centering has no such layer. */
+  /* Same margin-based centering as the feed — see the note there. */
   margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
-  gap: 0.75rem;
 }
-.gallery-index a {
-  position: relative;
+.photo-detail img {
   display: block;
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: 3px;
-  background: var(--surface);
-  text-decoration: none;
-}
-.gallery-index img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-.gallery-index a:hover img {
-  transform: scale(1.03);
-}
-.gallery-index-label {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: 1.5rem 1rem 1rem;
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: var(--step-1);
-  color: #fff;
-  background: linear-gradient(transparent, rgb(0 0 0 / 0.65));
-}
-
-/* Lightbox */
-.lightbox {
-  max-width: min(94vw, 1400px);
-  max-height: 92vh;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--fg);
-}
-.lightbox::backdrop {
-  background: rgb(0 0 0 / 0.82);
-  backdrop-filter: blur(2px);
-}
-.lightbox img {
-  display: block;
-  max-width: 94vw;
-  max-height: 86vh;
   width: auto;
   height: auto;
+  max-width: 100%;
+  /* Sized so a portrait frame plus its caption still fit a laptop screen
+     without scrolling — the photo is the page, and it should arrive whole. */
+  max-height: 70vh;
   margin-inline: auto;
   border-radius: 3px;
+  background: var(--surface);
 }
-.lightbox-figure {
-  margin: 0;
-}
-.lightbox figcaption {
+.photo-detail figcaption {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.15rem 0.9rem;
   font-family: var(--font-sans);
   font-size: var(--step--1);
-  color: #d8d4cd;
+  color: var(--muted);
   text-align: center;
-  margin-top: 0.6rem;
+  margin-top: 0.8rem;
 }
-/* Shooting settings read as a footnote to the capture line above them. */
-.lightbox-settings {
-  color: #9d9891;
+/* Shooting settings and feed position read as footnotes to the date beside them. */
+.photo-settings,
+.photo-position {
   font-variant-numeric: tabular-nums;
 }
-.lightbox-counter {
-  margin-top: 0.2rem;
-  color: #857f78;
-  font-variant-numeric: tabular-nums;
+.photo-when {
+  color: var(--fg);
 }
-.lightbox-close,
-.lightbox-nav {
-  position: fixed;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  background: rgb(0 0 0 / 0.5);
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-.lightbox-close:hover,
-.lightbox-nav:hover {
-  background: rgb(0 0 0 / 0.75);
-}
-.lightbox-close {
-  top: 1rem;
-  right: 1rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  font-size: 1.5rem;
-  line-height: 1;
-}
-/* Paging controls sit against the viewport edges rather than the image, so they
-   stay put as photos of different aspect ratios swap in and out. */
-.lightbox-nav {
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3rem;
-  height: 3rem;
-  padding-bottom: 0.2rem; /* optically center the chevron glyph */
-  font-size: 2.25rem;
-  line-height: 1;
-}
-.lightbox-nav.is-prev {
-  left: 1rem;
-}
-.lightbox-nav.is-next {
-  right: 1rem;
-}
-@media (max-width: 700px) {
-  .lightbox-nav {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 1.75rem;
-  }
-  .lightbox-nav.is-prev {
-    left: 0.4rem;
-  }
-  .lightbox-nav.is-next {
-    right: 0.4rem;
-  }
+.photo-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2011,7 +1916,7 @@ a.book-link:hover .book-title {
 /* ---- /timeline ----------------------------------------------------------
    One row per day, merging listening / reading / writing / photos. Slightly
    wider than the reading column so a day's events don't wrap awkwardly, but
-   narrower than the galleries — it's still a text page. */
+   narrower than the photo feed — it's still a text page. */
 .timeline {
   width: min(48rem, 92vw);
   margin-inline: calc(50% - min(48rem, 92vw) / 2);
@@ -2166,7 +2071,7 @@ a.book-link:hover .book-title {
 }
 .map-canvas {
   width: min(var(--measure-wide), 92vw);
-  /* Same margin-based centering as the gallery grid — see the note there about
+  /* Same margin-based centering as the photo feed — see the note there about
      why this isn't a transform. */
   margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
   height: min(70vh, 40rem);
@@ -2417,8 +2322,8 @@ a.book-link:hover .book-title {
 }
 
 /* ---- command palette (⌘K) ------------------------------------------------
-   Jump to any page, post, gallery, or tag. A native <dialog>, like the gallery
-   lightbox — showModal() brings focus trapping and Escape with it. */
+   Jump to any page, post, photo year, or tag. A native <dialog> — showModal()
+   brings focus trapping and Escape with it. */
 .palette {
   width: min(38rem, 92vw);
   /* Near the top rather than centered: the list grows downward, and a centered
@@ -2825,9 +2730,7 @@ a.guestbook-name:hover {
   .related-posts,
   .curl-hint,
   .load-more,
-  .lightbox,
-  .lightbox-nav,
-  .lightbox-close,
+  .photo-nav,
   .segmented,
   .now-bar,
   .sparkline,
@@ -2907,9 +2810,10 @@ a.guestbook-name:hover {
     word-break: break-all;
   }
 
-  /* Galleries break out of the measure with a negative margin on screen; on
-     paper that pushes them off the sheet. */
-  .gallery-grid {
+  /* The feed breaks out of the measure with a negative margin on screen; on
+     paper that pushes it off the sheet. */
+  .photo-feed,
+  .photo-detail figure {
     width: auto;
     margin-inline: 0;
   }

@@ -1,10 +1,6 @@
-import { galleryDefinitions, type Gallery, type GalleryImage } from './galleries'
-import { datedPhotos, type DatedPhoto } from './timeline'
+import { byNewest, type Photo } from './photos'
+import { datedPhotos } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
-
-export interface GallerySummary extends Omit<Gallery, 'images'> {
-  cover?: GalleryImage
-}
 
 async function loadAtproto(): Promise<AtprotoData> {
   const path = await import('node:path')
@@ -38,26 +34,15 @@ export async function loadPublicationUri(): Promise<string | null> {
   return (await loadAtproto()).publication
 }
 
-export async function loadGalleries(): Promise<Gallery[]> {
+export async function loadPhotos(): Promise<Photo[]> {
   const path = await import('node:path')
   const { readFile } = await import('node:fs/promises')
   const manifest = JSON.parse(
-    await readFile(path.join(process.cwd(), 'src', 'lib', 'gallery-images.json'), 'utf8'),
-  ) as Record<string, GalleryImage[]>
-
-  return galleryDefinitions.map(({ imageKey, ...gallery }) => ({
-    ...gallery,
-    images: manifest[imageKey] ?? [],
-  }))
+    await readFile(path.join(process.cwd(), 'src', 'lib', 'photos.json'), 'utf8'),
+  ) as Photo[]
+  return manifest.sort(byNewest)
 }
 
-export async function loadGallerySummaries(): Promise<GallerySummary[]> {
-  return (await loadGalleries()).map(({ images, ...gallery }) => ({
-    ...gallery,
-    cover: images[0],
-  }))
-}
-
-export async function loadDatedPhotos(): Promise<DatedPhoto[]> {
-  return datedPhotos(await loadGalleries())
+export async function loadDatedPhotos(): Promise<Photo[]> {
+  return datedPhotos(await loadPhotos())
 }

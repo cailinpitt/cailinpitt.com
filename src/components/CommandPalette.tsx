@@ -9,12 +9,12 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { posts } from 'virtual:site-index'
-import { galleryDefinitions } from '../lib/galleries'
+import { photoYears, posts } from 'virtual:site-index'
+import { yearAnchor } from '../lib/photos'
 import { tagSlug } from '../lib/tags'
 
 // Jump-to-anywhere search over everything the site is made of: pages, posts,
-// galleries, and tags. The whole index is compiled in (see the site-index plugin
+// photo years, and tags. The whole index is compiled in (see the site-index plugin
 // in vite.config.ts), so opening the palette costs no request and matching is a
 // scan over a few hundred short strings — fast enough that debouncing would only
 // add latency.
@@ -37,7 +37,7 @@ export interface Entry {
 /**
  * The site's own pages, by hand — a route knows its path but not what to call it
  * or what someone might type looking for it, and "listening" being findable as
- * "scrobbles" is the whole point of the list. Posts, galleries, and tags are
+ * "scrobbles" is the whole point of the list. Posts, photo years, and tags are
  * derived below, so only a genuinely new *page* needs a line here.
  *
  * Exported for tests/command-palette.test.ts, which holds this against the
@@ -47,7 +47,7 @@ export interface Entry {
 export const PAGES: Entry[] = [
   { id: 'page:/', label: 'Home', kind: 'Page', to: '/', keywords: 'index start' },
   { id: 'page:/blog', label: 'Blog', kind: 'Page', to: '/blog', keywords: 'writing posts essays' },
-  { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography galleries' },
+  { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography feed gallery' },
   { id: 'page:/photos/map', label: 'Photo map', kind: 'Page', to: '/photos/map', keywords: 'where places locations' },
   { id: 'page:/projects', label: 'Projects', kind: 'Page', to: '/projects', keywords: 'software code apps' },
   { id: 'page:/listening', label: 'Listening', kind: 'Page', to: '/listening', keywords: 'music scrobbles last.fm now playing' },
@@ -81,17 +81,16 @@ function buildEntries(): Entry[] {
     keywords: post.tags.join(' '),
   }))
 
-  const galleryEntries: Entry[] = galleryDefinitions
-    // Alias galleries (/past-work → /2022) would show the same photos twice.
-    .filter((gallery) => !gallery.canonicalPath)
-    .map((gallery) => ({
-      id: `gallery:${gallery.path}`,
-      label: gallery.title,
-      sub: 'Gallery',
-      kind: 'Photos',
-      to: gallery.path,
-      keywords: `photos gallery ${gallery.description ?? ''}`,
-    }))
+  // The feed is one page, so a year is a place *in* it rather than a page of its
+  // own — these land on the first photo of that year.
+  const yearEntries: Entry[] = photoYears.map((year) => ({
+    id: `photos:${year}`,
+    label: year,
+    sub: 'Photos',
+    kind: 'Photos',
+    to: `/photos#${yearAnchor(year)}`,
+    keywords: 'photos photography year',
+  }))
 
   // One entry per distinct tag, labeled with the most recent spelling — posts
   // arrive newest first, so the first one to claim a slug wins, which is the
@@ -111,7 +110,7 @@ function buildEntries(): Entry[] {
     }
   }
 
-  return [...PAGES, ...postEntries, ...galleryEntries, ...tagEntries.values()]
+  return [...PAGES, ...postEntries, ...yearEntries, ...tagEntries.values()]
 }
 
 const ENTRIES = buildEntries()
@@ -229,9 +228,9 @@ export function CommandPalette({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open, onOpen, onClose])
 
-  // Drive the native <dialog> from state, the same way the gallery lightbox
-  // does — showModal() brings focus trapping, Escape, and inert background for
-  // free, none of which is worth reimplementing.
+  // Drive the native <dialog> from state — showModal() brings focus trapping,
+  // Escape, and an inert background for free, none of which is worth
+  // reimplementing.
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
@@ -263,7 +262,7 @@ export function CommandPalette({
       event.preventDefault()
       if (!results.length) return
       const delta = event.key === 'ArrowDown' ? 1 : -1
-      // Wraps, like the lightbox: holding an arrow never dead-ends.
+      // Wraps: holding an arrow never dead-ends.
       setActive((current) => (current + delta + results.length) % results.length)
     } else if (event.key === 'Enter') {
       event.preventDefault()
