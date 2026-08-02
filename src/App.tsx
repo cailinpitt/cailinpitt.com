@@ -1,16 +1,30 @@
 import type { RouteRecord } from 'vite-react-ssg'
 import { Layout } from './components/Layout'
+import { RouteError } from './components/RouteError'
 import { galleryDefinitions } from './lib/galleries'
 import { listeningYears } from './lib/listeningYears'
 
 // Child paths are relative (no leading slash) under the '/' layout route.
 const stripSlash = (p: string) => p.replace(/^\//, '')
 
+/**
+ * Give every page the same error boundary.
+ *
+ * It has to go on the children, not the layout route: an errorElement replaces
+ * the route it sits on, and putting it upstairs would take the header and nav
+ * down with the page. Applied here rather than written out fifteen times so a
+ * route added later can't quietly opt out of it — which matters, because the
+ * error it mostly catches is a deploy landing mid-visit and that can happen on
+ * any route.
+ */
+const withErrorBoundary = (routes: RouteRecord[]): RouteRecord[] =>
+  routes.map((route) => ({ ...route, errorElement: <RouteError /> }))
+
 export const routes: RouteRecord[] = [
   {
     path: '/',
     element: <Layout />,
-    children: [
+    children: withErrorBoundary([
       { index: true, lazy: () => import('./pages/Home') },
       { path: 'blog', lazy: () => import('./pages/BlogIndex') },
       { path: 'blog/tag/:tag', lazy: () => import('./pages/BlogTag') },
@@ -38,6 +52,6 @@ export const routes: RouteRecord[] = [
       })),
       // Catch-all (dynamic; skipped by the SSG prerenderer, served via 404.html).
       { path: '*', lazy: () => import('./pages/NotFound') },
-    ],
+    ]),
   },
 ]

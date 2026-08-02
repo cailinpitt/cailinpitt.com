@@ -2767,6 +2767,21 @@ a.guestbook-name:hover {
   animation: sk-pulse 1.5s ease-in-out infinite;
 }
 
+/* The route error boundary. Rarely seen on purpose: a stale-build failure
+   reloads before this paints, so what's left is the genuine breakage. */
+.route-error {
+  max-width: var(--measure);
+}
+.route-error-retry {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* ---- print ---------------------------------------------------------------
    Aimed at the blog post — the one page anyone prints or saves as a PDF. The
    site chrome comes off, the palette is forced light regardless of the reader's
