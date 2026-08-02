@@ -23,7 +23,7 @@ import { tagSlug } from '../lib/tags'
 
 type Kind = 'Page' | 'Post' | 'Photos' | 'Tag'
 
-interface Entry {
+export interface Entry {
   id: string
   label: string
   /** Secondary line — a date, a count, a description. */
@@ -34,7 +34,17 @@ interface Entry {
   keywords?: string
 }
 
-const PAGES: Entry[] = [
+/**
+ * The site's own pages, by hand — a route knows its path but not what to call it
+ * or what someone might type looking for it, and "listening" being findable as
+ * "scrobbles" is the whole point of the list. Posts, galleries, and tags are
+ * derived below, so only a genuinely new *page* needs a line here.
+ *
+ * Exported for tests/command-palette.test.ts, which holds this against the
+ * router: a page added to App.tsx and forgotten here is unreachable from ⌘K, and
+ * nothing about the palette would look broken.
+ */
+export const PAGES: Entry[] = [
   { id: 'page:/', label: 'Home', kind: 'Page', to: '/', keywords: 'index start' },
   { id: 'page:/blog', label: 'Blog', kind: 'Page', to: '/blog', keywords: 'writing posts essays' },
   { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography galleries' },

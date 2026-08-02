@@ -603,15 +603,17 @@ h3 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.post-date {
+.post-date,
+.post-updated {
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
 }
-/* The separator belongs to the pair, not to either half — a post with no date
-   in its frontmatter shows the reading time alone, with no leading dot. */
-.post-date + .post-reading-time::before {
+/* The separator belongs to the gap between two items, not to either one — a post
+   with no date in its frontmatter shows the reading time alone, with no leading
+   dot, and the same holds for the revision date, which most posts don't carry. */
+.post-meta > * + *::before {
   content: '·';
   margin-right: 0.5rem;
 }
@@ -625,6 +627,42 @@ h3 {
 .post-body h3 {
   font-size: var(--step-1);
   margin-top: 2rem;
+}
+/* Room above a heading jumped to from its own anchor, so it doesn't land flush
+   against the top of the viewport under the reading-progress bar. */
+.post-body :is(h2, h3, h4) {
+  scroll-margin-top: 1.5rem;
+}
+/* The self-link sits after the heading text and stays out of the way until the
+   heading is hovered or the link itself is focused — it's a handle for the
+   person who wants to quote a section, not part of the heading. `opacity`
+   rather than `display` keeps it in the tab order and reachable by keyboard. */
+.heading-anchor {
+  margin-left: 0.35em;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.7em;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+:is(h2, h3, h4):hover > .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 1;
+}
+.heading-anchor:hover {
+  color: var(--accent);
+}
+/* Touch has no hover, so the handle would simply never appear. */
+@media (hover: none) {
+  .heading-anchor {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heading-anchor {
+    transition: none;
+  }
 }
 .post-body .project-year {
   margin-top: 0.35rem;

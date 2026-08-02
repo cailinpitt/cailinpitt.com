@@ -1,7 +1,8 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
+import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
@@ -10,11 +11,42 @@ import { formatDate, formatReadingTime, type Post, type PostSummary } from '../l
 import { relatedPosts, tagPath } from '../lib/tags'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
 
-// Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
+/**
+ * A heading that links to itself, so a section of a long post can be pointed at.
+ *
+ * The `id` comes from rehype-slug rather than from anything here: it dedupes
+ * repeated headings (`#background`, `#background-1`) and derives the slug from
+ * the heading's text after the markdown is parsed, which a `components` override
+ * can't do without re-walking React children.
+ *
+ * The "#" is real, focusable text rather than a hover-only decoration, so it can
+ * be reached by keyboard; the stylesheet keeps it out of the way until the
+ * heading is hovered or the link is focused. It carries a class so
+ * scripts/generate-rss.mjs can strip it back out — a feed reader has no use for
+ * a link into a page it isn't showing.
+ */
+const anchored = (Tag: 'h2' | 'h3' | 'h4') =>
+  function Heading({ children, id }: { node?: unknown; children?: ReactNode; id?: string }) {
+    return (
+      <Tag id={id}>
+        {children}
+        {id && (
+          <a className="heading-anchor" href={`#${id}`} aria-label="Link to this section">
+            #
+          </a>
+        )}
+      </Tag>
+    )
+  }
+
 const markdownComponents = {
+  // Rewrite root-relative /images/... sources in post bodies to their R2 URLs.
   img: ({ node: _node, ...props }: { node?: unknown; src?: string }) => (
     <img {...props} src={imageUrl(props.src)} />
   ),
+  h2: anchored('h2'),
+  h3: anchored('h3'),
+  h4: anchored('h4'),
 }
 
 interface BlogPostData {
@@ -77,7 +109,7 @@ export function Component() {
       <article className="post" ref={articleRef}>
         <header className="post-header">
           <h1>{post.title}</h1>
-          {(post.date || readingTime) && (
+          {(post.date || readingTime || post.updated) && (
             <p className="post-meta">
               {post.date && (
                 <time dateTime={post.date} className="post-date">
@@ -85,6 +117,15 @@ export function Component() {
                 </time>
               )}
               {readingTime && <span className="post-reading-time">{readingTime}</span>}
+              {/* Only set for a substantive revision, so it's worth saying out
+                  loud: the date above is when this was written, not when it last
+                  said what it says now. It already reaches machines as JSON-LD
+                  dateModified; this is the same fact for people. */}
+              {post.updated && (
+                <time dateTime={post.updated} className="post-updated">
+                  Updated {formatDate(post.updated)}
+                </time>
+              )}
             </p>
           )}
           {post.tags.length > 0 && (
@@ -100,7 +141,9 @@ export function Component() {
         <div className="post-body">
           <Markdown
             remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
+            // rehypeRaw first: it turns embedded HTML into real nodes, which is
+            // what lets rehypeSlug give a hand-written <h2> an id too.
+            rehypePlugins={[rehypeRaw, rehypeSlug]}
             components={markdownComponents}
           >
             {post.body}

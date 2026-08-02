@@ -75,6 +75,6 @@ export default defineConfig({
   },
   ssr: {
     // Bundle the markdown/unified ecosystem for the SSG prerender pass.
-    noExternal: ['react-markdown', 'remark-gfm', 'rehype-raw'],
+    noExternal: ['react-markdown', 'remark-gfm', 'rehype-raw', 'rehype-slug'],
   },
 })

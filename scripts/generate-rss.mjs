@@ -113,6 +113,16 @@ function extractBody(html) {
 const absolutize = (html) =>
   html.replace(/\b(href|src|srcset|poster)="\/(?!\/)/g, `$1="${SITE}/`)
 
+/**
+ * Drop the "#" self-links BlogPost renders after each heading (see `anchored`
+ * there). On the page they're a handle for linking to a section; in a feed item
+ * they'd be a stray "#" after every heading, pointing at an anchor in a document
+ * the reader isn't displaying. The heading `id`s stay — they cost nothing and
+ * survive into whatever the reader links out to.
+ */
+const stripHeadingAnchors = (html) =>
+  html.replace(/<a\b[^>]*\bclass="heading-anchor"[^>]*>[\s\S]*?<\/a>/g, '')
+
 async function main() {
   if (!existsSync(DIST)) {
     console.error('✗ No dist/ — run `npm run build` first.')
@@ -141,7 +151,7 @@ async function main() {
     let content = null
     if (existsSync(file)) {
       const body = extractBody(await readFile(file, 'utf8'))
-      if (body) content = absolutize(body)
+      if (body) content = absolutize(stripHeadingAnchors(body))
       else console.warn(`  ! no post-body found in ${path.relative(ROOT, file)}`)
     } else {
       console.warn(`  ! no prerendered page for ${post.path}`)

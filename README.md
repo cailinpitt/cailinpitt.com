@@ -9,6 +9,7 @@ statically prerendered, deployed to GitHub Pages.
 npm install
 npm run dev        # local dev server
 npm run typecheck  # tsc --noEmit
+npm test           # vitest run (see Tests below)
 npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt, feed.xml, og cards)
 npm run preview    # serve the built dist/
 ```
@@ -62,6 +63,12 @@ Markdown body…
   estimate at all, which is why the travel photo essays don't claim to be a "1 min read".
 - **Related posts** — up to three posts sharing the most tags with this one, above the
   newer/older nav. A post with no tags gets none, rather than three arbitrary ones.
+- **Headings** get an `id` (from `rehype-slug`) and a `#` self-link, so a section of a long
+  post can be pointed at. The link is invisible until the heading is hovered or it takes
+  focus, and `scripts/generate-rss.mjs` strips it back out of feed items — the ids stay.
+- **`updated:`** is shown in the post's meta line ("Updated February 3, 2026") as well as in
+  the JSON-LD `dateModified`. Set it only for a substantive revision: the date beside it is
+  when the post was written, and most posts should carry just that one.
 - Otherwise posts are picked up automatically (glob of `content/blog/*.md`). The post shows up
   on `/blog`, the home "Recent writing", `sitemap.xml`, and `llms.txt`, gets JSON-LD, and is
   prerendered to a real HTML file at `path` (so old bookmarks keep working). No routing to wire.
@@ -272,7 +279,11 @@ typing, or the magnifier in the header. It jumps to any page, post, gallery, or 
 - Adding a post needs nothing done here — it's in the palette on the next build. In dev the
   module is invalidated when anything under `content/blog/` changes.
 - Pages are listed by hand in `PAGES` in `src/components/CommandPalette.tsx`; **a new route
-  needs adding there** (galleries and tags are derived, so those don't).
+  needs adding there** (galleries and tags are derived, so those don't). Forgetting is caught
+  by `tests/command-palette.test.ts`, which holds the list against the routes in `App.tsx` in
+  both directions — a page missing from the palette, and an entry pointing at a route that no
+  longer exists. It can't guess a label or the words someone would search for, so it fails
+  rather than deriving the list.
 - It's a native `<dialog>` opened with `showModal()`, like the gallery lightbox — focus
   trapping and Escape come with it rather than being reimplemented.
 
@@ -470,6 +481,37 @@ somewhere you can look at without touching the build).
   in the repo; satori converts glyphs to paths, so nothing needs fonts at render time.
 - Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the
   script. They must agree, or pages point at a 404.
+
+## Tests
+
+`npm test` (vitest, no config file — it picks up `vite.config.ts`, so the `virtual:site-index`
+plugin and `import.meta.glob` resolve the same way they do in a build). Everything lives in
+`tests/`, runs in well under a second, and touches no network, no `dist/`, and no images.
+
+That last part is the rule the suite is built around: **a test has to pass on a fresh clone.**
+`public/images/` and `originals/` are gitignored, so CI has no photographs — which is also why
+`npm run images:check` is *not* in the workflow. It would report every blog image as missing on
+disk and fail every build. Run it locally, where the files exist.
+
+What's covered, and why each one:
+
+- **`frontmatter`, `posts`, `tags`, `colophon`** — the pure functions the whole build leans on.
+  These fail quietly rather than loudly: a tag slug that stops collapsing casing splits one tag
+  into two pages, a broken `{{#located}}` section publishes "0 of them carry a location", and a
+  word counter that starts counting iframes tells a photo essay it's a 12 minute read. Nothing
+  about a green build would look wrong.
+- **`content`** — the posts on disk, checked for the frontmatter facts the build trusts without
+  verifying: two posts sharing a `path` silently prerender over each other, a `path` whose date
+  disagrees with `date:` puts a post at a URL contradicting itself, and a mistyped `tags:` array
+  arrives as a string. The path check is padding-agnostic, since one post is at `/blog/2026/8/01/…`
+  rather than the usual unpadded `/8/1/`.
+- **`guestbook-validate`** — the one piece of code that decides what a stranger may store. It
+  lives in `worker-guestbook/`, which has no test setup of its own, but it's pure, so it's
+  tested from here.
+- **`command-palette`** — the hand-written page list, held against the router (see [Search](#search-k)).
+
+The workflow runs `typecheck` → `test` → `build`, so a broken invariant stops a deploy rather
+than shipping.
 
 ## Deploy
 
