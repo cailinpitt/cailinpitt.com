@@ -50,6 +50,9 @@ export function Layout() {
               <NavLink to="/timeline">Timeline</NavLink>
             </li>
             <li>
+              <NavLink to="/guestbook">Guestbook</NavLink>
+            </li>
+            <li>
               <CommandPaletteTrigger onClick={openPalette} />
             </li>
             <li>

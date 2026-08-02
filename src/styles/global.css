@@ -2479,6 +2479,228 @@ a.book-link:hover .book-title {
   }
 }
 
+/* ---- guestbook -----------------------------------------------------------
+   The form first, then the entries. Deliberately in that order: the page exists
+   to be signed, and burying the form under a hundred entries would mean anyone
+   who wanted to sign had to go looking for it. */
+
+.guestbook-form {
+  margin: 2.5rem 0 0;
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.guestbook-form h2 {
+  margin: 0 0 1.25rem;
+  font-size: var(--step-1);
+}
+
+/* Name / website / location share a row on a wide screen and stack on a narrow
+   one. `minmax(0, …)` rather than `auto` so a long placeholder can't force the
+   grid wider than its container. */
+.guestbook-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  gap: 1rem;
+}
+.guestbook-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.guestbook-field-message {
+  margin-top: 1rem;
+}
+.guestbook-field > span:first-child {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.guestbook-field em {
+  font-style: normal;
+  opacity: 0.75;
+}
+.guestbook-field input,
+.guestbook-field textarea {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.guestbook-field textarea {
+  resize: vertical;
+  min-height: 6rem;
+  line-height: 1.5;
+}
+.guestbook-field input:focus,
+.guestbook-field textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.guestbook-field input[aria-invalid='true'],
+.guestbook-field textarea[aria-invalid='true'] {
+  border-color: var(--accent);
+}
+.guestbook-count {
+  align-self: flex-end;
+  min-height: 1.2em; /* reserved, so the layout doesn't jump when it appears */
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.guestbook-error {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--accent);
+}
+.guestbook-success {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--fg);
+  background: var(--bg);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+}
+
+/* The honeypot. Off-screen rather than `display: none` — some bots skip hidden
+   inputs, and the whole point is that they fill this one in. It is aria-hidden
+   and untabbable in the markup, so nobody using the page can reach it. */
+.guestbook-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* Empty until the challenge mounts, and usually empty afterwards too —
+   `interaction-only` shows a widget only to a visitor Turnstile isn't sure
+   about. The margin lives on the mounted iframe so an empty div adds nothing. */
+.guestbook-challenge:not(:empty) {
+  margin-top: 1rem;
+}
+
+.guestbook-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 1.25rem;
+}
+.guestbook-actions button {
+  padding: 0.55rem 1.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  color: var(--accent-fg);
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.guestbook-actions button:hover {
+  opacity: 0.9;
+}
+.guestbook-actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.guestbook-note {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+/* Entries ---------------------------------------------------------------- */
+
+.guestbook-entries {
+  margin-top: 3rem;
+}
+.guestbook-entries h2 {
+  font-size: var(--step-1);
+}
+.guestbook-load-error,
+.guestbook-empty {
+  color: var(--muted);
+}
+.guestbook-list {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.guestbook-entry {
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--rule);
+}
+.guestbook-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.guestbook-name {
+  font-weight: 600;
+  font-size: var(--step-0);
+  color: var(--fg);
+  text-decoration: none;
+}
+a.guestbook-name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.guestbook-location,
+.guestbook-time {
+  color: var(--muted);
+}
+/* Pushed to the far end of the row, so dates line up down the list. */
+.guestbook-time {
+  margin-left: auto;
+}
+.guestbook-flag {
+  font-size: 1.1em;
+  line-height: 1;
+}
+/* Entries are written by strangers: `pre-wrap` keeps their line breaks, and the
+   two wrap rules keep a 200-character unbroken keysmash inside the column
+   instead of stretching the page. */
+.guestbook-message {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.guestbook-site {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.guestbook-site a {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.guestbook-site a:hover {
+  color: var(--accent);
+}
+.guestbook-skeleton {
+  margin-top: 3rem;
+}
+.guestbook-skeleton > * {
+  background: var(--surface);
+  border-radius: 6px;
+  animation: sk-pulse 1.5s ease-in-out infinite;
+}
+
 /* ---- print ---------------------------------------------------------------
    Aimed at the blog post — the one page anyone prints or saves as a PDF. The
    site chrome comes off, the palette is forced light regardless of the reader's
@@ -2532,6 +2754,7 @@ a.book-link:hover .book-title {
   .palette,
   .palette-trigger,
   .reading-progress,
+  .guestbook-form,
   .post-filter {
     display: none !important;
   }

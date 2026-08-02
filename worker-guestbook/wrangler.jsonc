@@ -1,0 +1,60 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-guestbook",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+
+  // API on a subdomain of the (Cloudflare-managed) zone, same as the listening
+  // and reading workers. Auto-provisions the DNS record + cert.
+  "routes": [{ "pattern": "guestbook.cailinpitt.com", "custom_domain": true }],
+
+  // No cron. Nothing here is pulled from anywhere — entries arrive when someone
+  // signs, and every read is derived from D1 on demand behind the edge cache.
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // Fixed offset (seconds) used for the dates in the curl view. -18000 = UTC-5
+    // (US Central, DST). Matches the other two workers — see the listening
+    // README on the DST caveat.
+    "TZ_OFFSET_SECONDS": "-18000",
+    // Comma-separated origins allowed to read *and write* the API (CORS). Any
+    // http://localhost or 127.0.0.1 port is additionally allowed in code, so
+    // local dev needs no entry here. The first entry is the fallback sent to
+    // non-matching origins.
+    //
+    // Unlike the other two workers this list is load-bearing rather than
+    // cosmetic: POST /entries rejects an origin that isn't on it. That is not a
+    // security boundary on its own (a non-browser client sets any Origin it
+    // likes) — Turnstile is — but it does keep the form from being embedded and
+    // driven from someone else's page.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Turnstile *site* key. Public by design — it ships in the page's HTML — so
+    // it lives here rather than in a secret. The matching secret key does not;
+    // it's the TURNSTILE_SECRET below.
+    //
+    // Kept in sync by hand with TURNSTILE_SITE_KEY in src/lib/guestbook.ts,
+    // which is the copy the browser actually renders the widget with. This one
+    // is informational — nothing in the Worker reads it.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEEBNcQ83mO9Fcud"
+  },
+
+  // Bindings. Fill in the id after creating the database (see README):
+  //   wrangler d1 create cailinpitt-guestbook
+  //
+  // No KV and no R2, unlike the other two workers. A guestbook is a few hundred
+  // short rows; one indexed query behind a 30-second edge cache is cheaper than
+  // any precomputed blob would be, and there is nothing to mirror.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-guestbook",
+      "database_id": "98b83fa9-2acd-4417-8c96-0d66061d49c7"
+    }
+  ]
+
+  // Secrets (not stored here):
+  //   wrangler secret put TURNSTILE_SECRET
+  //   wrangler secret put ADMIN_TOKEN
+  //   wrangler secret put IP_SALT
+}

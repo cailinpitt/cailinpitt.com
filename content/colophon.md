@@ -1,9 +1,9 @@
 ---
 title: "Colophon"
 lead: "What this site is made of, and roughly how much of it there is."
-description: "How cailinpitt.com is built: a prerendered React site, two Cloudflare Workers, and photos on R2."
+description: "How cailinpitt.com is built: a prerendered React site, three Cloudflare Workers, and photos on R2."
 ---
-<p class="stat-note">Posts, words, and photos are counted at build time. The rest is read from two Cloudflare Workers described below.</p>
+<p class="stat-note">Posts, words, and photos are counted at build time. The rest is read from three Cloudflare Workers described below.</p>
 
 ## Site
 
@@ -21,15 +21,18 @@ Every blog post is also published to my Bluesky account as a [standard.site](htt
 
 ## Moving parts
 
-Two [Cloudflare Workers](https://www.cloudflare.com/products/workers/) (`Listening` and `Reading`) power the data used by [listening](/listening), [reading](/reading), [timeline](/timeline), and the [homepage](/): `Listening` pulls scrobbles from Last.fm into a [D1](https://www.cloudflare.com/products/d1/) archive on a cron schedule. `Reading` pulls read books from my [Hardcover](https://hardcover.app) account daily and takes saved articles I send from my phone and personal computer via a POST request I make to an authenticated endpoint in this worker. Each serves a cached JSON bundle the page fetches in the browser.
+Three [Cloudflare Workers](https://www.cloudflare.com/products/workers/) (`Listening`, `Reading`, and `Guestbook`) power the data used by [listening](/listening), [reading](/reading), [timeline](/timeline), and the [homepage](/): `Listening` pulls scrobbles from Last.fm into a [D1](https://www.cloudflare.com/products/d1/) archive on a cron schedule. `Reading` pulls read books from my [Hardcover](https://hardcover.app) account daily and takes saved articles I send from my phone and personal computer via a POST request I make to an authenticated endpoint in this worker. Each serves a cached JSON bundle the page fetches in the browser.
 
 The `Listening` Worker keeps its precomputed aggregates in [KV](https://www.cloudflare.com/products/kv/), so answering a request means reading a few small blobs rather than scanning the whole scrobble archive. Those are rebuilt on the cron, on slower cadences the further back they reach. The `Reading` Worker doesn't use KV at all since book and article data is written less frequently than my music data.
 
-Both Workers also render themselves as text when accessed not through a browser:
+The `Guestbook` Worker backs the [guestbook](/guestbook), and is the only one that accepts writes from anyone but me. Entries publish instantly, behind a honeypot field, a [Turnstile](https://www.cloudflare.com/products/turnstile/) challenge, and rate limits; I delete anything unwelcome afterwards from the command line.
+
+All three Workers also render themselves as text when accessed not through a browser:
 
 ```
 curl listening.cailinpitt.com
 curl reading.cailinpitt.com
+curl guestbook.cailinpitt.com
 ```
 
 ## Photographs

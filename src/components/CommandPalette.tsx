@@ -50,6 +50,7 @@ const PAGES: Entry[] = [
     // "log" stays a keyword: the page answered to that name until 2026.
     keywords: 'log activity days',
   },
+  { id: 'page:/guestbook', label: 'Guestbook', kind: 'Page', to: '/guestbook', keywords: 'sign visitors say hi hello comments' },
   { id: 'page:/colophon', label: 'Colophon', kind: 'Page', to: '/colophon', keywords: 'about built stack how' },
   { id: 'page:/privacy', label: 'Privacy', kind: 'Page', to: '/privacy', keywords: 'cookies tracking data' },
 ]

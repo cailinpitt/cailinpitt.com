@@ -18,7 +18,7 @@ export function Component() {
       <article className="post">
         <header className="post-header">
           <h1>Privacy</h1>
-          <p className="post-date">Last updated: June 20, 2026</p>
+          <p className="post-date">Last updated: August 1, 2026</p>
         </header>
         <div className="post-body">
           <p>
@@ -46,6 +46,32 @@ export function Component() {
             As with any web host, their servers may process standard request metadata (such as your IP
             address) to deliver pages and protect against abuse. That data is handled under their
             respective privacy policies and is not used by me for tracking.
+          </p>
+
+          <h2>Guestbook</h2>
+          <p>
+            The <a href="/guestbook">guestbook</a> is the only part of this site that asks
+            you for anything. What you type into it — your name, your message, and the
+            website and location if you fill them in — is published on that page for
+            anyone to read, so please don&rsquo;t put anything there you wouldn&rsquo;t
+            want public. No email address is asked for and none is stored.
+          </p>
+          <p>
+            Two things are recorded that you don&rsquo;t type. Your country, as
+            Cloudflare reports it from your connection, is stored so entries can show a
+            flag. And your IP address is stored <em>only</em> as a salted hash — a
+            one-way scramble that can&rsquo;t be turned back into an address — which
+            exists purely to notice when one source is posting dozens of entries. The
+            address itself is never written down. The form is protected by{' '}
+            <a href="https://www.cloudflare.com/products/turnstile/" rel="noreferrer">
+              Cloudflare Turnstile
+            </a>
+            , a cookieless CAPTCHA alternative; its script loads only if you start
+            filling in the form, never for people who are just reading.
+          </p>
+          <p>
+            Want an entry taken down? Ask via the contact link below and I&rsquo;ll
+            delete it — no questions, no verification hoops.
           </p>
 
           <h2>Contact</h2>

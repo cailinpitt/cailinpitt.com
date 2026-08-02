@@ -20,6 +20,8 @@
     "publish:atproto": "node scripts/publish-atproto.mjs",
     "reading:probe": "node scripts/hardcover-probe.mjs",
     "reading:sync": "node scripts/reading-sync.mjs",
+    "guestbook:list": "node scripts/guestbook.mjs list",
+    "guestbook:rm": "node scripts/guestbook.mjs rm",
     "og": "node scripts/generate-og.mjs",
     "rss": "node scripts/generate-rss.mjs"
   },
