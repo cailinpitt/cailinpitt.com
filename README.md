@@ -365,6 +365,43 @@ bundle in the browser.
 - **API base URL:** set `VITE_READING_API` at build time (defaults to
   `https://reading.cailinpitt.com`).
 
+## Guestbook (`/guestbook`)
+
+Anyone can sign it: name and message required, website and location optional, plus a
+country flag derived from the request (no field to fill in). Same shape as the other
+two activity pages — a standalone Cloudflare Worker (`worker-guestbook/`) owns the
+data and the page fetches JSON in the browser — except this is the one endpoint on
+the site that accepts **writes from the public**.
+
+- **Moderation** is after the fact, from the repo root:
+
+  ```sh
+  npm run guestbook:list                    # 50 newest entries, with ids
+  npm run guestbook:list -- --limit 200     # more
+  npm run guestbook:rm -- <id> [<id> ...]   # delete, one or many
+  ```
+
+  `list` prints the id first on each line — that is what you paste into `rm`. It also
+  tags repeats from a single IP hash (`[4x from 1a7c07a3]`), which is how a flood
+  shows up when it is wearing ten different names. Both need `GUESTBOOK_ADMIN_TOKEN`
+  in `.env`, matching the Worker's `ADMIN_TOKEN` secret. **Deleting is immediate and
+  permanent** — there is no pending state and no trash.
+- **Entries publish instantly.** What makes that affordable is a layered write path —
+  origin check, hidden honeypot field, [Turnstile](https://www.cloudflare.com/products/turnstile/),
+  validation, per-IP limits (3/hour, 10/day), and a global 60/hour circuit breaker.
+  Turnstile is the load-bearing one and fails closed, so an outage makes the guestbook
+  read-only rather than open. Its script loads only once someone starts filling in the
+  form, so readers never pay for it.
+- **Deleting an entry returns that IP's hourly quota**, because the rate limit counts
+  rows. Handy for testing; worth knowing it means deletion won't slow a persistent
+  signer down.
+- **Terminal view:** `curl guestbook.cailinpitt.com`, like `/listening` and `/reading`.
+- **Setup, the full write path, and the privacy design:** see
+  [`worker-guestbook/README.md`](worker-guestbook/README.md).
+- **API base URL:** set `VITE_GUESTBOOK_API` at build time (defaults to
+  `https://guestbook.cailinpitt.com`). The Turnstile **site** key is public and lives
+  in `src/lib/guestbook.ts` and `worker-guestbook/wrangler.jsonc`; keep the two in sync.
+
 ## Photo map (`/photos/map`)
 
 Plots every photo that carries a location — i.e. the galleries built from `originals/`,
@@ -439,3 +476,12 @@ somewhere you can look at without touching the build).
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and publishes to
 GitHub Pages. In the repo: **Settings → Pages → Source = GitHub Actions**. The custom domain is
 set via `public/CNAME`.
+
+The three Workers deploy **separately** and are not part of that pipeline — a push to
+`main` never touches them. Each is its own package, deployed by hand from its directory:
+
+```sh
+cd worker && npm run deploy            # listening.cailinpitt.com
+cd worker-reading && npm run deploy    # reading.cailinpitt.com
+cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
+```
