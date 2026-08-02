@@ -2588,6 +2588,12 @@ a.book-link:hover .book-title {
   margin-top: 1rem;
 }
 
+.guestbook-waiting {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
 .guestbook-actions {
   display: flex;
   flex-wrap: wrap;
