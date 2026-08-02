@@ -83,6 +83,13 @@ export function Component() {
               {filtering ? `${matches.length} of ${posts.length} posts` : `${posts.length} posts`}
             </p>
           </div>
+          {/* A plain <a>, not a <Link>: /feed.xml is a static file in dist/, not a
+              route the router knows about. */}
+          <p className="post-subscribe">
+            <a href="/feed.xml" type="application/rss+xml">
+              Subscribe via RSS
+            </a>
+          </p>
         </header>
 
         {matches.length === 0 ? (

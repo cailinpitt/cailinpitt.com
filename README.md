@@ -9,7 +9,7 @@ statically prerendered, deployed to GitHub Pages.
 npm install
 npm run dev        # local dev server
 npm run typecheck  # tsc --noEmit
-npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt, og cards)
+npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt, feed.xml, og cards)
 npm run preview    # serve the built dist/
 ```
 
@@ -217,6 +217,29 @@ whitespace-separated term has to match, so "music 2019" narrows rather than wide
 Matching is a substring scan over a map built once from the posts already on the page:
 ~35 posts needs no search index, no dependency, and no fetch. With JavaScript off the input
 goes inert and the full list is still there, because it's in the prerendered HTML.
+
+## RSS feed (`/feed.xml`)
+
+`scripts/generate-rss.mjs` writes a full-content RSS 2.0 feed as part of `postbuild`
+(`npm run rss` re-runs it against an existing `dist/`). `index.html` carries the
+`<link rel="alternate" type="application/rss+xml">` autodiscovery tag on every page, and
+`/blog` links it under the post count.
+
+- **Item bodies come from the prerendered HTML**, not from re-rendering the markdown here:
+  the script lifts what's inside `<div class="post-body">` out of each post's built page.
+  The build already turns markdown into HTML once — with GFM, raw HTML embeds, and the R2
+  image rewriting — and a second renderer in this script would be one more thing to keep in
+  sync, with the feed quietly drifting from the page when it fell behind. Metadata (title,
+  date, tags, summary) still comes from the frontmatter.
+- **Root-relative URLs are made absolute**, since a feed item is read somewhere that isn't
+  this site. Post images are already absolute R2 URLs by the time they're rendered, so in
+  practice this is links between posts.
+- **The 20 most recent posts** carry full text (`MAX_ITEMS`); older ones stay at `/blog`. A
+  feed is re-fetched on a timer forever, and readers only show a new subscriber the recent
+  items anyway.
+- **`lastBuildDate` is the newest post's date, not the build time** — every deploy rewrites
+  this file, and a timestamp that moved when nothing was published would keep telling
+  subscribers there's something new.
 
 ## Color theme
 

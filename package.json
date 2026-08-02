@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite-react-ssg build",
-    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-rss.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "migrate:posts": "node scripts/migrate-posts.mjs",
@@ -20,7 +20,8 @@
     "publish:atproto": "node scripts/publish-atproto.mjs",
     "reading:probe": "node scripts/hardcover-probe.mjs",
     "reading:sync": "node scripts/reading-sync.mjs",
-    "og": "node scripts/generate-og.mjs"
+    "og": "node scripts/generate-og.mjs",
+    "rss": "node scripts/generate-rss.mjs"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

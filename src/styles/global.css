@@ -2221,6 +2221,15 @@ a.book-link:hover .book-title {
   font-variant-numeric: tabular-nums;
 }
 
+/* The feed link sits under the post count, quiet enough that it doesn't compete
+   with the archive itself — people who want it know to look for it. */
+.post-subscribe {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+
 .post-year + .post-year {
   margin-top: 2.25rem;
 }

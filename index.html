@@ -8,6 +8,9 @@
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
+    <!-- Feed autodiscovery, on every page rather than just /blog, so a reader
+         subscribed from anywhere on the site finds it. Written by scripts/generate-rss.mjs. -->
+    <link rel="alternate" type="application/rss+xml" title="Cailin Pitt — Blog" href="/feed.xml" />
     <!-- Browser chrome tint. Matches the page background rather than the accent, so
          the toolbar reads as an extension of the paper instead of a clay band above
          it. Two media-scoped tags cover System with no JS; a manual override can't
