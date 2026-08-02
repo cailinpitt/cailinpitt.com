@@ -13,6 +13,8 @@ Posts are Markdown files in the repo next to the code, including this page.
 
 My website was hosted on Squarespace for many years, but in 2026 I decided to rewrite and host it elsewhere to save money and experiment with web technologies.
 
+I was really inspired by [dame.is](https://dame.is/) to add activity logs and the homepage description shuffler to my website. Their website is really wonderful, check it out!
+
 ## Bluesky
 
 Every blog post is also published to my Bluesky account as a [standard.site](https://standard.site) record, so it also shows up in the [AT Protocol](https://atproto.com) network as a longform document.
