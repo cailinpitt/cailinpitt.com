@@ -76,6 +76,9 @@ export function Layout() {
               GitHub
             </a>
           </li>
+          <li>
+            <a href="https://iheartrss.com/">I &hearts; RSS</a>
+          </li>
         </ul>
       </footer>
     </>

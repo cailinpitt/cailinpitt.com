@@ -2221,13 +2221,31 @@ a.book-link:hover .book-title {
   font-variant-numeric: tabular-nums;
 }
 
-/* The feed link sits under the post count, quiet enough that it doesn't compete
-   with the archive itself — people who want it know to look for it. */
+/* The feed link sits under the post count, as the same outlined pill the tag
+   chips and the /timeline "load more" use — quiet enough that it doesn't compete
+   with the archive itself, but reading as something to press rather than as a
+   line of prose that happens to be a link. */
 .post-subscribe {
-  margin: 0.35rem 0 0;
+  margin: 0.7rem 0 0;
+}
+.post-subscribe a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
   color: var(--muted);
   font-family: var(--font-sans);
   font-size: var(--step--1);
+  line-height: 1.5;
+  text-decoration: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.post-subscribe a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .post-year + .post-year {
