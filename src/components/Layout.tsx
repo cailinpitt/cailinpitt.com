@@ -24,10 +24,22 @@ export function Layout() {
         Skip to content
       </a>
       <header className="site-header">
+        {/* Two rows, deliberately. The utility buttons used to be the last two
+            items of nav-links, which meant they wrapped along with the page
+            links — so every page added shoved them further, and they ended up
+            stranded on a row of their own. Keeping them on the title row
+            instead means the link list is the only thing that grows, and it is
+            the one part designed to wrap. */}
         <nav className="site-nav" aria-label="Primary">
-          <Link to="/" className="site-title">
-            Cailin Pitt
-          </Link>
+          <div className="site-nav-top">
+            <Link to="/" className="site-title">
+              Cailin Pitt
+            </Link>
+            <div className="site-nav-controls">
+              <CommandPaletteTrigger onClick={openPalette} />
+              <ThemeToggle />
+            </div>
+          </div>
           <ul className="nav-links">
             <li>
               <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
@@ -51,12 +63,6 @@ export function Layout() {
             </li>
             <li>
               <NavLink to="/guestbook">Guestbook</NavLink>
-            </li>
-            <li>
-              <CommandPaletteTrigger onClick={openPalette} />
-            </li>
-            <li>
-              <ThemeToggle />
             </li>
           </ul>
         </nav>

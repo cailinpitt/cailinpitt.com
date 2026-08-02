@@ -172,13 +172,34 @@ img {
   padding-block: 2rem 1rem;
 }
 
+/* Two stacked rows: title + utility buttons, then the page links.
+
+   This is what makes the header scale. The links are the only part that grows,
+   and they get a full-width row to grow into — so adding a page wraps a second
+   line of links rather than displacing anything. The buttons are pinned to the
+   title row and never move. */
 .site-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-family: var(--font-sans);
+}
+
+.site-nav-top {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1.5rem;
-  font-family: var(--font-sans);
+  gap: 1rem;
+}
+
+.site-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  /* Optical alignment: each button is a 2.75rem tap target around a 1.2rem
+     icon, so its glyph would otherwise sit well inside the measure that the
+     title and body text align to. Pull the box out to line the icon up. */
+  margin-right: -0.75rem;
 }
 
 .site-title {
@@ -194,8 +215,8 @@ img {
 .social-links {
   display: flex;
   /* Wrap, or the row of links is a single unbreakable line that pushes the page
-     wider than the viewport on a narrow screen — six items plus the theme
-     toggle is already past that on a small phone. */
+     wider than the viewport on a narrow screen — the list is past that on a
+     small phone, and grows every time a page is added. */
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   list-style: none;
@@ -230,8 +251,10 @@ img {
   text-underline-offset: 0.3em;
 }
 
-/* The two icon buttons at the end of the nav — search and theme. One rule for
-   both so they can't end up different sizes next to each other. */
+/* The two icon buttons on the title row — search and theme. One rule for both
+   so they can't end up different sizes next to each other. 2.75rem is 44px,
+   the minimum comfortable tap target; the title row is tall enough to carry it
+   without the negative block margin this used to need down among the links. */
 .theme-toggle,
 .palette-trigger {
   display: inline-flex;
@@ -239,7 +262,6 @@ img {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  margin-block: -0.575rem;
   padding: 0;
   border: 0;
   background: none;
