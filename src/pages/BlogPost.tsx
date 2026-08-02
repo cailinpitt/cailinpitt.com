@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
+import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
 import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
@@ -50,6 +52,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
 
 export function Component() {
   const { post, newer, older, related, publicationUri } = useLoaderData() as BlogPostData
+  const articleRef = useRef<HTMLElement>(null)
   // Fall back to the first image in the body so posts without an explicit `image:`
   // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
@@ -70,7 +73,8 @@ export function Component() {
         publicationUri={publicationUri}
         documentUri={post.atUri}
       />
-      <article className="post">
+      <ReadingProgress targetRef={articleRef} />
+      <article className="post" ref={articleRef}>
         <header className="post-header">
           <h1>{post.title}</h1>
           {(post.date || readingTime) && (

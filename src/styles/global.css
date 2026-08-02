@@ -137,6 +137,28 @@ img {
   color: var(--muted);
 }
 
+/* Reading progress — a hairline across the top of the window on blog posts.
+   Full-bleed rather than inside the measure: it's a window-edge indicator, not
+   part of the column. The fill is a scaleX transform on a full-width element so
+   scrolling only ever touches the compositor. */
+.reading-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 4px;
+  /* Under the skip link (10), which shares the top edge and has to be legible
+     when it's focused. Above everything in normal flow, which sets no z-index. */
+  z-index: 5;
+  background: transparent;
+  pointer-events: none;
+}
+.reading-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  /* No transition: it follows the scroll position exactly, and easing toward the
+     value would leave the bar visibly lagging the page under a fast scroll. */
+}
+
 /* Layout shell */
 .site-header,
 .site-main,
@@ -2509,6 +2531,7 @@ a.book-link:hover .book-title {
   .photos-map-link,
   .palette,
   .palette-trigger,
+  .reading-progress,
   .post-filter {
     display: none !important;
   }
