@@ -488,7 +488,8 @@ Shortcut → POST photos.cailinpitt.com/ingest → R2 (private originals bucket)
 ```
 
 - **`worker-photos/` is deliberately thin**: authenticate, check the file, store it, fire a
-  dispatch. It can't do more — renditions need `sharp`, which doesn't run in a Worker, and the
+  dispatch. It takes the photo either as a multipart `photo` field or as the raw request body,
+  because Shortcuts switches between the two on its own. It can't do more — renditions need `sharp`, which doesn't run in a Worker, and the
   manifest is a file in git. The build has both, and already knows how to do this.
 - **The build runs the ordinary pipeline.** `scripts/ingest-photos.mjs --fetch` pulls the
   pending uploads into `originals/<year>/`, and from there it's `images:sync` →

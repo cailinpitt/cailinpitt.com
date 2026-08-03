@@ -57,13 +57,27 @@ The repo also needs these GitHub Actions **secrets**, which
 
 ### `POST /ingest`
 
-`multipart/form-data`, `Authorization: Bearer <INGEST_TOKEN>`.
+`Authorization: Bearer <INGEST_TOKEN>`, and the photo in **either** of two shapes.
+
+**Form** — `multipart/form-data`:
 
 | Field   | Required | Notes |
 | ------- | -------- | ----- |
 | `photo` | yes      | JPEG or PNG, up to 50 MB. |
 | `alt`   | no       | Alt text / caption, up to 500 chars. Replaces the default `Photograph — <year>`. |
 | `taken` | no       | The photo's creation date, e.g. `2026-08-02T15:42:33`. Decides the year folder and therefore the id — **not** the date the site shows, which is read from the file's own EXIF during the build. |
+
+**File** — the image as the raw request body, with `Content-Type: image/jpeg`
+and `alt` / `taken` as query parameters:
+
+```
+POST /ingest?taken=2026-08-02T15:42:33&alt=Golden%20hour
+```
+
+Both are supported because Shortcuts' *Get Contents of URL* quietly switches its
+Request Body to **File** the moment you hand it an image, and the request that
+produces is perfectly reasonable — it just isn't multipart. Accepting only one of
+them made the endpoint fussy for no benefit.
 
 ```json
 {
@@ -81,8 +95,9 @@ it has started — the id scheme (`<year>-<filename>`, see
 dispatch failed, or `GITHUB_TOKEN` isn't set. Nothing is lost — the workflow also
 runs hourly and will find it.
 
-Errors: `401` (bad or missing token), `400` (no file, empty file, or not
-multipart), `415` (not JPEG/PNG), `413` (over 50 MB).
+Errors: `401` (bad or missing token), `400` (no file, empty file, or a body it
+can't read a photo out of — the response names the `content-type` it got),
+`415` (not JPEG/PNG), `413` (over 50 MB).
 
 **HEIC is rejected on purpose.** `sharp` on a stock GitHub runner has no HEIF
 support, so a HEIC would upload happily and fail an hour later in a place with no
@@ -112,6 +127,10 @@ Share sheet → Photos. Seven actions:
      - `photo` → the converted image (as a File)
      - `taken` → the formatted date from step 4
      - `alt` → the text from step 5
+
+   If Shortcuts insists on switching the body to **File**, let it: post the
+   image as the raw body and move `taken` and `alt` into the URL's query string
+   instead (`…/ingest?taken=…&alt=…`). The endpoint takes either.
 7. **Show Notification** with `url` from the response.
 
 ## Testing without a phone
@@ -120,11 +139,18 @@ Share sheet → Photos. Seven actions:
 npm run dev                    # local, in-memory R2
 npm run dev:remote             # the real bucket, so a build can actually see it
 
+# Form
 curl -X POST http://localhost:8787/ingest \
   -H "Authorization: Bearer $INGEST_TOKEN" \
   -F photo=@/path/to/photo.jpg \
   -F 'taken=2026-08-02T15:42:33' \
   -F 'alt=A test photograph'
+
+# File (what Shortcuts sends when it decides the body is an image)
+curl -X POST "http://localhost:8787/ingest?taken=2026-08-02T15:42:33&alt=A%20test" \
+  -H "Authorization: Bearer $INGEST_TOKEN" \
+  -H 'Content-Type: image/jpeg' \
+  --data-binary @/path/to/photo.jpg
 ```
 
 For local runs put `INGEST_TOKEN` (and `GITHUB_TOKEN`, if you want the dispatch

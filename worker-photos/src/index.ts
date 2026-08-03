@@ -151,41 +151,104 @@ function mintName(taken: string | null): { year: string; stem: string } {
   return { year, stem: `${month}${day}-${hour}${minute}${second}-${hex}` }
 }
 
-async function ingest(request: Request, env: Env): Promise<Response> {
+/** One upload, however it was framed on the wire. */
+interface Upload {
+  body: Blob
+  type: string
+  size: number
+  alt: string | null
+  taken: string | null
+}
+
+/**
+ * Pull the photo out of the request, accepting the two shapes a Shortcut can
+ * produce.
+ *
+ * **Form** — `multipart/form-data` with `photo`, `alt`, `taken` fields. The
+ * tidy one, and what the README recommends.
+ *
+ * **File** — the image as the raw body, with `alt` and `taken` in the query
+ * string. This exists because Shortcuts' "Get Contents of URL" quietly switches
+ * its Request Body to *File* when you hand it an image, and the resulting
+ * request is perfectly reasonable — it just isn't multipart. Rejecting it taught
+ * nothing except that the endpoint was fussy, so it's supported.
+ */
+async function readUpload(request: Request, url: URL): Promise<Upload | Response> {
+  const contentType = (request.headers.get('content-type') ?? '').toLowerCase()
+
+  if (contentType.startsWith('multipart/form-data')) {
+    let form: FormData
+    try {
+      form = await request.formData()
+    } catch {
+      return json({ error: 'multipart body could not be parsed' }, 400)
+    }
+    // `FormData.get` is typed as returning `string | null` by
+    // @cloudflare/workers-types, which is lossy: a file part comes back as a
+    // File at runtime. Widening to `unknown` is what lets this check be the real one.
+    const photo: unknown = form.get('photo')
+    if (!(photo instanceof File)) {
+      return json({ error: 'multipart body has no `photo` file' }, 400)
+    }
+    return {
+      body: photo,
+      type: photo.type,
+      size: photo.size,
+      alt: asText(form.get('alt')),
+      taken: asText(form.get('taken')),
+    }
+  }
+
+  if (ACCEPTED.has(contentType.split(';')[0].trim())) {
+    const body = await request.blob()
+    return {
+      body,
+      type: contentType.split(';')[0].trim(),
+      size: body.size,
+      alt: asText(url.searchParams.get('alt')),
+      taken: asText(url.searchParams.get('taken')),
+    }
+  }
+
+  // Naming what arrived is the whole point of this message: "expected
+  // multipart" on its own sends you looking at the wrong end of the Shortcut.
+  return json(
+    {
+      error:
+        'cannot read a photo from this request — send multipart/form-data with a `photo` ' +
+        'field, or the image itself as the raw body',
+      received: contentType || '(no content-type header)',
+    },
+    400,
+  )
+}
+
+async function ingest(request: Request, url: URL, env: Env): Promise<Response> {
   if (!authorized(request, env.INGEST_TOKEN)) return json({ error: 'unauthorized' }, 401)
 
-  let form: FormData
-  try {
-    form = await request.formData()
-  } catch {
-    return json({ error: 'expected multipart/form-data with a `photo` file' }, 400)
-  }
+  const upload = await readUpload(request, url)
+  if (upload instanceof Response) return upload
 
-  // `FormData.get` is typed as returning `string | null` by @cloudflare/workers-types,
-  // which is lossy: a file part comes back as a File at runtime. Widening to
-  // `unknown` is what lets the check below be the real one.
-  const photo: unknown = form.get('photo')
-  if (!(photo instanceof File)) return json({ error: 'missing `photo` file' }, 400)
-  if (!ACCEPTED.has(photo.type)) {
-    return json({ error: `unsupported type ${photo.type || 'unknown'} — send JPEG or PNG` }, 415)
+  if (!ACCEPTED.has(upload.type)) {
+    return json({ error: `unsupported type ${upload.type || 'unknown'} — send JPEG or PNG` }, 415)
   }
-  if (photo.size > MAX_BYTES) {
-    return json({ error: `photo is ${photo.size} bytes, over the ${MAX_BYTES} limit` }, 413)
+  if (upload.size > MAX_BYTES) {
+    return json({ error: `photo is ${upload.size} bytes, over the ${MAX_BYTES} limit` }, 413)
   }
-  if (photo.size === 0) return json({ error: 'photo is empty' }, 400)
+  if (upload.size === 0) return json({ error: 'photo is empty' }, 400)
 
-  const alt = asText(form.get('alt'))?.slice(0, MAX_ALT) ?? null
+  const alt = upload.alt?.slice(0, MAX_ALT) ?? null
   // `taken` decides only the folder — i.e. the id, and where the original is
   // filed. The date the site shows is read from the file's own EXIF during the
   // build, which is authoritative and needs nothing from here; so a missing or
   // unparseable value falls back to now rather than failing the upload.
-  const { year, stem } = mintName(asText(form.get('taken')))
-  const extension = photo.type === 'image/png' ? 'png' : 'jpg'
+  const { year, stem } = mintName(upload.taken)
+  const extension = upload.type === 'image/png' ? 'png' : 'jpg'
   const key = `incoming/${year}/${stem}.${extension}`
   const id = `${year}-${stem}`
 
-  await env.ORIGINALS.put(key, photo.stream(), {
-    httpMetadata: { contentType: photo.type },
+  await env.ORIGINALS.put(key, upload.body.stream(), {
+    httpMetadata: { contentType: upload.type },
     // Carried alongside the bytes rather than in a database: the build reads
     // both back together, and there is no other consumer to keep in sync.
     customMetadata: { ...(alt ? { alt } : {}), uploadedAt: new Date().toISOString() },
@@ -238,7 +301,7 @@ export default {
 
     if (url.pathname === '/ingest') {
       if (request.method !== 'POST') return json({ error: 'method not allowed' }, 405)
-      return ingest(request, env)
+      return ingest(request, url, env)
     }
 
     // Anything else is a person, not the Shortcut.
