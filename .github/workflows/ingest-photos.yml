@@ -1,0 +1,81 @@
+name: Ingest photos
+
+# The build half of the phone-upload pipeline. worker-photos/ stores what the
+# iOS Shortcut sends in the private originals bucket and fires the
+# `photo-uploaded` dispatch below; this turns those files into renditions, a
+# manifest entry, and a commit — which the deploy workflow then publishes.
+#
+# The scheduled run is the safety net: if the dispatch is ever lost (a bad token,
+# a GitHub outage, a Worker that failed after storing the file), the photo is
+# still in `incoming/` and gets picked up within the hour rather than silently
+# never appearing.
+on:
+  repository_dispatch:
+    types: [photo-uploaded]
+  schedule:
+    - cron: '20 * * * *'
+  workflow_dispatch:
+
+# Commits to main. The deploy workflow takes it from there.
+permissions:
+  contents: write
+
+# Never two of these at once: both would write src/lib/photos.json, and the
+# loser would fail to push. Uploads that arrive mid-run are found by the next.
+concurrency:
+  group: ingest-photos
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      R2_ORIGINALS_BUCKET: ${{ secrets.R2_ORIGINALS_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Pull pending uploads into originals/
+        id: fetch
+        run: |
+          node scripts/ingest-photos.mjs --fetch
+          # Counted here because --finish clears the queue file. Everything after
+          # this is pointless when nothing was waiting, which is what the hourly
+          # run usually finds.
+          count=$(jq 'length' .ingest-queue.json)
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" -gt 0 ]; then echo "pending=true" >> "$GITHUB_OUTPUT"; fi
+
+      # The ordinary pipeline, unchanged: encode renditions + read EXIF, then push
+      # the renditions to the public bucket. A phone photo is the same kind of
+      # photo as one added from the laptop.
+      - name: Encode renditions and update the manifest
+        if: steps.fetch.outputs.pending
+        run: npm run images:sync
+
+      - name: Upload renditions to R2
+        if: steps.fetch.outputs.pending
+        run: npm run images:upload
+
+      - name: Apply alt text and archive the originals
+        if: steps.fetch.outputs.pending
+        run: node scripts/ingest-photos.mjs --finish
+
+      - name: Commit
+        if: steps.fetch.outputs.pending
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add src/lib/photos.json
+          # A re-run that changes nothing must not fail the workflow.
+          git diff --cached --quiet && echo 'nothing to commit' && exit 0
+          git commit -m 'Add ${{ steps.fetch.outputs.count }} photo(s) from the phone'
+          git push

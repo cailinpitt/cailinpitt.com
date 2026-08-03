@@ -14,6 +14,12 @@ worker-reading/.wrangler/
 worker-reading/.dev.vars
 worker-guestbook/.wrangler/
 worker-guestbook/.dev.vars
+worker-photos/.wrangler/
+worker-photos/.dev.vars
+
+# Hand-off file between the two halves of scripts/ingest-photos.mjs, written and
+# deleted inside a single CI run.
+.ingest-queue.json
 scripts/backfill.sql
 scripts/backfill.sql.progress.json
 

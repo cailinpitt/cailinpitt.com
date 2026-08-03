@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-photos",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-30",
+
+  // Write-only intake on a subdomain of the (Cloudflare-managed) zone, like the
+  // other workers. Nothing reads from here — the photo feed is static — so this
+  // hostname exists only for the Shortcut to POST to.
+  "routes": [{ "pattern": "photos.cailinpitt.com", "custom_domain": true }],
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // Where to fire the repository_dispatch that starts the build.
+    "GITHUB_REPO": "cailinpitt/cailinpitt.com"
+  },
+
+  // Camera originals, in their **own private bucket** — deliberately not
+  // `cailinpitt-photos`, which is served publicly at images.cailinpitt.com. An
+  // original carries EXIF the site never publishes (full-precision GPS above
+  // all), so it must not sit behind a public domain. Create it with:
+  //
+  //   wrangler r2 bucket create cailinpitt-photo-originals
+  //
+  // and do NOT attach a custom domain or public access to it.
+  //
+  // preview_bucket_name is the same bucket on purpose: `wrangler dev --remote`
+  // refuses to start without one, and an upload tested from the phone has to
+  // land where the build will look for it. Keys are minted per upload and never
+  // reused, so a dev run can only add objects.
+  "r2_buckets": [
+    {
+      "binding": "ORIGINALS",
+      "bucket_name": "cailinpitt-photo-originals",
+      "preview_bucket_name": "cailinpitt-photo-originals"
+    }
+  ]
+
+  // Secrets (not stored here):
+  //   wrangler secret put INGEST_TOKEN   # what the Shortcut sends as a bearer token
+  //   wrangler secret put GITHUB_TOKEN   # fine-grained PAT, Contents: read+write on this repo
+}

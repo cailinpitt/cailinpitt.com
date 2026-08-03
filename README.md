@@ -453,6 +453,41 @@ squares, newest first, with no pagination and no infinite scroll. There are no g
   and `scripts/generate-og.mjs` skips any page that brings its own `og:image` — otherwise a
   deploy would render ~500 cards, which is most of a build for no gain.
 
+## Publishing a photo from your phone
+
+Share sheet → Shortcut → the photo is on the site a couple of minutes later, with its own
+page. The same idea as the article Shortcut behind `/reading`, except this one ends in a
+**commit** rather than a database row.
+
+```
+Shortcut → POST photos.cailinpitt.com/ingest → R2 (private originals bucket)
+        → repository_dispatch → .github/workflows/ingest-photos.yml → commit → deploy
+```
+
+- **`worker-photos/` is deliberately thin**: authenticate, check the file, store it, fire a
+  dispatch. It can't do more — renditions need `sharp`, which doesn't run in a Worker, and the
+  manifest is a file in git. The build has both, and already knows how to do this.
+- **The build runs the ordinary pipeline.** `scripts/ingest-photos.mjs --fetch` pulls the
+  pending uploads into `originals/<year>/`, and from there it's `images:sync` →
+  `images:upload` → `--finish` — the same commands you'd run at the laptop. There is no second
+  code path that publishes a photo, only a second way of getting files into `originals/`.
+  `--finish` applies the alt text the Shortcut sent (the one thing sync can't know), archives
+  the original, and clears the queue.
+- **The price is that publishing takes a deploy, not a second.** The payoff is that a phone
+  photo is the same kind of photo as any other: prerendered, permalinked, with a social card.
+  A live-from-a-database feed would have published instantly and had none of that.
+- **The URL is known before the build starts.** The Worker mints the filename, and the id
+  scheme is `<year>-<filename>`, so `/ingest` can hand the Shortcut the finished permalink to
+  put in its notification.
+- **Originals go to a second, private bucket** (`cailinpitt-photo-originals`), never the public
+  one. An original carries full-precision GPS, which is exactly what the ~0.7 mile rounding
+  exists to withhold. The build archives them there under `originals/<year>/`; pull them back
+  down with `npm run photos:pull`.
+- **A lost dispatch loses nothing.** The workflow also runs hourly, so a photo sitting in
+  `incoming/` is picked up either way.
+- **Setup, the API, the Shortcut recipe, and how to test each half separately:** see
+  [`worker-photos/README.md`](worker-photos/README.md).
+
 ## Photo map (`/photos/map`)
 
 Plots every photo that carries a location — i.e. the 2026 ones, since the coordinates come
@@ -563,11 +598,16 @@ Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and publ
 GitHub Pages. In the repo: **Settings → Pages → Source = GitHub Actions**. The custom domain is
 set via `public/CNAME`.
 
-The three Workers deploy **separately** and are not part of that pipeline — a push to
+The four Workers deploy **separately** and are not part of that pipeline — a push to
 `main` never touches them. Each is its own package, deployed by hand from its directory:
 
 ```sh
 cd worker && npm run deploy            # listening.cailinpitt.com
 cd worker-reading && npm run deploy    # reading.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
+cd worker-photos && npm run deploy     # photos.cailinpitt.com
 ```
+
+There is a second workflow, `.github/workflows/ingest-photos.yml`, which commits photos sent
+from the phone — see [Publishing a photo from your phone](#publishing-a-photo-from-your-phone).
+It pushes to `main`, so it ends by triggering the deploy above.
