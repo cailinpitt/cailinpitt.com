@@ -1,363 +1,318 @@
 # [cailinpitt.com](https://cailinpitt.com)
 
-Personal site + photography + software projects + blog. React (Vite + [`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg)),
-statically prerendered, deployed to GitHub Pages.
-
-## Develop
+Personal site: blog, photography, projects. React + Vite prerendered to static HTML with
+[`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg), deployed to GitHub Pages.
+Four Cloudflare Workers back the live-data pages.
 
 ```bash
 npm install
-npm run dev        # local dev server
+npm run dev        # dev server
 npm run typecheck  # tsc --noEmit
-npm test           # vitest run (see Tests below)
-npm run build      # static prerender → dist/ (also writes sitemap.xml, llms.txt, feed.xml, og cards)
-npm run preview    # serve the built dist/
+npm test           # vitest
+npm run build      # prerender → dist/ (+ sitemap.xml, llms.txt, feed.xml, og cards)
+npm run preview    # serve dist/
 ```
 
-## Content
+**Looking for a command?** [`RUNBOOK.md`](RUNBOOK.md) is every command in the repo, by task. This
+file explains how things work.
 
-### Add a blog post
+## Contents
 
-Create `content/blog/<slug>.md` with frontmatter. `path` is the **exact URL** (non-zero-padded
-month/day, matching the old Squarespace convention) and must be unique:
+- [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
+- Pages: [/listening](#listening) · [/reading](#reading) · [/guestbook](#guestbook) ·
+  [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
+  [/colophon](#colophon) · [/blog](#blog-index)
+- Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
+  [theme](#color-theme)
+- [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
+
+## Blog posts
+
+Create `content/blog/<slug>.md`. Posts are picked up by glob — no routing to wire.
 
 ```markdown
 ---
 title: "Post title"
 date: 2026-01-15
-updated: 2026-02-03  # optional; only for a substantive revision
-path: /blog/2026/1/15/post-slug
+updated: 2026-02-03            # optional; only for substantive revisions
+path: /blog/2026/1/15/post-slug  # exact URL, non-zero-padded, must be unique
 slug: post-slug
 tags: ["music"]
-description: "Optional summary for listings + social cards."
-image: /images/post-slug/cover.jpg   # optional cover / social image
+description: "Summary for listings + social cards."  # optional
+image: /images/post-slug/cover.jpg                   # optional cover/social image
 ---
-
-Markdown body…
 ```
 
-- **Inline images**: drop the originals in `originals/<slug>/` and run `npm run images:publish` —
-  each one is compressed to a 1600px WebP at `public/images/<slug>/<name>.webp` and pushed to R2.
-  Reference that path in markdown as `/images/<slug>/<name>.webp` (note the extension changes).
-  Those paths are rewritten to Cloudflare R2 at render time, so images are **never committed**
-  (see below). `npm run images:sync` also reports any image a post references but that isn't on
-  disk — suggesting the `.webp` name when that's the mismatch — plus files nothing references.
-  Images already under `public/images/<slug>/` with no original are left alone.
-- Markdown renders at build time (`react-markdown` + `remark-gfm`, with `rehype-raw` so embedded
-  HTML like YouTube/Spotify iframes survives).
-- **Tags** are free text. Each one becomes a chip under the post header and gets a prerendered
-  `/blog/tag/<slug>` page, listed in the tag cloud at the foot of `/blog`. Pages are generated
-  only for tags actually in use, so nothing needs registering — but note that a typo makes a new
-  one-post tag. Grouping is by slug (`"Year in Review"` → `year-in-review`), so casing differences
-  can't split a tag in two; the spelling shown is the one from the most recent post using it.
-- **Social card:** every page gets its own card rendered at build time (see
-  [Social cards](#social-cards)). For a post, `image:` in frontmatter picks the photograph that
-  runs behind the title; if omitted, the first image in the body is used. A post with no images
-  at all gets the paper card instead — nothing to set.
-- **standard.site (Bluesky):** each post also gets an AT Protocol record so it renders as a
-  first-class document in the Bluesky ecosystem. This is **not automatic** — you must run
-  `npm run publish:atproto` and commit the updated `content/atproto.json` (see the checklist and
-  the [standard.site](#standardsite--bluesky) section below).
-- **Reading time** is counted at build time from the prose in the body — code, embedded HTML,
-  image syntax, and link targets don't count, link text does. Posts under 100 words show no
-  estimate at all, which is why the travel photo essays don't claim to be a "1 min read".
-- **Related posts** — up to three posts sharing the most tags with this one, above the
-  newer/older nav. A post with no tags gets none, rather than three arbitrary ones.
-- **Headings** get an `id` (from `rehype-slug`) and a `#` self-link, so a section of a long
-  post can be pointed at. The link is invisible until the heading is hovered or it takes
-  focus, and `scripts/generate-rss.mjs` strips it back out of feed items — the ids stay.
-- **`updated:`** is shown in the post's meta line ("Updated February 3, 2026") as well as in
-  the JSON-LD `dateModified`. Set it only for a substantive revision: the date beside it is
-  when the post was written, and most posts should carry just that one.
-- Otherwise posts are picked up automatically (glob of `content/blog/*.md`). The post shows up
-  on `/blog`, the home "Recent writing", `sitemap.xml`, and `llms.txt`, gets JSON-LD, and is
-  prerendered to a real HTML file at `path` (so old bookmarks keep working). No routing to wire.
+`path` is the literal URL the post prerenders to (the old Squarespace convention). It must be
+unique — two posts sharing one silently overwrite each other. `tests/content.test.ts` checks this.
 
-#### Checklist for a new post
+**Publishing checklist**
 
-1. Create `content/blog/<slug>.md` with the frontmatter above.
-2. Drop any inline images in `public/images/<slug>/`, reference them as `/images/<slug>/<file>`,
-   then `npm run images:publish` (needs R2 creds in `.env`).
-3. Preview locally: `npm run dev` (and optionally `npm run build` to sanity-check the prerender).
-4. Publish the standard.site record: `npm run publish:atproto` (needs Bluesky creds in `.env`),
-   then **commit the updated `content/atproto.json`**.
-5. Commit the post (`content/blog/<slug>.md`) and push `main` → auto-deploys.
-6. _Optional:_ re-share the post link on Bluesky — link cards are cached per-URL, so a fresh post
-   forces Bluesky to re-fetch the new thumbnail/record.
+1. Write `content/blog/<slug>.md`.
+2. Put inline images in `originals/<slug>/`, run `npm run images:publish`, and reference them as
+   `/images/<slug>/<name>.webp` (note: extension changes to `.webp`).
+3. Preview with `npm run dev`.
+4. `npm run publish:atproto`, then commit `content/atproto.json`.
+5. Commit the post and push `main`.
 
-### Add photos
+**What happens automatically**
 
-All images (blog + photos) are served from Cloudflare R2 (`images.cailinpitt.com`) and **none
-are committed** — all of `public/images/` is gitignored. Photos are one flat, chronological feed
-at `/photos`, described by `src/lib/photos.json`; there is no gallery registry to edit.
+| Feature | Notes |
+|---|---|
+| Rendering | `react-markdown` + `remark-gfm` + `rehype-raw` (so YouTube/Spotify iframes survive) |
+| Tags | Free text. Each gets a prerendered `/blog/tag/<slug>`. Grouped by slug, so casing can't split a tag; a typo makes a new one |
+| Social card | Built per page. `image:` picks the photo behind the title; falls back to the first body image, then the paper card |
+| Reading time | Counted from prose only. Under 100 words shows nothing |
+| Related posts | Up to three sharing the most tags; none if the post has no tags |
+| Heading anchors | `rehype-slug` ids + a `#` self-link, hidden until hover/focus. Stripped from RSS |
+| `updated:` | Renders in the meta line and JSON-LD `dateModified` |
+| Listings | `/blog`, home page, `sitemap.xml`, `llms.txt`, JSON-LD, RSS |
 
-1. Put the full-size photos straight off the camera in `originals/2026/` — a four-digit folder
-   name is the whole rule for "this is a photo, not a blog image".
-2. ```bash
-   npm run images:publish   # = images:sync + images:upload; needs R2 creds in .env
-   ```
-3. Commit the **code** change (`src/lib/photos.json`) — never the photos — and push.
+Images are rewritten to Cloudflare R2 at render time and are **never committed**.
+`npm run images:sync` reports images a post references but that aren't on disk, plus files nothing
+references.
 
-That's it. `npm run images:sync` (`scripts/sync-images.mjs`) does the bookkeeping:
+## Photos
 
-- **Compresses.** Every original under `originals/<folder>/` is encoded to WebP in
-  `public/images/<folder>/`: a 2560px full size for the photo's own page and a 1000px
-  `-1000.webp` for the feed grid (quality 82, EXIF orientation baked in, EXIF metadata dropped).
-  2026 went from 119 MB of camera files to 18 MB served, of which the feed only loads the 3 MB of
-  thumbnails. Re-encoding is skipped when a rendition is newer than its original; `--reencode`
-  forces it.
-- **Fills in the feed.** `src/lib/photos.json` is rebuilt from what's on disk: `src` (full size),
-  `thumb` (grid), and `width`/`height` read from the file headers. Existing entries keep their
-  id, alt text, date, and metadata, so a hand-edit survives re-runs; new files are appended and
-  the whole list is sorted newest-first.
-- **Assigns a permalink.** Each photo gets an `id` — `<year>-<filename>`, e.g. `2019-img-0116` —
-  the first time it's seen, and it is **never recomputed**: it is the URL of `/photos/<id>`, so
-  renaming the file on disk later must not 404 the page. A filename that repeats within a year
-  takes a `-2` suffix.
-- **Records capture metadata.** Each entry also gets an `exif` object read from the *original*
-  (the renditions are encoded with EXIF stripped): capture date, camera, aperture, shutter, ISO,
-  focal length, and a coarse location. The photo's page shows it as a caption. Like alt text, it's
-  read once and then left alone, so a hand-edit sticks (useful when a camera reports a model code
-  rather than a name — the drone identifies itself as `FC3170`). `--reexif` forces a re-read.
-- **Dates every photo**, because the feed is ordered by date and nothing may be undated. In order:
-  the EXIF capture time; else whatever the manifest already says; else January 1st of the folder's
-  year. Everything but the first is marked `approx`, which the site renders as a bare year — see
-  [Dates before 2026](#dates-before-2026).
-- **Never deletes silently.** A manifest entry whose file isn't on disk is kept and counted in the
-  output (you may just not have that photo locally). Pass `--prune` to actually drop them.
-- **Checks blog images** too — see [Add a blog post](#add-a-blog-post) above.
-
-> **On location data.** `photos.json` is committed and served to browsers, so anything in it is
-> public and permanent. GPS coordinates are therefore rounded to 2 decimal places (~0.7 miles) on
-> the way in — enough to place a photo on a map or name a neighborhood, not enough to point at an
-> address. Full precision stays in the originals, which are gitignored and never uploaded. If you'd
-> rather publish nothing at all, drop the `place` field in `scripts/exif.mjs` and re-run with
-> `--reexif`; it will clear the recorded values.
-
-`originals/` is gitignored and lives outside `public/`, so camera files are never committed,
-never uploaded to R2, and never built into the site — only the renditions are. It is a local
-working directory, **not a backup**: keep your originals wherever you normally keep them.
-
-#### Dates before 2026
-
-Only the 2026 photos carry EXIF: everything older came back from Squarespace with its metadata
-stripped. A feed sorted by date has nowhere to put an undated photo, so those dates were recovered
-from the Squarespace export, where each CDN URL embeds the file's **upload** time:
+All images (blog + photos) are served from R2 (`images.cailinpitt.com`); `public/images/` and
+`originals/` are both gitignored. Photos are one flat chronological feed at `/photos`, described by
+`src/lib/photos.json`. No gallery registry.
 
 ```bash
-npm run photos:backfill        # scripts/backfill-photo-dates.mjs; --dry-run to look first
+# 1. Drop full-size camera files in originals/2026/  (a four-digit folder = "this is a photo")
+npm run images:publish     # = images:sync + images:upload; needs R2 creds in .env
+# 2. Commit src/lib/photos.json — never the photos
 ```
 
-That reached 454 of the 460 older photos. It is not when they were taken, so:
+### What `images:sync` does
 
-- the entry is flagged `approx`, and the site prints only the year for those — never a day it
-  can't stand behind;
-- the photo keeps the **year of the folder it's filed under**, not the year of the recovered
-  upload (a 2014 photo posted in 2016 stays a 2014 photo). The upload time orders that year's
-  photos among themselves and does nothing else. That's why a manifest entry carries both `year`
-  and `date`;
-- `/timeline` skips approximate photos entirely — it's a day-per-row page, and they'd all pile
-  onto January 1st.
-
-The script only ever replaces the January-1st placeholder, so it's safe to re-run and safe to
-hand-correct a date afterward. To fix one photo, edit its `date` in `src/lib/photos.json` (drop
-`approx` if you know the real day) — sync won't overwrite it.
-
-Useful variants:
+- **Compresses.** Each original becomes two WebPs in `public/images/<folder>/`: 2560px full size
+  and a 1000px `-1000.webp` thumbnail (quality 82, EXIF orientation baked in, metadata stripped).
+  Skipped when a rendition is newer than its original.
+- **Rebuilds `src/lib/photos.json`** from disk: `src`, `thumb`, `width`/`height`. Existing entries
+  keep their id, alt, date, and EXIF, so hand-edits survive. New files are appended, list sorted
+  newest-first.
+- **Assigns a permanent id** — `<year>-<filename>`, e.g. `2019-img-0116` — on first sight and
+  **never recomputes it**, because it's the URL of `/photos/<id>`. Repeats within a year get `-2`.
+- **Records EXIF** from the original: date, camera, aperture, shutter, ISO, focal length, coarse
+  location. Read once, then left alone (useful when a camera reports a model code — the drone says
+  `FC3170`).
+- **Dates every photo**: EXIF capture time, else the existing manifest value, else Jan 1 of the
+  folder year. Anything but the first is marked `approx` and renders as a bare year.
+- **Never deletes silently.** Entries whose file is missing are kept unless you pass `--prune`.
 
 ```bash
-npm run images:sync -- --prune     # drop manifest entries whose file is gone
-npm run images:sync -- --reexif    # re-read capture metadata from the originals
-npm run images:sync -- --reencode  # rebuild every rendition (e.g. after changing quality)
-npm run images:check               # report only, no writes; exits non-zero if out of date
-npm run images:upload -- --dry-run # show what would upload to R2, upload nothing
-npm run images:prune               # list R2 objects nothing references (dry run)
-npm run images:prune -- --delete   # …and delete them
+npm run images:sync -- --prune      # drop entries whose file is gone
+npm run images:sync -- --reexif     # re-read EXIF from originals
+npm run images:sync -- --reencode   # rebuild every rendition
+npm run images:check                # report only; non-zero exit if out of date
+npm run images:upload -- --dry-run  # show what would upload to R2
+npm run images:prune                # list unreferenced R2 objects
+npm run images:prune -- --delete    # …and delete them
 ```
 
-#### Removing a photo
+> **Location privacy.** `photos.json` is committed and public, so GPS is rounded to 2 decimal
+> places (~0.7 miles) on the way in — enough for a neighborhood, not an address. Full precision
+> stays in the gitignored originals. To publish nothing, drop the `place` field in
+> `scripts/exif.mjs` and re-run with `--reexif`.
+
+`originals/` is a local working directory, **not a backup**. Keep your real originals elsewhere.
+
+### Removing a photo
 
 ```sh
-npm run photos:rm -- 2026-img-1919                       # delete
-npm run photos:rm -- 2026-img-1919 --dry-run             # look first
-npm run photos:rm -- https://cailinpitt.com/photos/2026-img-1919   # a URL works too
-npm run photos:rm -- <id> <id> <id>                      # several at once
+npm run photos:rm -- 2026-img-1919              # delete
+npm run photos:rm -- <id> --dry-run             # look first
+npm run photos:rm -- <url>                      # a photo URL works too
+npm run photos:rm -- <id> <id> <id>             # several
 ```
 
-Five things belong to a photo — its manifest entry, its two renditions locally, the same two in
-R2, its original in `originals/`, and (if it came from the phone) the archived original in the
-private bucket. This removes all of them, then tells you to commit `src/lib/photos.json`. The
-same shape as `npm run guestbook:rm`: immediate, permanent, no trash.
+Removes all five pieces: manifest entry, both local renditions, both R2 objects, the original, and
+the archived original in the private bucket. Then commit `src/lib/photos.json`. Immediate and
+permanent, like `guestbook:rm`.
 
-**The original goes too, and that isn't optional.** `images:sync` rebuilds renditions from
-whatever is in `originals/`, so a delete that spared the original would quietly republish the
-photo — at the same URL, since ids come from the filename — the next time anything synced. To
-keep the file, move it out of the repo *before* running this.
+**The original must go too.** `images:sync` rebuilds renditions from `originals/`, so sparing the
+original republishes the photo at the same URL on the next sync. Move it out of the repo first if
+you want to keep it.
 
-An unknown id is an error rather than a silent no-op, and a missing archived original is only a
-warning: not every photo has one, and an R2 token scoped to just the public bucket can't see the
-private one either way.
+An unknown id is an error; a missing archived original is only a warning.
 
-`images:prune` is what cleans up after photos switch to new renditions: the superseded objects
-stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest and every
-`/images/...` path in the blog markdown, and refuses to delete if anything referenced is missing
-from the bucket (so a half-finished upload can't look like a bucket full of orphans).
-Anything under `PROTECTED_PREFIXES` (currently `images/reading/`) is never touched — those objects
-belong to the reading Worker and are referenced from its D1 database, which this script can't see.
-Note that deleted objects can still serve from Cloudflare's edge cache for a while — the upload
-sets `immutable` — so purge the URL in the dashboard if you need it gone immediately.
+### `images:prune`
 
-### standard.site / Bluesky
+Cleans up R2 objects superseded when photos get new renditions. Compares the bucket against every
+`src`/`thumb` in the manifest and every `/images/...` path in blog markdown, and refuses to delete
+if anything referenced is missing from the bucket (so a half-finished upload can't look like a
+bucket of orphans). `PROTECTED_PREFIXES` (currently `images/reading/`) is never touched — those
+objects belong to the reading Worker and are referenced from D1, which this script can't see.
+Deleted objects may still serve from the edge cache; purge in the dashboard if urgent.
 
-Posts are published as [standard.site](https://standard.site) AT Protocol records so they render
-as first-class long-form documents in the Bluesky ecosystem (not just a link card).
+### Dates before 2026
+
+Only 2026 photos carry EXIF; everything older came back from Squarespace stripped. Dates were
+recovered from the Squarespace export, where each CDN URL embeds the **upload** time:
+
+```bash
+npm run photos:backfill      # --dry-run to look first
+```
+
+That reached 454 of 460 older photos. Because it's upload time, not capture time:
+
+- entries are flagged `approx` and the site prints only the year;
+- the photo keeps the **year of its folder**, not the recovered year (a 2014 photo posted in 2016
+  stays 2014) — which is why entries carry both `year` and `date`;
+- `/timeline` skips approximate photos entirely.
+
+The script only replaces the Jan-1 placeholder, so it's safe to re-run and safe to hand-correct
+afterward.
+
+## standard.site / Bluesky
+
 `scripts/publish-atproto.mjs` upserts one `site.standard.publication` record plus one
-`site.standard.document` per post into your Bluesky repo (PDS). The build reads the resulting
-AT-URIs from `content/atproto.json` to emit `/.well-known/site.standard.publication` and the
-per-post `<link rel="site.standard.*">` tags — so the build itself needs **no** credentials.
-
-Credentials live in `.env` (gitignored). Create an **app password** (not your real password) at
-<https://bsky.app/settings/app-passwords>:
-
-```
-BLUESKY_IDENTIFIER=yourhandle.bsky.social   # handle or account email
-BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
-# BLUESKY_PDS=https://bsky.social            # optional; default shown
-```
+`site.standard.document` per post into your Bluesky PDS, so posts render as first-class long-form
+documents rather than link cards. The build reads the AT-URIs from `content/atproto.json` — the
+build itself needs **no** credentials.
 
 ```bash
 npm run publish:atproto              # create/update records, rewrite content/atproto.json
-npm run publish:atproto -- --dry-run # preview (lists posts; no login, no writes)
+npm run publish:atproto -- --dry-run # preview; no login, no writes
 ```
 
-- **Idempotent:** records use stable record keys (`self` for the publication, the post slug per
-  document), so re-running updates in place — it never creates duplicates.
-- **Re-run whenever post content/metadata changes** (new post, edited title/description/body), then
-  commit the updated `content/atproto.json`.
-- The `did`/AT-URIs in `content/atproto.json` are public identifiers — safe to commit.
+`.env` (gitignored), using an [app password](https://bsky.app/settings/app-passwords):
 
+```
+BLUESKY_IDENTIFIER=yourhandle.bsky.social
+BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+# BLUESKY_PDS=https://bsky.social   # optional
+```
 
-## Listening (`/listening`)
+Idempotent — stable record keys (`self` for the publication, the slug per document) mean re-running
+updates in place. Re-run whenever post content or metadata changes, then commit
+`content/atproto.json`. The DIDs and AT-URIs in it are public identifiers.
 
-The `/listening` page shows what I'm playing now, 7d/30d stats, a year heatmap,
-and a per-day scrobble log — sourced from Last.fm. The site stays static: a
-standalone Cloudflare Worker (`worker/`) ingests scrobbles into a D1 archive on a
-cron and serves a cached JSON bundle; the page fetches it in the browser.
+## Listening
 
-- **Worker setup + how it stays free:** see [`worker/README.md`](worker/README.md).
-- **Full-history backfill:** `node scripts/backfill-listening.mjs` (needs
-  `LASTFM_API_KEY` in `.env`), then load the generated SQL into D1 (see worker README).
-- **API base URL:** set `VITE_LISTENING_API` at build time (defaults to
-  `https://listening.cailinpitt.com`).
-- **`/sparkline.json`** serves 90 daily counts for the homepage sparkline — a projection
-  of the heatmap blob the cron already computes, so it costs one KV read and no D1. Today's
-  bar inherits the heatmap's ~6h cadence and can read low against a day still in progress.
-  **Requires deploying the Worker** (`cd worker && npx wrangler deploy`); until then it 404s
-  and the sparkline simply doesn't render.
+`/listening` shows now-playing, 7d/30d stats, a year heatmap, and a daily scrobble log from
+Last.fm. The Worker in `worker-listening/` ingests into D1 on a cron and serves a cached JSON
+bundle; the static page fetches it in the browser.
 
-## Blog index (`/blog`)
+- Setup and cost design: [`worker-listening/README.md`](worker-listening/README.md)
+- Full-history backfill: `node scripts/backfill-listening.mjs` (needs `LASTFM_API_KEY` in `.env`),
+  then load the SQL into D1
+- API base: `VITE_LISTENING_API` at build time (default `https://listening.cailinpitt.com`)
+- `/sparkline.json` feeds the homepage sparkline — a projection of the heatmap blob, so one KV read
+  and no D1. Today's bar inherits the heatmap's ~6h cadence and can read low. **Requires the Worker
+  to be deployed**; until then it 404s and the sparkline doesn't render.
 
-The list is grouped into year sections, and rows inside a section show only the month and
-day since the year is in the heading above them (the `datetime` attribute still carries the
-whole date). A filter above the list narrows by title, summary, tag, or date — every
-whitespace-separated term has to match, so "music 2019" narrows rather than widening.
+## Reading
 
-Matching is a substring scan over a map built once from the posts already on the page:
-~35 posts needs no search index, no dependency, and no fetch. With JavaScript off the input
-goes inert and the full list is still there, because it's in the prerendered HTML.
+`/reading` shows books (from [hardcover.app](https://hardcover.app)) and saved articles with cover
+art. Owned by `worker-reading/`.
 
-## RSS feed (`/feed.xml`)
+- **Books** sync from Hardcover's GraphQL API on a daily cron into D1. Full replace, so the first
+  run imports everything — no backfill script.
+- **Articles** are pushed to an authenticated `POST /ingest`, which fetches `og:` metadata and the
+  social card. Saved from an iOS/macOS Shortcut or a desktop bookmarklet.
+- **Images** mirror into the photos R2 bucket under `images/reading/`, protected from
+  `images:prune` by `PROTECTED_PREFIXES`.
+- **Terminal view:** `curl reading.cailinpitt.com`; `?T` disables color.
+- Check the Hardcover query without deploying: `npm run reading:probe` (needs `HARDCOVER_TOKEN`).
+- API base: `VITE_READING_API` (default `https://reading.cailinpitt.com`).
+- Setup and testing: [`worker-reading/README.md`](worker-reading/README.md)
 
-`scripts/generate-rss.mjs` writes a full-content RSS 2.0 feed as part of `postbuild`
-(`npm run rss` re-runs it against an existing `dist/`). `index.html` carries the
-`<link rel="alternate" type="application/rss+xml">` autodiscovery tag on every page, and
-`/blog` links it under the post count.
+## Guestbook
 
-- **Item bodies come from the prerendered HTML**, not from re-rendering the markdown here:
-  the script lifts what's inside `<div class="post-body">` out of each post's built page.
-  The build already turns markdown into HTML once — with GFM, raw HTML embeds, and the R2
-  image rewriting — and a second renderer in this script would be one more thing to keep in
-  sync, with the feed quietly drifting from the page when it fell behind. Metadata (title,
-  date, tags, summary) still comes from the frontmatter.
-- **Root-relative URLs are made absolute**, since a feed item is read somewhere that isn't
-  this site. Post images are already absolute R2 URLs by the time they're rendered, so in
-  practice this is links between posts.
-- **The 20 most recent posts** carry full text (`MAX_ITEMS`); older ones stay at `/blog`. A
-  feed is re-fetched on a timer forever, and readers only show a new subscriber the recent
-  items anyway.
-- **`lastBuildDate` is the newest post's date, not the build time** — every deploy rewrites
-  this file, and a timestamp that moved when nothing was published would keep telling
-  subscribers there's something new.
+Anyone can sign `/guestbook`: name and message required, website and location optional, country
+flag derived from the request. Owned by `worker-guestbook/` — the only endpoint on the site that
+accepts **public writes**.
 
-## Color theme
+- **Moderation** is after the fact, from the repo root (needs `GUESTBOOK_ADMIN_TOKEN` in `.env`
+  matching the Worker's `ADMIN_TOKEN`):
 
-Light/dark follows `prefers-color-scheme`; the header toggle cycles System → Light → Dark,
-stores the choice in `localStorage`, and applies it as `data-theme` on `<html>`. A tiny
-inline script in `index.html` applies a stored choice before first paint.
+  ```sh
+  npm run guestbook:list                    # 50 newest, with ids
+  npm run guestbook:list -- --limit 200
+  npm run guestbook:rm -- <id> [<id> ...]   # immediate and permanent
+  ```
 
-`index.html` also ships two media-scoped `<meta name="theme-color">` tags — the browser
-chrome matches the **page background**, not the accent, so the toolbar reads as an extension
-of the paper. A media query can't see the manual override, so `ThemeToggle` rewrites both
-tags with the resolved `--bg` when a theme is forced, and restores them for System. The
-value is read from the stylesheet rather than repeated in JS, which is also why it happens
-after mount: in the pre-paint script the CSS isn't loaded and `--bg` reads empty. The cost
-is that an overridden theme keeps the media-matched tint for the first few frames — which
-tints browser chrome and nothing on the page.
+  `list` prints the id first on each line and tags repeats from one IP hash
+  (`[4x from 1a7c07a3]`) — how a flood looks when it wears ten names.
+- **Entries publish instantly**, made affordable by a layered write path: origin check, honeypot,
+  [Turnstile](https://www.cloudflare.com/products/turnstile/), validation, per-IP limits (3/hour,
+  10/day), and a global 60/hour breaker. Turnstile is load-bearing and fails closed, so an outage
+  makes the guestbook read-only, not open. Its script loads only once someone starts typing.
+- **Deleting returns that IP's hourly quota**, since the limit counts rows.
+- **Terminal view:** `curl guestbook.cailinpitt.com`.
+- API base: `VITE_GUESTBOOK_API` (default `https://guestbook.cailinpitt.com`). The Turnstile
+  **site** key is public and lives in both `src/lib/guestbook.ts` and
+  `worker-guestbook/wrangler.jsonc` — keep them in sync.
+- Full write path and privacy design: [`worker-guestbook/README.md`](worker-guestbook/README.md)
 
-## Search (⌘K)
+## Photos page
 
-Every page carries a command palette — **⌘K** / **Ctrl-K**, or **/** when you aren't already
-typing, or the magnifier in the header. It jumps to any page, post, photo year, or tag.
+One Instagram-style feed: every photograph in a three-column grid of squares, newest first, no
+pagination. There are no galleries — `/2019`, `/latest`, `/past-work` and friends now 404.
 
-- **The index is compiled in, not fetched.** A small Vite plugin
-  (`cailinpitt:site-index` in `vite.config.ts`) reads `content/blog/*.md` at build time and
-  inlines the frontmatter — path, title, date, tags — as the `virtual:site-index` module.
-  The same module carries the photo feed's years, and (for the prerenderer only) every
-  photo's permalink id; the browser build gets an empty list, since five hundred slugs are
-  no use to it.
-  That's ~100 bytes per post and no request, where an eager `import.meta.glob` would have
-  shipped every post's *body* to the browser and a generated JSON file would have cost a
-  round trip before the palette could open. Bodies are never included; the plugin uses the
-  same frontmatter parser as the site (`src/lib/frontmatter.ts`), so it can't disagree with
-  the rendered pages about what a post is called.
-- Adding a post needs nothing done here — it's in the palette on the next build. In dev the
-  module is invalidated when anything under `content/blog/` changes.
-- Pages are listed by hand in `PAGES` in `src/components/CommandPalette.tsx`; **a new route
-  needs adding there** (photo years and tags are derived, so those don't). Forgetting is caught
-  by `tests/command-palette.test.ts`, which holds the list against the routes in `App.tsx` in
-  both directions — a page missing from the palette, and an entry pointing at a route that no
-  longer exists. It can't guess a label or the words someone would search for, so it fails
-  rather than deriving the list.
-- It's a native `<dialog>` opened with `showModal()` — focus trapping and Escape come with
-  it rather than being reimplemented.
+- **Every photo has a page** at `/photos/<id>`, prerendered, with the full-size image, date, camera
+  settings, a map link when it has coordinates, and prev/next (←/→ work too).
+- **The whole feed is in the prerendered HTML.** ~500 lazy `<img>` tags gzip to ~20 KB, which buys
+  a page that works without JavaScript, is Cmd-F searchable, and has real year anchors
+  (`/photos#y2019`). Loader data carries only what a tile needs — no EXIF, no dates.
+- **Ordering** is year first, then date within the year, because a pre-2026 date can be a recovered
+  upload time that landed in the following year.
+- **The social card is the photograph itself**, so `generate-og.mjs` skips these pages — otherwise
+  a deploy would render ~500 cards.
 
-## Homepage
+## Photo map
 
-Mostly static, with three things that change on their own:
+`/photos/map` plots every photo with a location (i.e. the 2026 ones). Photos sharing a rounded
+coordinate collapse into one pin; each popup links to the photo's page.
 
-- **🎧 Last played** — the now-playing bar (polls `/now.json` every 60s), a 90-day
-  sparkline, and an "on this day" line drawn from `/on-this-day.json`, which the listening
-  Worker already built for `/listening`. All three render nothing until their fetch lands
-  and nothing at all if it fails, so the prerendered shell never depends on them.
-- **📸 Recent photos** shows the first four photographs in the feed, each linking to its own
-  page. The label under each is the capture day when there is one, else the year.
+- **Leaflet** (BSD-2-Clause, bundled from npm) with **OpenStreetMap** raster tiles. No account, no
+  API key, no billing. Attribution is on the map as the tile policy requires.
+- Leaflet reads `window` on import, so it's imported inside the effect — the shell prerenders and
+  the map fills in after mount. Vite splits it into its own JS and CSS chunk.
+- Pins are `circleMarker`s, avoiding Leaflet's bundler-hostile default marker icon URLs and taking
+  the site accent color.
+- Dark mode inverts and hue-rotates the tile pane; markers sit in a pane above it.
+- Positions are rounded to ~0.7 miles, which the page says plainly.
 
-## Colophon (`/colophon`)
+## Timeline
 
-A "how this is built" page, linked from the footer. **The prose lives in
-`content/colophon.md`** — edit that, not the page component (same arrangement as
-`content/projects.md`; `title`, `lead`, and `description` come from its frontmatter).
+`/timeline` is one row per day merging five streams: scrobbles, saved articles, books
+started/finished, published posts, photos taken. Nothing new is stored — it fetches the same
+`/listening.json` and `/reading.json` bundles and merges them against build-time posts and photos
+(`src/lib/timeline.ts`).
 
-Above it sits a row of counters: posts, words, and photos are counted at **build time**
-from the same content the pages render from; scrobbles, books, and articles are fetched in
-the browser from the two Workers when the page loads. Each live tile renders only once its
-number lands, so a Worker being down costs the page three tiles and nothing else.
+- **Depth is set by the listening days**, the densest stream and the only one worth a cursor.
+  Everything else is filtered into that window; "load older" pulls another block. Once listening is
+  exhausted the rest of the history shows — currently ~77 rows back to 2015.
+- A day with no scrobbles still gets a row if anything else happened.
+- **Photos appear from 2026 on** only, since placing one on a day needs a real capture date.
+- **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles
+  into US Central days while articles bucket in the viewer's zone, so the two disagree at the
+  margins far from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
 
-### Numbers in the prose
+## Blog index
 
-The body can quote the build-time counts, substituted by `fillTemplate` in
-`src/lib/colophon.ts` before the Markdown is rendered. Two forms, and deliberately no more —
-it's a fill-in-the-blanks step, not a template language:
+`/blog` is grouped into year sections; rows show only month and day (the `datetime` attribute
+carries the full date). The filter above matches title, summary, tag, or date — every
+whitespace-separated term must match, so "music 2019" narrows.
+
+Matching is a substring scan over a map built from the posts already on the page: ~35 posts needs
+no index, no dependency, no fetch. With JavaScript off the input goes inert and the full list is
+still there in the prerendered HTML.
+
+## Colophon
+
+`/colophon` prose lives in **`content/colophon.md`** — edit that, not the page component (`title`,
+`lead`, `description` come from its frontmatter; same arrangement as `content/projects.md`).
+
+Counters above it: posts, words, and photos are counted at build time; scrobbles, books, and
+articles are fetched from the Workers in the browser. Each live tile renders only once its number
+lands, so a Worker being down costs three tiles and nothing else.
+
+**Numbers in the prose** are substituted by `fillTemplate` in `src/lib/colophon.ts`. Two forms,
+deliberately no more:
 
 ```markdown
 {{photos}} photographs spanning {{years}} years…
@@ -367,120 +322,89 @@ it's a fill-in-the-blanks step, not a template language:
 {{/located}}
 ```
 
-- Available keys: `posts`, `words`, `photos`, `years`, `located` — whatever `ColophonData`
-  carries. Numbers are thousands-separated. `posts` and `words` also feed the tiles, so they
-  stay defined whether or not the prose quotes them.
-- `{{#key}}…{{/key}}` keeps its contents only when that count is non-zero. That exists
-  because "0 of them carry a location" is a sentence that shouldn't be published — a repo
-  whose photos carry no EXIF just doesn't get that paragraph.
-- An unknown placeholder is **left in the text**, not blanked, so a typo shows up as
-  `{{photoss}}` the first time you preview the page rather than quietly deleting half a
-  sentence.
-- Root-relative links in the body render as client-side `<Link>`s; external ones are plain
-  anchors.
+- Keys: `posts`, `words`, `photos`, `years`, `located`. Numbers are thousands-separated.
+- `{{#key}}…{{/key}}` keeps its contents only when that count is non-zero, so "0 of them carry a
+  location" never publishes.
+- An unknown placeholder is **left in the text**, so a typo shows as `{{photoss}}` rather than
+  silently deleting a sentence.
+- Root-relative links render as client-side `<Link>`s.
 
-### Where the live numbers come from
+Live numbers: scrobbles come from `/now.json` (Last.fm's own all-time total, no `COUNT(*)`) — the
+field is optional in `NowState` so an older Worker reads as absent rather than zero. Books and
+articles come from `/reading.json`. Photo counts are the length of `src/lib/photos.json`.
 
-- Scrobbles come from the listening Worker's `/now.json`, which already carries Last.fm's
-  own all-time total — no `COUNT(*)`, and the smallest endpoint on the site. The field is
-  optional in `NowState` so a Worker deployed before it existed reads as *absent* rather
-  than as zero.
-- Books and articles come from `/reading.json` (the counts aren't on the reading Worker's
-  smaller endpoint).
-- Photo counts are just the length of `src/lib/photos.json` — one flat list, nothing to
-  double-count.
+## Homepage
 
-## Reading (`/reading`)
+Static except for three things: the now-playing bar (polls `/now.json` every 60s), a 90-day
+sparkline, and an "on this day" line from `/on-this-day.json`. All three render nothing until their
+fetch lands, and nothing at all if it fails. Below that, the four newest photographs, labeled with
+capture day or year.
 
-The `/reading` page shows books (from [hardcover.app](https://hardcover.app)) and
-articles, with cover art and social cards. Same shape as `/listening`: a standalone
-Cloudflare Worker (`worker-reading/`) owns the data and the page fetches a JSON
-bundle in the browser.
+## Social cards
 
-- **Books** are synced from Hardcover's GraphQL API on a daily cron into D1. The
-  sync is a full replace, so the first run imports the entire history — there is no
-  backfill script to run.
-- **Articles** are pushed to an authenticated `POST /ingest` on the Worker, which
-  fetches the page's `og:` metadata and social card and logs it. Saved from an
-  iOS/macOS share-sheet Shortcut or a desktop bookmarklet — one tap from any app.
-- **Images** (covers + social cards) are mirrored into the same R2 bucket as the
-  photos, under `images/reading/`. Because those objects are referenced from D1
-  rather than from the repo, `scripts/prune-r2.mjs` carries a `PROTECTED_PREFIXES`
-  guard so `images:prune` can never delete them.
-- **Terminal view:** `curl reading.cailinpitt.com` renders the same data as an
-  ANSI page, like `/listening` does. Dispatch is on User-Agent, so `/reading.json`
-  is unaffected; `?T` turns off color.
-- **Setup, design notes, and how to test each piece separately:** see
-  [`worker-reading/README.md`](worker-reading/README.md).
-- **Check the Hardcover query without deploying:** `npm run reading:probe`
-  (needs `HARDCOVER_TOKEN` in `.env`).
-- **API base URL:** set `VITE_READING_API` at build time (defaults to
-  `https://reading.cailinpitt.com`).
+Every prerendered page gets a 1200×630 card at `/og/<path>.jpg`, written by
+`scripts/generate-og.mjs` during `postbuild`.
 
-## Guestbook (`/guestbook`)
+```bash
+npm run og                          # re-run against an existing dist/
+npm run og -- --only /blog/…        # one page
+npm run og -- --out .og-preview     # write somewhere safe to look at
+```
 
-Anyone can sign it: name and message required, website and location optional, plus a
-country flag derived from the request (no field to fill in). Same shape as the other
-two activity pages — a standalone Cloudflare Worker (`worker-guestbook/`) owns the
-data and the page fetches JSON in the browser — except this is the one endpoint on
-the site that accepts **writes from the public**.
+- **Two layouts.** Pages with a photograph get it full-bleed under an ink scrim; everything else
+  gets the paper card — paper/ink palette, clay spine, title and description between hairlines.
+- **Copy comes from the built HTML** (`og:title`, `og:description`), so a card can't drift from its
+  page. Page-only details (kicker, date, which photo) come through a `<meta name="og-card">` hint
+  emitted by `<Seo card={{…}}>`.
+- **Photographs are fetched from R2** at build time, falling back to `public/images`. A photo that
+  can't be fetched falls back to the paper card rather than failing the deploy.
+- **Type is Source Serif 4 + Inter**, not the site's own fonts, which a Linux runner lacks. They
+  ship as `.woff` in `node_modules`; satori converts glyphs to paths.
+- Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the script.
+  **They must agree** or pages point at a 404.
 
-- **Moderation** is after the fact, from the repo root:
+## RSS feed
 
-  ```sh
-  npm run guestbook:list                    # 50 newest entries, with ids
-  npm run guestbook:list -- --limit 200     # more
-  npm run guestbook:rm -- <id> [<id> ...]   # delete, one or many
-  ```
+`scripts/generate-rss.mjs` writes a full-content RSS 2.0 feed at `/feed.xml` during `postbuild`
+(`npm run rss` re-runs it). Autodiscovery is in `index.html` on every page.
 
-  `list` prints the id first on each line — that is what you paste into `rm`. It also
-  tags repeats from a single IP hash (`[4x from 1a7c07a3]`), which is how a flood
-  shows up when it is wearing ten different names. Both need `GUESTBOOK_ADMIN_TOKEN`
-  in `.env`, matching the Worker's `ADMIN_TOKEN` secret. **Deleting is immediate and
-  permanent** — there is no pending state and no trash.
-- **Entries publish instantly.** What makes that affordable is a layered write path —
-  origin check, hidden honeypot field, [Turnstile](https://www.cloudflare.com/products/turnstile/),
-  validation, per-IP limits (3/hour, 10/day), and a global 60/hour circuit breaker.
-  Turnstile is the load-bearing one and fails closed, so an outage makes the guestbook
-  read-only rather than open. Its script loads only once someone starts filling in the
-  form, so readers never pay for it.
-- **Deleting an entry returns that IP's hourly quota**, because the rate limit counts
-  rows. Handy for testing; worth knowing it means deletion won't slow a persistent
-  signer down.
-- **Terminal view:** `curl guestbook.cailinpitt.com`, like `/listening` and `/reading`.
-- **Setup, the full write path, and the privacy design:** see
-  [`worker-guestbook/README.md`](worker-guestbook/README.md).
-- **API base URL:** set `VITE_GUESTBOOK_API` at build time (defaults to
-  `https://guestbook.cailinpitt.com`). The Turnstile **site** key is public and lives
-  in `src/lib/guestbook.ts` and `worker-guestbook/wrangler.jsonc`; keep the two in sync.
+- **Item bodies are lifted from the prerendered HTML** (`<div class="post-body">`), not re-rendered
+  from markdown, so the feed can't drift from the page.
+- **Root-relative URLs are made absolute.** Post images are already absolute R2 URLs.
+- **The 20 most recent posts** carry full text (`MAX_ITEMS`); older ones stay at `/blog`.
+- **`lastBuildDate` is the newest post's date, not the build time** — every deploy rewrites the
+  file, and a moving timestamp would keep claiming there's something new.
 
-## Photos (`/photos`)
+## Search (⌘K)
 
-One feed, Instagram-style: every photograph on the site in a single three-column grid of
-squares, newest first, with no pagination and no infinite scroll. There are no galleries —
-`/2019`, `/latest`, `/past-work` and the rest are gone, and those URLs now 404.
+A command palette on every page — **⌘K** / **Ctrl-K**, **/** when not typing, or the header
+magnifier. Jumps to any page, post, photo year, or tag.
 
-- **Every photo has its own page** at `/photos/<id>` — prerendered like everything else, with
-  the photograph at full size, its date, camera and settings, a link to the map when it has
-  coordinates, and previous/next links (←/→ also page through the feed). The old
-  `/2019?photo=12` lightbox is gone; a frame is a page now, so it can be linked and shared.
-- **The whole feed is in the prerendered HTML.** ~500 lazy-loaded `<img>` tags gzip to about
-  20 KB, which buys a page that works with JavaScript off, that Cmd-F can search, and whose
-  year anchors (`/photos#y2019`, what the palette's year entries point at) are real links.
-  The loader data carries only what a tile needs — no EXIF, no dates — since that would double
-  it for nothing.
-- **Ordering** is by year, then by date within the year. Year leads because a pre-2026 date can
-  be a recovered *upload* time that landed in the following year; see
-  [Dates before 2026](#dates-before-2026).
-- **The social card for a photo page is the photograph itself.** `<Seo image>` names it directly,
-  and `scripts/generate-og.mjs` skips any page that brings its own `og:image` — otherwise a
-  deploy would render ~500 cards, which is most of a build for no gain.
+- **The index is compiled in, not fetched.** The `cailinpitt:site-index` Vite plugin reads
+  `content/blog/*.md` at build time and inlines path/title/date/tags as `virtual:site-index` — ~100
+  bytes per post, no request. Bodies are never included. The same module carries photo years, plus
+  (prerenderer only) every photo id; the browser build gets an empty list. It uses the site's own
+  `src/lib/frontmatter.ts`, so it can't disagree with the rendered pages.
+- Adding a post needs nothing here. Dev invalidates the module on changes under `content/blog/`.
+- **Pages are listed by hand** in `PAGES` in `src/components/CommandPalette.tsx` — a new route
+  needs adding there (years and tags are derived). `tests/command-palette.test.ts` holds the list
+  against `App.tsx` in both directions.
+- It's a native `<dialog>` opened with `showModal()`, so focus trapping and Escape come free.
+
+## Color theme
+
+Light/dark follows `prefers-color-scheme`; the header toggle cycles System → Light → Dark, stores
+the choice in `localStorage`, and applies `data-theme` on `<html>`. An inline script in
+`index.html` applies a stored choice before first paint.
+
+Two media-scoped `<meta name="theme-color">` tags match the **page background**, not the accent, so
+browser chrome reads as an extension of the paper. A media query can't see a manual override, so
+`ThemeToggle` rewrites both tags with the resolved `--bg` when a theme is forced. The value is read
+from the stylesheet rather than duplicated in JS, which is why it happens after mount — in the
+pre-paint script the CSS isn't loaded and `--bg` reads empty. Cost: an overridden theme keeps the
+media-matched tint for the first few frames.
 
 ## Publishing a photo from your phone
-
-Share sheet → Shortcut → the photo is on the site a couple of minutes later, with its own
-page. The same idea as the article Shortcut behind `/reading`, except this one ends in a
-**commit** rather than a database row.
 
 ```
 Shortcut → POST photos.cailinpitt.com/ingest → R2 (private originals bucket)
@@ -488,152 +412,55 @@ Shortcut → POST photos.cailinpitt.com/ingest → R2 (private originals bucket)
 ```
 
 - **`worker-photos/` is deliberately thin**: authenticate, check the file, store it, fire a
-  dispatch. It takes the photo either as a multipart `photo` field or as the raw request body,
-  because Shortcuts switches between the two on its own, and reads the alt text and date from
-  form fields, `X-Photo-*` headers, or the query string — whichever the caller found easiest. It can't do more — renditions need `sharp`, which doesn't run in a Worker, and the
-  manifest is a file in git. The build has both, and already knows how to do this.
-- **The build runs the ordinary pipeline.** `scripts/ingest-photos.mjs --fetch` pulls the
-  pending uploads into `originals/<year>/`, and from there it's `images:sync` →
-  `images:upload` → `--finish` — the same commands you'd run at the laptop. There is no second
-  code path that publishes a photo, only a second way of getting files into `originals/`.
-  `--finish` applies the alt text the Shortcut sent (the one thing sync can't know), archives
-  the original, and clears the queue.
-- **The price is that publishing takes a deploy, not a second.** The payoff is that a phone
-  photo is the same kind of photo as any other: prerendered, permalinked, with a social card.
-  A live-from-a-database feed would have published instantly and had none of that.
-- **The URL is known before the build starts.** The Worker mints the filename, and the id
-  scheme is `<year>-<filename>`, so `/ingest` can hand the Shortcut the finished permalink to
-  put in its notification.
-- **Originals go to a second, private bucket** (`cailinpitt-photo-originals`), never the public
-  one. An original carries full-precision GPS, which is exactly what the ~0.7 mile rounding
-  exists to withhold. The build archives them there under `originals/<year>/`; pull them back
-  down with `npm run photos:pull`.
-- **A lost dispatch loses nothing.** The workflow also runs hourly, so a photo sitting in
-  `incoming/` is picked up either way.
-- **Setup, the API, the Shortcut recipe, and how to test each half separately:** see
-  [`worker-photos/README.md`](worker-photos/README.md).
-
-## Photo map (`/photos/map`)
-
-Plots every photo that carries a location — i.e. the 2026 ones, since the coordinates come
-from the EXIF that `images:sync` records. Photos sharing a rounded coordinate collapse into
-one pin, and each popup links to that photo's page.
-
-- **Leaflet** (BSD-2-Clause, bundled from npm — no CDN) with raster tiles from
-  **OpenStreetMap**. Both are free with no account, no API key, and no billing to
-  misconfigure; the attribution line the tile policy requires is on the map.
-- Leaflet reads `window` on import, so it's pulled in inside the effect rather than at
-  module scope — the page shell prerenders like any other and the map fills in after
-  mount. Vite splits it into its own JS **and** CSS chunk, so no other page loads it.
-- Pins are `circleMarker`s (drawn, not images), which sidesteps Leaflet's bundler-hostile
-  default marker icon URLs and lets them take the site's accent color.
-- In dark mode the tile pane is inverted and hue-rotated, since OSM's tiles are drawn for
-  light backgrounds. Markers live in a pane above it and keep their real color.
-- Positions are rounded to ~0.7 miles (see [above](#add-photos)), which the
-  page says plainly — a pin marks a neighborhood, not a spot.
-
-## Timeline (`/timeline`)
-
-One row per day, merging all five activity streams: scrobbles, saved articles, books
-started/finished, published posts, and photos taken. Nothing new is stored — the page
-fetches the same `/listening.json` and `/reading.json` bundles the other two pages use
-and merges them in the browser against the posts and photos compiled into the build
-(`src/lib/timeline.ts`).
-
-- **How far back it goes** is set by the listening days, the densest stream and the only
-  one worth a real cursor. Everything else is filtered into that window, and "load older"
-  pulls another block of days and tops the other streams up to match. Once listening is
-  exhausted there's no floor and the rest of the history shows — currently ~77 rows back
-  to 2015.
-- **A day with no scrobbles still gets a row** if anything else happened on it. The
-  listening days seed the timeline; they don't limit it.
-- **Photos only appear from 2026 on**, since placing one on a day needs a real capture date
-  and everything older carries only an approximate one (see [above](#dates-before-2026)).
-  Each thumbnail links to that photo's page.
-- **Day bucketing is inherited from each stream, not recomputed** — the Worker groups
-  scrobbles into US Central days while articles bucket in the viewer's zone, so the two
-  disagree at the margins for a visitor far from Central. See the note at the top of
-  `src/lib/datetime.ts`; it's a property of the data, not something this page can fix.
-
-## Social cards
-
-Every prerendered page gets its own 1200×630 Open Graph card at `/og/<path>.jpg`, written by
-`scripts/generate-og.mjs` as part of `postbuild` (`npm run og` re-runs it against an existing
-`dist/`; `npm run og -- --only /blog/…` does a single page, and `--out .og-preview` writes
-somewhere you can look at without touching the build).
-
-- **Two layouts.** Pages with a photograph — blog posts with images, the photo feed — put it
-  full-bleed under an ink scrim with the title over it. Everything else gets the paper card:
-  the site's paper/ink palette, a clay spine off the left edge, the title and description
-  between two hairline rules.
-- **Copy comes from the built HTML.** The script reads each page's own `og:title` and
-  `og:description` rather than re-deriving them, so a card can't drift from the page it
-  belongs to. Anything only the page knows — its kicker, its date and reading time, which
-  photo to use — `<Seo card={{…}}>` emits as a `<meta name="og-card">` hint for the script
-  to pick up (`src/components/Seo.tsx`).
-- **Photographs are fetched from R2** at build time, falling back to a local `public/images`
-  copy when there is one. If a photo can't be fetched the page quietly gets the paper card
-  instead — a broken image URL doesn't fail a deploy.
-- **Type is Source Serif 4 + Inter**, not the site's own Iowan Old Style/`system-ui`, which a
-  Linux runner doesn't have. They ship as `.woff` in `node_modules`, so no font binaries live
-  in the repo; satori converts glyphs to paths, so nothing needs fonts at render time.
-- Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the
-  script. They must agree, or pages point at a 404.
+  dispatch. It accepts the photo as a multipart `photo` field or as the raw body, and reads alt text and date from form fields, `X-Photo-*`
+  headers, or the query string. It can't do more — renditions need `sharp`, which doesn't run in a
+  Worker, and the manifest is a file in git.
+- **The build runs the ordinary pipeline.** `scripts/ingest-photos.mjs --fetch` pulls pending
+  uploads into `originals/<year>/`, then it's `images:sync` → `images:upload` → `--finish`. There
+  is no second code path that publishes a photo, only a second way of getting files into
+  `originals/`. `--finish` applies the Shortcut's alt text, archives the original, clears the queue.
+- **Publishing takes a deploy, not a second.** In exchange a phone photo is the same kind of photo
+  as any other: prerendered, permalinked, with a social card.
+- **The URL is known before the build starts** — the Worker mints the filename and ids are
+  `<year>-<filename>`, so `/ingest` returns the finished permalink for the notification.
+- **Originals go to a private bucket** (`cailinpitt-photo-originals`), never the public one, since
+  they carry full-precision GPS. Pull them back with `npm run photos:pull`.
+- **A lost dispatch loses nothing** — the workflow also runs hourly.
+- Setup, API, and the Shortcut recipe: [`worker-photos/README.md`](worker-photos/README.md)
 
 ## Tests
 
-`npm test` (vitest, no config file — it picks up `vite.config.ts`, so the `virtual:site-index`
-plugin and `import.meta.glob` resolve the same way they do in a build). Everything lives in
-`tests/`, runs in well under a second, and touches no network, no `dist/`, and no images.
+`npm test` (vitest, no config file — it picks up `vite.config.ts`, so `virtual:site-index` and
+`import.meta.glob` resolve as they do in a build). Everything is in `tests/`, runs in under a
+second, and touches no network, no `dist/`, and no images.
 
-That last part is the rule the suite is built around: **a test has to pass on a fresh clone.**
-`public/images/` and `originals/` are gitignored, so CI has no photographs — which is also why
-`npm run images:check` is *not* in the workflow. It would report every blog image as missing on
-disk and fail every build. Run it locally, where the files exist.
+**A test has to pass on a fresh clone.** `public/images/` and `originals/` are gitignored, so CI
+has no photographs — which is why `npm run images:check` is *not* in the workflow. It would report
+every blog image as missing. Run it locally.
 
-What's covered, and why each one:
+| Test | Guards against |
+|---|---|
+| `frontmatter`, `posts`, `tags`, `colophon` | Silent failures in the pure functions: a tag slug that stops collapsing casing splits one tag into two pages; a broken `{{#located}}` publishes "0 of them carry a location"; a word counter that counts iframes calls a photo essay a 12 minute read |
+| `content` | Frontmatter facts the build trusts: duplicate `path` (posts prerender over each other), a `path` whose date disagrees with `date:`, a mistyped `tags:` arriving as a string. Padding-agnostic, since one post is at `/blog/2026/8/01/…` |
+| `guestbook-validate` | The one piece of code deciding what a stranger may store. Lives in `worker-guestbook/`, which has no test setup, but it's pure |
+| `command-palette` | The hand-written page list vs. the router, both directions |
+| `photos` | The two rules the feed can't get wrong: ids are permanent public URLs (slugging + collision suffix pinned), and order is year then date. Tests `scripts/photo-manifest.mjs` against the site's own sort and checks they agree. Also pins what `photos:rm` considers part of a photo |
 
-- **`frontmatter`, `posts`, `tags`, `colophon`** — the pure functions the whole build leans on.
-  These fail quietly rather than loudly: a tag slug that stops collapsing casing splits one tag
-  into two pages, a broken `{{#located}}` section publishes "0 of them carry a location", and a
-  word counter that starts counting iframes tells a photo essay it's a 12 minute read. Nothing
-  about a green build would look wrong.
-- **`content`** — the posts on disk, checked for the frontmatter facts the build trusts without
-  verifying: two posts sharing a `path` silently prerender over each other, a `path` whose date
-  disagrees with `date:` puts a post at a URL contradicting itself, and a mistyped `tags:` array
-  arrives as a string. The path check is padding-agnostic, since one post is at `/blog/2026/8/01/…`
-  rather than the usual unpadded `/8/1/`.
-- **`guestbook-validate`** — the one piece of code that decides what a stranger may store. It
-  lives in `worker-guestbook/`, which has no test setup of its own, but it's pure, so it's
-  tested from here.
-- **`command-palette`** — the hand-written page list, held against the router (see [Search](#search-k)).
-- **`photos`** — the two rules the feed can't get wrong: a photo's `id` is a public URL that must
-  never move (so the slugging and its collision suffix are pinned), and the feed's order is year
-  first, date second. It tests `scripts/photo-manifest.mjs` — the sync script's date/id rules,
-  extracted so they're testable without touching disk — alongside the site's own sort, and checks
-  the two agree, because a manifest written in one order and rendered in another would put photos
-  in the wrong place with nothing looking broken. It also pins what `photos:rm` considers part of
-  a photo — miss a rendition and R2 keeps an orphan, miss the original and the photo comes back.
-
-The workflow runs `typecheck` → `test` → `build`, so a broken invariant stops a deploy rather
-than shipping.
+CI runs `typecheck` → `test` → `build`, so a broken invariant stops the deploy.
 
 ## Deploy
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and publishes to
-GitHub Pages. In the repo: **Settings → Pages → Source = GitHub Actions**. The custom domain is
-set via `public/CNAME`.
+Push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. Repo settings
+need **Settings → Pages → Source = GitHub Actions**; the custom domain comes from `public/CNAME`.
 
-The four Workers deploy **separately** and are not part of that pipeline — a push to
-`main` never touches them. Each is its own package, deployed by hand from its directory:
+The four Workers deploy **separately** — a push to `main` never touches them:
 
 ```sh
-cd worker && npm run deploy            # listening.cailinpitt.com
+cd worker-listening && npm run deploy  # listening.cailinpitt.com
 cd worker-reading && npm run deploy    # reading.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
 cd worker-photos && npm run deploy     # photos.cailinpitt.com
 ```
 
-There is a second workflow, `.github/workflows/ingest-photos.yml`, which commits photos sent
-from the phone — see [Publishing a photo from your phone](#publishing-a-photo-from-your-phone).
-It pushes to `main`, so it ends by triggering the deploy above.
+`.github/workflows/ingest-photos.yml` commits photos sent from the phone and pushes to `main`,
+triggering the deploy above.

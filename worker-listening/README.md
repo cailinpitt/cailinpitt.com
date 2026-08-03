@@ -1,0 +1,175 @@
+# Listening API (Cloudflare Worker)
+
+Backs [`cailinpitt.com/listening`](https://cailinpitt.com/listening). Ingests Last.fm scrobbles
+into D1 on a cron and serves a precomputed JSON bundle from KV.
+
+| File | What it does |
+|---|---|
+| `src/index.ts` | `scheduled` (cron ingest + recompute) and `fetch` (read API) |
+| `src/lastfm.ts` | Last.fm `user.getRecentTracks` client |
+| `src/stats.ts` | D1 → stat windows, heatmap, daily logs |
+| `src/text.ts` | the `curl listening.cailinpitt.com` view |
+| `schema.sql` | the `scrobbles` table |
+
+## Endpoints
+
+- `GET /listening.json` — the full bundle (now-playing, 7d/30d stats, heatmap, recent days)
+- `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination
+- `GET /now.json` — now-playing only; uncached
+- `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
+
+## Setup
+
+From this directory (`npm install`, `wrangler login` first):
+
+```bash
+# 1. Create the datastores; paste the printed ids into wrangler.jsonc
+wrangler d1 create cailinpitt-listening
+wrangler kv namespace create LISTENING
+
+# 2. Schema
+npm run schema:remote
+
+# 3. Secret (value is in the repo-root .env)
+wrangler secret put LASTFM_API_KEY
+
+# 4. Backfill history — writes a .sql file, then load it
+cd .. && node scripts/backfill-listening.mjs && cd worker-listening
+wrangler d1 execute cailinpitt-listening --remote --file=../scripts/backfill.sql
+
+# 5. Deploy (cron + route come from wrangler.jsonc)
+npm run deploy
+```
+
+Then set `VITE_LISTENING_API` at build time on the site (defaults to
+`https://listening.cailinpitt.com`).
+
+**Local development:**
+
+```bash
+echo 'LASTFM_API_KEY=…' > .dev.vars   # gitignored
+wrangler dev --remote                 # --remote uses the real D1/KV
+```
+
+## Staying on the free tier
+
+The cron fires every minute, but only the cheap work runs that often:
+
+| Cadence | Work | Cost |
+|---|---|---|
+| 1 min | fetch Last.fm, `INSERT OR IGNORE`, refresh now-playing | no table scans; **KV write only when the track changed** |
+| 15 min | recompute 7d/30d windows + recent daily logs | in-window rows only — **but only because of `INDEXED BY`**, see below |
+| 6 h | recompute the year heatmap | ~one year of rows |
+| — | all-time total | free with each Last.fm response (`@attr.total`); never `COUNT(*)` |
+
+Reads are served from KV, so page loads never touch D1 or Last.fm.
+
+**KV writes are the tight budget, not reads.** The free tier allows 100,000 reads but only **1,000
+writes/day**, and the cron fires 1,440 times — so nothing on the per-minute path may write
+unconditionally. `ingest()` reads `now:v1` and rewrites it only when the observable state
+(now-playing, last-played, total) differs; `updatedAt` is excluded from the comparison or every run
+would look changed. Budget: a few hundred writes/day for `now:v1`, 96 for `stats:v1`, 4 for
+`heatmap:v1`.
+
+### Four rules for changing anything here
+
+Both expensive mistakes in this file were made by measuring *after* deploying.
+
+**1. `GROUP BY artist` needs `INDEXED BY`.** It matches `idx_scrobbles_artist` exactly, so SQLite
+plans `SCAN scrobbles USING INDEX idx_scrobbles_artist` — a full ~101k-row scan that **ignores the
+`uts` range in the WHERE clause**. The query looks windowed and isn't. At the 15-minute cadence
+that measured **22.5M rows/day against a 5M/day budget**, silently. Pin the range index:
+
+```sql
+FROM scrobbles INDEXED BY idx_scrobbles_uts WHERE uts >= ?1 GROUP BY artist
+```
+
+That gives `SEARCH scrobbles USING INDEX idx_scrobbles_uts (uts>?)` and 3,492 rows for the same
+30-day result — 29× less. Album and track queries group on unindexed columns, so they already range
+scan correctly. **Check `EXPLAIN QUERY PLAN` before deploying any new aggregate.** "SCAN … USING
+INDEX" over a windowed query means the window isn't being used.
+
+**2. 50 D1 queries per invocation is a real ceiling**, and `batch()` counts each statement
+separately. Ingest once sent one `INSERT OR IGNORE` per scrobble — measured at 70,258 insert
+statements in 24h to write 428 rows, ~49 per tick, with the refreshes tipping some ticks over.
+Ingest now filters to scrobbles newer than the last one seen (with an hour of overlap, free because
+`INSERT OR IGNORE`) and packs the rest into multi-row inserts. **100 bound parameters per query** is
+a hard D1 limit, so 6 columns means 16 rows per statement. A normal tick is now zero or one.
+
+**3. Aggregate in the Worker when the window is small.** 7d/30d used to be nine queries re-reading
+the same rows. The 30-day window is ~1,600 rows and strictly contains both the 7-day window and the
+log rows, so `computeStats()` fetches it once and folds all three out in JS — one query, ~1.6k rows
+instead of ~10k. If you change `windowStats()`, re-verify against the SQL it replaced:
+`COUNT(DISTINCT album)` counts album *names*, not name+artist, and it's easy to "fix" that into a
+discrepancy.
+
+**4. Two things that look cheap and aren't:** `SELECT COUNT(*)` over the archive reads ~100k rows
+(at the 15-minute cadence that blows past 5M/day), and a per-tick counter key in KV costs a write
+every time it moves.
+
+### Freshness by piece
+
+| Piece | Blob | Behind by |
+|---|---|---|
+| now-playing / last-played | `now:v1` | ~1 min |
+| daily log (`recentDays`) | `stats:v1` + `now:v1` | ~1 min |
+| 7d/30d windows | `stats:v1` | up to 15 min |
+| heatmap | `heatmap:v1` | up to 6 h |
+
+`recentDays` would naturally inherit `stats:v1`'s 15-minute cadence, which made the log lag the
+now-playing bar by ~20 minutes. Instead `now:v1` carries the tail of the Last.fm response
+(`recent`), and `mergeRecent()` splices anything newer than the log's newest entry in on read. This
+is free — ingest already fetches those scrobbles and already writes that blob.
+
+Re-grouping in `mergeRecent()` is safe because `groupDays()` derives `count` from the tracks it's
+handed and `recentDays` always holds every track for its days; filtering on `uts` keeps it
+idempotent. **Anything reading `now:v1` must treat `recent` as optional** — older blobs don't have
+it, and the cron only rewrites on a real change.
+
+### The edge cache
+
+Cloudflare doesn't cache Worker-generated responses on its own, so every request used to execute
+the Worker and pay 3 KV reads — capping the free tier at ~33k requests/day (100k ÷ 3), below the
+100k Workers limit. `/listening.json`, `/days` and the terminal view now go through `caches.default`
+with a 60s TTL.
+
+Two things the cache key must account for:
+
+- **The variant is folded into the key URL**, because one path produces two bodies — `/` is the
+  terminal view for curl and a 302 for browsers.
+- **CORS headers are never stored.** They vary by `Origin`, so the cached body is origin-independent
+  and `withCors()` re-applies the right header per request. Storing them would serve one visitor's
+  `access-control-allow-origin` to everyone behind that cache entry.
+
+`/now.json` is deliberately uncached: one KV read, and the one endpoint whose staleness is visible.
+
+## Terminal view
+
+```bash
+curl listening.cailinpitt.com          # 7-day window, color
+curl listening.cailinpitt.com?T        # no color
+curl listening.cailinpitt.com?w=30d    # 30-day window
+```
+
+The wttr.in trick: an 80-column ANSI page instead of JSON. Dispatch is on User-Agent (`curl`,
+`wget`, `httpie`, `xh`, …) and only on `/` and `/listening` — `*.json` paths always return JSON, so
+scripts piping into `jq` are unaffected. Color is on by default because curl can't tell the server
+it's a TTY; `?T` opts out.
+
+A browser on those paths gets a **302 with `no-store`** — deliberately not permanent or
+shared-cacheable, since the response varies by User-Agent and a cached redirect could later be
+replayed to a client that wanted the terminal view. Only the text variant is written to the edge
+cache, keyed `__variant=text`.
+
+Two rendering details that are easy to regress:
+
+- Pad with `fit()` only for columns with something to their right. On a line's last field the
+  padding lands *inside* the ANSI color wrap, where `trimEnd()` can't reach it.
+- The 30-day sparkline takes `max(heatmap, recentDays)` per day. The heatmap recomputes every 6h, so
+  on its own it draws today — the cell people look at first — as empty.
+
+## Timezone
+
+Days are bucketed with a fixed offset (`TZ_OFFSET_SECONDS` in wrangler.jsonc): `-18000` = US
+Central Daylight (UTC-5), `-21600` for standard time. A fixed offset can misplace a scrobble by an
+hour at a DST switch.

@@ -5,7 +5,7 @@
 // It pages through user.getRecentTracks (oldest kept as-is) and writes a single
 // SQL file of batched `INSERT OR IGNORE` statements. Load it into D1 with:
 //
-//   cd worker
+//   cd worker-listening
 //   wrangler d1 execute cailinpitt-listening --remote --file=../scripts/backfill.sql
 //
 // Resumable: progress is checkpointed after every page to <out>.progress.json, and
@@ -159,7 +159,7 @@ const saveProgress = (p) => writeFile(PROGRESS, JSON.stringify(p), 'utf8')
 function printLoadInstructions(written) {
   console.log(`\n✓ Done — ${written.toLocaleString()} rows in ${path.relative(ROOT, OUT)}`)
   console.log('\nLoad it into D1 with:')
-  console.log(`  cd worker`)
+  console.log(`  cd worker-listening`)
   console.log(`  wrangler d1 execute cailinpitt-listening --remote --file=../${path.relative(ROOT, OUT)}`)
 }
 

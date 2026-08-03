@@ -7,15 +7,9 @@ node_modules/
 dist/
 *.local
 
-# Cloudflare Worker (listening + reading + guestbook APIs) build/runtime artifacts
-worker/.wrangler/
-worker/.dev.vars
-worker-reading/.wrangler/
-worker-reading/.dev.vars
-worker-guestbook/.wrangler/
-worker-guestbook/.dev.vars
-worker-photos/.wrangler/
-worker-photos/.dev.vars
+# Cloudflare Worker build/runtime artifacts + local secrets, for every worker-*/
+worker-*/.wrangler/
+worker-*/.dev.vars
 
 # Hand-off file between the two halves of scripts/ingest-photos.mjs, written and
 # deleted inside a single CI run.

@@ -11,7 +11,7 @@
 // `formatDayLabel` takes a YYYY-MM-DD key that has already been bucketed —
 // client-side from local timestamps on /reading, server-side by the listening
 // Worker (which groups scrobbles into US Central days; see TZ_OFFSET_SECONDS in
-// worker/wrangler.jsonc). So it formats the key *as written*, in UTC, rather
+// worker-listening/wrangler.jsonc). So it formats the key *as written*, in UTC, rather
 // than reinterpreting it in some other zone and printing a different date than
 // the one it was handed. "Today"/"Yesterday" then compare that date against the
 // viewer's own calendar date, which is what makes those two words true for the
