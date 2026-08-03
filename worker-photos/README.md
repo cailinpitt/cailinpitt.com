@@ -67,17 +67,24 @@ The repo also needs these GitHub Actions **secrets**, which
 | `alt`   | no       | Alt text / caption, up to 500 chars. Replaces the default `Photograph — <year>`. |
 | `taken` | no       | The photo's creation date, e.g. `2026-08-02T15:42:33`. Decides the year folder and therefore the id — **not** the date the site shows, which is read from the file's own EXIF during the build. |
 
-**File** — the image as the raw request body, with `Content-Type: image/jpeg`
-and `alt` / `taken` as query parameters:
+**File** — the image as the raw request body, with `Content-Type: image/jpeg`.
+`alt` and `taken` then come from headers or query parameters:
 
 ```
-POST /ingest?taken=2026-08-02T15:42:33&alt=Golden%20hour
+X-Photo-Taken: 2026-08-02T15:42:33
+X-Photo-Alt:   Golden hour
+
+POST /ingest?taken=2026-08-02T15:42:33&alt=Golden%20hour     # or this
 ```
 
-Both are supported because Shortcuts' *Get Contents of URL* quietly switches its
-Request Body to **File** the moment you hand it an image, and the request that
-produces is perfectly reasonable — it just isn't multipart. Accepting only one of
-them made the endpoint fussy for no benefit.
+Both body shapes are supported because Shortcuts' *Get Contents of URL* quietly
+switches its Request Body to **File** the moment you hand it an image, and the
+request that produces is perfectly reasonable — it just isn't multipart.
+
+The headers work with *either* body shape, and are the easiest thing to set in
+Shortcuts: they go in the same Headers table as the bearer token, whereas a query
+parameter means hand-building the URL and thinking about escaping. A `photo`
+form field always wins over a header of the same name.
 
 ```json
 {
@@ -128,9 +135,15 @@ Share sheet → Photos. Seven actions:
      - `taken` → the formatted date from step 4
      - `alt` → the text from step 5
 
-   If Shortcuts insists on switching the body to **File**, let it: post the
-   image as the raw body and move `taken` and `alt` into the URL's query string
-   instead (`…/ingest?taken=…&alt=…`). The endpoint takes either.
+   **If Shortcuts switches the body to File, let it.** That's its default once
+   an image is the input. Leave the body alone and move the two details up into
+   the Headers table beside `Authorization`:
+
+   - `X-Photo-Taken` → the formatted date from step 4
+   - `X-Photo-Alt` → the text from step 5
+
+   Those headers work with the Form body too, so a Shortcut built this way keeps
+   working whichever shape Shortcuts decides to send.
 7. **Show Notification** with `url` from the response.
 
 ## Testing without a phone
@@ -147,9 +160,11 @@ curl -X POST http://localhost:8787/ingest \
   -F 'alt=A test photograph'
 
 # File (what Shortcuts sends when it decides the body is an image)
-curl -X POST "http://localhost:8787/ingest?taken=2026-08-02T15:42:33&alt=A%20test" \
+curl -X POST http://localhost:8787/ingest \
   -H "Authorization: Bearer $INGEST_TOKEN" \
   -H 'Content-Type: image/jpeg' \
+  -H 'X-Photo-Taken: 2026-08-02T15:42:33' \
+  -H 'X-Photo-Alt: A test photograph' \
   --data-binary @/path/to/photo.jpg
 ```
 

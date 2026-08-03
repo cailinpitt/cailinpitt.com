@@ -161,17 +161,30 @@ interface Upload {
 }
 
 /**
+ * `alt` and `taken` from wherever the caller found it easiest to put them: a
+ * query parameter, or an `X-Photo-Alt` / `X-Photo-Taken` header.
+ *
+ * The header form exists for Shortcuts. Its *Get Contents of URL* action has a
+ * Headers table right there — the one the bearer token already goes in — while
+ * putting a variable into a query string means hand-building the URL and
+ * worrying about escaping. Two more rows in a table you're already filling in is
+ * a much better ask.
+ */
+const detail = (name: string, request: Request, url: URL): string | null =>
+  asText(url.searchParams.get(name)) ?? asText(request.headers.get(`x-photo-${name}`))
+
+/**
  * Pull the photo out of the request, accepting the two shapes a Shortcut can
  * produce.
  *
  * **Form** — `multipart/form-data` with `photo`, `alt`, `taken` fields. The
  * tidy one, and what the README recommends.
  *
- * **File** — the image as the raw body, with `alt` and `taken` in the query
- * string. This exists because Shortcuts' "Get Contents of URL" quietly switches
- * its Request Body to *File* when you hand it an image, and the resulting
- * request is perfectly reasonable — it just isn't multipart. Rejecting it taught
- * nothing except that the endpoint was fussy, so it's supported.
+ * **File** — the image as the raw body, with `alt` and `taken` given as headers
+ * or query parameters. This exists because Shortcuts' "Get Contents of URL"
+ * quietly switches its Request Body to *File* when you hand it an image, and the
+ * resulting request is perfectly reasonable — it just isn't multipart. Rejecting
+ * it taught nothing except that the endpoint was fussy.
  */
 async function readUpload(request: Request, url: URL): Promise<Upload | Response> {
   const contentType = (request.headers.get('content-type') ?? '').toLowerCase()
@@ -194,8 +207,10 @@ async function readUpload(request: Request, url: URL): Promise<Upload | Response
       body: photo,
       type: photo.type,
       size: photo.size,
-      alt: asText(form.get('alt')),
-      taken: asText(form.get('taken')),
+      // A form field wins, but the header/query forms still work alongside one —
+      // so a Shortcut that switches its body shape doesn't have to be rebuilt.
+      alt: asText(form.get('alt')) ?? detail('alt', request, url),
+      taken: asText(form.get('taken')) ?? detail('taken', request, url),
     }
   }
 
@@ -205,8 +220,8 @@ async function readUpload(request: Request, url: URL): Promise<Upload | Response
       body,
       type: contentType.split(';')[0].trim(),
       size: body.size,
-      alt: asText(url.searchParams.get('alt')),
-      taken: asText(url.searchParams.get('taken')),
+      alt: detail('alt', request, url),
+      taken: detail('taken', request, url),
     }
   }
 
