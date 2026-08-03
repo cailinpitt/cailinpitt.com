@@ -14,6 +14,14 @@ export function resolveDate(input: {
   year: string
 }): { date: string; year: string; approx?: boolean }
 
+// Takes a whole manifest entry; only `src` and `thumb` are read, and the index
+// signature is what lets a caller pass the rest of the entry along with them.
+export function photoFiles(photo: {
+  src: string
+  thumb?: string
+  [key: string]: unknown
+}): { folder: string; stem: string; renditions: string[]; originalStem: string }
+
 export function byNewest(
   a: { id: string; year: string; date: string },
   b: { id: string; year: string; date: string },

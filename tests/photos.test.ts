@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { assignPhotoId, approxDateForYear, byNewest, resolveDate, slugify } from '../scripts/photo-manifest.mjs'
+import {
+  assignPhotoId,
+  approxDateForYear,
+  byNewest,
+  photoFiles,
+  resolveDate,
+  slugify,
+} from '../scripts/photo-manifest.mjs'
 import { byNewest as byNewestUi, formatPhotoDate, formatPhotoDateShort, photoNeighbors, photoYearBreaks, type Photo } from '../src/lib/photos'
 
 // The feed's two invariants: a photo's id is a URL that must never move, and its
@@ -151,5 +158,40 @@ describe('how a date is phrased', () => {
   it('labels an approximate photo with its folder year, not its date year', () => {
     const p = photo({ id: '2014-a', year: '2014', date: '2016-11-13T20:48:06', approx: true })
     expect(formatPhotoDate(p)).toBe('2014')
+  })
+})
+
+describe('what belongs to a photo', () => {
+  // npm run photos:rm deletes from this. Missing a rendition leaves an orphan in
+  // R2; missing the original means the next images:sync republishes the photo.
+  it('finds both renditions and the original stem', () => {
+    expect(
+      photoFiles({
+        id: '2026-img-1919',
+        src: '/images/2026/IMG_1919.webp',
+        thumb: '/images/2026/IMG_1919-1000.webp',
+      }),
+    ).toEqual({
+      folder: '2026',
+      stem: 'IMG_1919',
+      renditions: ['/images/2026/IMG_1919.webp', '/images/2026/IMG_1919-1000.webp'],
+      originalStem: 'IMG_1919',
+    })
+  })
+
+  it('takes the folder from the path, not from the year the photo is labeled', () => {
+    // A capture date can file a photo under a different year than its folder.
+    const files = photoFiles({
+      id: '2026-img-0001',
+      src: '/images/2026/IMG_0001.webp',
+      thumb: '/images/2026/IMG_0001-1000.webp',
+      year: '2025',
+    })
+    expect(files.folder).toBe('2026')
+  })
+
+  it('copes with a photo that has no thumbnail', () => {
+    const files = photoFiles({ id: '2014-x', src: '/images/2014/x.webp' })
+    expect(files.renditions).toEqual(['/images/2014/x.webp'])
   })
 })

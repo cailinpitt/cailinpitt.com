@@ -16,6 +16,7 @@
     "images:sync": "node scripts/sync-images.mjs",
     "photos:backfill": "node scripts/backfill-photo-dates.mjs",
     "photos:pull": "node scripts/pull-originals.mjs",
+    "photos:rm": "node scripts/photos-rm.mjs",
     "images:check": "node scripts/sync-images.mjs --check",
     "images:upload": "node scripts/upload-r2.mjs",
     "images:prune": "node scripts/prune-r2.mjs",

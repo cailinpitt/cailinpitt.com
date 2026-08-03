@@ -175,6 +175,29 @@ npm run images:prune               # list R2 objects nothing references (dry run
 npm run images:prune -- --delete   # …and delete them
 ```
 
+#### Removing a photo
+
+```sh
+npm run photos:rm -- 2026-img-1919                       # delete
+npm run photos:rm -- 2026-img-1919 --dry-run             # look first
+npm run photos:rm -- https://cailinpitt.com/photos/2026-img-1919   # a URL works too
+npm run photos:rm -- <id> <id> <id>                      # several at once
+```
+
+Five things belong to a photo — its manifest entry, its two renditions locally, the same two in
+R2, its original in `originals/`, and (if it came from the phone) the archived original in the
+private bucket. This removes all of them, then tells you to commit `src/lib/photos.json`. The
+same shape as `npm run guestbook:rm`: immediate, permanent, no trash.
+
+**The original goes too, and that isn't optional.** `images:sync` rebuilds renditions from
+whatever is in `originals/`, so a delete that spared the original would quietly republish the
+photo — at the same URL, since ids come from the filename — the next time anything synced. To
+keep the file, move it out of the repo *before* running this.
+
+An unknown id is an error rather than a silent no-op, and a missing archived original is only a
+warning: not every photo has one, and an R2 token scoped to just the public bucket can't see the
+private one either way.
+
 `images:prune` is what cleans up after photos switch to new renditions: the superseded objects
 stay in R2 otherwise. It compares the bucket against every `src`/`thumb` in the manifest and every
 `/images/...` path in the blog markdown, and refuses to delete if anything referenced is missing
@@ -587,7 +610,8 @@ What's covered, and why each one:
   first, date second. It tests `scripts/photo-manifest.mjs` — the sync script's date/id rules,
   extracted so they're testable without touching disk — alongside the site's own sort, and checks
   the two agree, because a manifest written in one order and rendered in another would put photos
-  in the wrong place with nothing looking broken.
+  in the wrong place with nothing looking broken. It also pins what `photos:rm` considers part of
+  a photo — miss a rendition and R2 keeps an orphan, miss the original and the photo comes back.
 
 The workflow runs `typecheck` → `test` → `build`, so a broken invariant stops a deploy rather
 than shipping.

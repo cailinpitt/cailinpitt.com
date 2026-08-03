@@ -65,6 +65,27 @@ export function resolveDate({ exif, existing, year }) {
 }
 
 /**
+ * Everything on disk and in R2 that belongs to one photo, derived from its
+ * manifest entry.
+ *
+ * Note the folder comes from the `src` path, not from `photo.year`: those
+ * disagree whenever a capture date puts a photo in a different year than the
+ * folder it's filed under (see resolveDate), and it's the path that says where
+ * the bytes actually are.
+ *
+ * `originalStem` is a stem, not a filename — an original may be `.jpg`, `.jpeg`,
+ * `.png`, whatever came off the camera, while the renditions are always `.webp`.
+ * The caller matches it against what it finds.
+ */
+export function photoFiles(photo) {
+  const [, , folder, file] = photo.src.split('/')
+  const stem = file.replace(/\.[^.]+$/, '')
+  /** Root-relative paths under public/, which are also the R2 keys minus the leading slash. */
+  const renditions = [photo.src, photo.thumb].filter(Boolean)
+  return { folder, stem, renditions, originalStem: stem }
+}
+
+/**
  * Newest first: by year, then by date within it, with the id as a stable
  * tiebreak. Year leads because an approximate date can sit outside the year the
  * photo is filed under — see resolveDate. Mirrors byNewest in src/lib/photos.ts.
