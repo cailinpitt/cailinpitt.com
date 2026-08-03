@@ -1,5 +1,27 @@
 [
   {
+    "id": "2026-0802-195928-9f70",
+    "src": "/images/2026/0802-195928-9f70.webp",
+    "thumb": "/images/2026/0802-195928-9f70-1000.webp",
+    "alt": "Photograph — 2026",
+    "width": 1920,
+    "height": 2560,
+    "year": "2026",
+    "date": "2026-08-02T15:03:26",
+    "exif": {
+      "shot": "2026-08-02T15:03:26",
+      "camera": "iPhone 15",
+      "fNumber": 1.6,
+      "exposure": 0.0013850415512465374,
+      "iso": 50,
+      "focalLength": 5.96,
+      "place": [
+        42,
+        -87.66
+      ]
+    }
+  },
+  {
     "id": "2026-img-1919",
     "src": "/images/2026/IMG_1919.webp",
     "thumb": "/images/2026/IMG_1919-1000.webp",
