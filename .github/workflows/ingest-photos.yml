@@ -29,6 +29,8 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
     env:
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -70,6 +72,7 @@ jobs:
         run: node scripts/ingest-photos.mjs --finish
 
       - name: Commit
+        id: commit
         if: steps.fetch.outputs.pending
         run: |
           git config user.name 'github-actions[bot]'
@@ -79,3 +82,22 @@ jobs:
           git diff --cached --quiet && echo 'nothing to commit' && exit 0
           git commit -m 'Add ${{ steps.fetch.outputs.count }} photo(s) from the phone'
           git push
+          echo 'committed=true' >> "$GITHUB_OUTPUT"
+
+  # The push above cannot trigger deploy.yml on its own: GitHub suppresses
+  # workflow triggers for pushes made with the default GITHUB_TOKEN, so nothing
+  # would ever publish the photo. Calling the deploy workflow is the fix — and
+  # calling the real one, rather than copying its steps, keeps a single
+  # definition of what "deploy the site" means.
+  deploy:
+    needs: ingest
+    if: needs.ingest.outputs.committed
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # `main`, not the triggering SHA: the commit to publish was made a moment ago
+    # by the job above and does not exist at the SHA this run started from.
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: main

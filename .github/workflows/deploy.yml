@@ -4,6 +4,20 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Called by ingest-photos.yml after it commits a photo from the phone. That
+  # push is made with the default GITHUB_TOKEN, and GitHub deliberately does not
+  # let such a push trigger `on: push` — it's the loop guard. So the ingest
+  # workflow has to ask for the deploy explicitly rather than causing one.
+  workflow_call:
+    inputs:
+      ref:
+        description: >-
+          Branch or SHA to build. Left empty for push and manual runs, which
+          check out the commit that triggered them. The ingest workflow passes
+          `main`, because the commit it wants deployed is one it made *during*
+          this run — the triggering SHA predates it.
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -19,6 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
