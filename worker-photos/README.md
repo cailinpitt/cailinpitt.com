@@ -90,23 +90,29 @@ obvious connection to the phone. The Shortcut converts to JPEG first.
 
 ## The Shortcut
 
-Share sheet → Photos. Six actions:
+Share sheet → Photos. Seven actions:
 
 1. **Receive** images from the share sheet.
 2. **Convert Image** → JPEG, **Preserve Metadata: On**. This is the load-bearing
    toggle: with it off the photo arrives stripped and the site can only date it
    to the year, which is the exact problem the pre-2026 archive has.
-3. **Get Details of Images** → *Creation Date* (for `taken`).
-4. *(optional)* **Ask for Input** → Text, "Alt text?".
-5. **Get Contents of URL**
+3. **Get Details of Images** → *Creation Date*.
+4. **Format Date** on that, with a **Custom** format string of `yyyy-MM-dd'T'HH:mm:ss`.
+   This step matters: Shortcuts otherwise formats a date the way your locale
+   writes it (`8/2/26, 3:42 PM`), which `/ingest` can't read, so it falls back to
+   the upload time and may file the photo under the wrong year. Only the id and
+   the folder are affected — the date the site shows comes from EXIF either way —
+   but the id is permanent, so it's worth getting right.
+5. *(optional)* **Ask for Input** → Text, "Alt text?".
+6. **Get Contents of URL**
    - URL: `https://photos.cailinpitt.com/ingest`
    - Method: `POST`
    - Headers: `Authorization` → `Bearer <INGEST_TOKEN>`
    - Request Body: **Form**
      - `photo` → the converted image (as a File)
-     - `taken` → the creation date
-     - `alt` → the text from step 4
-6. **Show Notification** with `url` from the response.
+     - `taken` → the formatted date from step 4
+     - `alt` → the text from step 5
+7. **Show Notification** with `url` from the response.
 
 ## Testing without a phone
 
