@@ -28,6 +28,13 @@ export interface Photo {
   width?: number
   height?: number
   /**
+   * Average color of the photograph, `#rrggbb`, written by `npm run images:sync`
+   * (see scripts/tint.mjs). Painted under the image so a tile that hasn't loaded
+   * yet is roughly the right color instead of a gray rectangle. Absent for a
+   * photo synced before this existed, which simply falls back to the surface.
+   */
+  tint?: string
+  /**
    * When the photo was taken, as a wall clock without a zone
    * ("2026-07-18T19:32:23") — the same shape as `exif.shot`, which is where it
    * comes from when the original still carries EXIF.

@@ -1,12 +1,5 @@
 #!/usr/bin/env node
-// Copy each post's Markdown source next to its prerendered HTML, so
-// /blog/2023/3/3/slug also answers at /blog/2023/3/3/slug.md — the raw file the
-// page was built from. Runs after `npm run build` (part of "postbuild").
-//
-// The file is published byte-for-byte, frontmatter included: the point is to
-// hand over the actual source, not a reconstruction of it. Body images still
-// point at /images/... rather than the R2 host they're rewritten to at render
-// time, which is what the source says and what you'd paste back into a post.
+// Copy each Markdown source next to the prerendered HTML it produced
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -15,7 +8,8 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const BLOG = path.join(ROOT, 'content', 'blog')
+const CONTENT = path.join(ROOT, 'content')
+const BLOG = path.join(CONTENT, 'blog')
 const DIST = path.join(ROOT, 'dist')
 
 // Mirrors src/lib/frontmatter.ts; only `path` is needed here.
@@ -46,7 +40,18 @@ async function main() {
     await mkdir(path.dirname(out), { recursive: true })
     await writeFile(out, raw, 'utf8')
   }
-  console.log(`✓ ${files.length} post sources copied to dist/`)
+
+  // A .md directly in content/ is a page whose route is its name: /colophon.md.
+  // Read from the directory, so a page added later needs nothing here.
+  const pages = (await readdir(CONTENT, { withFileTypes: true }))
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+    .map((entry) => entry.name)
+  for (const file of pages) {
+    const raw = await readFile(path.join(CONTENT, file), 'utf8')
+    await writeFile(path.join(DIST, file), raw, 'utf8')
+  }
+
+  console.log(`✓ ${files.length} post and ${pages.length} page sources copied to dist/`)
 }
 
 main().catch((err) => {

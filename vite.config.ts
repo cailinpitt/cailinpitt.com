@@ -98,17 +98,20 @@ function siteIndex(): Plugin {
 }
 
 /**
- * Each post's git history, as a virtual module — the data behind the provenance
- * line at the foot of a post (src/components/PostHistory.tsx).
+ * The git history of everything written in Markdown, as a virtual module — the
+ * data behind the provenance line at the foot of a post, and at the foot of the
+ * colophon (src/components/PostHistory.tsx).
  *
- * One `git log` for the whole directory, not one per file: 32 subprocesses to
+ * One `git log` for the whole of content/, not one per file: 34 subprocesses to
  * say what a single pass already knows would be the slowest thing in the build.
  * Renames aren't followed (`--follow` takes exactly one pathspec), which costs
  * nothing here — a post's file name is its URL, so renaming one is a redirect
  * problem nobody has taken on.
  *
- * Keyed by post path rather than by file name, because `path:` is the site's
- * unique key for a post and a frontmatter `slug:` may disagree with the file.
+ * Keyed by route rather than by file name, because `path:` is the site's unique
+ * key for a post and a frontmatter `slug:` may disagree with the file. A
+ * Markdown file sitting directly in content/ is a page whose route is its name,
+ * which is the same rule scripts/generate-markdown.mjs publishes sources by.
  *
  * **A shallow clone reports almost no history**, and would quietly show every
  * post as brand new. .github/workflows/deploy.yml checks out with
@@ -117,7 +120,8 @@ function siteIndex(): Plugin {
  */
 function postHistory(): Plugin {
   const dir = path.join(process.cwd(), 'content', 'blog')
-  const rel = 'content/blog'
+  const content = path.join(process.cwd(), 'content')
+  const rel = 'content'
 
   async function collect() {
     let byFile: Record<string, PostHistory> = {}
@@ -158,13 +162,23 @@ function postHistory(): Plugin {
     }
 
     const history: Record<string, PostHistory & { file: string }> = {}
+
     for (const file of (await readdir(dir)).filter((f) => f.endsWith('.md'))) {
-      const entry = byFile[`${rel}/${file}`]
+      const entry = byFile[`${rel}/blog/${file}`]
       if (!entry) continue
       const { data } = parseFrontmatter(await readFile(path.join(dir, file), 'utf8'))
       const postPath = (data.path as string) ?? `/blog/${file.replace(/\.md$/, '')}`
-      history[postPath] = { ...entry, file: `${rel}/${file}` }
+      history[postPath] = { ...entry, file: `${rel}/blog/${file}` }
     }
+
+    // Pages: content/colophon.md is /colophon.
+    for (const file of (await readdir(content, { withFileTypes: true }))
+      .filter((e) => e.isFile() && e.name.endsWith('.md'))
+      .map((e) => e.name)) {
+      const entry = byFile[`${rel}/${file}`]
+      if (entry) history[`/${file.replace(/\.md$/, '')}`] = { ...entry, file: `${rel}/${file}` }
+    }
+
     return { repo, history }
   }
 
@@ -184,30 +198,49 @@ function postHistory(): Plugin {
 }
 
 /**
- * Serve `/blog/<path>.md` in dev, the way the built site does.
+ * Serve `/blog/<path>.md` and `/<page>.md` in dev, the way the built site does.
  *
  * In production those files are real: scripts/generate-markdown.mjs copies each
- * post's source next to its prerendered HTML. Without this the ".md file" link
- * on every post would be the one thing on the page that only works in
+ * source next to its prerendered HTML. Without this the ".md file" link on a
+ * post or the colophon would be the one thing on the page that only works in
  * production, which is how it ends up broken.
  */
-function postSource(): Plugin {
-  const dir = path.join(process.cwd(), 'content', 'blog')
+function markdownSource(): Plugin {
+  const content = path.join(process.cwd(), 'content')
+  const blog = path.join(content, 'blog')
 
   return {
-    name: 'cailinpitt:post-source',
+    name: 'cailinpitt:markdown-source',
     configureServer(server: ViteDevServer) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split('?')[0]
-        if (!url?.startsWith('/blog/') || !url.endsWith('.md')) return next()
+        if (!url?.endsWith('.md')) return next()
+        const send = (raw: string) => {
+          res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+          return res.end(raw)
+        }
+
+        // A page: content/colophon.md answers at /colophon.md. Same rule the
+        // build applies, and the reason it's a single path segment is that the
+        // route for such a page is its filename.
+        if (!url.startsWith('/blog/')) {
+          const name = url.slice(1)
+          // A bare filename and nothing else — no separators, no traversal, so
+          // this can't be talked into reading outside content/.
+          if (/^[a-z0-9-]+\.md$/i.test(name)) {
+            const raw = await readFile(path.join(content, name), 'utf8').catch(() => null)
+            if (raw !== null) return send(raw)
+          }
+          return next()
+        }
+
         const wanted = url.slice(0, -3)
-        for (const file of (await readdir(dir)).filter((f) => f.endsWith('.md'))) {
-          const raw = await readFile(path.join(dir, file), 'utf8')
+        for (const file of (await readdir(blog)).filter((f) => f.endsWith('.md'))) {
+          const raw = await readFile(path.join(blog, file), 'utf8')
           const { data } = parseFrontmatter(raw)
           const postPath = (data.path as string) ?? `/blog/${file.replace(/\.md$/, '')}`
           if (postPath !== wanted) continue
-          res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
-          return res.end(raw)
+          return send(raw)
         }
         next()
       })
@@ -217,7 +250,7 @@ function postSource(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), siteIndex(), postHistory(), postSource()],
+  plugins: [react(), siteIndex(), postHistory(), markdownSource()],
   build: {
     // Emit clean, fingerprinted assets; HTML is generated per-route by vite-react-ssg.
     outDir: 'dist',

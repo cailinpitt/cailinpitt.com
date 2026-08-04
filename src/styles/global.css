@@ -512,6 +512,28 @@ h3 {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+/* /blog rows carry a reading estimate beside the date. The row owns the spacing
+   the <time> would otherwise provide, so the two sit on one line here without
+   changing the plain date-above-title rows used on the home page. */
+.post-list-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin: 0 0 0.3rem;
+}
+.post-list-meta time {
+  margin-bottom: 0;
+}
+.post-list-time {
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+}
+.post-list-time::before {
+  content: '·';
+  margin-right: 0.55rem;
+}
 
 /* Tags — chips under a post header, and the cloud at the foot of /blog */
 .tag-list {
@@ -1029,6 +1051,30 @@ h3 {
 .photo-feed a:hover img {
   opacity: 0.92;
   transform: scale(1.03);
+}
+/* The year of whatever is at the top of the feed, floating over it while you
+   scroll — see useFeedYear in src/pages/Photos.tsx. Fixed, so it never enters
+   the layout, and pointer-events: none so it can't take a click meant for the
+   photograph underneath it. */
+.photo-year-marker {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 5;
+  margin: 0;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  /* Semi-opaque over the photographs rather than solid, so it reads as glass
+     laid over the feed instead of a box punched into it. */
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(6px);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 .photos-empty {
   color: var(--muted);

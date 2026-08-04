@@ -5,10 +5,16 @@ import rehypeRaw from 'rehype-raw'
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { StatTile } from '../components/ListeningBits'
+import { PostHistory, useHistoryPanel } from '../components/PostHistory'
+import { PostSource } from '../components/PostSource'
 import { colophonPage, fillTemplate } from '../lib/colophon'
+import type { PostHistory as PostHistoryData } from '../lib/history'
 import { fetchNow } from '../lib/listening'
 import { fetchReading } from '../lib/reading'
 import { pageSchema } from '../lib/structuredData'
+
+/** Where this page's own source is published — see scripts/generate-markdown.mjs. */
+const SOURCE_FILE = '/colophon.md'
 
 // The prose lives in content/colophon.md; everything here is the numbers it
 // quotes and the tiles above it, which are live and can't be written down.
@@ -24,23 +30,40 @@ interface ColophonData {
   photos: number
   years: number
   located: number
+  /** What git knows about content/colophon.md; null outside a git checkout. */
+  history: (PostHistoryData & { file: string }) | null
+  /** Repo web URL, for linking commits. */
+  repo: string | null
 }
 
 export async function loader(): Promise<ColophonData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
     const { loadPhotos, loadPostSummaries } = await import('../lib/content.client')
-    return summarize(loadPostSummaries(), loadPhotos())
+    return { ...summarize(loadPostSummaries(), loadPhotos()), ...(await provenance()) }
   }
   const { loadPhotos, loadPostSummaries } = await import('../lib/content.server')
   const [posts, photos] = await Promise.all([loadPostSummaries(), loadPhotos()])
-  return summarize(posts, photos)
+  return { ...summarize(posts, photos), ...(await provenance()) }
 }
+
+/**
+ * Imported here rather than at the top of the file so it lands in its own chunk:
+ * the production client returns above without ever loading it, and the history
+ * of every post has no business in this page's bundle.
+ */
+async function provenance() {
+  const { history, repo } = await import('virtual:post-history')
+  return { history: history['/colophon'] ?? null, repo }
+}
+
+/** The counters, which are also what the prose quotes as {{placeholders}}. */
+type ColophonCounts = Omit<ColophonData, 'history' | 'repo'>
 
 function summarize(
   posts: { words: number }[],
   photos: { year: string; exif?: { place?: number[] } }[],
-): ColophonData {
+): ColophonCounts {
   return {
     posts: posts.length,
     words: posts.reduce((total, post) => total + post.words, 0),
@@ -114,7 +137,21 @@ const markdownComponents = {
 
 export function Component() {
   const data = useLoaderData() as ColophonData
-  const body = useMemo(() => fillTemplate(colophonPage.body, { ...data }), [data])
+  const { history, repo } = data
+  const [showSource, setShowSource] = useState(false)
+  const panel = useHistoryPanel()
+
+  const counts: ColophonCounts = useMemo(
+    () => ({
+      posts: data.posts,
+      words: data.words,
+      photos: data.photos,
+      years: data.years,
+      located: data.located,
+    }),
+    [data],
+  )
+  const body = useMemo(() => fillTemplate(colophonPage.body, { ...counts }), [counts])
 
   return (
     <>
@@ -127,6 +164,7 @@ export function Component() {
           title: colophonPage.title,
           description: colophonPage.description,
         })}
+        markdownPath={SOURCE_FILE}
       />
       <article className="post">
         <header className="post-header">
@@ -134,22 +172,46 @@ export function Component() {
           {colophonPage.lead && <p className="lead">{colophonPage.lead}</p>}
         </header>
 
-        <div className="post-body">
-          <dl className="stat-tiles is-compact">
-            <StatTile label="Posts" value={data.posts} />
-            <StatTile label="Words" value={data.words} />
-            <StatTile label="Photos" value={data.photos} />
-            <LiveTiles />
-          </dl>
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={markdownComponents}
-          >
-            {body}
-          </Markdown>
+        <div className="post-source-bar">
+          {/* The unfilled body, which is what content/colophon.md and the
+              published .md both contain — the counts are substituted when the
+              page renders, so {{photos}} is what was actually written. */}
+          <PostSource
+            body={colophonPage.body}
+            file={SOURCE_FILE}
+            open={showSource}
+            onToggle={setShowSource}
+          />
+          {history && (
+            <a href="#history" onClick={panel.openFromLink}>
+              History
+            </a>
+          )}
         </div>
+
+        {showSource ? (
+          <pre className="post-source">{colophonPage.body}</pre>
+        ) : (
+          <div className="post-body">
+            <dl className="stat-tiles is-compact">
+              <StatTile label="Posts" value={data.posts} />
+              <StatTile label="Words" value={data.words} />
+              <StatTile label="Photos" value={data.photos} />
+              <LiveTiles />
+            </dl>
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={markdownComponents}
+            >
+              {body}
+            </Markdown>
+          </div>
+        )}
       </article>
+      {history && (
+        <PostHistory history={history} repo={repo} open={panel.open} onToggle={panel.setOpen} />
+      )}
     </>
   )
 }

@@ -38,7 +38,7 @@ export interface Node {
   kind: NodeKind
   /** Where `open` goes. */
   to?: string
-  /** Posts only: the published `.md` that `cat` reads. */
+  /** The published `.md` that `cat` reads — posts, and the pages written as one. */
   source?: string
   /** Right-hand column in `ls`. */
   meta?: string
@@ -159,9 +159,11 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
       { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
-      { name: 'projects', kind: 'page', to: '/projects', meta: 'things I have built', keywords: 'software code apps' },
+      // The two pages written as a single Markdown file publish their source the
+      // way a post does, so `cat` reads them too.
+      { name: 'projects', kind: 'page', to: '/projects', source: '/projects.md', meta: 'things I have built', keywords: 'software code apps' },
       { name: 'guestbook', kind: 'page', to: '/guestbook', meta: 'say hello', keywords: 'sign visitors' },
-      { name: 'colophon', kind: 'page', to: '/colophon', meta: 'how this is built', keywords: 'about stack' },
+      { name: 'colophon', kind: 'page', to: '/colophon', source: '/colophon.md', meta: 'how this is built', keywords: 'about stack' },
       { name: 'privacy', kind: 'page', to: '/privacy', meta: 'what is and is not collected', keywords: 'cookies tracking' },
     ],
   }
@@ -213,7 +215,7 @@ export const COMMANDS: CommandSpec[] = [
   { name: 'ls', args: '[path]', summary: 'List what is here' },
   { name: 'cd', args: '[path]', summary: 'Change directory' },
   { name: 'pwd', summary: 'Print the working directory' },
-  { name: 'cat', args: '<post>', summary: "Print a post's Markdown source" },
+  { name: 'cat', args: '<file>', summary: 'Print the Markdown source of a post or page' },
   { name: 'open', args: '[path]', summary: 'Open the real page on the site' },
   { name: 'find', args: '<words>', summary: 'Search posts, tags, and pages' },
   { name: 'photo', args: '[random|<id>]', summary: 'Show a photograph' },
@@ -460,7 +462,7 @@ export async function run(
       if (!node.source) {
         return {
           lines: [
-            err(`cat: ${node.name}: not a post`),
+            err(`cat: ${node.name}: nothing to read`),
             ...(node.to ? [muted(`It's a page — try \`open ${node.name}\`.`)] : []),
           ],
         }

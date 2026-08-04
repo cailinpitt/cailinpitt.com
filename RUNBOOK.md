@@ -67,6 +67,7 @@ npm run photos:rm -- <id> <id> <id>
 npm run images:sync                    # rebuild renditions + manifest from disk
 npm run images:sync -- --prune         # drop manifest entries whose file is gone
 npm run images:sync -- --reexif        # re-read EXIF from originals
+npm run images:sync -- --retint        # recompute every tile's placeholder color
 npm run images:sync -- --reencode      # rebuild every rendition
 npm run images:check                   # report only; non-zero exit if out of date (local only, not CI)
 npm run images:upload                  # push renditions to R2

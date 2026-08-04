@@ -5,13 +5,15 @@
 //   npm run images:sync -- --prune # also drop manifest entries whose file is gone
 //   npm run images:sync -- --check # report only, exit 1 if anything is out of date (CI)
 //   npm run images:sync -- --reexif # re-read capture metadata from the originals
+//   npm run images:sync -- --retint # recompute every tile's placeholder color
 //   npm run images:publish         # sync, then upload to R2
 //
 // What it does:
 //   1. Photo folders — public/images/<year>, a four-digit name and nothing else —
 //      are written into src/lib/photos.json as one flat, newest-first feed: real
-//      width/height read off disk, a permalink id, a date, and capture metadata
-//      (camera, exposure, coarse location) read from the matching original.
+//      width/height read off disk, a permalink id, a date, an average color for
+//      the tile placeholder, and capture metadata (camera, exposure, coarse
+//      location) read from the matching original.
 //      Existing entries keep their id, hand-written alt text, hand-corrected date,
 //      and any metadata already recorded.
 //   2. Blog folders (public/images/<post-slug>) are checked against the markdown:
@@ -30,6 +32,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { imageSize } from './image-size.mjs'
 import { readPhotoExif } from './exif.mjs'
+import { readTint } from './tint.mjs'
 import { assignPhotoId, byNewest, resolveDate } from './photo-manifest.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -55,6 +58,7 @@ const PRUNE = args.includes('--prune')
 const CHECK = args.includes('--check')
 const REENCODE = args.includes('--reencode') // redo renditions even if they look current
 const REEXIF = args.includes('--reexif') // re-read capture metadata from the originals
+const RETINT = args.includes('--retint') // recompute every tile's placeholder color
 
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 
@@ -200,15 +204,19 @@ async function syncPhotos(existing) {
   for (const year of years) {
     const dir = path.join(IMAGES_DIR, year)
     const originals = await originalsByStem(year)
-    const sharp = originals.size ? await loadSharp() : null
     // Thumbnails ride along on their full-size entry rather than being photos of their own.
     const files = (await imageFiles(dir)).filter((name) => !name.endsWith(THUMB_SUFFIX))
-    const tally = { total: 0, added: 0, sized: 0, tagged: 0 }
+    // Needed for EXIF (which reads originals/) and for the tint (which reads the
+    // renditions right here), so it's wanted whenever there is anything to sync —
+    // not only in a checkout that happens to have the originals.
+    const sharp = files.length ? await loadSharp() : null
+    const tally = { total: 0, added: 0, sized: 0, tagged: 0, tinted: 0 }
 
     for (const name of files) {
       const src = `/images/${year}/${name}`
       const file = path.join(dir, name)
       const prior = bySrc.get(src)
+      const thumb = thumbFor(src)
 
       /**
        * Capture metadata is re-read only when the entry has none (or --reexif /
@@ -231,15 +239,29 @@ async function syncPhotos(existing) {
         else console.warn(`  ! could not read dimensions: ${src}`)
       }
 
+      /**
+       * The tile's placeholder color. Read from the grid rendition, which is the
+       * image that actually has to load before the tile stops being a blank
+       * square. Cached in the manifest like everything else here, so a resync
+       * costs nothing once it's been computed.
+       */
+      let tint = prior?.tint
+      if (sharp && (!tint || REENCODE || RETINT)) {
+        const from = path.join(ROOT, 'public', thumb ?? src)
+        tint = await readTint(sharp, from)
+        if (tint && !prior?.tint) tally.tinted++
+      }
+
       const resolved = resolveDate({ exif, existing: prior, year })
       const { date, approx } = resolved
 
       out.push({
         id: prior?.id ?? assignPhotoId(year, stemOf(name), used),
         src,
-        thumb: thumbFor(src),
+        thumb,
         alt: prior?.alt ?? `Photograph — ${year}`,
         ...(size ?? {}),
+        ...(tint ? { tint } : {}),
         year: resolved.year,
         date,
         ...(approx ? { approx: true } : {}),
@@ -318,6 +340,7 @@ async function main() {
       tally.added && `+${tally.added} new`,
       tally.sized && `${tally.sized} sized`,
       tally.tagged && `${tally.tagged} exif`,
+      tally.tinted && `${tally.tinted} tinted`,
     ].filter(Boolean)
     console.log(`  ${year}: ${tally.total} photo(s)${notes.length ? ` (${notes.join(', ')})` : ''}`)
   }

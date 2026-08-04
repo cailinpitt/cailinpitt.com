@@ -72,12 +72,18 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 
 ### Markdown source
 
-Every post is readable as the file it was written in.
+Every post is readable as the file it was written in, and so are the two pages that *are* a
+Markdown file — `/colophon.md` and `/projects.md`.
 
 - `scripts/generate-markdown.mjs` (postbuild) copies `content/blog/<slug>.md` byte-for-byte to
   `dist/<post path>.md`, so <https://cailinpitt.com/blog/2023/3/3/paramore-this-is-why-2023.md>
   is the source, frontmatter and all. GitHub Pages serves it as
   `text/markdown; charset=utf-8`, which browsers show inline.
+- **A `.md` sitting directly in `content/` is a page whose route is its name**, and its source
+  publishes at `/<name>.md`. That one rule is what `generate-markdown.mjs`, the dev middleware in
+  `vite.config.ts`, and the history plugin all apply, so adding `content/uses.md` later needs no
+  changes to any of them. The colophon's source keeps its `{{placeholders}}` — the numbers are
+  filled in when the page renders, and the file is what was written.
 - On the page, the **Markdown** toggle above the body (`src/components/PostSource.tsx`) swaps the
   rendered article for a `<pre>` of the source, with Copy and a link to the file. It reads the body
   out of the loader data the page already renders from — no request, and it can't disagree with
@@ -92,7 +98,8 @@ Every post is readable as the file it was written in.
 ### Provenance
 
 Each post ends with one quiet line about its own file — "Edited 6 times since August 1, 2026" —
-that expands into the list of commits, each linking to GitHub.
+that expands into the list of commits, each linking to GitHub. `/colophon` carries the same line,
+for the same reason: it's a Markdown file in this repo like any post.
 
 The counting is the whole design. This repo's history starts in June 2026: 31 posts arrived from
 Squarespace in one commit and were reformatted in a second the next day. Counting those would tell
@@ -122,8 +129,9 @@ The commit that *added* a post has no diff: it would be the post. Diffs are coll
   `tests/diff.test.ts`
 - `src/lib/history.ts` — types, the `git log` invocation, and the parsing/filtering, kept pure and
   covered by `tests/history.test.ts`
-- `cailinpitt:post-history` in `vite.config.ts` — one `git log` for the whole directory at build
-  time, exposed as `virtual:post-history`, keyed by post path. Renames aren't followed
+- `cailinpitt:post-history` in `vite.config.ts` — one `git log` for the whole of `content/` at
+  build time, exposed as `virtual:post-history`, keyed by route (a post's `path:`, a page's
+  filename). Renames aren't followed
 - `src/components/PostHistory.tsx` — the line itself, outside the `<article>`
 
 > **`fetch-depth: 0` is required.** `.github/workflows/deploy.yml` checks out full history for
@@ -320,6 +328,12 @@ pagination. There are no galleries — `/2019`, `/latest`, `/past-work` and frie
 
 - **Every photo has a page** at `/photos/<id>`, prerendered, with the full-size image, date, camera
   settings, a map link when it has coordinates, and prev/next (←/→ work too).
+- **Each tile paints its photo's average color** while the image loads (`tint` in the manifest,
+  computed by `scripts/tint.mjs` during `images:sync`), so scrolling the feed is photographs
+  arriving rather than a grid of identical gray squares. 7 bytes per photo.
+- **A floating marker names the year** at the top of the feed as you scroll — measured off the
+  year-break tiles that already carry the `#y2019` anchors, so it needs no extra markup and
+  degrades to nothing without JavaScript.
 - **The whole feed is in the prerendered HTML.** ~500 lazy `<img>` tags gzip to ~20 KB, which buys
   a page that works without JavaScript, is Cmd-F searchable, and has real year anchors
   (`/photos#y2019`). Loader data carries only what a tile needs — no EXIF, no dates.
@@ -360,9 +374,10 @@ started/finished, published posts, photos taken. Nothing new is stored — it fe
 
 ## Blog index
 
-`/blog` is grouped into year sections; rows show only month and day (the `datetime` attribute
-carries the full date). The filter above matches title, summary, tag, or date — every
-whitespace-separated term must match, so "music 2019" narrows.
+`/blog` is grouped into year sections; rows show month, day, and reading time (the `datetime`
+attribute carries the full date; posts under 100 words show no estimate, same rule as the post
+itself). The filter above matches title, summary, tag, or date — every whitespace-separated term
+must match, so "music 2019" narrows.
 
 Matching is a substring scan over a map built from the posts already on the page: ~35 posts needs
 no index, no dependency, no fetch. With JavaScript off the input goes inert and the full list is
@@ -372,6 +387,10 @@ still there in the prerendered HTML.
 
 `/colophon` prose lives in **`content/colophon.md`** — edit that, not the page component (`title`,
 `lead`, `description` come from its frontmatter; same arrangement as `content/projects.md`).
+
+Being a Markdown file in the repo, it gets what a post gets: a **Markdown** toggle above the body,
+its source published at [`/colophon.md`](#markdown-source), and a [provenance](#provenance) line at
+the foot reading its own commits out of `git log`.
 
 Counters above it: posts, words, and photos are counted at build time; scrobbles, books, and
 articles are fetched from the Workers in the browser. Each live tile renders only once its number
@@ -462,7 +481,7 @@ magnifier. Jumps to any page, post, photo year, or tag.
 
 ## Terminal
 
-`/terminal` is the site as a shell: `ls` the sections, `cat` a post, `open` a page, `now`,
+`/terminal` is the site as a shell: `ls` the sections, `cat` a post or page, `open` a page, `now`,
 `reading`, `guestbook`, `photo random`, `neofetch`. Tab completes, ↑/↓ walk history, Ctrl-L clears.
 
 - **It's the whole viewport.** The route sits *outside* `<Layout>` in `App.tsx`, so there's no
@@ -473,8 +492,9 @@ magnifier. Jumps to any page, post, photo year, or tag.
   every command. The outside world (navigation, theme, clock, fetchers) arrives as a `Shell`, so
   `tests/terminal.test.ts` runs it with no DOM and no network.
 - **Nothing is a second source of truth.** Posts come from `virtual:site-index` (already in the
-  bundle for ⌘K), `cat` fetches the post's published `.md`, and `now`/`reading`/`guestbook` call the
-  same clients the pages do.
+  bundle for ⌘K), `cat` fetches the published `.md` — of a post, or of `colophon`/`projects`, the
+  two pages that are themselves one Markdown file — and `now`/`reading`/`guestbook` call the same
+  clients the pages do.
 - **Photo ids ride in the route loader**, since the browser build of `virtual:site-index`
   deliberately carries none.
 - `COMMANDS` drives `help`, completion, and did-you-mean; a test asserts every name in it is

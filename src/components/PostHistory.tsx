@@ -1,7 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import { formatDate } from '../lib/posts'
+import { jumpToAnchor } from '../lib/anchor'
 import { BULK_POSTS, editedLabel, type PostHistory as History } from '../lib/history'
 import type { DiffRow } from '../lib/diff'
+
+/**
+ * Open state for the panel, shared by every page that has one.
+ *
+ * It lives above <PostHistory> because the link at the top of the page opens
+ * it: arriving at #history should land on something expanded rather than on a
+ * collapsed line the reader then has to click.
+ */
+export function useHistoryPanel() {
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (window.location.hash !== '#history') return
+    setOpen(true)
+    // The browser has already tried to jump here and, on a cold load, will have
+    // been wrong about where "here" is — see src/lib/anchor.ts.
+    jumpToAnchor('history')
+  }, [])
+
+  const openFromLink = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    setOpen(true)
+    // Next frame, so the panel is expanded before anything is measured.
+    requestAnimationFrame(() => {
+      jumpToAnchor('history')
+      // Still updates the URL the way an anchor would, so the position can be
+      // shared and Back returns to where the reader was.
+      window.history.pushState(null, '', '#history')
+    })
+  }
+
+  return { open, setOpen, openFromLink }
+}
 
 /**
  * What happened to this post after it was published, from git.

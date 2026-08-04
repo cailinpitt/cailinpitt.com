@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { formatMonthDay, postsByYear, type PostSummary } from '../lib/posts'
+import { formatMonthDay, formatReadingTime, postsByYear, type PostSummary } from '../lib/posts'
 import { collectTags } from '../lib/tags'
 import { blogIndexSchema } from '../lib/structuredData'
 
@@ -109,9 +109,17 @@ export function Component() {
               <ul className="post-list">
                 {group.posts.map((p) => (
                   <li key={p.path}>
-                    {/* The year lives in the heading above, so the row shows only
-                        the month and day — but the machine-readable date is whole. */}
-                    <time dateTime={p.date}>{formatMonthDay(p.date)}</time>
+                    <p className="post-list-meta">
+                      {/* The year lives in the heading above, so the row shows only
+                          the month and day — but the machine-readable date is whole. */}
+                      <time dateTime={p.date}>{formatMonthDay(p.date)}</time>
+                      {/* Absent for the posts with almost no prose — the travel
+                          posts are photographs, and "1 min read" would be a claim
+                          about them rather than a description. */}
+                      {formatReadingTime(p.words) && (
+                        <span className="post-list-time">{formatReadingTime(p.words)}</span>
+                      )}
+                    </p>
                     <Link to={p.path}>{p.title}</Link>
                   </li>
                 ))}

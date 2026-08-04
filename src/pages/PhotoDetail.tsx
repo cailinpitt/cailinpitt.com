@@ -83,6 +83,9 @@ export function Component() {
           alt={photo.alt}
           width={photo.width}
           height={photo.height}
+          // Same placeholder color the tile used, so arriving from the feed the
+          // box that was already the right color simply sharpens into the photo.
+          style={photo.tint ? { background: photo.tint } : undefined}
           // The one image the visitor came for: no lazy loading, and ask for it early.
           fetchPriority="high"
           decoding="async"

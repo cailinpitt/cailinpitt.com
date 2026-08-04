@@ -245,11 +245,20 @@ describe('commands', () => {
     expect(result.lines.at(-1)?.href).toBe('/blog/2026/8/1/seasons.md')
   })
 
-  it('cat sends you to `open` when the target is a page, not a post', async () => {
+  it('cat sends you to `open` for a page with no source of its own', async () => {
     const { shell } = fakeShell()
     const result = await run('cat listening', state(), shell)
-    expect(result.lines[0].text).toContain('not a post')
+    expect(result.lines[0].text).toContain('nothing to read')
     expect(result.lines[1].text).toContain('open listening')
+  })
+
+  // /colophon and /projects are each one Markdown file, published next to their
+  // HTML the way a post is — so `cat` reads them rather than pointing at `open`.
+  it('cat prints a page written as a Markdown file', async () => {
+    const { shell } = fakeShell()
+    const result = await run('cat colophon', state(), shell)
+    expect(result.lines.map((line) => line.text)).toContain('The body.')
+    expect(result.lines.at(-1)?.href).toBe('/colophon.md')
   })
 
   it('cat reports a source it could not read rather than printing nothing', async () => {
