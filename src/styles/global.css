@@ -842,17 +842,6 @@ h3 {
   text-align: left;
   cursor: pointer;
 }
-.post-history-list button.post-history-subject::before {
-  content: '▸';
-  display: inline-block;
-  width: 1em;
-  margin-left: -1em;
-  color: var(--muted);
-  font-size: 0.75em;
-}
-.post-history-list button[aria-expanded='true'].post-history-subject::before {
-  transform: rotate(90deg);
-}
 
 /* One commit's changes, as track-changes prose — see the Diff component in
    src/components/PostHistory.tsx. Serif, because what's being read is writing:

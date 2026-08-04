@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -8,6 +8,7 @@ import { PostHistory } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
+import { jumpToAnchor } from '../lib/anchor'
 import { imageUrl } from '../lib/images'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
@@ -100,12 +101,29 @@ export function Component() {
     useLoaderData() as BlogPostData
   const articleRef = useRef<HTMLElement>(null)
   const [showSource, setShowSource] = useState(false)
-  // Lives here rather than in PostHistory because the link in the meta line
-  // opens it — and because arriving on #history should land on something open.
+  // Lives here rather than in PostHistory because the button at the top of the
+  // post opens it — and because arriving on #history should land on something
+  // open rather than on a collapsed line.
   const [historyOpen, setHistoryOpen] = useState(false)
   useEffect(() => {
-    if (window.location.hash === '#history') setHistoryOpen(true)
+    if (window.location.hash !== '#history') return
+    setHistoryOpen(true)
+    // The browser has already tried to jump here and, on a cold load, will have
+    // been wrong about where "here" is — see src/lib/anchor.ts.
+    jumpToAnchor('history')
   }, [])
+
+  const openHistory = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    setHistoryOpen(true)
+    // Next frame, so the panel is expanded before anything is measured.
+    requestAnimationFrame(() => {
+      jumpToAnchor('history')
+      // The link still updates the URL the way an anchor would, so the position
+      // can be shared and Back returns to where the reader was.
+      window.history.pushState(null, '', '#history')
+    })
+  }
   // Fall back to the first image in the body so posts without an explicit `image:`
   // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
@@ -172,7 +190,7 @@ export function Component() {
               line the reader then has to expand. A plain hash link, so it goes
               somewhere useful before hydration and can be shared. */}
           {history && (
-            <a href="#history" onClick={() => setHistoryOpen(true)}>
+            <a href="#history" onClick={openHistory}>
               History
             </a>
           )}
