@@ -2921,12 +2921,16 @@ a.guestbook-name:hover {
 }
 
 /* ---- terminal (/terminal) ------------------------------------------------
-   Rendered outside <Layout>, so the viewport is the terminal. Inverts the paper
-   palette via swapped --fg/--bg, so it still follows the theme. */
+   Rendered outside <Layout>, so the viewport is the terminal. Dark in both
+   themes: a terminal is a dark screen, and deriving these from --fg/--bg
+   inverted it to light for anyone in dark mode. Same values as the dark theme
+   above, and as `D` in scripts/generate-og.mjs, which draws the same screen. */
 .terminal-screen {
-  --tl-bg: var(--fg);
-  --tl-fg: var(--bg);
-  --tl-muted: color-mix(in srgb, var(--bg) 55%, var(--fg));
+  --tl-bg: #141312;
+  --tl-fg: #ece8e1;
+  --tl-muted: #a49c90;
+  --tl-accent: #e3925b;
+  color-scheme: dark;
   min-height: 100dvh;
   padding: clamp(0.75rem, 2vw, 1.5rem);
   background: var(--tl-bg);
@@ -2934,7 +2938,7 @@ a.guestbook-name:hover {
   font-family: var(--font-mono);
   font-size: var(--step--1);
   line-height: 1.55;
-  /* `ls` pads with spaces, so they must not collapse. Wrapping still allowed. */
+  /* `help` and `history` pad with spaces, so they must not collapse. */
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   cursor: text;
@@ -2946,20 +2950,20 @@ a.guestbook-name:hover {
 }
 .terminal-screen a:hover,
 .terminal-screen a:focus-visible {
-  color: var(--accent);
+  color: var(--tl-accent);
 }
 
 .tl-muted {
   color: var(--tl-muted);
 }
 .tl-accent {
-  color: var(--accent);
+  color: var(--tl-accent);
 }
 .tl-error {
   color: #e2725b;
 }
 .tl-prompt {
-  color: color-mix(in srgb, var(--accent) 70%, var(--tl-fg));
+  color: color-mix(in srgb, var(--tl-accent) 70%, var(--tl-fg));
 }
 
 /* A listing row (`ls`, `find`): name left, meta right-aligned against a shared
@@ -3002,7 +3006,7 @@ a.guestbook-name:hover {
   background: none;
   color: var(--tl-fg);
   font: inherit;
-  caret-color: var(--accent);
+  caret-color: var(--tl-accent);
 }
 .terminal-input:focus {
   outline: none;

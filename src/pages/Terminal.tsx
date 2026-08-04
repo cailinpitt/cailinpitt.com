@@ -119,6 +119,7 @@ export function Component() {
   const [busy, setBusy] = useState(false)
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const screenRef = useRef<HTMLDivElement>(null)
 
   const tree = useMemo(() => buildTree(indexedPosts, photos), [photos])
 
@@ -145,6 +146,20 @@ export function Component() {
     setReady(true)
     setLines(motd(stats))
   }, [stats])
+
+  // This page is dark whatever the site theme is, so the browser chrome has to be
+  // told; index.html's media-scoped tags would leave a paper toolbar above it.
+  // Restored on the way out, before ThemeToggle mounts on the next page.
+  useEffect(() => {
+    const screen = screenRef.current
+    if (!screen) return
+    const bg = getComputedStyle(screen).getPropertyValue('--tl-bg').trim()
+    if (!bg) return
+    const tags = [...document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')]
+    const before = tags.map((tag) => tag.content)
+    for (const tag of tags) tag.content = bg
+    return () => tags.forEach((tag, i) => (tag.content = before[i]))
+  }, [])
 
   // The screen is the page, so following the output down means scrolling the window.
   useEffect(() => {
@@ -234,6 +249,7 @@ export function Component() {
   return (
     <div
       className="terminal-screen"
+      ref={screenRef}
       onClick={(event) => {
         if ((event.target as HTMLElement).closest('a')) return
         if (window.getSelection()?.toString()) return
