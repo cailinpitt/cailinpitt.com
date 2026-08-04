@@ -5,7 +5,14 @@ import { promisify } from 'node:util'
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { parseFrontmatter } from './src/lib/frontmatter'
-import { gitLogArgs, parsePostHistory, repoWebUrl, type PostHistory } from './src/lib/history'
+import { parseUnifiedDiff } from './src/lib/diff'
+import {
+  gitLogArgs,
+  gitShowArgs,
+  parsePostHistory,
+  repoWebUrl,
+  type PostHistory,
+} from './src/lib/history'
 
 const run = promisify(execFile)
 
@@ -124,6 +131,30 @@ function postHistory(): Plugin {
       // No git, no remote, or not a repo. The feature is additive: without
       // history the page renders exactly as it did before it existed.
       return { repo: null, history: {} }
+    }
+
+    // One `git show` per commit, not per commit *per post*: the reformat that
+    // touched 31 posts is one patch containing all 31, and asking git 31 times
+    // for slices of it would be the slowest thing in the build.
+    const shas = new Set<string>()
+    for (const entry of Object.values(byFile)) {
+      // Commits are newest-first, so dropping the last one drops the commit
+      // that created the file — whose "diff" is the whole post.
+      for (const commit of entry.commits.slice(0, -1)) shas.add(commit.sha)
+    }
+    for (const sha of shas) {
+      try {
+        const { stdout } = await run('git', gitShowArgs(sha, rel), { maxBuffer: 32 * 1024 * 1024 })
+        for (const fileDiff of parseUnifiedDiff(stdout)) {
+          const commit = byFile[fileDiff.file]?.commits.find((c) => c.sha === sha)
+          if (!commit) continue
+          commit.diff = fileDiff.rows
+          if (fileDiff.truncated) commit.truncated = true
+        }
+      } catch {
+        // A patch git won't produce (a binary blob, a broken object) costs the
+        // page its diff, not its history.
+      }
     }
 
     const history: Record<string, PostHistory & { file: string }> = {}

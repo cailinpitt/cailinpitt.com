@@ -16,6 +16,8 @@
  * entered the repo, and how many times it alone was changed after that.
  */
 
+import type { DiffRow } from './diff'
+
 /** A commit that touched a post. */
 export interface Revision {
   sha: string
@@ -25,6 +27,13 @@ export interface Revision {
   subject: string
   /** How many posts this commit touched — 1 for an ordinary edit. */
   posts: number
+  /**
+   * What it changed in *this* post, as track-changes rows. Absent for the
+   * commit that added the post, whose diff is the post itself.
+   */
+  diff?: DiffRow[]
+  /** Whether rows were dropped from `diff` to keep the page small. */
+  truncated?: boolean
 }
 
 export interface PostHistory {
@@ -63,6 +72,29 @@ export const gitLogArgs = (dir: string): string[] => [
 ]
 
 /**
+ * "Edited 6 times", or null when nothing post-specific has happened to it.
+ * Shared by the line at the foot of a post and the link at the top that points
+ * at it, so the two can't say different numbers.
+ */
+export const editedLabel = (revisions: number): string | null =>
+  revisions === 0 ? null : `Edited ${revisions === 1 ? 'once' : `${revisions} times`}`
+
+/**
+ * The patch for one commit, in the form src/lib/diff.ts parses. `--unified=0`
+ * because in markdown the context around a changed paragraph is a blank line;
+ * `--format=''` drops the commit header, which this module already has.
+ */
+export const gitShowArgs = (sha: string, dir: string): string[] => [
+  'show',
+  sha,
+  '--unified=0',
+  '--format=',
+  '--no-color',
+  '--',
+  dir,
+]
+
+/**
  * Post histories keyed by file path, exactly as git printed them (e.g.
  * `content/blog/california.md`). Commits arrive newest-first and stay that way.
  */
@@ -90,9 +122,11 @@ export function parsePostHistory(log: string): Record<string, PostHistory> {
       posts: commit.files.length,
     }
     for (const file of commit.files) {
-      ;(history[file] ??= { added: null, imported: false, revisions: 0, commits: [] }).commits.push(
-        revision,
-      )
+      // A copy per file, not the shared object: a bulk commit appears in 31
+      // histories, and each one is about to have its own `diff` hung on it.
+      ;(history[file] ??= { added: null, imported: false, revisions: 0, commits: [] }).commits.push({
+        ...revision,
+      })
     }
   }
 

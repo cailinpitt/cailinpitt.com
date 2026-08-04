@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
@@ -100,6 +100,12 @@ export function Component() {
     useLoaderData() as BlogPostData
   const articleRef = useRef<HTMLElement>(null)
   const [showSource, setShowSource] = useState(false)
+  // Lives here rather than in PostHistory because the link in the meta line
+  // opens it — and because arriving on #history should land on something open.
+  const [historyOpen, setHistoryOpen] = useState(false)
+  useEffect(() => {
+    if (window.location.hash === '#history') setHistoryOpen(true)
+  }, [])
   // Fall back to the first image in the body so posts without an explicit `image:`
   // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
@@ -154,12 +160,23 @@ export function Component() {
             </ul>
           )}
         </header>
-        <PostSource
-          body={post.body}
-          file={`${post.path}.md`}
-          open={showSource}
-          onToggle={setShowSource}
-        />
+        <div className="post-source-bar">
+          <PostSource
+            body={post.body}
+            file={`${post.path}.md`}
+            open={showSource}
+            onToggle={setShowSource}
+          />
+          {/* Jumps to the record at the foot of the page and opens it on the
+              way, so the click lands on the list rather than on a collapsed
+              line the reader then has to expand. A plain hash link, so it goes
+              somewhere useful before hydration and can be shared. */}
+          {history && (
+            <a href="#history" onClick={() => setHistoryOpen(true)}>
+              History
+            </a>
+          )}
+        </div>
         {showSource ? (
           <pre className="post-source">{post.body}</pre>
         ) : (
@@ -179,7 +196,9 @@ export function Component() {
       {/* Outside the <article>: this is a record *about* the post, which is also
           why the reading-progress bar (measured on the article) completes at the
           end of the prose rather than at the end of a commit list. */}
-      {history && <PostHistory history={history} repo={repo} />}
+      {history && (
+        <PostHistory history={history} repo={repo} open={historyOpen} onToggle={setHistoryOpen} />
+      )}
       {related.length > 0 && (
         <aside className="related-posts" aria-labelledby="related-heading">
           <h2 id="related-heading" className="eyebrow">

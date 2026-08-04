@@ -66,7 +66,7 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 | Related posts | Up to three sharing the most tags; none if the post has no tags |
 | Heading anchors | `rehype-slug` ids + a `#` self-link, hidden until hover/focus. Stripped from RSS |
 | Markdown source | Every post publishes its source at `<post path>.md`, and a **Markdown** toggle above the body swaps the rendered article for the raw source in place, with Copy. See [Markdown source](#markdown-source) |
-| Provenance | A line at the foot of the post, read from `git log` at build time: when the file arrived and how many times it alone was edited since. See [Provenance](#provenance) |
+| Provenance | A line at the foot of the post, read from `git log` at build time: when the file arrived and how many times it alone was edited since. Each commit opens a word-level diff of what it changed. See [Provenance](#provenance) |
 | `updated:` | Renders in the meta line and JSON-LD `dateModified` |
 | Listings | `/blog`, home page, `sitemap.xml`, `llms.txt`, JSON-LD, RSS |
 
@@ -101,6 +101,25 @@ writing. So **a commit touching `BULK_POSTS` (3) or more posts is shown but not 
 post that has never been edited on its own says only when it turned up: "Imported June 20, 2026",
 with a note explaining the migration. Bulk rows in the list are marked `31 POSTS`.
 
+Each commit's subject opens the **diff** of what it changed in this post, as track-changes prose:
+the paragraph with what came out struck through and what went in marked, in `<ins>`/`<del>` so the
+change is in the markup and not only the color.
+
+Markdown puts a whole paragraph on one line, so git's line diff reports a 1,200-character
+paragraph deleted and a near-identical one added to fix `turnes` → `turned`. Three things make
+that readable, all at build time:
+
+| | |
+|---|---|
+| **Word refinement** | Git decides which lines correspond; `wordDiff()` refines each pair to the words that changed. An LCS table — quadratic, but one paragraph at a time |
+| **Elision** | Unchanged runs longer than ~90 characters of context collapse to a `…` chip, so a diff opens *on* the change instead of a wall of prose. Also cut this post's loader data from 24 KB to 16 KB |
+| **Similarity floor** | Below 30% shared text the pair is a rewrite, not an edit, and shows as whole `−`/`+` lines — word-marking every token would be confetti. This is what the "Polish" commit's `description:` rewrite looks like |
+
+The commit that *added* a post has no diff: it would be the post. Diffs are collected with one
+`git show` per commit, not per commit per post — the reformat that touched 31 posts is one patch.
+
+- `src/lib/diff.ts` — parsing, word refinement, and elision, pure and covered by
+  `tests/diff.test.ts`
 - `src/lib/history.ts` — types, the `git log` invocation, and the parsing/filtering, kept pure and
   covered by `tests/history.test.ts`
 - `cailinpitt:post-history` in `vite.config.ts` — one `git log` for the whole directory at build

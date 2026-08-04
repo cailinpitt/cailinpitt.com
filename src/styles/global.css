@@ -755,6 +755,8 @@ h3 {
    Deliberately the quietest thing on the page: one line of small caps that only
    becomes a list if someone asks for it. */
 .post-history {
+  /* Clears the reading-progress bar when jumped to from the link above. */
+  scroll-margin-top: 1.5rem;
   margin-top: 3rem;
   padding-top: 1rem;
   border-top: 1px solid var(--rule);
@@ -821,6 +823,116 @@ h3 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+.post-history-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.post-history-meta a {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+/* The subject doubles as the control that opens the diff. */
+.post-history-list button.post-history-subject {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.post-history-list button.post-history-subject::before {
+  content: '▸';
+  display: inline-block;
+  width: 1em;
+  margin-left: -1em;
+  color: var(--muted);
+  font-size: 0.75em;
+}
+.post-history-list button[aria-expanded='true'].post-history-subject::before {
+  transform: rotate(90deg);
+}
+
+/* One commit's changes, as track-changes prose — see the Diff component in
+   src/components/PostHistory.tsx. Serif, because what's being read is writing:
+   the monospace treatment belongs to the Markdown view, this is the sentence
+   before and after. */
+.post-diff {
+  grid-column: 1 / -1;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.75rem 1rem;
+  border-left: 2px solid var(--rule);
+  background: var(--surface);
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-0);
+  line-height: 1.5;
+  color: var(--fg);
+  /* A diff of a long paragraph shouldn't push the page down by a screen. */
+  max-height: 24rem;
+  overflow-y: auto;
+}
+.post-diff-row {
+  margin: 0;
+}
+.post-diff-row + .post-diff-row {
+  margin-top: 0.6rem;
+}
+.post-diff ins {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  text-decoration: none;
+  border-radius: 2px;
+}
+.post-diff del {
+  color: var(--muted);
+  text-decoration-thickness: 1px;
+}
+/* A word swapped for another leaves no whitespace between them — the space
+   around the pair belongs to the unchanged text on either side. Without this
+   they collide: "turnesturned". */
+.post-diff del + ins,
+.post-diff ins + del {
+  margin-left: 0.25em;
+}
+/* A line with no counterpart: the whole line went in or came out, so it gets a
+   gutter mark rather than a strike buried in a paragraph. */
+.post-diff-add,
+.post-diff-del {
+  padding-left: 1rem;
+  text-indent: -1rem;
+}
+.post-diff-add::before,
+.post-diff-del::before {
+  display: inline-block;
+  width: 1rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.post-diff-add::before {
+  content: '+';
+}
+.post-diff-del::before {
+  content: '−';
+}
+/* Stands in for the unchanged middle of a paragraph. Set apart so it reads as
+   "text omitted here" rather than as an ellipsis someone wrote. */
+.post-diff-gap {
+  display: inline-block;
+  margin: 0 0.15em;
+  padding: 0 0.35em;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.8em;
+  vertical-align: 0.1em;
+}
+.post-diff-more {
+  margin: 0.6rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
 }
 @media (max-width: 34rem) {
   .post-history-list li {

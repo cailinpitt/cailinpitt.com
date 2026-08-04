@@ -40,8 +40,10 @@ export function PostSource({
     }
   }
 
+  // A fragment, not a row: the page puts these in `.post-source-bar` alongside
+  // the link to the post's history, so the two sit in one row of controls.
   return (
-    <div className="post-source-bar">
+    <>
       {/* A toggle button: the label stays put and aria-pressed carries the
           state, so a screen reader announces what pressing it does rather than
           renaming the control out from under anyone who just used it. */}
@@ -61,6 +63,6 @@ export function PostSource({
           </span>
         </>
       )}
-    </div>
+    </>
   )
 }
