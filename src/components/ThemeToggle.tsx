@@ -6,11 +6,14 @@ import { useEffect, useState, type ReactElement } from 'react'
 // attribute, so those visitors follow their OS `prefers-color-scheme` — and can get
 // back to it, which a two-state toggle can't offer. A tiny inline script in
 // index.html applies a stored choice before first paint (avoids FOUC).
-type Theme = 'system' | 'light' | 'dark'
+export type Theme = 'system' | 'light' | 'dark'
 
 const ORDER: Theme[] = ['system', 'light', 'dark']
 
-function storedTheme(): Theme {
+/** Lets the button follow a change it didn't make (the `theme` command in /terminal). */
+const THEME_EVENT = 'cailinpitt:themechange'
+
+export function storedTheme(): Theme {
   try {
     const saved = localStorage.getItem('theme')
     if (saved === 'light' || saved === 'dark') return saved
@@ -53,7 +56,8 @@ function syncThemeColor(theme: Theme) {
   for (const tag of tags) tag.content = bg
 }
 
-function apply(theme: Theme) {
+/** Attribute, chrome tint, and stored preference. The only implementation. */
+export function applyTheme(theme: Theme) {
   if (theme === 'system') delete document.documentElement.dataset.theme
   else document.documentElement.dataset.theme = theme
   // After the attribute, so --bg resolves to the theme being applied.
@@ -64,6 +68,7 @@ function apply(theme: Theme) {
   } catch {
     /* ignore persistence failure */
   }
+  window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: theme }))
 }
 
 const SUN = (
@@ -99,11 +104,17 @@ export function ThemeToggle() {
     syncThemeColor(stored)
   }, [])
 
+  // Follow changes made elsewhere, e.g. `theme dark` in /terminal.
+  useEffect(() => {
+    const onChange = (event: Event) => setTheme((event as CustomEvent<Theme>).detail)
+    window.addEventListener(THEME_EVENT, onChange)
+    return () => window.removeEventListener(THEME_EVENT, onChange)
+  }, [])
+
   const next = ORDER[(ORDER.indexOf(theme) + 1) % ORDER.length]
 
   function cycle() {
-    setTheme(next)
-    apply(next)
+    applyTheme(next)
   }
 
   // Say where you are as well as where you're going: with three states the icon

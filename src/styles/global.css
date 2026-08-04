@@ -2920,6 +2920,101 @@ a.guestbook-name:hover {
   cursor: pointer;
 }
 
+/* ---- terminal (/terminal) ------------------------------------------------
+   Rendered outside <Layout>, so the viewport is the terminal. Inverts the paper
+   palette via swapped --fg/--bg, so it still follows the theme. */
+.terminal-screen {
+  --tl-bg: var(--fg);
+  --tl-fg: var(--bg);
+  --tl-muted: color-mix(in srgb, var(--bg) 55%, var(--fg));
+  min-height: 100dvh;
+  padding: clamp(0.75rem, 2vw, 1.5rem);
+  background: var(--tl-bg);
+  color: var(--tl-fg);
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  line-height: 1.55;
+  /* `ls` pads with spaces, so they must not collapse. Wrapping still allowed. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.terminal-screen a {
+  color: inherit;
+  text-decoration-color: var(--tl-muted);
+}
+.terminal-screen a:hover,
+.terminal-screen a:focus-visible {
+  color: var(--accent);
+}
+
+.tl-muted {
+  color: var(--tl-muted);
+}
+.tl-accent {
+  color: var(--accent);
+}
+.tl-error {
+  color: #e2725b;
+}
+.tl-prompt {
+  color: color-mix(in srgb, var(--accent) 70%, var(--tl-fg));
+}
+
+/* A listing row (`ls`, `find`): name left, meta right-aligned against a shared
+   edge, a dotted leader across the gap. Capped so the columns stay a table on a
+   wide screen instead of flinging the dates at the far edge. */
+.tl-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.5ch;
+  max-width: 104ch;
+}
+.tl-leader {
+  flex: 1;
+  min-width: 2ch;
+  align-self: center;
+  border-bottom: 1px dotted color-mix(in srgb, var(--tl-muted) 40%, transparent);
+}
+.tl-meta {
+  flex: none;
+  color: var(--tl-muted);
+}
+
+.tl-image img {
+  max-width: min(18rem, 60%);
+  margin: 0.4rem 0;
+  border-radius: 3px;
+  display: block;
+}
+
+.terminal-input-row {
+  display: flex;
+  gap: 0.5ch;
+  align-items: baseline;
+}
+.terminal-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--tl-fg);
+  font: inherit;
+  caret-color: var(--accent);
+}
+.terminal-input:focus {
+  outline: none;
+}
+
+.terminal-static ul {
+  padding-left: 1.2rem;
+}
+.terminal-static li {
+  margin-bottom: 0.4rem;
+}
+
 /* ---- print ---------------------------------------------------------------
    Aimed at the blog post — the one page anyone prints or saves as a PDF. The
    site chrome comes off, the palette is forced light regardless of the reader's

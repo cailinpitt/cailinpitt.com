@@ -16,6 +16,8 @@ interface OgCard {
   meta?: string
   /** Absolute URL of a photograph to run full-bleed behind the title. */
   photo?: string
+  /** Opt out of the paper card for a layout of the page's own. */
+  layout?: 'terminal'
 }
 
 interface SeoProps {

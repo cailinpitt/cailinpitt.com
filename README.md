@@ -21,7 +21,7 @@ file explains how things work.
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
 - Pages: [/listening](#listening) · [/reading](#reading) · [/guestbook](#guestbook) ·
   [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
-  [/colophon](#colophon) · [/blog](#blog-index)
+  [/colophon](#colophon) · [/blog](#blog-index) · [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
   [theme](#color-theme) · [markdown source](#markdown-source) · [provenance](#provenance)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
@@ -417,15 +417,18 @@ npm run og -- --only /blog/…        # one page
 npm run og -- --out .og-preview     # write somewhere safe to look at
 ```
 
-- **Two layouts.** Pages with a photograph get it full-bleed under an ink scrim; everything else
-  gets the paper card — paper/ink palette, clay spine, title and description between hairlines.
+- **Three layouts.** Pages with a photograph get it full-bleed under an ink scrim; `/terminal` gets
+  its own dark screen, rendered as a session in JetBrains Mono; everything else gets the paper card
+  — paper/ink palette, clay spine, title and description between hairlines. A page picks the
+  terminal layout with `card={{ layout: 'terminal' }}`.
 - **Copy comes from the built HTML** (`og:title`, `og:description`), so a card can't drift from its
   page. Page-only details (kicker, date, which photo) come through a `<meta name="og-card">` hint
   emitted by `<Seo card={{…}}>`.
 - **Photographs are fetched from R2** at build time, falling back to `public/images`. A photo that
   can't be fetched falls back to the paper card rather than failing the deploy.
-- **Type is Source Serif 4 + Inter**, not the site's own fonts, which a Linux runner lacks. They
-  ship as `.woff` in `node_modules`; satori converts glyphs to paths.
+- **Type is Source Serif 4 + Inter** (+ JetBrains Mono, terminal card only), not the site's own
+  fonts, which a Linux runner lacks. They ship as `.woff` in `node_modules`; satori converts glyphs
+  to paths.
 - Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the script.
   **They must agree** or pages point at a 404.
 
@@ -456,6 +459,29 @@ magnifier. Jumps to any page, post, photo year, or tag.
   needs adding there (years and tags are derived). `tests/command-palette.test.ts` holds the list
   against `App.tsx` in both directions.
 - It's a native `<dialog>` opened with `showModal()`, so focus trapping and Escape come free.
+
+## Terminal
+
+`/terminal` is the site as a shell: `ls` the sections, `cat` a post, `open` a page, `now`,
+`reading`, `guestbook`, `photo random`, `neofetch`. Tab completes, ↑/↓ walk history, Ctrl-L clears.
+
+- **It's the whole viewport.** The route sits *outside* `<Layout>` in `App.tsx`, so there's no
+  header or footer — `exit` (or any link in the output) is the way back. That's also why
+  `tests/command-palette.test.ts` walks the route tree recursively instead of reading
+  `routes[0].children`.
+- **`src/lib/terminal.ts` is the engine and it's pure**: the tree, path resolution, completion, and
+  every command. The outside world (navigation, theme, clock, fetchers) arrives as a `Shell`, so
+  `tests/terminal.test.ts` runs it with no DOM and no network.
+- **Nothing is a second source of truth.** Posts come from `virtual:site-index` (already in the
+  bundle for ⌘K), `cat` fetches the post's published `.md`, and `now`/`reading`/`guestbook` call the
+  same clients the pages do.
+- **Photo ids ride in the route loader**, since the browser build of `virtual:site-index`
+  deliberately carries none.
+- `COMMANDS` drives `help`, completion, and did-you-mean; a test asserts every name in it is
+  actually handled.
+- Signing the guestbook navigates to the real form rather than reimplementing a write path past
+  Turnstile.
+- Without JavaScript the prerendered HTML is a short list of real links, not an empty box.
 
 ## Color theme
 

@@ -61,6 +61,7 @@ export const PAGES: Entry[] = [
     keywords: 'log activity days',
   },
   { id: 'page:/guestbook', label: 'Guestbook', kind: 'Page', to: '/guestbook', keywords: 'sign visitors say hi hello comments' },
+  { id: 'page:/terminal', label: 'Terminal', kind: 'Page', to: '/terminal', keywords: 'shell console command line cli ls cat curl' },
   { id: 'page:/colophon', label: 'Colophon', kind: 'Page', to: '/colophon', keywords: 'about built stack how' },
   { id: 'page:/privacy', label: 'Privacy', kind: 'Page', to: '/privacy', keywords: 'cookies tracking data' },
 ]

@@ -8,13 +8,15 @@ import { PAGES } from '../src/components/CommandPalette'
 // else. Posts, photo years, and tags are derived from content, so they can't
 // drift — only this list can, and only when a route is added or removed.
 
-const children = (routes[0].children ?? []) as RouteRecord[]
+/** Every leaf route, so a page outside <Layout> (e.g. /terminal) is still checked. */
+const leaves = (list: RouteRecord[]): RouteRecord[] =>
+  list.flatMap((route) => (route.children ? leaves(route.children as RouteRecord[]) : [route]))
 
 /**
  * The routes a visitor could be told to search for: no parameterized routes (a
  * post, a tag, or a single photo has no one URL) and no catch-all.
  */
-const staticRoutes = children.flatMap((route) => {
+const staticRoutes = leaves(routes).flatMap((route) => {
   if ('index' in route && route.index) return ['/']
   const routePath = (route as { path?: string }).path
   if (!routePath || routePath.includes(':') || routePath === '*') return []

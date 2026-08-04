@@ -12,7 +12,8 @@
 // date/reading-time line, and the photo to use as a background). So the card copy can
 // never drift from the copy in the page's own tags.
 //
-// Two layouts, both 1200x630 (see src/components/Seo.tsx for where they're linked):
+// Three layouts, all 1200x630 (see src/components/Seo.tsx for where they're linked):
+//   - terminal: /terminal only, via `layout: 'terminal'` in the hint — its own dark screen.
 //   - photo: pages with a photograph — full-bleed image under an ink scrim.
 //   - paper: everything else — the site's paper/ink palette, clay spine, hairline rules.
 //
@@ -57,6 +58,15 @@ const C = {
   accent: '#b34a26',
 }
 
+// The dark theme, for the terminal card — the one page that is ink-on-screen.
+const D = {
+  bg: '#141312',
+  fg: '#ece8e1',
+  muted: '#a49c90',
+  rule: '#2c2a26',
+  accent: '#e3925b',
+}
+
 // The site's own faces are Iowan Old Style (macOS-only) and system-ui, neither of
 // which a Linux build runner has. Source Serif 4 and Inter are the closest open
 // stand-ins and ship as .woff in node_modules, so nothing binary lives in the repo.
@@ -67,6 +77,10 @@ const fonts = [
   { name: 'Serif', weight: 600, style: 'normal', data: await fontFile('source-serif-4', 'source-serif-4-latin-600-normal.woff') },
   { name: 'Sans', weight: 400, style: 'normal', data: await fontFile('inter', 'inter-latin-400-normal.woff') },
   { name: 'Sans', weight: 500, style: 'normal', data: await fontFile('inter', 'inter-latin-500-normal.woff') },
+  // Only the terminal card uses this; a card of a shell in a proportional face
+  // isn't a card of a shell.
+  { name: 'Mono', weight: 400, style: 'normal', data: await fontFile('jetbrains-mono', 'jetbrains-mono-latin-400-normal.woff') },
+  { name: 'Mono', weight: 600, style: 'normal', data: await fontFile('jetbrains-mono', 'jetbrains-mono-latin-600-normal.woff') },
 ]
 
 // satori takes React-shaped nodes; these build them without needing JSX in a .mjs.
@@ -141,6 +155,37 @@ function paperCard({ title, dek, kicker, meta }) {
       row({ justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.rule}`, paddingTop: 20 },
         text({ ...META, color: C.muted }, meta ?? SITE_HOST),
         meta ? text({ ...META, color: C.muted }, SITE_HOST) : null))
+  )
+}
+
+const MONO = { fontFamily: 'Mono' }
+/** JetBrains Mono's advance width, in ems. Every glyph is this wide. */
+const CH = 0.6
+
+/** Largest size in [min, max] at which `s` fits one monospace line in `boxWidth`. */
+const monoFit = (s, boxWidth, max, min) =>
+  Math.max(min, Math.min(max, Math.floor(boxWidth / (s.length * CH))))
+
+/** Terminal card: the /terminal page's own dark screen, as a session. */
+function terminalCard({ title, dek, kicker, meta }) {
+  const prompt = (after) =>
+    row({ alignItems: 'center' },
+      text({ ...MONO, fontSize: 26, color: D.accent, marginRight: 14 }, '~ $'),
+      after)
+
+  return col({ width: W, height: H, background: D.bg, padding: '46px 56px 44px' },
+    row({ justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${D.rule}`, paddingBottom: 20 },
+      text({ ...MONO, fontSize: 19, letterSpacing: 2.2, color: D.muted }, 'cailin@cailinpitt.com'),
+      text({ ...MONO, fontSize: 19, letterSpacing: 2.6, textTransform: 'uppercase', color: D.accent }, kicker)),
+    col({ flex: 1, justifyContent: 'center' },
+      prompt(text({ ...MONO, fontSize: 26, color: D.fg }, 'open /terminal')),
+      text({ ...MONO, fontWeight: 600, fontSize: monoFit(title, 1040, 66, 30), color: D.fg, marginTop: 26 }, title),
+      dek ? text({ ...MONO, fontSize: 24, lineHeight: 1.5, color: D.muted, marginTop: 20 }, clampText(dek, 108)) : null,
+      // A block cursor, which is the one thing that says "this is still waiting for you".
+      row({ marginTop: 30 }, prompt(row({ width: 15, height: 26, background: D.accent })))),
+    row({ justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${D.rule}`, paddingTop: 20 },
+      text({ ...MONO, fontSize: 20, color: D.muted }, meta ?? SITE_HOST),
+      text({ ...MONO, fontSize: 20, color: D.muted }, SITE_HOST))
   )
 }
 
@@ -271,12 +316,15 @@ function cardSpec(html, route) {
     kicker: hint.kicker ?? kickerFor(route),
     meta: hint.meta,
     photo: hint.photo,
+    layout: hint.layout,
   }
 }
 
 async function render(spec) {
   let node
-  if (spec.photo) {
+  if (spec.layout === 'terminal') {
+    node = terminalCard(spec)
+  } else if (spec.photo) {
     try {
       node = setImageSrc(photoCard(spec), await loadPhoto(spec.photo))
     } catch (err) {
