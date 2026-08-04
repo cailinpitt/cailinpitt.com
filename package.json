@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite-react-ssg build",
-    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-rss.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-markdown.mjs && node scripts/generate-rss.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -26,6 +26,7 @@
     "reading:sync": "node scripts/reading-sync.mjs",
     "guestbook:list": "node scripts/guestbook.mjs list",
     "guestbook:rm": "node scripts/guestbook.mjs rm",
+    "md": "node scripts/generate-markdown.mjs",
     "og": "node scripts/generate-og.mjs",
     "rss": "node scripts/generate-rss.mjs"
   },

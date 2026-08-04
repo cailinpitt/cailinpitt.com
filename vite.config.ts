@@ -83,9 +83,41 @@ function siteIndex(): Plugin {
   }
 }
 
+/**
+ * Serve `/blog/<path>.md` in dev, the way the built site does.
+ *
+ * In production those files are real: scripts/generate-markdown.mjs copies each
+ * post's source next to its prerendered HTML. Without this the ".md file" link
+ * on every post would be the one thing on the page that only works in
+ * production, which is how it ends up broken.
+ */
+function postSource(): Plugin {
+  const dir = path.join(process.cwd(), 'content', 'blog')
+
+  return {
+    name: 'cailinpitt:post-source',
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url?.split('?')[0]
+        if (!url?.startsWith('/blog/') || !url.endsWith('.md')) return next()
+        const wanted = url.slice(0, -3)
+        for (const file of (await readdir(dir)).filter((f) => f.endsWith('.md'))) {
+          const raw = await readFile(path.join(dir, file), 'utf8')
+          const { data } = parseFrontmatter(raw)
+          const postPath = (data.path as string) ?? `/blog/${file.replace(/\.md$/, '')}`
+          if (postPath !== wanted) continue
+          res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+          return res.end(raw)
+        }
+        next()
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), siteIndex()],
+  plugins: [react(), siteIndex(), postSource()],
   build: {
     // Emit clean, fingerprinted assets; HTML is generated per-route by vite-react-ssg.
     outDir: 'dist',

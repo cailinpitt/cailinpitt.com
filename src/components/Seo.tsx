@@ -38,6 +38,12 @@ interface SeoProps {
   publicationUri?: string | null
   /** AT-URI of this page's site.standard.document record (standard.site, Phase 8). */
   documentUri?: string | null
+  /**
+   * Path of this page's published Markdown source, if it has one. Advertised as
+   * an alternate representation so a crawler or a reader that would rather have
+   * the source than the page can find it without being told.
+   */
+  markdownPath?: string
 }
 
 // Escape `<` so the serialized JSON can't break out of the <script> element.
@@ -66,6 +72,7 @@ export function Seo({
   jsonLd,
   publicationUri,
   documentUri,
+  markdownPath,
 }: SeoProps) {
   const url = `${SITE_URL}${path}`
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
@@ -78,6 +85,14 @@ export function Seo({
       <title>{fullTitle}</title>
       {description && <meta name="description" content={description} />}
       <link rel="canonical" href={url} />
+      {markdownPath && (
+        <link
+          rel="alternate"
+          type="text/markdown"
+          href={`${SITE_URL}${markdownPath}`}
+          title="Markdown source"
+        />
+      )}
 
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:type" content={type} />

@@ -11,7 +11,7 @@ npm run dev            # dev server
 npm run typecheck      # tsc --noEmit
 npm test               # vitest run
 npm run test:watch
-npm run build          # prerender → dist/ (runs postbuild: sitemap, llms, rss, atproto, og)
+npm run build          # prerender → dist/ (runs postbuild: sitemap, llms, md, rss, atproto, og)
 npm run preview        # serve dist/
 ```
 
@@ -98,6 +98,7 @@ npm run og                          # all social cards
 npm run og -- --only /blog/<path>   # one page
 npm run og -- --out .og-preview     # write somewhere safe to look at
 npm run rss                         # feed.xml
+npm run md                          # post sources → dist/<post path>.md
 ```
 
 ## Deploy

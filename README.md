@@ -23,7 +23,7 @@ file explains how things work.
   [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
   [/colophon](#colophon) · [/blog](#blog-index)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
-  [theme](#color-theme)
+  [theme](#color-theme) · [markdown source](#markdown-source)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
 
 ## Blog posts
@@ -65,8 +65,28 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 | Reading time | Counted from prose only. Under 100 words shows nothing |
 | Related posts | Up to three sharing the most tags; none if the post has no tags |
 | Heading anchors | `rehype-slug` ids + a `#` self-link, hidden until hover/focus. Stripped from RSS |
+| Markdown source | Every post publishes its source at `<post path>.md`, and a **Markdown** toggle above the body swaps the rendered article for the raw source in place, with Copy. See [Markdown source](#markdown-source) |
 | `updated:` | Renders in the meta line and JSON-LD `dateModified` |
 | Listings | `/blog`, home page, `sitemap.xml`, `llms.txt`, JSON-LD, RSS |
+
+### Markdown source
+
+Every post is readable as the file it was written in.
+
+- `scripts/generate-markdown.mjs` (postbuild) copies `content/blog/<slug>.md` byte-for-byte to
+  `dist/<post path>.md`, so <https://cailinpitt.com/blog/2023/3/3/paramore-this-is-why-2023.md>
+  is the source, frontmatter and all. GitHub Pages serves it as
+  `text/markdown; charset=utf-8`, which browsers show inline.
+- On the page, the **Markdown** toggle above the body (`src/components/PostSource.tsx`) swaps the
+  rendered article for a `<pre>` of the source, with Copy and a link to the file. It reads the body
+  out of the loader data the page already renders from — no request, and it can't disagree with
+  what's on screen. The inline view has no frontmatter; the file does.
+- Each post's `<head>` advertises the file as
+  `<link rel="alternate" type="text/markdown">`, so a crawler can find it.
+- Body images read `/images/...` in the source, not the R2 URLs they're rewritten to at render
+  time — the source says what you'd paste back into a post.
+- The dev server serves the same URLs (a middleware in `vite.config.ts`), so the link isn't a
+  production-only feature that only breaks in production.
 
 Images are rewritten to Cloudflare R2 at render time and are **never committed**.
 `npm run images:sync` reports images a post references but that aren't on disk, plus files nothing

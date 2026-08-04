@@ -1,9 +1,10 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
+import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
@@ -85,6 +86,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
 export function Component() {
   const { post, newer, older, related, publicationUri } = useLoaderData() as BlogPostData
   const articleRef = useRef<HTMLElement>(null)
+  const [showSource, setShowSource] = useState(false)
   // Fall back to the first image in the body so posts without an explicit `image:`
   // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
@@ -104,6 +106,7 @@ export function Component() {
         jsonLd={blogPostSchema(post)}
         publicationUri={publicationUri}
         documentUri={post.atUri}
+        markdownPath={`${post.path}.md`}
       />
       <ReadingProgress targetRef={articleRef} />
       <article className="post" ref={articleRef}>
@@ -138,17 +141,27 @@ export function Component() {
             </ul>
           )}
         </header>
-        <div className="post-body">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            // rehypeRaw first: it turns embedded HTML into real nodes, which is
-            // what lets rehypeSlug give a hand-written <h2> an id too.
-            rehypePlugins={[rehypeRaw, rehypeSlug]}
-            components={markdownComponents}
-          >
-            {post.body}
-          </Markdown>
-        </div>
+        <PostSource
+          body={post.body}
+          file={`${post.path}.md`}
+          open={showSource}
+          onToggle={setShowSource}
+        />
+        {showSource ? (
+          <pre className="post-source">{post.body}</pre>
+        ) : (
+          <div className="post-body">
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              // rehypeRaw first: it turns embedded HTML into real nodes, which is
+              // what lets rehypeSlug give a hand-written <h2> an id too.
+              rehypePlugins={[rehypeRaw, rehypeSlug]}
+              components={markdownComponents}
+            >
+              {post.body}
+            </Markdown>
+          </div>
+        )}
       </article>
       {related.length > 0 && (
         <aside className="related-posts" aria-labelledby="related-heading">
