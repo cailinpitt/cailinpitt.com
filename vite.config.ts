@@ -1,13 +1,20 @@
+import { execFile } from 'node:child_process'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
+import { promisify } from 'node:util'
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { parseFrontmatter } from './src/lib/frontmatter'
+import { gitLogArgs, parsePostHistory, repoWebUrl, type PostHistory } from './src/lib/history'
+
+const run = promisify(execFile)
 
 const VIRTUAL_ID = 'virtual:site-index'
 // The \0 prefix is the convention that marks an id as not-a-file, so Vite and
 // other plugins leave it alone rather than trying to resolve it on disk.
 const RESOLVED_ID = '\0virtual:site-index'
+const HISTORY_ID = 'virtual:post-history'
+const RESOLVED_HISTORY_ID = '\0virtual:post-history'
 
 /**
  * A tiny post index for the command palette (⌘K), as a virtual module.
@@ -84,6 +91,68 @@ function siteIndex(): Plugin {
 }
 
 /**
+ * Each post's git history, as a virtual module — the data behind the provenance
+ * line at the foot of a post (src/components/PostHistory.tsx).
+ *
+ * One `git log` for the whole directory, not one per file: 32 subprocesses to
+ * say what a single pass already knows would be the slowest thing in the build.
+ * Renames aren't followed (`--follow` takes exactly one pathspec), which costs
+ * nothing here — a post's file name is its URL, so renaming one is a redirect
+ * problem nobody has taken on.
+ *
+ * Keyed by post path rather than by file name, because `path:` is the site's
+ * unique key for a post and a frontmatter `slug:` may disagree with the file.
+ *
+ * **A shallow clone reports almost no history**, and would quietly show every
+ * post as brand new. .github/workflows/deploy.yml checks out with
+ * `fetch-depth: 0` for this reason. Outside a git repo entirely — a tarball, a
+ * fresh unzip — the map comes back empty and the line simply doesn't render.
+ */
+function postHistory(): Plugin {
+  const dir = path.join(process.cwd(), 'content', 'blog')
+  const rel = 'content/blog'
+
+  async function collect() {
+    let byFile: Record<string, PostHistory> = {}
+    let repo: string | null = null
+    try {
+      const { stdout } = await run('git', gitLogArgs(rel), { maxBuffer: 32 * 1024 * 1024 })
+      byFile = parsePostHistory(stdout)
+      const remote = await run('git', ['remote', 'get-url', 'origin'])
+      repo = repoWebUrl(remote.stdout)
+    } catch {
+      // No git, no remote, or not a repo. The feature is additive: without
+      // history the page renders exactly as it did before it existed.
+      return { repo: null, history: {} }
+    }
+
+    const history: Record<string, PostHistory & { file: string }> = {}
+    for (const file of (await readdir(dir)).filter((f) => f.endsWith('.md'))) {
+      const entry = byFile[`${rel}/${file}`]
+      if (!entry) continue
+      const { data } = parseFrontmatter(await readFile(path.join(dir, file), 'utf8'))
+      const postPath = (data.path as string) ?? `/blog/${file.replace(/\.md$/, '')}`
+      history[postPath] = { ...entry, file: `${rel}/${file}` }
+    }
+    return { repo, history }
+  }
+
+  return {
+    name: 'cailinpitt:post-history',
+    resolveId: (id) => (id === HISTORY_ID ? RESOLVED_HISTORY_ID : undefined),
+
+    async load(id) {
+      if (id !== RESOLVED_HISTORY_ID) return
+      const { repo, history } = await collect()
+      return (
+        `export const repo = ${JSON.stringify(repo)}\n` +
+        `export const history = ${JSON.stringify(history)}\n`
+      )
+    },
+  }
+}
+
+/**
  * Serve `/blog/<path>.md` in dev, the way the built site does.
  *
  * In production those files are real: scripts/generate-markdown.mjs copies each
@@ -117,7 +186,7 @@ function postSource(): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), siteIndex(), postSource()],
+  plugins: [react(), siteIndex(), postHistory(), postSource()],
   build: {
     // Emit clean, fingerprinted assets; HTML is generated per-route by vite-react-ssg.
     outDir: 'dist',

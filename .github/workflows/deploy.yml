@@ -35,6 +35,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+          # Full history, not the default shallow clone: the provenance line at
+          # the foot of each post is read from `git log` at build time (see the
+          # cailinpitt:post-history plugin in vite.config.ts). At depth 1 every
+          # post would claim to have been added in the most recent commit.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20

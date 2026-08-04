@@ -751,6 +751,86 @@ h3 {
   border: 0;
 }
 
+/* Provenance, at the foot of the article — see src/components/PostHistory.tsx.
+   Deliberately the quietest thing on the page: one line of small caps that only
+   becomes a list if someone asks for it. */
+.post-history {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.post-history > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0;
+}
+.post-history button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+.post-history button:hover,
+.post-history a:hover {
+  color: var(--accent);
+}
+.post-history-note {
+  max-width: 34rem;
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}
+.post-history-list + .post-history-note {
+  margin-top: 1rem;
+}
+.post-history-list {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Date column fixed so the subjects line up as a column of their own; it
+   collapses to stacked rows where there isn't room for two columns. */
+.post-history-list li {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr auto;
+  gap: 0.5rem 1rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--rule);
+}
+.post-history-list li:first-child {
+  border-top: 0;
+}
+.post-history-subject {
+  color: var(--fg);
+}
+.post-history-list a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.post-history-bulk {
+  font-size: 0.85em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+@media (max-width: 34rem) {
+  .post-history-list li {
+    grid-template-columns: 1fr auto;
+  }
+  .post-history-list time {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Posts sharing tags with this one. Sits above the chronological nav: it is the
    more useful of the two, and the prev/next pair reads as the end of the page. */
 .related-posts {

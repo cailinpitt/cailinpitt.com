@@ -20,3 +20,17 @@ declare module 'virtual:site-index' {
   /** Years the photo feed covers, newest first. */
   export const photoYears: string[]
 }
+
+/**
+ * Per-post git history, read at build time by the `cailinpitt:post-history`
+ * plugin in vite.config.ts. Empty outside a git repo.
+ */
+declare module 'virtual:post-history' {
+  /** Browsable URL of the origin remote, e.g. https://github.com/user/repo. */
+  export const repo: string | null
+  /** Keyed by post path; `file` is the source path within the repo. */
+  export const history: Record<
+    string,
+    import('./lib/history').PostHistory & { file: string }
+  >
+}

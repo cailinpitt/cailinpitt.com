@@ -95,6 +95,12 @@ function rfc822(iso) {
  * first of those after the opening tag is the end of the body — no HTML parser
  * needed. Nested divs inside a post (raw embeds) are safe because they close
  * before the article does.
+ *
+ * **This depends on `.post-body` being the last thing inside `<article>`.** Put
+ * anything after it there and every feed item silently loses its content and
+ * falls back to the summary — the warning below is the only sign. Page furniture
+ * that isn't the post (provenance, related, nav) belongs outside the article,
+ * which is where BlogPost.tsx keeps it.
  */
 function extractBody(html) {
   const open = html.indexOf('<div class="post-body">')

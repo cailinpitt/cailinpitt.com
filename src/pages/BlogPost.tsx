@@ -4,10 +4,12 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
+import { PostHistory } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
+import type { PostHistory as PostHistoryData } from '../lib/history'
 import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
 import { relatedPosts, tagPath } from '../lib/tags'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
@@ -57,6 +59,10 @@ interface BlogPostData {
   /** Posts sharing tags with this one; empty when it has none. */
   related: PostSummary[]
   publicationUri: string | null
+  /** What git knows about this post's file; null outside a git checkout. */
+  history: (PostHistoryData & { file: string }) | null
+  /** Repo web URL, for linking commits. */
+  repo: string | null
 }
 
 export async function getStaticPaths(): Promise<string[]> {
@@ -74,17 +80,24 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
   const index = posts.findIndex((post) => post.path === path)
   if (index === -1) throw new Response('Not found', { status: 404 })
   const summary = ({ body: _body, ...post }: Post): PostSummary => post
+  // Imported here rather than at the top of the file so it lands in its own
+  // chunk: the production client returns above without ever loading it, and the
+  // history of all 32 posts has no business in the page's own bundle.
+  const { history, repo } = await import('virtual:post-history')
   return {
     post: posts[index],
     newer: posts[index - 1] ? summary(posts[index - 1]) : undefined,
     older: posts[index + 1] ? summary(posts[index + 1]) : undefined,
     related: relatedPosts(posts.map(summary), posts[index]),
     publicationUri: await source.loadPublicationUri(),
+    history: history[path] ?? null,
+    repo,
   }
 }
 
 export function Component() {
-  const { post, newer, older, related, publicationUri } = useLoaderData() as BlogPostData
+  const { post, newer, older, related, publicationUri, history, repo } =
+    useLoaderData() as BlogPostData
   const articleRef = useRef<HTMLElement>(null)
   const [showSource, setShowSource] = useState(false)
   // Fall back to the first image in the body so posts without an explicit `image:`
@@ -163,6 +176,10 @@ export function Component() {
           </div>
         )}
       </article>
+      {/* Outside the <article>: this is a record *about* the post, which is also
+          why the reading-progress bar (measured on the article) completes at the
+          end of the prose rather than at the end of a commit list. */}
+      {history && <PostHistory history={history} repo={repo} />}
       {related.length > 0 && (
         <aside className="related-posts" aria-labelledby="related-heading">
           <h2 id="related-heading" className="eyebrow">

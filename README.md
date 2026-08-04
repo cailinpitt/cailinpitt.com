@@ -23,7 +23,7 @@ file explains how things work.
   [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
   [/colophon](#colophon) · [/blog](#blog-index)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
-  [theme](#color-theme) · [markdown source](#markdown-source)
+  [theme](#color-theme) · [markdown source](#markdown-source) · [provenance](#provenance)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
 
 ## Blog posts
@@ -66,6 +66,7 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 | Related posts | Up to three sharing the most tags; none if the post has no tags |
 | Heading anchors | `rehype-slug` ids + a `#` self-link, hidden until hover/focus. Stripped from RSS |
 | Markdown source | Every post publishes its source at `<post path>.md`, and a **Markdown** toggle above the body swaps the rendered article for the raw source in place, with Copy. See [Markdown source](#markdown-source) |
+| Provenance | A line at the foot of the post, read from `git log` at build time: when the file arrived and how many times it alone was edited since. See [Provenance](#provenance) |
 | `updated:` | Renders in the meta line and JSON-LD `dateModified` |
 | Listings | `/blog`, home page, `sitemap.xml`, `llms.txt`, JSON-LD, RSS |
 
@@ -87,6 +88,32 @@ Every post is readable as the file it was written in.
   time — the source says what you'd paste back into a post.
 - The dev server serves the same URLs (a middleware in `vite.config.ts`), so the link isn't a
   production-only feature that only breaks in production.
+
+### Provenance
+
+Each post ends with one quiet line about its own file — "Edited 6 times since August 1, 2026" —
+that expands into the list of commits, each linking to GitHub.
+
+The counting is the whole design. This repo's history starts in June 2026: 31 posts arrived from
+Squarespace in one commit and were reformatted in a second the next day. Counting those would tell
+every pre-2026 post the same lie ("revised twice") about the repo's plumbing rather than the
+writing. So **a commit touching `BULK_POSTS` (3) or more posts is shown but not counted**, and a
+post that has never been edited on its own says only when it turned up: "Imported June 20, 2026",
+with a note explaining the migration. Bulk rows in the list are marked `31 POSTS`.
+
+- `src/lib/history.ts` — types, the `git log` invocation, and the parsing/filtering, kept pure and
+  covered by `tests/history.test.ts`
+- `cailinpitt:post-history` in `vite.config.ts` — one `git log` for the whole directory at build
+  time, exposed as `virtual:post-history`, keyed by post path. Renames aren't followed
+- `src/components/PostHistory.tsx` — the line itself, outside the `<article>`
+
+> **`fetch-depth: 0` is required.** `.github/workflows/deploy.yml` checks out full history for
+> this. At the default shallow depth every post would claim to have been added in the most recent
+> commit. Outside a git repo the map comes back empty and the line doesn't render at all.
+
+Also: **`.post-body` must stay the last thing inside `<article>`.** `scripts/generate-rss.mjs`
+finds the end of a post by looking for the literal `</div></article>`; anything added after the
+body inside the article silently empties every feed item down to its summary.
 
 Images are rewritten to Cloudflare R2 at render time and are **never committed**.
 `npm run images:sync` reports images a post references but that aren't on disk, plus files nothing
