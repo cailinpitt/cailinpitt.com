@@ -4,12 +4,14 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Link, useLoaderData } from 'react-router-dom'
 import { NowPlayingBar } from '../components/NowPlayingBar'
+import { PhotoStrip } from '../components/PhotoStrip'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingBar } from '../components/ReadingBar'
 import { Seo } from '../components/Seo'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { nowPage } from '../lib/now'
+import { toPreviews, type PhotoPreview } from '../lib/photos'
 import { formatDate } from '../lib/posts'
 import { pageSchema } from '../lib/structuredData'
 
@@ -23,7 +25,11 @@ import { pageSchema } from '../lib/structuredData'
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
 const SOURCE_FILE = '/now.md'
 
+/** How many photographs the strip shows. Three, to sit on one row beside the bars. */
+const RECENT_PHOTOS = 3
+
 interface NowData {
+  photos: PhotoPreview[]
   /** What git knows about content/now.md; null outside a git checkout. */
   history: (PostHistoryData & { file: string }) | null
   /** Repo web URL, for linking commits. */
@@ -32,10 +38,17 @@ interface NowData {
 
 export async function loader(): Promise<NowData | null> {
   if (!import.meta.env.SSR && !import.meta.env.DEV) return null
+  const { loadPhotos } = import.meta.env.SSR
+    ? await import('../lib/content.server')
+    : await import('../lib/content.client')
   // Imported here rather than at the top of the file so it lands in its own
   // chunk: the production client returns above without ever loading it.
   const { history, repo } = await import('virtual:post-history')
-  return { history: history['/now'] ?? null, repo }
+  return {
+    photos: toPreviews(await loadPhotos(), RECENT_PHOTOS),
+    history: history['/now'] ?? null,
+    repo,
+  }
 }
 
 /** Keep root-relative links client-side; matches the colophon. */
@@ -62,7 +75,7 @@ const markdownComponents = {
 }
 
 export function Component() {
-  const { history, repo } = useLoaderData() as NowData
+  const { photos, history, repo } = useLoaderData() as NowData
   const [showSource, setShowSource] = useState(false)
   const panel = useHistoryPanel()
 
@@ -110,6 +123,9 @@ export function Component() {
         <div className="now-live">
           <NowPlayingBar />
           <ReadingBar />
+          {/* The newest frames, under the bars. Prerendered, unlike the two
+              above it — these come from the build, not a Worker. */}
+          <PhotoStrip photos={photos} />
         </div>
 
         <div className="post-source-bar">

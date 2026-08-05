@@ -273,9 +273,11 @@ edit that, not `src/pages/Now.tsx`.
   that it was true recently, and a hand-maintained date is exactly the field you forget to bump in
   the edit where it matters. It's the newest commit to touch the file, read from the same
   `virtual:post-history` the [provenance](#provenance) line at the foot uses.
-- **Now-playing and currently-reading sit above the prose**, reusing the homepage's two bars. The
-  rest of the page is true as of the date; those are true as of now. Both render nothing until
-  their fetch lands, so a Worker being down costs the page a strip and nothing else.
+- **Now-playing, currently-reading, and the three newest photographs sit above the prose.** The
+  rest of the page is true as of the date; those are true as of now. The two bars are the
+  homepage's and render nothing until their fetch lands, so a Worker being down costs the page a
+  strip and nothing else; the photographs come from the build and are prerendered.
+  `<PhotoStrip>` is shared with the homepage, which shows four.
 - Like the colophon it gets a **Markdown** toggle, publishes its source at `/now.md`, and answers
   to `cat now` in [/terminal](#terminal) — all of which come free from being a `.md` in `content/`.
 - Linked from the header nav and from the homepage intro, and listed first in `llms.txt`, it being

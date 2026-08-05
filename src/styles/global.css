@@ -663,6 +663,11 @@ h3 {
 .now-live:empty {
   margin: 0;
 }
+/* Three across, matching the bars above rather than the homepage's four. */
+.now-live .photo-previews {
+  margin-top: 0.6rem;
+  grid-template-columns: repeat(3, 1fr);
+}
 /* The source bar's negative top margin assumes it follows a header directly; on
    /now the live strip sits between them, so it gets ordinary spacing. */
 .now-page .post-source-bar {

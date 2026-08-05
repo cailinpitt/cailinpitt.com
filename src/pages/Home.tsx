@@ -4,26 +4,13 @@ import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
+import { PhotoStrip } from '../components/PhotoStrip'
 import { formatDate, type PostSummary } from '../lib/posts'
-import { formatPhotoDateShort, imageUrl, type Photo } from '../lib/photos'
+import { toPreviews, type PhotoPreview } from '../lib/photos'
 import { homeSchema } from '../lib/structuredData'
 
-/** A thumbnail in the "Recent photos" strip. */
-interface PhotoPreview {
-  href: string
-  src: string
-  /** "Jul 18" for a photo with a capture time, else its year. */
-  label: string
-}
-
-/** The four newest photographs in the feed, each linking to its own page. */
-function toPreviews(photos: Photo[]): PhotoPreview[] {
-  return photos.slice(0, 4).map((photo) => ({
-    href: `/photos/${photo.id}`,
-    src: photo.thumb ?? photo.src,
-    label: formatPhotoDateShort(photo),
-  }))
-}
+/** How many photographs the strip shows. */
+const RECENT_PHOTOS = 4
 
 interface HomeData {
   recent: PostSummary[]
@@ -56,7 +43,7 @@ export async function loader(): Promise<HomeData | null> {
       await import('../lib/content.client')
     return {
       recent: loadPostSummaries().slice(0, 5),
-      recentPhotos: toPreviews(loadPhotos()),
+      recentPhotos: toPreviews(loadPhotos(), RECENT_PHOTOS),
       publicationUri: loadPublicationUri(),
     }
   }
@@ -69,7 +56,7 @@ export async function loader(): Promise<HomeData | null> {
   ])
   return {
     recent: posts.slice(0, 5),
-    recentPhotos: toPreviews(photos),
+    recentPhotos: toPreviews(photos, RECENT_PHOTOS),
     publicationUri,
   }
 }
@@ -148,16 +135,7 @@ export function Component() {
           <h2 id="photos-heading" className="eyebrow">
             📸 Recent photos
           </h2>
-          <ul className="photo-previews">
-            {recentPhotos.map((photo) => (
-              <li key={photo.href}>
-                <Link to={photo.href} aria-label={`Photo — ${photo.label}`}>
-                  <img src={imageUrl(photo.src)} alt="" loading="lazy" decoding="async" />
-                  <span className="photo-preview-label">{photo.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <PhotoStrip photos={recentPhotos} />
           <p className="more">
             <Link to="/photos">All photos →</Link>
           </p>

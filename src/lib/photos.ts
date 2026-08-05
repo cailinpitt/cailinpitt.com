@@ -84,6 +84,26 @@ export function formatPhotoDateShort(photo: Photo): string {
   return formatShotDateShort(photo.date) ?? photo.year
 }
 
+/** A thumbnail in a "recent photos" strip — see src/components/PhotoStrip.tsx. */
+export interface PhotoPreview {
+  href: string
+  src: string
+  /** "Jul 18" for a photo with a capture time, else its year. */
+  label: string
+  /** Placeholder color, as on the feed tiles. */
+  tint?: string
+}
+
+/** The newest `count` photographs, each linking to its own page. */
+export function toPreviews(photos: Photo[], count: number): PhotoPreview[] {
+  return photos.slice(0, count).map((photo) => ({
+    href: `/photos/${photo.id}`,
+    src: photo.thumb ?? photo.src,
+    label: formatPhotoDateShort(photo),
+    tint: photo.tint,
+  }))
+}
+
 /** Anchor id for the first photo of a year, so /photos#y2019 still lands. */
 export const yearAnchor = (year: string) => `y${year}`
 
