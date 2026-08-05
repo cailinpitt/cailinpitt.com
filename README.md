@@ -24,7 +24,8 @@ file explains how things work.
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
   [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
-  [theme](#color-theme) · [markdown source](#markdown-source) · [provenance](#provenance)
+  [header nav](#header-nav) · [theme](#color-theme) · [markdown source](#markdown-source) ·
+  [provenance](#provenance)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
 
 ## Blog posts
@@ -281,8 +282,9 @@ edit that, not `src/pages/Now.tsx`.
   `<PhotoStrip>` is shared with the homepage, which shows four.
 - Like the colophon it gets a **Markdown** toggle, publishes its source at `/now.md`, and answers
   to `cat now` in [/terminal](#terminal) — all of which come free from being a `.md` in `content/`.
-- Linked from the header nav and from the homepage intro, and listed first in `llms.txt`, it being
-  the page that answers "what is this person doing".
+- Reached from the **Me** menu in the header (see [header nav](#header-nav)) and from a line in
+  the homepage intro, and listed first in `llms.txt`, it being the page that answers "what is this
+  person doing".
 
 ## Uses
 
@@ -290,9 +292,9 @@ edit that, not `src/pages/Now.tsx`.
 reach for. Prose lives in **`content/uses.md`**.
 
 Structurally it's `/now` without the live block — same "Updated" date read from `git log`, same
-Markdown toggle, same provenance line, all of it falling out of being a `.md` in `content/`. Linked
-from the footer beside the colophon rather than the header nav, which is already carrying nine
-items, and listed under **Setup** in `llms.txt`.
+Markdown toggle, same provenance line, all of it falling out of being a `.md` in `content/`.
+Reached from the **Me** menu in the header (see [header nav](#header-nav)), and listed under
+**Setup** in `llms.txt`.
 
 > **Three pages now share this shape** — `/now`, `/uses`, and `/colophon` each render one Markdown
 > file with a source toggle and a history panel, and the JSX for that is copied three times. Worth
@@ -538,6 +540,21 @@ magnifier. Jumps to any page, post, photo year, or tag.
 - Signing the guestbook navigates to the real form rather than reimplementing a write path past
   Turnstile.
 - Without JavaScript the prerendered HTML is a short list of real links, not an empty box.
+
+## Header nav
+
+Two rows: the title and the two icon buttons on one, the page links on another. The links are the
+only part that grows, and they get a full-width row to wrap into, so adding a page never displaces
+the buttons.
+
+**Me** is a disclosure grouping `/now` and `/uses` — pages about the person rather than the work.
+It's a `<details>`/`<summary>`, so it opens with no JavaScript at all, which matters because the
+nav is in the prerendered HTML of every page. `<summary>` also brings the button role, the
+expanded/collapsed announcement, and keyboard activation. `src/components/NavMenu.tsx` adds only
+what a dropdown is expected to do beyond that: close on navigation (a link click inside a
+`<details>` navigates but leaves the panel hanging open), on Escape, and on a click elsewhere. The
+summary carries `aria-current="page"` when either of its own pages is the one being viewed, so the
+section reads as active even though the page is a level down.
 
 ## Color theme
 

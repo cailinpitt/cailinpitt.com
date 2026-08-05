@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom'
 import { CommandPalette, CommandPaletteTrigger } from './CommandPalette'
+import { NavMenu } from './NavMenu'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Layout() {
@@ -39,9 +40,13 @@ export function Layout() {
             </div>
           </div>
           <ul className="nav-links">
-            <li>
-              <NavLink to="/now">Now</NavLink>
-            </li>
+            <NavMenu
+              label="Me"
+              items={[
+                { to: '/now', label: 'Now' },
+                { to: '/uses', label: 'Uses' },
+              ]}
+            />
             <li>
               <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
                 Photos
@@ -80,8 +85,8 @@ export function Layout() {
 
       <footer className="site-footer">
         <p>
-          © {new Date().getFullYear()} Cailin Pitt · <Link to="/uses">Uses</Link> ·{' '}
-          <Link to="/colophon">Colophon</Link> · <Link to="/privacy">Privacy</Link>
+          © {new Date().getFullYear()} Cailin Pitt · <Link to="/colophon">Colophon</Link> ·{' '}
+          <Link to="/privacy">Privacy</Link>
         </p>
         <ul className="social-links">
           <li>

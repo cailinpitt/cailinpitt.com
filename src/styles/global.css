@@ -252,6 +252,59 @@ img {
   text-underline-offset: 0.3em;
 }
 
+/* Nav disclosure ("Me") — a <details> so it opens without JavaScript. See
+   src/components/NavMenu.tsx. */
+.nav-menu {
+  position: relative;
+}
+.nav-menu summary {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  color: var(--muted);
+  /* Both are needed to drop the native disclosure triangle: the standard
+     property, and the WebKit pseudo-element that ignores it. */
+  list-style: none;
+}
+.nav-menu summary::-webkit-details-marker {
+  display: none;
+}
+.nav-menu summary:hover {
+  color: var(--accent);
+}
+.nav-menu summary[aria-current='page'] {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.3em;
+}
+.nav-menu-chevron {
+  width: 0.8em;
+  height: 0.8em;
+  transition: transform 0.15s ease;
+}
+.nav-menu[open] .nav-menu-chevron {
+  transform: rotate(180deg);
+}
+.nav-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 8rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+}
+
 /* The two icon buttons on the title row — search and theme. One rule for both
    so they can't end up different sizes next to each other. 2.75rem is 44px,
    the minimum comfortable tap target; the title row is tall enough to carry it
