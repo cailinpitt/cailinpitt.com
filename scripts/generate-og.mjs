@@ -249,16 +249,26 @@ async function loadPhoto(url) {
   return promise
 }
 
-/** Section label for pages that don't name one themselves. */
+/**
+ * Section label for pages that don't name one themselves.
+ *
+ * Only the routes whose label *isn't* their own name are listed; everything else
+ * falls back to the first path segment, title-cased. That way a page added later
+ * gets a correct kicker without anyone remembering to come back here — which is
+ * exactly what went wrong when this ended in a bare `return 'Photographs'` and
+ * /now, /uses, /guestbook, and /privacy all quietly claimed to be photography.
+ */
 function kickerFor(route) {
   if (route === '/') return 'Portfolio'
   if (route.startsWith('/blog')) return 'Writing'
-  if (route.startsWith('/listening')) return 'Listening'
-  if (route.startsWith('/reading')) return 'Reading'
-  if (route.startsWith('/projects')) return 'Projects'
-  if (route.startsWith('/timeline')) return 'Timeline'
-  if (route.startsWith('/colophon')) return 'Colophon'
-  return 'Photographs'
+  if (route.startsWith('/photos')) return 'Photographs'
+
+  const segment = route.split('/').filter(Boolean)[0]
+  if (!segment) return 'Portfolio'
+  return segment
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
 // --- reading the built pages ------------------------------------------------
