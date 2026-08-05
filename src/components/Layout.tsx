@@ -43,6 +43,7 @@ export function Layout() {
             <NavMenu
               label="Me"
               items={[
+                { to: '/about', label: 'About' },
                 { to: '/now', label: 'Now' },
                 { to: '/uses', label: 'Uses' },
               ]}

@@ -48,6 +48,7 @@ export const routes: RouteRecord[] = [
         // doesn't carry a list of five hundred slugs it will never read.
         getStaticPaths: () => photoIds.map((id) => `/photos/${id}`),
       },
+      { path: 'about', lazy: () => import('./pages/About') },
       { path: 'now', lazy: () => import('./pages/Now') },
       { path: 'uses', lazy: () => import('./pages/Uses') },
       { path: 'colophon', lazy: () => import('./pages/Colophon') },

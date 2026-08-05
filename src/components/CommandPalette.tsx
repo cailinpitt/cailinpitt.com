@@ -46,6 +46,7 @@ export interface Entry {
  */
 export const PAGES: Entry[] = [
   { id: 'page:/', label: 'Home', kind: 'Page', to: '/', keywords: 'index start' },
+  { id: 'page:/about', label: 'About', kind: 'Page', to: '/about', keywords: 'me bio who cailin' },
   { id: 'page:/now', label: 'Now', kind: 'Page', to: '/now', keywords: 'currently up to today latest' },
   { id: 'page:/blog', label: 'Blog', kind: 'Page', to: '/blog', keywords: 'writing posts essays' },
   { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography feed gallery' },

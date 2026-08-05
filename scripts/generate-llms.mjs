@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Generate dist/llms.txt (curated index) and dist/llms-full.txt (full text) from
-// content/now.md, content/projects.md, content/uses.md, content/colophon.md, and
+// content/about.md, content/now.md, content/projects.md, content/uses.md,
+// content/colophon.md, and
 // content/blog/*.md. Runs after `npm run build` (part of the "postbuild" script).
 // Format follows the llms.txt convention — see https://llmstxt.org.
 
@@ -13,6 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const PROJECTS = path.join(ROOT, 'content', 'projects.md')
 const COLOPHON = path.join(ROOT, 'content', 'colophon.md')
+const ABOUT = path.join(ROOT, 'content', 'about.md')
 const NOW = path.join(ROOT, 'content', 'now.md')
 const USES = path.join(ROOT, 'content', 'uses.md')
 const PHOTOS = path.join(ROOT, 'src', 'lib', 'photos.json')
@@ -129,6 +131,7 @@ async function main() {
   }
   posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 
+  const aboutRaw = parseFrontmatter(await readFile(ABOUT, 'utf8'))
   const nowRaw = parseFrontmatter(await readFile(NOW, 'utf8'))
   const usesRaw = parseFrontmatter(await readFile(USES, 'utf8'))
   const colophonRaw = parseFrontmatter(await readFile(COLOPHON, 'utf8'))
@@ -150,7 +153,11 @@ async function main() {
     '',
     `> ${TAGLINE}`,
     '',
-    // First, because it is the page that answers "what is this person doing".
+    '## About',
+    '',
+    `- [${aboutRaw.data.title ?? 'About'}](${SITE}/about)${aboutRaw.data.description ? `: ${aboutRaw.data.description}` : ''}`,
+    '',
+    // Then the page that answers "what is this person doing".
     '## Now',
     '',
     `- [${nowRaw.data.title ?? 'Now'}](${SITE}/now)${nowRaw.data.description ? `: ${nowRaw.data.description}` : ''}`,
@@ -177,6 +184,13 @@ async function main() {
     `# ${SITE_NAME}`,
     '',
     `> ${TAGLINE}`,
+    '',
+    '---',
+    '',
+    `# ${aboutRaw.data.title ?? 'About'}`,
+    `${SITE}/about`,
+    '',
+    cleanBody(aboutRaw.body),
     '',
     '---',
     '',

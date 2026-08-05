@@ -156,6 +156,7 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
           ...yearNodes,
         ],
       },
+      { name: 'about', kind: 'page', to: '/about', source: '/about.md', meta: 'who I am', keywords: 'bio me cailin' },
       // Reachable as a file (`cat now`, `open now`); typing `now` on its own is
       // still the command, which answers roughly the same question anyway.
       { name: 'now', kind: 'page', to: '/now', source: '/now.md', meta: 'what I am up to', keywords: 'currently today' },
