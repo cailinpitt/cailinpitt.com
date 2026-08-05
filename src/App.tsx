@@ -49,6 +49,7 @@ export const routes: RouteRecord[] = [
         getStaticPaths: () => photoIds.map((id) => `/photos/${id}`),
       },
       { path: 'now', lazy: () => import('./pages/Now') },
+      { path: 'uses', lazy: () => import('./pages/Uses') },
       { path: 'colophon', lazy: () => import('./pages/Colophon') },
       { path: 'privacy', lazy: () => import('./pages/Privacy') },
       // Catch-all (dynamic; skipped by the SSG prerenderer, served via 404.html).

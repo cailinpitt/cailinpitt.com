@@ -166,6 +166,7 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       // way a post does, so `cat` reads them too.
       { name: 'projects', kind: 'page', to: '/projects', source: '/projects.md', meta: 'things I have built', keywords: 'software code apps' },
       { name: 'guestbook', kind: 'page', to: '/guestbook', meta: 'say hello', keywords: 'sign visitors' },
+      { name: 'uses', kind: 'page', to: '/uses', source: '/uses.md', meta: 'what I use', keywords: 'gear setup hardware software tools' },
       { name: 'colophon', kind: 'page', to: '/colophon', source: '/colophon.md', meta: 'how this is built', keywords: 'about stack' },
       { name: 'privacy', kind: 'page', to: '/privacy', meta: 'what is and is not collected', keywords: 'cookies tracking' },
     ],

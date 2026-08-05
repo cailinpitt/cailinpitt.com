@@ -19,9 +19,10 @@ file explains how things work.
 ## Contents
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
-- Pages: [/now](#now) · [/listening](#listening) · [/reading](#reading) · [/guestbook](#guestbook) ·
-  [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
-  [/colophon](#colophon) · [/blog](#blog-index) · [/terminal](#terminal)
+- Pages: [/now](#now) · [/uses](#uses) · [/listening](#listening) · [/reading](#reading) ·
+  [/guestbook](#guestbook) · [/timeline](#timeline) · [/photos](#photos-page) ·
+  [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
+  [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
   [theme](#color-theme) · [markdown source](#markdown-source) · [provenance](#provenance)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
@@ -282,6 +283,20 @@ edit that, not `src/pages/Now.tsx`.
   to `cat now` in [/terminal](#terminal) — all of which come free from being a `.md` in `content/`.
 - Linked from the header nav and from the homepage intro, and listed first in `llms.txt`, it being
   the page that answers "what is this person doing".
+
+## Uses
+
+`/uses` is a [uses.tech](https://uses.tech/) page: the hardware, software, and services I actually
+reach for. Prose lives in **`content/uses.md`**.
+
+Structurally it's `/now` without the live block — same "Updated" date read from `git log`, same
+Markdown toggle, same provenance line, all of it falling out of being a `.md` in `content/`. Linked
+from the footer beside the colophon rather than the header nav, which is already carrying nine
+items, and listed under **Setup** in `llms.txt`.
+
+> **Three pages now share this shape** — `/now`, `/uses`, and `/colophon` each render one Markdown
+> file with a source toggle and a history panel, and the JSX for that is copied three times. Worth
+> extracting if a fourth turns up.
 
 ## Listening
 

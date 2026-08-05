@@ -80,8 +80,8 @@ export function Layout() {
 
       <footer className="site-footer">
         <p>
-          © {new Date().getFullYear()} Cailin Pitt · <Link to="/colophon">Colophon</Link> ·{' '}
-          <Link to="/privacy">Privacy</Link>
+          © {new Date().getFullYear()} Cailin Pitt · <Link to="/uses">Uses</Link> ·{' '}
+          <Link to="/colophon">Colophon</Link> · <Link to="/privacy">Privacy</Link>
         </p>
         <ul className="social-links">
           <li>
