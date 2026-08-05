@@ -40,6 +40,9 @@ export function Layout() {
           </div>
           <ul className="nav-links">
             <li>
+              <NavLink to="/now">Now</NavLink>
+            </li>
+            <li>
               <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
                 Photos
               </Link>

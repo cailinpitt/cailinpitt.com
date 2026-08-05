@@ -87,6 +87,9 @@ export function Component() {
       />
       <section className="intro">
         <IdentityLine />
+        <p className="intro-now">
+          <Link to="/now">What I'm doing now →</Link>
+        </p>
         <h2 className="eyebrow">🎧 Last played</h2>
         <NowPlayingBar />
         <ListeningSparkline />

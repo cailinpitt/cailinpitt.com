@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Generate dist/llms.txt (curated index) and dist/llms-full.txt (full text) from
-// content/projects.md, content/colophon.md, and content/blog/*.md. Runs after
+// content/now.md, content/projects.md, content/colophon.md, and content/blog/*.md. Runs after
 // `npm run build` (part of the "postbuild" script).
 // Format follows the llms.txt convention — see https://llmstxt.org.
 
@@ -13,6 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const PROJECTS = path.join(ROOT, 'content', 'projects.md')
 const COLOPHON = path.join(ROOT, 'content', 'colophon.md')
+const NOW = path.join(ROOT, 'content', 'now.md')
 const PHOTOS = path.join(ROOT, 'src', 'lib', 'photos.json')
 const BLOG = path.join(ROOT, 'content', 'blog')
 const DIST = path.join(ROOT, 'dist')
@@ -127,6 +128,7 @@ async function main() {
   }
   posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 
+  const nowRaw = parseFrontmatter(await readFile(NOW, 'utf8'))
   const colophonRaw = parseFrontmatter(await readFile(COLOPHON, 'utf8'))
   const colophonBody = fillTemplate(colophonRaw.body, await colophonValues(posts))
   // A placeholder that survived means the prose asked for a count this script
@@ -146,6 +148,11 @@ async function main() {
     '',
     `> ${TAGLINE}`,
     '',
+    // First, because it is the page that answers "what is this person doing".
+    '## Now',
+    '',
+    `- [${nowRaw.data.title ?? 'Now'}](${SITE}/now)${nowRaw.data.description ? `: ${nowRaw.data.description}` : ''}`,
+    '',
     '## Projects',
     '',
     `- [${projects.data.title ?? 'Projects'}](${SITE}/projects)${projects.data.description ? `: ${projects.data.description}` : ''}`,
@@ -164,6 +171,13 @@ async function main() {
     `# ${SITE_NAME}`,
     '',
     `> ${TAGLINE}`,
+    '',
+    '---',
+    '',
+    `# ${nowRaw.data.title ?? 'Now'}`,
+    `${SITE}/now`,
+    '',
+    cleanBody(nowRaw.body),
     '',
     '---',
     '',
@@ -192,7 +206,7 @@ async function main() {
 
   await writeFile(path.join(DIST, 'llms.txt'), index, 'utf8')
   await writeFile(path.join(DIST, 'llms-full.txt'), full, 'utf8')
-  console.log(`✓ llms.txt + llms-full.txt (${posts.length} posts, projects, colophon)`)
+  console.log(`✓ llms.txt + llms-full.txt (${posts.length} posts, now, projects, colophon)`)
 }
 
 main().catch((err) => {

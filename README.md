@@ -19,7 +19,7 @@ file explains how things work.
 ## Contents
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
-- Pages: [/listening](#listening) · [/reading](#reading) · [/guestbook](#guestbook) ·
+- Pages: [/now](#now) · [/listening](#listening) · [/reading](#reading) · [/guestbook](#guestbook) ·
   [/timeline](#timeline) · [/photos](#photos-page) · [/photos/map](#photo-map) ·
   [/colophon](#colophon) · [/blog](#blog-index) · [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
@@ -263,6 +263,24 @@ Idempotent — stable record keys (`self` for the publication, the slug per docu
 updates in place. Re-run whenever post content or metadata changes, then commit
 `content/atproto.json`. The DIDs and AT-URIs in it are public identifiers.
 
+## Now
+
+`/now` is a [now page](https://nownownow.org/about/): what has my attention at the moment, which is
+a different question from what `/blog` or `/projects` answers. Prose lives in **`content/now.md`** —
+edit that, not `src/pages/Now.tsx`.
+
+- **The "Updated" date comes from `git log`, not frontmatter.** The whole claim a now page makes is
+  that it was true recently, and a hand-maintained date is exactly the field you forget to bump in
+  the edit where it matters. It's the newest commit to touch the file, read from the same
+  `virtual:post-history` the [provenance](#provenance) line at the foot uses.
+- **Now-playing and currently-reading sit above the prose**, reusing the homepage's two bars. The
+  rest of the page is true as of the date; those are true as of now. Both render nothing until
+  their fetch lands, so a Worker being down costs the page a strip and nothing else.
+- Like the colophon it gets a **Markdown** toggle, publishes its source at `/now.md`, and answers
+  to `cat now` in [/terminal](#terminal) — all of which come free from being a `.md` in `content/`.
+- Linked from the header nav and from the homepage intro, and listed first in `llms.txt`, it being
+  the page that answers "what is this person doing".
+
 ## Listening
 
 `/listening` shows now-playing, 7d/30d stats, a year heatmap, and a daily scrobble log from
@@ -421,7 +439,8 @@ articles come from `/reading.json`. Photo counts are the length of `src/lib/phot
 ## Homepage
 
 Static except for three things: the now-playing bar (polls `/now.json` every 60s), a 90-day
-sparkline, and an "on this day" line from `/on-this-day.json`. All three render nothing until their
+sparkline, and an "on this day" line from `/on-this-day.json`. A link to [/now](#now) sits under
+the rotating identity line, since it answers the question that line raises. All three render nothing until their
 fetch lands, and nothing at all if it fails. Below that, the four newest photographs, labeled with
 capture day or year.
 

@@ -156,6 +156,9 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
           ...yearNodes,
         ],
       },
+      // Reachable as a file (`cat now`, `open now`); typing `now` on its own is
+      // still the command, which answers roughly the same question anyway.
+      { name: 'now', kind: 'page', to: '/now', source: '/now.md', meta: 'what I am up to', keywords: 'currently today' },
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
       { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },

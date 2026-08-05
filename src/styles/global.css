@@ -397,6 +397,21 @@ h3 {
   font-size: var(--step--1);
   margin-top: 1.5rem;
 }
+/* Straight under the rotating identity line, since it answers the question that
+   line raises. Sits above the first eyebrow rather than under the fold. */
+.intro-now {
+  margin: 0.9rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.intro-now a {
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+}
+.intro-now a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
 .recent-projects .more a,
 .recent .more a,
 .recent-photos .more a,
@@ -640,6 +655,20 @@ h3 {
   content: '·';
   margin-right: 0.5rem;
 }
+/* /now — the live strip between the header and the prose. Its two bars are the
+   homepage's, so they only need spacing here. */
+.now-live {
+  margin: 1.5rem 0 2rem;
+}
+.now-live:empty {
+  margin: 0;
+}
+/* The source bar's negative top margin assumes it follows a header directly; on
+   /now the live strip sits between them, so it gets ordinary spacing. */
+.now-page .post-source-bar {
+  margin-top: 0;
+}
+
 /* View-source control — see src/components/PostSource.tsx. Sits between the header and
    the body, right-aligned and quiet: it's a handle for the curious, not part of
    reading the post. */
@@ -1838,7 +1867,8 @@ h3 {
 
 /* Homepage now-playing bar — compact strip under the intro, links to /listening. */
 .now-bar {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   align-items: center;
   gap: 0.6rem;
   margin-top: 1.5rem;
@@ -2181,7 +2211,7 @@ a.book-link:hover .book-title {
   height: 51px;
   border-radius: 3px;
 }
-/* Social cards are landscape; the article bar shows one beside the book bar. */
+/* Social cards are landscape, unlike the 2:3 covers on the bar above. */
 .now-bar-art.is-card {
   width: 56px;
   height: 34px;
