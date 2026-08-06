@@ -48,6 +48,14 @@ export function Layout() {
                 { to: '/uses', label: 'Uses' },
               ]}
             />
+            <NavMenu
+              label="Logs"
+              items={[
+                { to: '/listening', label: 'Listening' },
+                { to: '/reading', label: 'Reading' },
+                { to: '/watching', label: 'Watching' },
+              ]}
+            />
             <li>
               <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
                 Photos
@@ -55,15 +63,6 @@ export function Layout() {
             </li>
             <li>
               <NavLink to="/projects">Projects</NavLink>
-            </li>
-            <li>
-              <NavLink to="/listening">Listening</NavLink>
-            </li>
-            <li>
-              <NavLink to="/reading">Reading</NavLink>
-            </li>
-            <li>
-              <NavLink to="/watching">Watching</NavLink>
             </li>
             <li>
               <NavLink to="/blog">Blog</NavLink>

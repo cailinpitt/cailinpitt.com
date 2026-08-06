@@ -579,13 +579,19 @@ Two rows: the title and the two icon buttons on one, the page links on another. 
 only part that grows, and they get a full-width row to wrap into, so adding a page never displaces
 the buttons.
 
-**Me** is a disclosure grouping `/now` and `/uses` — pages about the person rather than the work.
-It's a `<details>`/`<summary>`, so it opens with no JavaScript at all, which matters because the
+Two disclosures group the links that belong together: **Me** (`/about`, `/now`, `/uses` — pages
+about the person rather than the work) and **Logs** (`/listening`, `/reading`, `/watching` — the
+Worker-backed activity logs). "Logs" rather than something like "Doing" because it is the word the
+rest of the site already uses — the homepage links read "Listening log →" — and because it says
+why those three are grouped and Projects and Blog aren't. Grouping them is also what keeps the row
+from growing a link every time a new one is added.
+
+Each is a `<details>`/`<summary>`, so it opens with no JavaScript at all, which matters because the
 nav is in the prerendered HTML of every page. `<summary>` also brings the button role, the
 expanded/collapsed announcement, and keyboard activation. `src/components/NavMenu.tsx` adds only
 what a dropdown is expected to do beyond that: close on navigation (a link click inside a
 `<details>` navigates but leaves the panel hanging open), on Escape, and on a click elsewhere. The
-summary carries `aria-current="page"` when either of its own pages is the one being viewed, so the
+summary carries `aria-current="page"` when any of its own pages is the one being viewed, so the
 section reads as active even though the page is a level down.
 
 ## Color theme
