@@ -1,8 +1,9 @@
-// Merging the site's six activity streams into one day-per-row timeline (/timeline).
+// Merging the site's seven activity streams into one day-per-row timeline (/timeline).
 //
 // The streams live in four places and none of them knows about the others:
 // scrobbles come from the listening Worker, articles and books from the reading
-// Worker, films from the watching Worker, and posts and photos are static
+// Worker, films from the watching Worker, rides and lifts from the moving
+// Worker, and posts and photos are static
 // content compiled into the build. So the merge happens here, in the browser,
 // keyed on a YYYY-MM-DD day.
 //
@@ -22,7 +23,7 @@
 //
 // Each stream is bucketed the way its own page already buckets it (see the notes
 // in datetime.ts): the Worker groups scrobbles into US Central days, articles
-// bucket by the viewer's local zone, and films/books/posts/photos carry date
+// bucket by the viewer's local zone, and activities/films/books/posts/photos carry date
 // strings that are used as written — a film's watched date is the day Cailin
 // logged it against, which is the only day it can honestly sit on. Those rules disagree at the margins for a visitor far
 // from US Central, which is a pre-existing property of the data rather than
@@ -34,6 +35,7 @@ import type { Photo } from './photos'
 import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
 import type { Film } from './watching'
+import type { Activity } from './moving'
 import type { DayLog } from './listening'
 
 export interface TimelineDay {
@@ -45,6 +47,7 @@ export interface TimelineDay {
   booksFinished: Book[]
   booksStarted: Book[]
   films: Film[]
+  activities: Activity[]
   posts: PostSummary[]
   photos: Photo[]
 }
@@ -79,6 +82,7 @@ export interface TimelineSources {
   articles: Article[]
   books: Book[]
   films: Film[]
+  activities: Activity[]
   posts: PostSummary[]
   photos: Photo[]
   /**
@@ -99,6 +103,7 @@ export function buildTimeline({
   articles,
   books,
   films,
+  activities,
   posts,
   photos,
   floor,
@@ -117,6 +122,7 @@ export function buildTimeline({
         booksFinished: [],
         booksStarted: [],
         films: [],
+        activities: [],
         posts: [],
         photos: [],
       }
@@ -143,6 +149,9 @@ export function buildTimeline({
   // Letterboxd logs a date, not a timestamp, so this needs no bucketing at all.
   for (const film of films) dayFor(film.watchedDate.slice(0, 10))?.films.push(film)
 
+  // Already the athlete-local date the Worker stored, so no bucketing here either.
+  for (const activity of activities) dayFor(activity.startDate)?.activities.push(activity)
+
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
   for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
@@ -154,6 +163,7 @@ export function buildTimeline({
         day.booksFinished.length > 0 ||
         day.booksStarted.length > 0 ||
         day.films.length > 0 ||
+        day.activities.length > 0 ||
         day.posts.length > 0 ||
         day.photos.length > 0,
     )

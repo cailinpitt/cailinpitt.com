@@ -55,6 +55,7 @@ export const PAGES: Entry[] = [
   { id: 'page:/listening', label: 'Listening', kind: 'Page', to: '/listening', keywords: 'music scrobbles last.fm now playing' },
   { id: 'page:/reading', label: 'Reading', kind: 'Page', to: '/reading', keywords: 'books articles hardcover' },
   { id: 'page:/watching', label: 'Watching', kind: 'Page', to: '/watching', keywords: 'films movies letterboxd cinema' },
+  { id: 'page:/moving', label: 'Moving', kind: 'Page', to: '/moving', keywords: 'bike cycling ebike rides lifting gym workouts miles' },
   {
     id: 'page:/timeline',
     label: 'Timeline',

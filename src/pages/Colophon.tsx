@@ -12,6 +12,7 @@ import type { PostHistory as PostHistoryData } from '../lib/history'
 import { fetchNow } from '../lib/listening'
 import { fetchReading } from '../lib/reading'
 import { fetchWatching } from '../lib/watching'
+import { fetchMoving } from '../lib/moving'
 import { pageSchema } from '../lib/structuredData'
 
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
@@ -87,6 +88,9 @@ function LiveTiles() {
   const [scrobbles, setScrobbles] = useState<number | null>(null)
   const [reading, setReading] = useState<{ books: number; articles: number } | null>(null)
   const [watching, setWatching] = useState<{ films: number; rewatches: number } | null>(null)
+  const [moving, setMoving] = useState<{ miles: number; rides: number; lifts: number } | null>(
+    null,
+  )
 
   useEffect(() => {
     const controller = new AbortController()
@@ -103,6 +107,15 @@ function LiveTiles() {
         setWatching({ films: bundle.counts.films, rewatches: bundle.counts.rewatches }),
       )
       .catch(() => {})
+    void fetchMoving(controller.signal)
+      .then((bundle) =>
+        setMoving({
+          miles: Math.round(bundle.counts.distanceMi),
+          rides: bundle.counts.rides,
+          lifts: bundle.counts.lifts,
+        }),
+      )
+      .catch(() => {})
     return () => controller.abort()
   }, [])
 
@@ -112,7 +125,12 @@ function LiveTiles() {
       {reading && <StatTile label="Books read" value={reading.books} />}
       {reading && <StatTile label="Articles saved" value={reading.articles} />}
       {watching && <StatTile label="Films watched" value={watching.films} />}
-      {watching && <StatTile label="Rewatches" value={watching.rewatches} />}
+      {watching && <StatTile label="Films rewatched" value={watching.rewatches} />}
+      {/* Three, not two: the grid is three columns and the tile count has to
+          stay a multiple of it or the last row goes ragged. */}
+      {moving && <StatTile label="Miles" value={moving.miles} />}
+      {moving && <StatTile label="Rides" value={moving.rides} />}
+      {moving && <StatTile label="Lifts" value={moving.lifts} />}
     </>
   )
 }

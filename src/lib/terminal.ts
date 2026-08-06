@@ -7,6 +7,7 @@ import { tagSlug } from './tags'
 import type { NowState } from './listening'
 import type { Article, ReadingNow } from './reading'
 import { formatWatchedDate, stars, type WatchingNow } from './watching'
+import { kindIcon, longDate, summary, type ActivityNow } from './moving'
 import type { EntryPage } from './guestbook'
 
 // ---- output --------------------------------------------------------------
@@ -164,6 +165,7 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
       { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
       { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
+      { name: 'moving', kind: 'page', to: '/moving', meta: 'rides and lifts', keywords: 'bike cycling ebike lifting gym miles' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
       // The two pages written as a single Markdown file publish their source the
       // way a post does, so `cat` reads them too.
@@ -226,9 +228,10 @@ export const COMMANDS: CommandSpec[] = [
   { name: 'open', args: '[path]', summary: 'Open the real page on the site' },
   { name: 'find', args: '<words>', summary: 'Search posts, tags, and pages' },
   { name: 'photo', args: '[random|<id>]', summary: 'Show a photograph' },
-  { name: 'now', summary: 'What is playing, and what I am reading and watching' },
+  { name: 'now', summary: 'What is playing, and what I am reading, watching, and doing' },
   { name: 'reading', summary: 'The shelf in full' },
   { name: 'watching', summary: 'The last film logged' },
+  { name: 'moving', summary: 'The last ride or lift logged' },
   { name: 'guestbook', args: '[n]', summary: 'The most recent entries' },
   { name: 'sign', summary: 'Sign the guestbook' },
   { name: 'whoami', summary: 'Who I am, today' },
@@ -263,6 +266,7 @@ export interface Shell {
   fetchNow(): Promise<NowState>
   fetchReading(): Promise<ReadingNow>
   fetchWatching(): Promise<WatchingNow>
+  fetchMoving(): Promise<ActivityNow>
   fetchGuestbook(): Promise<EntryPage>
 }
 
@@ -516,12 +520,13 @@ export async function run(
     }
 
     case 'now': {
-      // Three Workers, one answer. Any of them can be down without taking the
+      // Four Workers, one answer. Any of them can be down without taking the
       // others' share of the screen with it.
-      const [music, reading, watching] = await Promise.allSettled([
+      const [music, reading, watching, moving] = await Promise.allSettled([
         shell.fetchNow(),
         shell.fetchReading(),
         shell.fetchWatching(),
+        shell.fetchMoving(),
       ])
       const lines: Line[] =
         music.status === 'fulfilled'
@@ -550,6 +555,16 @@ export async function run(
               .filter(Boolean)
               .join(' · ')}`,
           ),
+        )
+      }
+
+      // Same reasoning as the film above: the last one, whenever it was.
+      if (moving.status === 'fulfilled' && moving.value.lastActivity) {
+        const activity = moving.value.lastActivity
+        lines.push(
+          blank(),
+          line(`${kindIcon(activity.kind)} ${summary(activity)}`, 'accent'),
+          muted(`   ${longDate(activity.startDate)}`),
         )
       }
       return { lines }
@@ -594,6 +609,22 @@ export async function run(
         return { lines: [...lines, blank(), link('The whole log → /watching', '/watching')] }
       } catch {
         return { lines: [err('watching: the watching Worker did not answer')] }
+      }
+    }
+
+    case 'moving': {
+      try {
+        const { lastActivity } = await shell.fetchMoving()
+        const lines: Line[] = lastActivity
+          ? [
+              line(`${kindIcon(lastActivity.kind)} ${summary(lastActivity)}`, 'accent'),
+              muted(`   ${longDate(lastActivity.startDate)}`),
+            ]
+          : [muted('Nothing logged yet.')]
+
+        return { lines: [...lines, blank(), link('The whole log → /moving', '/moving')] }
+      } catch {
+        return { lines: [err('moving: the moving Worker did not answer')] }
       }
     }
 

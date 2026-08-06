@@ -1242,11 +1242,12 @@ h3 {
   margin: 0;
   max-width: var(--measure);
 }
-/* Section headers for the activity pages. One rule for all three so
-   /listening, /reading, and /watching can't drift apart. */
+/* Section headers for the activity pages. One rule for all four so
+   /listening, /reading, /watching, and /moving can't drift apart. */
 .listening .eyebrow,
 .reading .eyebrow,
-.watching .eyebrow {
+.watching .eyebrow,
+.moving .eyebrow {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 1.25rem;
@@ -2403,6 +2404,26 @@ a.film-link:hover .film-title {
   margin-top: 0.6rem;
 }
 
+/* On /now the bars stack four deep, where shrink-to-fit widths leave a ragged
+   right edge that reads as clutter. One width turns them into a column.
+   Scoped to .now-live: on the homepage they sit apart, separated by prose, and
+   there each one is better as a chip sized to its own content. */
+.now-live .now-bar {
+  width: 100%;
+}
+/* The art column is a fixed size per kind (40px square, 56x34 for a link
+   card), so without this the label and title start at a different x on each
+   row — the other half of why the stack looked uneven. */
+.now-live .now-bar-art {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+}
+/* An empty box reads as art that failed to load. Nothing is cleaner. */
+.now-live .now-bar-art.art-placeholder {
+  visibility: hidden;
+}
+
 /* ---- /timeline ----------------------------------------------------------
    One row per day, merging listening / reading / writing / photos. Slightly
    wider than the reading column so a day's events don't wrap awkwardly, but
@@ -2461,7 +2482,8 @@ a.film-link:hover .film-title {
 }
 .timeline-event {
   display: grid;
-  grid-template-columns: 1.5rem 1fr;
+  /* 2rem, not 1.5, so the two-glyph e-bike mark fits on one line. */
+  grid-template-columns: 2rem 1fr;
   gap: 0.5rem;
   font-family: var(--font-sans);
   font-size: var(--step--1);
@@ -2470,6 +2492,10 @@ a.film-link:hover .film-title {
 .timeline-icon {
   font-size: 0.9em;
   line-height: 1.6;
+  /* The e-bike mark is 🚲 plus ⚡; keep the pair together and tuck them
+     tighter so they occupy about the width of the single-glyph marks. */
+  white-space: nowrap;
+  letter-spacing: -0.1em;
 }
 .timeline-label {
   font-weight: 600;
@@ -3410,4 +3436,105 @@ a.guestbook-name:hover {
     width: auto;
     margin-inline: 0;
   }
+}
+
+/* ---- /moving -------------------------------------------------------------
+   Rows on the same grid as /listening's log: a leading measure where the
+   timestamp sits there, then icon, line, and trailing detail. Ruled rows rather
+   than boxed cards, so a day of activities reads as a list. */
+
+.moving {
+  width: min(56rem, 92vw);
+  margin-inline: calc(50% - min(56rem, 92vw) / 2);
+}
+.moving section {
+  margin-top: 3rem;
+}
+.moving-error,
+.moving-empty {
+  color: var(--muted);
+}
+
+.moving-day {
+  margin-bottom: 2rem;
+}
+.moving-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+}
+.moving-day-head h3 {
+  font-size: var(--step-1);
+  margin: 0;
+}
+.moving-day-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.moving-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.moving-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1.75rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.45rem;
+  border-bottom: 1px solid var(--rule);
+}
+.moving-measure {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* The e-bike mark is two glyphs; keep it on one line and let it sit slightly
+   tighter so it occupies the same column width as the single-glyph marks. */
+.moving-icon {
+  font-size: var(--step--1);
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.1em;
+}
+.moving-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.moving-detail {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 32rem) {
+  /* Detail wraps under the line rather than squeezing it to nothing. */
+  .moving-row {
+    grid-template-columns: 4rem 1.75rem 1fr;
+  }
+  .moving-detail {
+    grid-column: 3;
+    text-align: left;
+  }
+}
+
+/* The moving bar has no cover art, so its slot carries the kind's mark instead.
+   Sized off .now-bar-art so the four bars keep one rhythm. */
+.moving-bar-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border-radius: 4px;
+  font-size: var(--step--1);
+  line-height: 1;
+  letter-spacing: -0.1em;
 }

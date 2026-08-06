@@ -65,6 +65,16 @@ const film = {
   poster: null,
 }
 
+const ride = {
+  id: '19614959439',
+  sportType: 'EBikeRide',
+  kind: 'ebike' as const,
+  startDate: '2026-08-05',
+  distanceMi: 10.1,
+  elevationFt: 120,
+  movingTime: 2400,
+  trainer: false,
+}
 
 const tree = buildTree(posts, photos)
 
@@ -97,6 +107,7 @@ function fakeShell(overrides: Partial<Shell> = {}) {
       updatedAt: 0,
     }),
     fetchWatching: async () => ({ lastFilm: film, updatedAt: 0 }),
+    fetchMoving: async () => ({ lastActivity: ride, updatedAt: 0 }),
     fetchGuestbook: async () => ({ entries: [], nextCursor: null, total: 0 }),
     ...overrides,
   }
@@ -318,12 +329,26 @@ describe('commands', () => {
     expect(result.lines[0].text).toContain('No match')
   })
 
-  it('now covers music, reading, and watching together', async () => {
+  it('now covers music, reading, watching, and moving together', async () => {
     const { shell } = fakeShell()
     const text = (await run('now', state(), shell)).lines.map((line) => line.text).join('\n')
     expect(text).toContain('Hard Times')
     expect(text).toContain('The Bee Sting')
     expect(text).toContain('Office Space (1999)')
+    expect(text).toContain('E-biked 10.1 miles')
+  })
+
+  it('now survives the moving Worker being down', async () => {
+    const { shell } = fakeShell({
+      fetchMoving: async () => {
+        throw new Error('502')
+      },
+    })
+    const text = (await run('now', state(), shell)).lines.map((line) => line.text).join('\n')
+    // The other three still get their share of the screen.
+    expect(text).toContain('Hard Times')
+    expect(text).toContain('Office Space (1999)')
+    expect(text).not.toContain('E-biked')
   })
 
   it('now survives the watching Worker being down', async () => {

@@ -54,6 +54,7 @@ export function Layout() {
                 { to: '/listening', label: 'Listening' },
                 { to: '/reading', label: 'Reading' },
                 { to: '/watching', label: 'Watching' },
+                { to: '/moving', label: 'Moving' },
               ]}
             />
             <li>

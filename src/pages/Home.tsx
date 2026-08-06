@@ -5,6 +5,7 @@ import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
 import { WatchingBar } from '../components/WatchingBar'
+import { MovingBar } from '../components/MovingBar'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
@@ -96,6 +97,12 @@ export function Component() {
         <WatchingBar />
         <p className="more">
           <Link to="/watching">Watching log →</Link>
+        </p>
+
+        <h2 className="eyebrow">🚲 Moving</h2>
+        <MovingBar />
+        <p className="more">
+          <Link to="/moving">Moving log →</Link>
         </p>
       </section>
 

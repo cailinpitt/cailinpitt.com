@@ -111,6 +111,7 @@ git push                               # main → GitHub Pages (site only)
 cd worker-listening && npm run deploy   # listening.cailinpitt.com
 cd worker-reading   && npm run deploy   # reading.cailinpitt.com
 cd worker-watching  && npm run deploy   # watching.cailinpitt.com
+cd worker-moving    && npm run deploy   # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy   # guestbook.cailinpitt.com
 cd worker-photos    && npm run deploy   # photos.cailinpitt.com
 ```
@@ -242,6 +243,67 @@ npm run schema:remote                  # from worker-watching/
 curl watching.cailinpitt.com           # terminal view; ?T for no color
 ```
 
+## Moving
+
+```bash
+npm run moving:sync                    # pull the last week now
+npm run moving:sync -- --refresh       # re-pull everything already stored
+npm run moving:sync -- --backfill      # walk backwards through history via the API
+npm run moving:auth                    # one-time OAuth, prints a refresh token
+```
+
+Import history from the bulk export (strava.com/settings/privacy → request an archive):
+
+```bash
+node scripts/moving-backfill.mjs ~/Downloads/export_XXXXXXXX/activities.csv
+cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
+  --remote --file=../scripts/moving-backfill.sql
+cd .. && npm run moving:sync -- --refresh   # fix dates, recompute `stats`
+```
+
+The `--refresh` is required, not tidiness: the export carries no local timestamp, so the generated
+SQL dates every activity with a fixed Central offset. Only the API knows which day a ride actually
+belongs to. The generated `.sql` is gitignored.
+
+After changing the `kind` mapping in `worker-moving/src/strava.ts`, re-derive the stored column —
+the sync only rewrites rows it fetched, so older rows keep the old bucket:
+
+```bash
+cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
+  --remote --file=../scripts/moving-recategorize.sql
+cd .. && npm run moving:sync           # recompute `stats`
+```
+
+Inspect D1:
+
+```bash
+npx wrangler d1 execute cailinpitt-moving --remote \
+  --command "SELECT kind, COUNT(*) n FROM activities GROUP BY kind ORDER BY n DESC"
+npx wrangler d1 execute cailinpitt-moving --remote \
+  --command "SELECT start_date, kind, distance_mi FROM activities ORDER BY start_date DESC LIMIT 5"
+```
+
+Dates look a day off? That is the export's UTC bucketing; compare against the real timestamp:
+
+```bash
+npx wrangler d1 execute cailinpitt-moving --remote \
+  --command "SELECT start_date, datetime(started_at,'unixepoch') utc FROM activities ORDER BY started_at DESC LIMIT 10"
+```
+
+Starting the archive over is safe — everything is re-derivable from the API plus the export:
+
+```bash
+npx wrangler d1 execute cailinpitt-moving --remote --command "DROP TABLE activities"
+npm run schema:remote                  # from worker-moving/
+```
+
+Note this drops the `auth` row too if you drop the whole database rather than the table — the
+refresh token then has to be re-seeded from `STRAVA_REFRESH_TOKEN`.
+
+```bash
+curl moving.cailinpitt.com             # terminal view; ?T for no color
+```
+
 ## Guestbook — moderation
 
 ```bash
@@ -266,14 +328,16 @@ Needs `GUESTBOOK_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 | `HARDCOVER_TOKEN` | `reading:probe` |
 | `READING_ADMIN_TOKEN` | `reading:sync` |
 | `WATCHING_ADMIN_TOKEN` | `watching:sync` |
+| `MOVING_ADMIN_TOKEN` | `moving:sync` |
+| `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` | `moving:auth` |
 | `INGEST_TOKEN` | saving articles |
 | `GUESTBOOK_ADMIN_TOKEN`, `GUESTBOOK_IP_SALT` | `guestbook:list` / `rm` |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook form |
 | `WORKER_PHOTOS_INGEST_TOKEN`, `WORKER_PHOTOS_GITHUB_TOKEN` | phone uploads |
 
 Overrides for pointing a script at a non-default Worker: `READING_API`, `WATCHING_API`,
-`GUESTBOOK_API`, or `--api <url>` on `reading:sync` / `watching:sync` / `guestbook:list` /
-`guestbook:rm`.
+`MOVING_API`, `GUESTBOOK_API`, or `--api <url>` on `reading:sync` / `watching:sync` /
+`moving:sync` / `guestbook:list` / `guestbook:rm`.
 
 Worker secrets (`npx wrangler secret put`, per directory):
 
@@ -282,6 +346,7 @@ Worker secrets (`npx wrangler secret put`, per directory):
 | `worker-listening` | `LASTFM_API_KEY` |
 | `worker-reading` | `HARDCOVER_TOKEN`, `INGEST_TOKEN`, `ADMIN_TOKEN` |
 | `worker-watching` | `ADMIN_TOKEN` |
+| `worker-moving` | `ADMIN_TOKEN`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` |
 | `worker-guestbook` | `TURNSTILE_SECRET`, `ADMIN_TOKEN`, `IP_SALT` |
 | `worker-photos` | `INGEST_TOKEN`, `GITHUB_TOKEN` |
 
@@ -297,6 +362,7 @@ Cloudflare secrets are write-only — `.env` is the only place a token can be re
 | `VITE_LISTENING_API` | `https://listening.cailinpitt.com` |
 | `VITE_READING_API` | `https://reading.cailinpitt.com` |
 | `VITE_WATCHING_API` | `https://watching.cailinpitt.com` |
+| `VITE_MOVING_API` | `https://moving.cailinpitt.com` |
 | `VITE_GUESTBOOK_API` | `https://guestbook.cailinpitt.com` |
 
 ## First-time setup
@@ -304,6 +370,8 @@ Cloudflare secrets are write-only — `.env` is the only place a token can be re
 Per-worker setup (create D1/KV/R2, apply schema, put secrets) is in each worker's README:
 [listening](worker-listening/README.md#setup) ·
 [reading](worker-reading/README.md#setup) ·
+[watching](worker-watching/README.md#setup) ·
+[moving](worker-moving/README.md#setup) ·
 [guestbook](worker-guestbook/README.md#setup) ·
 [photos](worker-photos/README.md#setup)
 

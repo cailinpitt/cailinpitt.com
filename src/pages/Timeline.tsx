@@ -19,6 +19,13 @@ import {
   stars,
   type Film,
 } from '../lib/watching'
+import {
+  fetchMoving,
+  fetchOlderActivities,
+  kindIcon,
+  summary as activitySummary,
+  type Activity,
+} from '../lib/moving'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
 import { buildTimeline, type TimelineDay } from '../lib/timeline'
@@ -74,16 +81,19 @@ async function topUp<T>(
 
 const bookDate = (book: Book) => book.finishedAt?.slice(0, 10) ?? book.startedAt?.slice(0, 10) ?? null
 const filmDate = (film: Film) => film.watchedDate.slice(0, 10)
+const activityDate = (activity: Activity) => activity.startDate
 
 function useTimeline(posts: PostSummary[], photos: Photo[]) {
   const [days, setDays] = useState<DayLog[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [films, setFilms] = useState<Film[]>([])
+  const [activities, setActivities] = useState<Activity[]>([])
   const [before, setBefore] = useState<number | null>(null)
   const [articleCursor, setArticleCursor] = useState<string | null>(null)
   const [bookCursor, setBookCursor] = useState<string | null>(null)
   const [filmCursor, setFilmCursor] = useState<string | null>(null)
+  const [activityCursor, setActivityCursor] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -96,8 +106,9 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       fetchBundle(controller.signal),
       fetchReading(controller.signal),
       fetchWatching(controller.signal),
+      fetchMoving(controller.signal),
     ])
-      .then(([listening, reading, watching]) => {
+      .then(([listening, reading, watching, moving]) => {
         setDays(listening.recentDays)
         setBefore(listening.nextBefore)
         setArticles(reading.articles)
@@ -106,6 +117,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
         setBookCursor(reading.nextBookCursor)
         setFilms(watching.films)
         setFilmCursor(watching.nextCursor)
+        setActivities(moving.activities)
+        setActivityCursor(moving.nextCursor)
         setReady(true)
       })
       .catch((err) => {
@@ -129,7 +142,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       const nextFloor =
         older.nextBefore != null && nextDays.length ? nextDays[nextDays.length - 1].date : null
 
-      const [nextArticles, nextBooks, nextFilms] = await Promise.all([
+      const [nextArticles, nextBooks, nextFilms, nextActivities] = await Promise.all([
         topUp(
           articles,
           articleCursor,
@@ -165,6 +178,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
           },
           controller.signal,
         ),
+        topUp(
+          activities,
+          activityCursor,
+          nextFloor,
+          activityDate,
+          async (cursor, signal) => {
+            const page = await fetchOlderActivities(cursor, 30, signal)
+            return { items: page.activities, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        ),
       ])
 
       setDays(nextDays)
@@ -175,17 +199,31 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       setBookCursor(nextBooks.cursor)
       setFilms(nextFilms.items)
       setFilmCursor(nextFilms.cursor)
+      setActivities(nextActivities.items)
+      setActivityCursor(nextActivities.cursor)
     } catch (err) {
       // Stop offering the button rather than looping on a broken endpoint.
       if ((err as Error)?.name !== 'AbortError') setBefore(null)
     } finally {
       setLoading(false)
     }
-  }, [articleCursor, articles, before, bookCursor, books, days, filmCursor, films, loading])
+  }, [
+    activities,
+    activityCursor,
+    articleCursor,
+    articles,
+    before,
+    bookCursor,
+    books,
+    days,
+    filmCursor,
+    films,
+    loading,
+  ])
 
   const timeline = useMemo(
-    () => buildTimeline({ days, articles, books, films, posts, photos, floor }),
-    [articles, books, days, films, floor, photos, posts],
+    () => buildTimeline({ days, articles, books, films, activities, posts, photos, floor }),
+    [activities, articles, books, days, films, floor, photos, posts],
   )
 
   return { timeline, ready, error, loading, hasMore: before != null, loadMore }
@@ -199,13 +237,13 @@ export function Component() {
     <div className="timeline">
       <Seo
         title="Timeline"
-        description="Everything Cailin Pitt listened to, read, watched, wrote, and photographed, day by day."
+        description="Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, and photographed, day by day."
         path="/timeline"
         jsonLd={pageSchema({
           path: '/timeline',
           title: 'Timeline',
           description:
-            'Everything Cailin Pitt listened to, read, watched, wrote, and photographed, day by day.',
+            'Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
@@ -213,7 +251,8 @@ export function Component() {
       <p className="lead">
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
         <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
-        <Link to="/blog">writing</Link>, and <Link to="/photos">photos</Link>.
+        <Link to="/moving">moving</Link>, <Link to="/blog">writing</Link>, and{' '}
+        <Link to="/photos">photos</Link>.
       </p>
 
       {error && !ready ? (
@@ -296,6 +335,17 @@ function TimelineRow({ day }: { day: TimelineDay }) {
 
         {day.films.map((film) => (
           <FilmEvent key={film.id} film={film} />
+        ))}
+
+        {day.activities.map((activity) => (
+          <li className="timeline-event" key={activity.id}>
+            <span className="timeline-icon" aria-hidden="true">
+              {kindIcon(activity.kind)}
+            </span>
+            <span>
+              <Link to="/moving">{activitySummary(activity)}</Link>
+            </span>
+          </li>
         ))}
 
         {day.posts.map((post) => (

@@ -2,7 +2,7 @@
 
 Personal site: blog, photography, projects. React + Vite prerendered to static HTML with
 [`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg), deployed to GitHub Pages.
-Four Cloudflare Workers back the live-data pages.
+Five Cloudflare Workers back the live-data pages.
 
 ```bash
 npm install
@@ -20,7 +20,8 @@ file explains how things work.
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
 - Pages: [/now](#now) · [/uses](#uses) · [/listening](#listening) · [/reading](#reading) ·
-  [/watching](#watching) · [/guestbook](#guestbook) · [/timeline](#timeline) · [/photos](#photos-page) ·
+  [/watching](#watching) · [/moving](#moving) · [/guestbook](#guestbook) · [/timeline](#timeline) ·
+  [/photos](#photos-page) ·
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
   [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
@@ -356,6 +357,38 @@ watched. Owned by `worker-watching/`.
 - API base: `VITE_WATCHING_API` (default `https://watching.cailinpitt.com`).
 - Setup and testing: [`worker-watching/README.md`](worker-watching/README.md)
 
+## Moving
+
+`/moving` is a day-by-day log of bike rides and lifting sessions, one line each — "Biked 10.1
+miles", "Lifted for 43m". Owned by `worker-moving/`.
+
+- **Nothing user-facing names the source.** The page, nav, terminal view, and row copy are all
+  deliberately vague about where the data comes from; the Worker and these docs say Strava freely.
+  Keep that in mind when editing copy.
+- **Activities sync from the Strava API** on a daily cron, asking only for the last week plus a
+  7-day overlap so renames and late manual entries land. Standard Tier access requires an active
+  Strava subscription as of June 2026, and downstream relays are now barred from serving Strava
+  data, so there is no free automated path.
+- **The refresh token rotates on every exchange**, so it lives in an `auth` row in D1 rather than a
+  Worker secret — secrets are write-only from the Worker's side. `STRAVA_REFRESH_TOKEN` seeds the
+  first run only.
+- **History came from the bulk export**: `npm run moving:backfill <activities.csv>` writes SQL for
+  `wrangler d1 execute`. Ids are Strava's own, so an imported row and the same activity fetched
+  later are the same row — the export and the API cannot duplicate each other.
+- **The export has no local timestamp**, only UTC, so backfilled dates are approximated with a
+  fixed Central offset and are wrong across DST and travel. `npm run moving:sync -- --refresh`
+  re-pulls every stored row and takes Strava's own per-activity local date. It is required after a
+  backfill, not optional.
+- **`kind` is derived from `sport_type`** — ride, ebike, lift, walk, run, yoga, climb, other.
+  E-bikes are split from ordinary rides. After changing that mapping, run
+  `scripts/moving-recategorize.sql`: the sync only rewrites rows it fetched.
+- **No polylines, coordinates, or streams are stored**, and `name` and `commute` are stored but not
+  served — the log renders a summary built from the numbers.
+- **Terminal view:** `curl moving.cailinpitt.com`; `?T` disables color.
+- Run the sync now: `npm run moving:sync` (`-- --refresh` re-pulls history).
+- API base: `VITE_MOVING_API` (default `https://moving.cailinpitt.com`).
+- Setup and testing: [`worker-moving/README.md`](worker-moving/README.md)
+
 ## Guestbook
 
 Anyone can sign `/guestbook`: name and message required, website and location optional, country
@@ -421,10 +454,11 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 ## Timeline
 
-`/timeline` is one row per day merging six streams: scrobbles, saved articles, books
-started/finished, films watched, published posts, photos taken. Nothing new is stored — it fetches
-the same `/listening.json`, `/reading.json`, and `/watching.json` bundles and merges them against
-build-time posts and photos (`src/lib/timeline.ts`).
+`/timeline` is one row per day merging seven streams: scrobbles, saved articles, books
+started/finished, films watched, rides and lifts, published posts, photos taken. Nothing new is
+stored — it fetches the same `/listening.json`, `/reading.json`, `/watching.json`, and
+`/moving.json` bundles and merges them against build-time posts and photos
+(`src/lib/timeline.ts`).
 
 - **Depth is set by the listening days**, the densest stream and the only one worth a cursor.
   Everything else is filtered into that window; "load older" pulls another block. Once listening is
@@ -434,6 +468,8 @@ build-time posts and photos (`src/lib/timeline.ts`).
 - **Films sit on their Letterboxd watched date**, which is a date and not a timestamp, so that
   stream needs no bucketing at all. Films imported from the CSV export are in here too, so the
   timeline reaches further back for watching than the 50-entry feed alone would allow.
+- **Activities sit on their stored local date**, the one the Worker took from the API, so like
+  films they need no bucketing.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles
   into US Central days while articles bucket in the viewer's zone, so the two disagree at the
   margins far from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
@@ -459,10 +495,10 @@ its source published at [`/colophon.md`](#markdown-source), and a [provenance](#
 the foot reading its own commits out of `git log`.
 
 Counters above it: posts, words, photos, and photo years are counted at build time; scrobbles,
-books, articles, films, and rewatches are fetched from the Workers in the browser. Each live tile
-renders only once its number lands, so a Worker being down costs those tiles and nothing else.
-Nine tiles in a three-column grid — the count and the columns have to stay in step, or the last row
-goes ragged.
+books, articles, films, rewatches, miles, rides, and lifts are fetched from the Workers in the
+browser. Each live tile renders only once its number lands, so a Worker being down costs those
+tiles and nothing else. Twelve tiles in a three-column grid — the count and the columns have to
+stay in step, or the last row goes ragged.
 
 **Numbers in the prose** are substituted by `fillTemplate` in `src/lib/colophon.ts`. Two forms,
 deliberately no more:
@@ -491,8 +527,8 @@ articles come from `/reading.json`. Photo counts are the length of `src/lib/phot
 Static except for three things: the now-playing bar (polls `/now.json` every 60s), a 90-day
 sparkline, and an "on this day" line from `/on-this-day.json`. A link to [/now](#now) sits under
 the rotating identity line, since it answers the question that line raises. All three render nothing until their
-fetch lands, and nothing at all if it fails. Under those, a currently-reading strip and a
-last-watched strip, both from their Workers' `/now.json`. Below that, the four newest photographs,
+fetch lands, and nothing at all if it fails. Under those, currently-reading, last-watched, and
+last-moved strips, all from their Workers' `/now.json`. Below that, the four newest photographs,
 labeled with capture day or year.
 
 ## Social cards
@@ -580,10 +616,10 @@ only part that grows, and they get a full-width row to wrap into, so adding a pa
 the buttons.
 
 Two disclosures group the links that belong together: **Me** (`/about`, `/now`, `/uses` — pages
-about the person rather than the work) and **Logs** (`/listening`, `/reading`, `/watching` — the
-Worker-backed activity logs). "Logs" rather than something like "Doing" because it is the word the
-rest of the site already uses — the homepage links read "Listening log →" — and because it says
-why those three are grouped and Projects and Blog aren't. Grouping them is also what keeps the row
+about the person rather than the work) and **Logs** (`/listening`, `/reading`, `/watching`,
+`/moving` — the Worker-backed activity logs). "Logs" rather than something like "Doing" because it
+is the word the rest of the site already uses — the homepage links read "Listening log →" — and
+because it says why those four are grouped and Projects and Blog aren't. Grouping them is also what keeps the row
 from growing a link every time a new one is added.
 
 Each is a `<details>`/`<summary>`, so it opens with no JavaScript at all, which matters because the
@@ -656,12 +692,13 @@ CI runs `typecheck` → `test` → `build`, so a broken invariant stops the depl
 Push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. Repo settings
 need **Settings → Pages → Source = GitHub Actions**; the custom domain comes from `public/CNAME`.
 
-The five Workers deploy **separately** — a push to `main` never touches them:
+The six Workers deploy **separately** — a push to `main` never touches them:
 
 ```sh
 cd worker-listening && npm run deploy  # listening.cailinpitt.com
 cd worker-reading && npm run deploy    # reading.cailinpitt.com
 cd worker-watching && npm run deploy   # watching.cailinpitt.com
+cd worker-moving && npm run deploy     # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
 cd worker-photos && npm run deploy     # photos.cailinpitt.com
 ```

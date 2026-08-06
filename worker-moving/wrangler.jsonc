@@ -1,0 +1,46 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-moving",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-30",
+
+  // Read API on a subdomain of the (Cloudflare-managed) zone, same as the other
+  // log workers. Auto-provisions the DNS record + cert.
+  "routes": [{ "pattern": "moving.cailinpitt.com", "custom_domain": true }],
+
+  // Daily, matching the reading and watching workers. Strava's rate limit is
+  // 1,000 non-upload requests a day, so a single run costs nothing against it.
+  // 09:00 UTC ≈ 04:00 Central.
+  "triggers": { "crons": ["0 9 * * *"] },
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // Fixed offset (seconds) used to decide which calendar year "this year"
+    // means. -18000 = UTC-5 (US Central, DST); -21600 for standard time.
+    // Matches the other workers — see worker/README.md on the DST caveat.
+    "TZ_OFFSET_SECONDS": "-18000",
+    // Comma-separated origins allowed to read the API (CORS). Any http://localhost
+    // or 127.0.0.1 port is additionally allowed in code, so local dev needs no
+    // entry here. The first entry is the fallback sent to non-matching origins.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Strava pages fetched per run, at 200 activities each. A steady-state
+    // incremental run needs exactly one; the backfill uses the whole budget and
+    // carries the rest over to the next pass.
+    "PAGE_BUDGET": "8"
+  },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-moving",
+      "database_id": "3b958673-4ebe-4d12-a60c-f2538891b79b"
+    }
+  ]
+
+  // Secrets (not stored here):
+  //   wrangler secret put ADMIN_TOKEN
+  //   wrangler secret put STRAVA_CLIENT_ID
+  //   wrangler secret put STRAVA_CLIENT_SECRET
+  //   wrangler secret put STRAVA_REFRESH_TOKEN
+}
