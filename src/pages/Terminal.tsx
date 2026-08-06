@@ -137,6 +137,7 @@ export function Component() {
       },
       fetchNow: async () => (await import('../lib/listening')).fetchNow(),
       fetchReading: async () => (await import('../lib/reading')).fetchReadingNow(),
+      fetchWatching: async () => (await import('../lib/watching')).fetchWatchingNow(),
       fetchGuestbook: async () => (await import('../lib/guestbook')).fetchGuestbook(),
     }),
     [navigate],

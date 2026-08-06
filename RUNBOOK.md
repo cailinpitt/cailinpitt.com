@@ -20,6 +20,7 @@ Point the site at local Workers:
 ```bash
 VITE_LISTENING_API=http://localhost:8787 npm run dev
 VITE_READING_API=http://localhost:8787 npm run dev
+VITE_WATCHING_API=http://localhost:8787 npm run dev
 VITE_GUESTBOOK_API=http://localhost:8787 npm run dev
 ```
 
@@ -109,6 +110,7 @@ git push                               # main → GitHub Pages (site only)
 
 cd worker-listening && npm run deploy   # listening.cailinpitt.com
 cd worker-reading   && npm run deploy   # reading.cailinpitt.com
+cd worker-watching  && npm run deploy   # watching.cailinpitt.com
 cd worker-guestbook && npm run deploy   # guestbook.cailinpitt.com
 cd worker-photos    && npm run deploy   # photos.cailinpitt.com
 ```
@@ -193,6 +195,53 @@ npx wrangler d1 execute cailinpitt-reading --remote \
 curl reading.cailinpitt.com            # terminal view; ?T for no color
 ```
 
+## Watching
+
+```bash
+npm run watching:sync                  # pull the Letterboxd diary feed now
+npm run watching:sync -- --posters     # loop until posters stop mirroring
+```
+
+Import the history behind the feed's 50-entry window (letterboxd.com/settings/data → export):
+
+```bash
+node scripts/watching-backfill.mjs ~/Downloads/letterboxd-export/diary.csv
+cd worker-watching && npx wrangler d1 execute cailinpitt-watching \
+  --remote --file=../scripts/watching-backfill.sql
+cd .. && npm run watching:sync         # recompute the totals in `stats`
+```
+
+The script resolves every `boxd.it` short link in the export to its real film slug and caches the
+results in `scripts/.watching-slugs.json`; delete that file to force a re-resolve. Both it and the
+generated `.sql` are gitignored.
+
+Inspect D1:
+
+```bash
+npx wrangler d1 execute cailinpitt-watching --remote \
+  --command "SELECT COUNT(*) AS rows, SUM(poster IS NOT NULL) AS with_poster FROM films"
+npx wrangler d1 execute cailinpitt-watching --remote \
+  --command "SELECT title, watched_date, rating FROM films ORDER BY watched_date DESC LIMIT 5"
+```
+
+Duplicate rows mean a backfill ran with guessed slugs — check for them before trusting the totals:
+
+```bash
+npx wrangler d1 execute cailinpitt-watching --remote \
+  --command "SELECT title, watched_date, COUNT(*) n FROM films GROUP BY lower(title), watched_date HAVING n > 1"
+```
+
+Starting the archive over is safe — everything is re-derivable from the feed plus the CSV:
+
+```bash
+npx wrangler d1 execute cailinpitt-watching --remote --command "DROP TABLE films"
+npm run schema:remote                  # from worker-watching/
+```
+
+```bash
+curl watching.cailinpitt.com           # terminal view; ?T for no color
+```
+
 ## Guestbook — moderation
 
 ```bash
@@ -216,13 +265,15 @@ Needs `GUESTBOOK_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 | `LASTFM_API_KEY`, `LASTFM_USER` | `backfill-listening.mjs` |
 | `HARDCOVER_TOKEN` | `reading:probe` |
 | `READING_ADMIN_TOKEN` | `reading:sync` |
+| `WATCHING_ADMIN_TOKEN` | `watching:sync` |
 | `INGEST_TOKEN` | saving articles |
 | `GUESTBOOK_ADMIN_TOKEN`, `GUESTBOOK_IP_SALT` | `guestbook:list` / `rm` |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook form |
 | `WORKER_PHOTOS_INGEST_TOKEN`, `WORKER_PHOTOS_GITHUB_TOKEN` | phone uploads |
 
-Overrides for pointing a script at a non-default Worker: `READING_API`, `GUESTBOOK_API`,
-or `--api <url>` on `reading:sync` / `guestbook:list` / `guestbook:rm`.
+Overrides for pointing a script at a non-default Worker: `READING_API`, `WATCHING_API`,
+`GUESTBOOK_API`, or `--api <url>` on `reading:sync` / `watching:sync` / `guestbook:list` /
+`guestbook:rm`.
 
 Worker secrets (`npx wrangler secret put`, per directory):
 
@@ -230,6 +281,7 @@ Worker secrets (`npx wrangler secret put`, per directory):
 |---|---|
 | `worker-listening` | `LASTFM_API_KEY` |
 | `worker-reading` | `HARDCOVER_TOKEN`, `INGEST_TOKEN`, `ADMIN_TOKEN` |
+| `worker-watching` | `ADMIN_TOKEN` |
 | `worker-guestbook` | `TURNSTILE_SECRET`, `ADMIN_TOKEN`, `IP_SALT` |
 | `worker-photos` | `INGEST_TOKEN`, `GITHUB_TOKEN` |
 
@@ -244,6 +296,7 @@ Cloudflare secrets are write-only — `.env` is the only place a token can be re
 |---|---|
 | `VITE_LISTENING_API` | `https://listening.cailinpitt.com` |
 | `VITE_READING_API` | `https://reading.cailinpitt.com` |
+| `VITE_WATCHING_API` | `https://watching.cailinpitt.com` |
 | `VITE_GUESTBOOK_API` | `https://guestbook.cailinpitt.com` |
 
 ## First-time setup

@@ -24,6 +24,8 @@
     "publish:atproto": "node scripts/publish-atproto.mjs",
     "reading:probe": "node scripts/hardcover-probe.mjs",
     "reading:sync": "node scripts/reading-sync.mjs",
+    "watching:sync": "node scripts/watching-sync.mjs",
+    "watching:backfill": "node scripts/watching-backfill.mjs",
     "guestbook:list": "node scripts/guestbook.mjs list",
     "guestbook:rm": "node scripts/guestbook.mjs rm",
     "md": "node scripts/generate-markdown.mjs",

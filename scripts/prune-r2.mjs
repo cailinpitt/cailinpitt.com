@@ -50,13 +50,16 @@ const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
  * Key prefixes this script must never touch.
  *
  * Everything else it keeps is discovered by reading the repo, so an object is
- * "orphaned" precisely when nothing in the repo points at it. Book covers and
- * article social cards are different: the reading Worker (worker-reading/)
- * writes them and records the paths in its D1 database, which is invisible from
- * here. Without this guard every one of them would look orphaned and a
- * `--delete` run would wipe live images off /reading.
+ * "orphaned" precisely when nothing in the repo points at it. Worker-written
+ * art is different: book covers and article social cards (worker-reading/) and
+ * film posters (worker-watching/) are recorded in those Workers' D1 databases,
+ * which are invisible from here. Without this guard every one of them would
+ * look orphaned and a `--delete` run would wipe live images off /reading and
+ * /watching.
+ *
+ * Any future Worker that writes into this bucket has to be added here too.
  */
-const PROTECTED_PREFIXES = ['images/reading/']
+const PROTECTED_PREFIXES = ['images/reading/', 'images/watching/']
 
 const isProtected = (key) => PROTECTED_PREFIXES.some((prefix) => key.startsWith(prefix))
 
@@ -103,7 +106,7 @@ async function main() {
   if (protectedCount) {
     console.log(
       `  (${protectedCount} of those are under ${PROTECTED_PREFIXES.join(', ')} — ` +
-        `owned by worker-reading, never pruned from here)`,
+        `owned by the Workers, never pruned from here)`,
     )
   }
   if (!orphans.length) return

@@ -1242,10 +1242,11 @@ h3 {
   margin: 0;
   max-width: var(--measure);
 }
-/* Section headers for the activity pages. One rule for both so /listening and
-   /reading can't drift apart. */
+/* Section headers for the activity pages. One rule for all three so
+   /listening, /reading, and /watching can't drift apart. */
 .listening .eyebrow,
-.reading .eyebrow {
+.reading .eyebrow,
+.watching .eyebrow {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 1.25rem;
@@ -1895,7 +1896,8 @@ h3 {
   background: var(--surface);
 }
 .listening-skeleton > *,
-.reading-skeleton > * {
+.reading-skeleton > *,
+.watching-skeleton > * {
   background: var(--surface);
   border-radius: 6px;
   animation: sk-pulse 1.5s ease-in-out infinite;
@@ -2261,6 +2263,127 @@ a.book-link:hover .book-title {
 .segmented button.active .segmented-count {
   background: var(--surface);
   color: var(--fg);
+}
+
+/* Watching ---------------------------------------------------------------
+   Same measure and section rhythm as /reading, so the two activity pages read
+   as siblings — and the film grid deliberately matches .book-grid, since a
+   poster and a cover are the same object at the same 2:3. */
+
+.watching {
+  width: min(56rem, 92vw);
+  margin-inline: calc(50% - min(56rem, 92vw) / 2);
+}
+.watching section {
+  margin-top: 3rem;
+}
+.watching-error,
+.watching-empty {
+  color: var(--muted);
+}
+
+.film-year + .film-year {
+  margin-top: 2.5rem;
+}
+.film-year-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  margin: 0 0 0.6rem;
+}
+.film-year-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--muted);
+}
+.film-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 1.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.film-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+a.film-link:hover .film-title {
+  color: var(--accent);
+}
+/* Fixed ratio box: reserves the space before the poster loads, so a slow
+   mirror can't shift the grid under someone mid-scroll. */
+.film-poster {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+.film-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.film-title {
+  font-size: var(--step--1);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.film-year {
+  margin-left: 0.4rem;
+  font-weight: 400;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.film-marks {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-height: 1.2em;
+}
+.film-rating {
+  font-size: var(--step--1);
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+.film-like {
+  color: var(--accent);
+  font-size: 0.9em;
+  line-height: 1;
+}
+/* The site's chip (.tag-list a) scaled down: this is a marker beside the stars,
+   not something to click, so it reads at 0.75em with the border carrying the
+   shape. `em` and not a --step-, because it should track the card's own size. */
+.film-rewatch {
+  font-family: var(--font-sans);
+  font-size: 0.75em;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.15em 0.5em;
+  white-space: nowrap;
+}
+.film-date {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
 }
 
 /* The reading bar reuses .now-bar; book covers are 2:3, not square like art. */
@@ -2633,11 +2756,15 @@ a.book-link:hover .book-title {
 
 /* ---- /colophon -----------------------------------------------------------
    The tile grid is shared with /listening, which sizes it for four tiles of
-   four-digit window counts. The colophon puts six tiles in the same 40rem
+   four-digit window counts. The colophon puts nine tiles in the same 40rem
    measure, one of them a six-figure scrobble total — at the inherited size the
    number ran past its tile and under the next one. So: a smaller value, room to
-   breathe, and three columns once there's width for them, which also lands six
-   tiles as a tidy 3 + 3 instead of 4 + 2. */
+   breathe, and three columns once there's width for them, which lands the nine
+   as a square 3 + 3 + 3.
+
+   Nine is deliberate, not incidental: the tile count and the column count have
+   to stay in step or the last row goes ragged. Adding a tenth means finding an
+   eleventh and twelfth too. */
 .stat-tiles.is-compact {
   grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
 }
@@ -2651,7 +2778,7 @@ a.book-link:hover .book-title {
 }
 .stat-tiles.is-compact dd {
   font-size: var(--step-1);
-  /* Same-width digits, so the six tiles don't sit at six different rhythms. */
+  /* Same-width digits, so the tiles don't sit at nine different rhythms. */
   font-variant-numeric: tabular-nums;
 }
 

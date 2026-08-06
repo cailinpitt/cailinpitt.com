@@ -12,6 +12,13 @@ import {
   type Article,
   type Book,
 } from '../lib/reading'
+import {
+  fetchOlderFilms,
+  fetchWatching,
+  letterboxdUrl,
+  stars,
+  type Film,
+} from '../lib/watching'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
 import { buildTimeline, type TimelineDay } from '../lib/timeline'
@@ -66,14 +73,17 @@ async function topUp<T>(
 }
 
 const bookDate = (book: Book) => book.finishedAt?.slice(0, 10) ?? book.startedAt?.slice(0, 10) ?? null
+const filmDate = (film: Film) => film.watchedDate.slice(0, 10)
 
 function useTimeline(posts: PostSummary[], photos: Photo[]) {
   const [days, setDays] = useState<DayLog[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [books, setBooks] = useState<Book[]>([])
+  const [films, setFilms] = useState<Film[]>([])
   const [before, setBefore] = useState<number | null>(null)
   const [articleCursor, setArticleCursor] = useState<string | null>(null)
   const [bookCursor, setBookCursor] = useState<string | null>(null)
+  const [filmCursor, setFilmCursor] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -82,14 +92,20 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
   useEffect(() => {
     const controller = new AbortController()
     controllerRef.current = controller
-    Promise.all([fetchBundle(controller.signal), fetchReading(controller.signal)])
-      .then(([listening, reading]) => {
+    Promise.all([
+      fetchBundle(controller.signal),
+      fetchReading(controller.signal),
+      fetchWatching(controller.signal),
+    ])
+      .then(([listening, reading, watching]) => {
         setDays(listening.recentDays)
         setBefore(listening.nextBefore)
         setArticles(reading.articles)
         setArticleCursor(reading.nextCursor)
         setBooks([...reading.currentlyReading, ...reading.finishedBooks])
         setBookCursor(reading.nextBookCursor)
+        setFilms(watching.films)
+        setFilmCursor(watching.nextCursor)
         setReady(true)
       })
       .catch((err) => {
@@ -113,7 +129,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       const nextFloor =
         older.nextBefore != null && nextDays.length ? nextDays[nextDays.length - 1].date : null
 
-      const [nextArticles, nextBooks] = await Promise.all([
+      const [nextArticles, nextBooks, nextFilms] = await Promise.all([
         topUp(
           articles,
           articleCursor,
@@ -138,6 +154,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
           },
           controller.signal,
         ),
+        topUp(
+          films,
+          filmCursor,
+          nextFloor,
+          filmDate,
+          async (cursor, signal) => {
+            const page = await fetchOlderFilms(cursor, 24, signal)
+            return { items: page.films, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        ),
       ])
 
       setDays(nextDays)
@@ -146,17 +173,19 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       setArticleCursor(nextArticles.cursor)
       setBooks(nextBooks.items)
       setBookCursor(nextBooks.cursor)
+      setFilms(nextFilms.items)
+      setFilmCursor(nextFilms.cursor)
     } catch (err) {
       // Stop offering the button rather than looping on a broken endpoint.
       if ((err as Error)?.name !== 'AbortError') setBefore(null)
     } finally {
       setLoading(false)
     }
-  }, [articleCursor, articles, before, bookCursor, books, days, loading])
+  }, [articleCursor, articles, before, bookCursor, books, days, filmCursor, films, loading])
 
   const timeline = useMemo(
-    () => buildTimeline({ days, articles, books, posts, photos, floor }),
-    [articles, books, days, floor, photos, posts],
+    () => buildTimeline({ days, articles, books, films, posts, photos, floor }),
+    [articles, books, days, films, floor, photos, posts],
   )
 
   return { timeline, ready, error, loading, hasMore: before != null, loadMore }
@@ -170,21 +199,21 @@ export function Component() {
     <div className="timeline">
       <Seo
         title="Timeline"
-        description="Everything Cailin Pitt listened to, read, wrote, and photographed, day by day."
+        description="Everything Cailin Pitt listened to, read, watched, wrote, and photographed, day by day."
         path="/timeline"
         jsonLd={pageSchema({
           path: '/timeline',
           title: 'Timeline',
           description:
-            'Everything Cailin Pitt listened to, read, wrote, and photographed, day by day.',
+            'Everything Cailin Pitt listened to, read, watched, wrote, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
       <h1>Timeline</h1>
       <p className="lead">
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
-        <Link to="/reading">reading</Link>, <Link to="/blog">writing</Link>, and{' '}
-        <Link to="/photos">photos</Link>.
+        <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
+        <Link to="/blog">writing</Link>, and <Link to="/photos">photos</Link>.
       </p>
 
       {error && !ready ? (
@@ -265,6 +294,10 @@ function TimelineRow({ day }: { day: TimelineDay }) {
           <BookEvent key={`start-${book.userBookId}-${book.readId}`} book={book} verb="Started" />
         ))}
 
+        {day.films.map((film) => (
+          <FilmEvent key={film.id} film={film} />
+        ))}
+
         {day.posts.map((post) => (
           <li className="timeline-event" key={post.path}>
             <span className="timeline-icon" aria-hidden="true">
@@ -305,6 +338,35 @@ function TimelineRow({ day }: { day: TimelineDay }) {
           </li>
         )}
       </ul>
+    </li>
+  )
+}
+
+function FilmEvent({ film }: { film: Film }) {
+  const href = letterboxdUrl(film)
+  // The year belongs to the title — "Tag (2018)" is how you say which Tag — so
+  // it is part of the link text, not a fragment left outside it. Rating and
+  // rewatch are notes about the viewing and go in the muted clause after it.
+  // Either of those can be absent.
+  const name = `${film.title}${film.year ? ` (${film.year})` : ''}`
+  const detail = [stars(film.rating), film.rewatch ? 'rewatch' : null].filter(Boolean).join(' · ')
+
+  return (
+    <li className="timeline-event">
+      <span className="timeline-icon" aria-hidden="true">
+        🎬
+      </span>
+      <span>
+        <span className="timeline-label">Watched</span>{' '}
+        {href ? (
+          <a href={href} target="_blank" rel="noopener noreferrer">
+            {name}
+          </a>
+        ) : (
+          name
+        )}
+        {detail && <span className="timeline-detail"> · {detail}</span>}
+      </span>
     </li>
   )
 }

@@ -53,6 +53,19 @@ const article = {
   readAt: 1,
 }
 
+const film = {
+  id: 'office-space|2026-07-25',
+  title: 'Office Space',
+  year: 1999,
+  slug: 'office-space',
+  watchedDate: '2026-07-25',
+  rewatch: true,
+  rating: 3.5,
+  liked: false,
+  poster: null,
+}
+
+
 const tree = buildTree(posts, photos)
 
 const state = (cwd = '/'): ShellState => ({
@@ -83,6 +96,7 @@ function fakeShell(overrides: Partial<Shell> = {}) {
       todaysArticle: article,
       updatedAt: 0,
     }),
+    fetchWatching: async () => ({ lastFilm: film, updatedAt: 0 }),
     fetchGuestbook: async () => ({ entries: [], nextCursor: null, total: 0 }),
     ...overrides,
   }
@@ -304,11 +318,26 @@ describe('commands', () => {
     expect(result.lines[0].text).toContain('No match')
   })
 
-  it('now covers music and reading together', async () => {
+  it('now covers music, reading, and watching together', async () => {
     const { shell } = fakeShell()
     const text = (await run('now', state(), shell)).lines.map((line) => line.text).join('\n')
     expect(text).toContain('Hard Times')
     expect(text).toContain('The Bee Sting')
+    expect(text).toContain('Office Space (1999)')
+  })
+
+  it('now survives the watching Worker being down', async () => {
+    const { shell } = fakeShell({
+      fetchWatching: async () => {
+        throw new Error('502')
+      },
+    })
+    const text = (await run('now', state(), shell)).lines.map((line) => line.text).join('\n')
+    // The other two halves still land, and nothing announces the missing one:
+    // a film is not something the page promised in the first place.
+    expect(text).toContain('Hard Times')
+    expect(text).toContain('The Bee Sting')
+    expect(text).not.toContain('Office Space')
   })
 
   it("links today's article, falling back to its host", async () => {
@@ -331,6 +360,24 @@ describe('commands', () => {
     expect(result.lines[0].tone).toBe('error')
     // The reading half still lands.
     expect(result.lines.map((line) => line.text).join('\n')).toContain('The Bee Sting')
+  })
+
+  it('watching shows the last film logged', async () => {
+    const { shell } = fakeShell()
+    const text = (await run('watching', state(), shell)).lines.map((line) => line.text).join('\n')
+    expect(text).toContain('Office Space (1999)')
+    // Half stars are rendered, not rounded — the point of the Letterboxd scale.
+    expect(text).toContain('★★★½')
+  })
+
+  it('watching says so when the Worker is down', async () => {
+    const { shell } = fakeShell({
+      fetchWatching: async () => {
+        throw new Error('502')
+      },
+    })
+    const result = await run('watching', state(), shell)
+    expect(result.lines[0].tone).toBe('error')
   })
 
   it('suggests a command for a near miss', async () => {

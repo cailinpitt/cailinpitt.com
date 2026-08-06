@@ -1,9 +1,10 @@
-// Merging the site's five activity streams into one day-per-row timeline (/timeline).
+// Merging the site's six activity streams into one day-per-row timeline (/timeline).
 //
-// The streams live in three places and none of them knows about the others:
+// The streams live in four places and none of them knows about the others:
 // scrobbles come from the listening Worker, articles and books from the reading
-// Worker, posts and photos are static content compiled into the build. So the
-// merge happens here, in the browser, keyed on a YYYY-MM-DD day.
+// Worker, films from the watching Worker, and posts and photos are static
+// content compiled into the build. So the merge happens here, in the browser,
+// keyed on a YYYY-MM-DD day.
 //
 // ## What decides how far back the timeline goes
 //
@@ -21,8 +22,9 @@
 //
 // Each stream is bucketed the way its own page already buckets it (see the notes
 // in datetime.ts): the Worker groups scrobbles into US Central days, articles
-// bucket by the viewer's local zone, and books/posts/photos carry date strings
-// that are used as written. Those rules disagree at the margins for a visitor far
+// bucket by the viewer's local zone, and films/books/posts/photos carry date
+// strings that are used as written — a film's watched date is the day Cailin
+// logged it against, which is the only day it can honestly sit on. Those rules disagree at the margins for a visitor far
 // from US Central, which is a pre-existing property of the data rather than
 // something this page can fix — recomputing it would need per-scrobble
 // timestamps the aggregates don't carry.
@@ -31,6 +33,7 @@ import { dayKey } from './datetime'
 import type { Photo } from './photos'
 import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
+import type { Film } from './watching'
 import type { DayLog } from './listening'
 
 export interface TimelineDay {
@@ -41,6 +44,7 @@ export interface TimelineDay {
   articles: Article[]
   booksFinished: Book[]
   booksStarted: Book[]
+  films: Film[]
   posts: PostSummary[]
   photos: Photo[]
 }
@@ -74,6 +78,7 @@ export interface TimelineSources {
   days: DayLog[]
   articles: Article[]
   books: Book[]
+  films: Film[]
   posts: PostSummary[]
   photos: Photo[]
   /**
@@ -93,6 +98,7 @@ export function buildTimeline({
   days,
   articles,
   books,
+  films,
   posts,
   photos,
   floor,
@@ -110,6 +116,7 @@ export function buildTimeline({
         articles: [],
         booksFinished: [],
         booksStarted: [],
+        films: [],
         posts: [],
         photos: [],
       }
@@ -133,6 +140,9 @@ export function buildTimeline({
     else if (book.startedAt) dayFor(book.startedAt.slice(0, 10))?.booksStarted.push(book)
   }
 
+  // Letterboxd logs a date, not a timestamp, so this needs no bucketing at all.
+  for (const film of films) dayFor(film.watchedDate.slice(0, 10))?.films.push(film)
+
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
   for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
@@ -143,6 +153,7 @@ export function buildTimeline({
         day.articles.length > 0 ||
         day.booksFinished.length > 0 ||
         day.booksStarted.length > 0 ||
+        day.films.length > 0 ||
         day.posts.length > 0 ||
         day.photos.length > 0,
     )

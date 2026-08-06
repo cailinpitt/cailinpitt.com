@@ -4,6 +4,7 @@ import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
+import { WatchingBar } from '../components/WatchingBar'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
@@ -89,6 +90,12 @@ export function Component() {
         <ReadingBar />
         <p className="more">
           <Link to="/reading">Reading log →</Link>
+        </p>
+
+        <h2 className="eyebrow">🎬 Watching</h2>
+        <WatchingBar />
+        <p className="more">
+          <Link to="/watching">Watching log →</Link>
         </p>
       </section>
 

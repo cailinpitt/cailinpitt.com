@@ -19,10 +19,10 @@ Additionally, [CTA Bus Bingo](https://cailinpitt.github.io/cta-bus-bingo/) is a 
 
 More projects can be found [here](/projects).
 
-## Music, books, photos
+## Music, books, films, photos
 
-Things I'm currently reading and listening to can be found on the 
-[/reading](/reading) and [/listening](/listening) pages (also at the top of this page). Recent photos I've taken also appear at [/photos](/photos), which I often upload directly from my phone.
+Things I'm currently reading, watching listening to can be found on the 
+[/reading](/reading), [/watching](/watching), and [/listening](/listening) pages (also at the top of this page). Recent photos I've taken also appear at [/photos](/photos), which I often upload directly from my phone.
 
 ## Otherwise
 

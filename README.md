@@ -20,7 +20,7 @@ file explains how things work.
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
 - Pages: [/now](#now) · [/uses](#uses) · [/listening](#listening) · [/reading](#reading) ·
-  [/guestbook](#guestbook) · [/timeline](#timeline) · [/photos](#photos-page) ·
+  [/watching](#watching) · [/guestbook](#guestbook) · [/timeline](#timeline) · [/photos](#photos-page) ·
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
   [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
@@ -330,6 +330,32 @@ art. Owned by `worker-reading/`.
 - API base: `VITE_READING_API` (default `https://reading.cailinpitt.com`).
 - Setup and testing: [`worker-reading/README.md`](worker-reading/README.md)
 
+## Watching
+
+`/watching` shows films with their posters and half-star ratings, grouped by the year they were
+watched. Owned by `worker-watching/`.
+
+- **Films** sync from the Letterboxd diary **RSS feed** on a daily cron — Letterboxd has no public
+  API, but the feed carries the rating, watched date, rewatch flag, TMDB id, and poster in named
+  fields, so nothing here parses markup. Letterboxd 403s a non-browser `user-agent`; the one in
+  `fetchDiary()` is load-bearing.
+- **Upserts, not a full replace** (unlike Reading): the feed is only the newest 50 entries, so a
+  replace would drop the archive on every run. Rows are keyed `<slug>|<watched date>` rather than
+  the feed's guid, which changes when a review is added later.
+- **History before those 50** comes from a one-off CSV import: `npm run watching:backfill
+  <diary.csv>` writes SQL for `wrangler d1 execute`. The export's "Letterboxd URI" is a `boxd.it`
+  short link, so the script resolves each one to its real film slug (cached in
+  `scripts/.watching-slugs.json`) — slugifying the title instead produces dead links and duplicate
+  rows.
+- **Reviews are deliberately not stored**, and cards link to `letterboxd.com/film/<slug>`, never to
+  the diary entry under `/<member>/`.
+- **Images** mirror into the photos R2 bucket under `images/watching/`, protected from
+  `images:prune` by `PROTECTED_PREFIXES`.
+- **Terminal view:** `curl watching.cailinpitt.com`; `?T` disables color.
+- Run the sync now: `npm run watching:sync` (`-- --posters` loops until poster mirroring is done).
+- API base: `VITE_WATCHING_API` (default `https://watching.cailinpitt.com`).
+- Setup and testing: [`worker-watching/README.md`](worker-watching/README.md)
+
 ## Guestbook
 
 Anyone can sign `/guestbook`: name and message required, website and location optional, country
@@ -395,16 +421,19 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 ## Timeline
 
-`/timeline` is one row per day merging five streams: scrobbles, saved articles, books
-started/finished, published posts, photos taken. Nothing new is stored — it fetches the same
-`/listening.json` and `/reading.json` bundles and merges them against build-time posts and photos
-(`src/lib/timeline.ts`).
+`/timeline` is one row per day merging six streams: scrobbles, saved articles, books
+started/finished, films watched, published posts, photos taken. Nothing new is stored — it fetches
+the same `/listening.json`, `/reading.json`, and `/watching.json` bundles and merges them against
+build-time posts and photos (`src/lib/timeline.ts`).
 
 - **Depth is set by the listening days**, the densest stream and the only one worth a cursor.
   Everything else is filtered into that window; "load older" pulls another block. Once listening is
   exhausted the rest of the history shows — currently ~77 rows back to 2015.
 - A day with no scrobbles still gets a row if anything else happened.
 - **Photos appear from 2026 on** only, since placing one on a day needs a real capture date.
+- **Films sit on their Letterboxd watched date**, which is a date and not a timestamp, so that
+  stream needs no bucketing at all. Films imported from the CSV export are in here too, so the
+  timeline reaches further back for watching than the 50-entry feed alone would allow.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles
   into US Central days while articles bucket in the viewer's zone, so the two disagree at the
   margins far from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
@@ -429,9 +458,11 @@ Being a Markdown file in the repo, it gets what a post gets: a **Markdown** togg
 its source published at [`/colophon.md`](#markdown-source), and a [provenance](#provenance) line at
 the foot reading its own commits out of `git log`.
 
-Counters above it: posts, words, and photos are counted at build time; scrobbles, books, and
-articles are fetched from the Workers in the browser. Each live tile renders only once its number
-lands, so a Worker being down costs three tiles and nothing else.
+Counters above it: posts, words, photos, and photo years are counted at build time; scrobbles,
+books, articles, films, and rewatches are fetched from the Workers in the browser. Each live tile
+renders only once its number lands, so a Worker being down costs those tiles and nothing else.
+Nine tiles in a three-column grid — the count and the columns have to stay in step, or the last row
+goes ragged.
 
 **Numbers in the prose** are substituted by `fillTemplate` in `src/lib/colophon.ts`. Two forms,
 deliberately no more:
@@ -460,8 +491,9 @@ articles come from `/reading.json`. Photo counts are the length of `src/lib/phot
 Static except for three things: the now-playing bar (polls `/now.json` every 60s), a 90-day
 sparkline, and an "on this day" line from `/on-this-day.json`. A link to [/now](#now) sits under
 the rotating identity line, since it answers the question that line raises. All three render nothing until their
-fetch lands, and nothing at all if it fails. Below that, the four newest photographs, labeled with
-capture day or year.
+fetch lands, and nothing at all if it fails. Under those, a currently-reading strip and a
+last-watched strip, both from their Workers' `/now.json`. Below that, the four newest photographs,
+labeled with capture day or year.
 
 ## Social cards
 
@@ -618,11 +650,12 @@ CI runs `typecheck` → `test` → `build`, so a broken invariant stops the depl
 Push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. Repo settings
 need **Settings → Pages → Source = GitHub Actions**; the custom domain comes from `public/CNAME`.
 
-The four Workers deploy **separately** — a push to `main` never touches them:
+The five Workers deploy **separately** — a push to `main` never touches them:
 
 ```sh
 cd worker-listening && npm run deploy  # listening.cailinpitt.com
 cd worker-reading && npm run deploy    # reading.cailinpitt.com
+cd worker-watching && npm run deploy   # watching.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
 cd worker-photos && npm run deploy     # photos.cailinpitt.com
 ```

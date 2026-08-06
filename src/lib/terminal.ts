@@ -6,6 +6,7 @@ import { formatNumber, formatRelative } from './datetime'
 import { tagSlug } from './tags'
 import type { NowState } from './listening'
 import type { Article, ReadingNow } from './reading'
+import { formatWatchedDate, stars, type WatchingNow } from './watching'
 import type { EntryPage } from './guestbook'
 
 // ---- output --------------------------------------------------------------
@@ -162,6 +163,7 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       { name: 'now', kind: 'page', to: '/now', source: '/now.md', meta: 'what I am up to', keywords: 'currently today' },
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
       { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
+      { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
       // The two pages written as a single Markdown file publish their source the
       // way a post does, so `cat` reads them too.
@@ -224,8 +226,9 @@ export const COMMANDS: CommandSpec[] = [
   { name: 'open', args: '[path]', summary: 'Open the real page on the site' },
   { name: 'find', args: '<words>', summary: 'Search posts, tags, and pages' },
   { name: 'photo', args: '[random|<id>]', summary: 'Show a photograph' },
-  { name: 'now', summary: 'What is playing, and what I am reading' },
+  { name: 'now', summary: 'What is playing, and what I am reading and watching' },
   { name: 'reading', summary: 'The shelf in full' },
+  { name: 'watching', summary: 'The last film logged' },
   { name: 'guestbook', args: '[n]', summary: 'The most recent entries' },
   { name: 'sign', summary: 'Sign the guestbook' },
   { name: 'whoami', summary: 'Who I am, today' },
@@ -259,6 +262,7 @@ export interface Shell {
   fetchText(url: string): Promise<string>
   fetchNow(): Promise<NowState>
   fetchReading(): Promise<ReadingNow>
+  fetchWatching(): Promise<WatchingNow>
   fetchGuestbook(): Promise<EntryPage>
 }
 
@@ -512,11 +516,12 @@ export async function run(
     }
 
     case 'now': {
-      // Two Workers, one answer. Either can be down without taking the other's
-      // half of the screen with it.
-      const [music, reading] = await Promise.allSettled([
+      // Three Workers, one answer. Any of them can be down without taking the
+      // others' share of the screen with it.
+      const [music, reading, watching] = await Promise.allSettled([
         shell.fetchNow(),
         shell.fetchReading(),
+        shell.fetchWatching(),
       ])
       const lines: Line[] =
         music.status === 'fulfilled'
@@ -530,6 +535,22 @@ export async function run(
         }
         const article = reading.value.todaysArticle
         if (article) lines.push(blank(), ...articleLines(article))
+      }
+
+      // The last film, whenever it was. Unlike the article above there is no
+      // "today" filter — films are logged a few times a week, so a same-day
+      // rule would leave this off the screen most of the time.
+      if (watching.status === 'fulfilled' && watching.value.lastFilm) {
+        const film = watching.value.lastFilm
+        lines.push(
+          blank(),
+          line(`🎬 ${film.title}${film.year ? ` (${film.year})` : ''}`, 'accent'),
+          muted(
+            `   ${[stars(film.rating), formatWatchedDate(film.watchedDate)]
+              .filter(Boolean)
+              .join(' · ')}`,
+          ),
+        )
       }
       return { lines }
     }
@@ -553,6 +574,26 @@ export async function run(
         return { lines: [...lines, blank(), link('The whole shelf → /reading', '/reading')] }
       } catch {
         return { lines: [err('reading: the reading Worker did not answer')] }
+      }
+    }
+
+    case 'watching': {
+      try {
+        const { lastFilm } = await shell.fetchWatching()
+        const lines: Line[] = lastFilm
+          ? [
+              line(`🎬 ${lastFilm.title}${lastFilm.year ? ` (${lastFilm.year})` : ''}`, 'accent'),
+              muted(
+                `   ${[stars(lastFilm.rating), formatWatchedDate(lastFilm.watchedDate)]
+                  .filter(Boolean)
+                  .join(' · ')}`,
+              ),
+            ]
+          : [muted('Nothing logged yet.')]
+
+        return { lines: [...lines, blank(), link('The whole log → /watching', '/watching')] }
+      } catch {
+        return { lines: [err('watching: the watching Worker did not answer')] }
       }
     }
 

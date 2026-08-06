@@ -63,6 +63,9 @@ export function Layout() {
               <NavLink to="/reading">Reading</NavLink>
             </li>
             <li>
+              <NavLink to="/watching">Watching</NavLink>
+            </li>
+            <li>
               <NavLink to="/blog">Blog</NavLink>
             </li>
             <li>

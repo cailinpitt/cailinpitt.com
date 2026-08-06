@@ -36,6 +36,7 @@ export const routes: RouteRecord[] = [
         getStaticPaths: () => listeningYears().map((y) => `/listening/${y}`),
       },
       { path: 'reading', lazy: () => import('./pages/Reading') },
+      { path: 'watching', lazy: () => import('./pages/Watching') },
       { path: 'timeline', lazy: () => import('./pages/Timeline') },
       { path: 'guestbook', lazy: () => import('./pages/Guestbook') },
       { path: 'photos', lazy: () => import('./pages/Photos') },

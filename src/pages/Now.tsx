@@ -8,6 +8,7 @@ import { PhotoStrip } from '../components/PhotoStrip'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingBar } from '../components/ReadingBar'
+import { WatchingBar } from '../components/WatchingBar'
 import { Seo } from '../components/Seo'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { nowPage } from '../lib/now'
@@ -123,6 +124,7 @@ export function Component() {
         <div className="now-live">
           <NowPlayingBar />
           <ReadingBar />
+          <WatchingBar />
           {/* The newest frames, under the bars. Prerendered, unlike the two
               above it — these come from the build, not a Worker. */}
           <PhotoStrip photos={photos} />

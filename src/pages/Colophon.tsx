@@ -11,6 +11,7 @@ import { colophonPage, fillTemplate } from '../lib/colophon'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { fetchNow } from '../lib/listening'
 import { fetchReading } from '../lib/reading'
+import { fetchWatching } from '../lib/watching'
 import { pageSchema } from '../lib/structuredData'
 
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
@@ -74,16 +75,18 @@ function summarize(
 }
 
 /**
- * The three counters the site itself doesn't know.
+ * The five counters the site itself doesn't know.
  *
- * Everything else on this page is compiled in, but scrobbles and books live in
- * the Workers' databases — so they're fetched here the way /listening and
- * /reading fetch theirs, and each tile simply doesn't render until its number
- * lands. A Worker being down costs this page three tiles and nothing else.
+ * Everything else on this page is compiled in, but scrobbles, books, and films
+ * live in the Workers' databases — so they're fetched here the way /listening,
+ * /reading, and /watching fetch theirs, and each tile simply doesn't render
+ * until its number lands. A Worker being down costs this page its tiles and
+ * nothing else.
  */
 function LiveTiles() {
   const [scrobbles, setScrobbles] = useState<number | null>(null)
   const [reading, setReading] = useState<{ books: number; articles: number } | null>(null)
+  const [watching, setWatching] = useState<{ films: number; rewatches: number } | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -95,6 +98,11 @@ function LiveTiles() {
         setReading({ books: bundle.counts.booksRead, articles: bundle.counts.articles }),
       )
       .catch(() => {})
+    void fetchWatching(controller.signal)
+      .then((bundle) =>
+        setWatching({ films: bundle.counts.films, rewatches: bundle.counts.rewatches }),
+      )
+      .catch(() => {})
     return () => controller.abort()
   }, [])
 
@@ -103,6 +111,8 @@ function LiveTiles() {
       {scrobbles != null && <StatTile label="Scrobbles" value={scrobbles} />}
       {reading && <StatTile label="Books read" value={reading.books} />}
       {reading && <StatTile label="Articles saved" value={reading.articles} />}
+      {watching && <StatTile label="Films watched" value={watching.films} />}
+      {watching && <StatTile label="Rewatches" value={watching.rewatches} />}
     </>
   )
 }
@@ -197,6 +207,7 @@ export function Component() {
               <StatTile label="Posts" value={data.posts} />
               <StatTile label="Words" value={data.words} />
               <StatTile label="Photos" value={data.photos} />
+              <StatTile label="Photo years" value={data.years} />
               <LiveTiles />
             </dl>
             <Markdown
