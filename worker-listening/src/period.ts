@@ -472,20 +472,26 @@ const LIVE_INTERVAL: Record<PeriodKind, number> = {
 }
 
 export interface WorkUnit {
-  period: Period
-  /** True when this fills a gap rather than refreshing a live period. */
+  /** One or more periods to build this tick. Live refreshes are always single. */
+  periods: Period[]
+  /** True when this fills gaps rather than refreshing a live period. */
   backfill: boolean
 }
 
 /**
- * Backfill only runs on ticks whose minute is a multiple of this.
+ * How many completed periods to build in one tick.
  *
- * The budget maths: `now:v1` spends ~300 KV writes/day and the four live periods
- * ~65, leaving roughly 500 of the 1,000/day ceiling. Unthrottled, an idle tick
- * would backfill every minute and spend 1,440. Every third minute caps it at
- * ~480/day and still clears all ~356 historical periods inside a day.
+ * The backfill is **finite**: ~356 periods, one KV write each, and then it stops
+ * because pickWork finds nothing missing. So the daily write cost is 356 total
+ * however fast it runs — spreading it over eighteen hours costs exactly what
+ * two hours costs. An earlier throttle here paced it as though it ran forever,
+ * which bought nothing and made a rebuild take most of a day.
+ *
+ * What does bind is per-invocation: a period costs ~10 D1 queries against a
+ * ceiling of about 50, and ingest wants a couple. Three keeps a wide margin
+ * while clearing the whole archive in roughly two hours.
  */
-const BACKFILL_EVERY_MINUTES = 3
+const BACKFILL_PER_TICK = 3
 
 /**
  * Pick at most one period to (re)compute this tick.
@@ -512,30 +518,35 @@ export async function pickWork(
       kind === 'all' ? parsePeriod('all', 'all', offset)! : periodContaining(kind, now, offset)
     const blob = await env.KV.get<PeriodStats>(blobKey(kind, period.key), 'json')
     if (!blob || now - blob.computedAt >= LIVE_INTERVAL[kind]) {
-      return { period, backfill: false }
+      return { periods: [period], backfill: false }
     }
     // All-time is derived from the year blobs, so a year rebuild invalidates it
     // regardless of its own age.
     if (kind === 'all') {
       const touched = Number(await env.KV.get(YEARS_TOUCHED_KEY)) || 0
-      if (touched > blob.computedAt) return { period, backfill: false }
+      if (touched > blob.computedAt) return { periods: [period], backfill: false }
     }
   }
 
   if (!firstDay) return null
-  if (new Date(now * 1000).getUTCMinutes() % BACKFILL_EVERY_MINUTES !== 0) return null
-
   const start = Math.floor(new Date(`${firstDay}T00:00:00Z`).getTime() / 1000) - offset
 
   // Years before months before weeks: the coarse pages are the ones people land
   // on first, so they should stop being empty soonest.
+  //
+  // Several per tick, taken from one `index` snapshot. KV list is eventually
+  // consistent, so a key written moments ago may not appear in the next tick's
+  // listing; batching from a single snapshot is what keeps a tick from picking
+  // the same period twice, and a rare cross-tick repeat only costs one write.
+  const batch: Period[] = []
   for (const kind of ['y', 'm', 'w'] as Exclude<PeriodKind, 'all'>[]) {
     const have = new Set(index[kind])
     for (const period of enumeratePeriods(kind, start, now, offset)) {
       // Only completed periods are frozen; the live one is handled above.
       if (period.end > now || have.has(period.key)) continue
-      return { period, backfill: true }
+      batch.push(period)
+      if (batch.length >= BACKFILL_PER_TICK) return { periods: batch, backfill: true }
     }
   }
-  return null
+  return batch.length ? { periods: batch, backfill: true } : null
 }

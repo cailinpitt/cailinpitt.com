@@ -246,30 +246,35 @@ async function refreshHeatmap(env: Env): Promise<void> {
 /**
  * Compute at most one period blob.
  *
- * Strictly one per tick: a year is ~18,700 rows to read and fold, and stacking
- * several into one invocation is how both the CPU ceiling and the KV write
- * budget get blown. 1,440 ticks a day is a lot of room.
+ * A live refresh is always one period. A backfill batch is several, because the
+ * backfill is finite — ~356 periods total — so its KV cost is the same however
+ * fast it runs, and pacing it slowly only made a rebuild take most of a day.
+ * BACKFILL_PER_TICK is sized against D1's per-invocation query ceiling.
  */
 async function runPeriodWork(env: Env, now: number): Promise<void> {
   const [index, bounds] = await Promise.all([listPeriods(env), archiveBounds(env)])
   const unit = await pickWork(env, index, bounds.firstDay, now)
   if (!unit) return
 
-  const stats = await computePeriod(env, unit.period, now)
-  await env.KV.put(blobKey(unit.period.kind, unit.period.key), JSON.stringify(stats))
-  // Tell the all-time fold that its inputs moved. Year builds are rare — six on a
-  // fresh archive, then the live year every six hours — so this is a handful of
-  // KV writes a day.
-  if (unit.period.kind === 'y') await env.KV.put(YEARS_TOUCHED_KEY, String(now))
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      stage: 'period',
-      key: `${unit.period.kind}:${unit.period.key}`,
-      backfill: unit.backfill,
-      scrobbles: stats.scrobbles,
-    }),
-  )
+  let touchedYear = false
+  for (const period of unit.periods) {
+    const stats = await computePeriod(env, period, now)
+    await env.KV.put(blobKey(period.kind, period.key), JSON.stringify(stats))
+    if (period.kind === 'y') touchedYear = true
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        stage: 'period',
+        key: `${period.kind}:${period.key}`,
+        backfill: unit.backfill,
+        scrobbles: stats.scrobbles,
+      }),
+    )
+  }
+
+  // Tell the all-time fold that its inputs moved. Written once per tick however
+  // many years the batch touched.
+  if (touchedYear) await env.KV.put(YEARS_TOUCHED_KEY, String(now))
 }
 
 /** First and last day in the archive, straight off the `days` table's primary key. */

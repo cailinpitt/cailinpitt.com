@@ -119,7 +119,7 @@ The cron fires every minute, but only the cheap work runs that often:
 | 15 min | recompute 7d/30d windows + recent daily logs | in-window rows only — **but only because of `INDEXED BY`**, see below |
 | 6 h | recompute the year heatmap | ~one year of rows |
 | 30 min / 2 h / 6 h / 24 h | recompute the live week / month / year / all-time blob | ~380 / 1,560 / 18,700 / 0 rows |
-| 3 min | build one *completed* period blob, until none are missing | once per period, ever |
+| 1 min | build up to 3 *completed* period blobs, until none are missing | once per period, ever |
 | — | all-time total | free with each Last.fm response (`@attr.total`); never `COUNT(*)` |
 
 Reads are served from KV, so page loads never touch D1 or Last.fm.
@@ -128,12 +128,20 @@ Reads are served from KV, so page loads never touch D1 or Last.fm.
 and a period compute into one invocation is how the CPU ceiling and the KV write
 budget both get blown, so they take turns. At 1,440 ticks a day there is no hurry.
 
-**The write budget is what caps the backfill.** KV allows 1,000 writes/day;
-`now:v1` spends ~300 and the four live period blobs ~65. Backfilling a period
-every minute would spend another 1,440, so it is throttled to every third minute
-(~480/day) — which still clears all ~356 historical periods inside a day. This is
-also why there is no period *index* key: maintaining one would cost an extra
-write per frozen period, so `/periods.json` lists KV instead, which costs a read.
+**The backfill is finite, so its rate is not a budget question.** Building the
+archive costs ~356 KV writes *total* — one per period, and then pickWork finds
+nothing and it stops. Spreading those over eighteen hours costs exactly what
+spreading them over two hours costs. An earlier version throttled it to one
+period every three minutes, reasoning as though it ran forever; that bought
+nothing and made a rebuild after a `PREFIX` bump take most of a day.
+
+What actually binds is per-invocation: a period costs ~10 D1 queries against a
+ceiling of about 50. Hence 3 per tick, which clears the archive in ~2 hours.
+
+The write budget still shapes everything *recurring*: KV allows 1,000/day,
+`now:v1` spends ~300 and the live period blobs ~65. It is also why there is no
+period *index* key — maintaining one would cost a write per frozen period, so
+`/periods.json` lists KV instead, which costs a read.
 
 **Layer 1 counters increment, so they must only see genuinely new rows.** Ingest
 re-offers an hour of overlap on every pull and lets `INSERT OR IGNORE` drop the
