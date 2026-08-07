@@ -39,7 +39,7 @@ import { fetchWindows } from './moving'
  * v3: rebuild after the genre/duration backfill landed — v2 blobs were computed
  *     against near-empty lookups and would otherwise stay that way forever.
  */
-export const PREFIX = 'p:v3:'
+export const PREFIX = 'p:v4:'
 
 export const blobKey = (kind: PeriodKind, key: string) => `${PREFIX}${kind}:${key}`
 
