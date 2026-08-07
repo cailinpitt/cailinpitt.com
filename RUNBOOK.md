@@ -190,6 +190,24 @@ cd worker-listening
 wrangler d1 execute cailinpitt-listening --remote --file=../scripts/enrich.sql
 ```
 
+`enrich.sql` is large — roughly 7 MB and ~31,000 statements, because unlike
+`backfill.sql` (which packs 100 rows per `INSERT`) this writes one upsert per
+entity. If `wrangler` times out or rejects the file, split it and load in
+chunks. Every statement is a self-contained single line and an idempotent
+upsert, so chunking is safe and a failed chunk can just be re-run:
+
+```bash
+cd /tmp && rm -rf d1chunks && mkdir d1chunks
+split -l 2000 ~/Development/cailinpitt.com/scripts/enrich.sql d1chunks/part_
+cd ~/Development/cailinpitt.com/worker-listening
+for f in /tmp/d1chunks/part_*; do
+  echo "→ $f"
+  wrangler d1 execute cailinpitt-listening --remote --file="$f" || break
+done
+```
+
+The row-write total (~31k) is well inside D1's 100k writes/day free-tier cap.
+
 Durations come from `album.getInfo`, which returns the whole tracklist per call —
 8,854 album lookups cover all 18,114 tracks.
 
