@@ -321,3 +321,36 @@ describe('the trend series', () => {
     expect(s.series[0].count).toBe(0)
   })
 })
+
+describe('chart movement vs genuinely new', () => {
+  // The label has to distinguish "first time I ever heard this" from "wasn't on
+  // last period's chart". They are different questions, and the second one
+  // labelled long-standing artists "new" the moment they dropped out of a top 25.
+  const previous = run([
+    scrobble('2026-08-03T09:00:00', 'A', 'Alpha'),
+    scrobble('2026-08-03T09:05:00', 'B', 'Beta'),
+  ])
+
+  it('leaves isNew unset for the aggregator to have the caller fill in', () => {
+    // aggregate() has no access to first_uts; period.ts sets this from D1.
+    const s = run([scrobble('2026-08-03T09:00:00', 'A', 'Alpha')], 0, previous as never)
+    expect(s.top.artists[0].isNew).toBeUndefined()
+  })
+
+  it('reports prevRank as chart position only, never as history', () => {
+    const s = run(
+      [
+        scrobble('2026-08-03T09:00:00', 'X', 'Newcomer'),
+        scrobble('2026-08-03T09:05:00', 'A', 'Alpha'),
+      ],
+      0,
+      previous as never,
+    )
+    const alpha = s.top.artists.find((a) => a.name === 'Alpha')!
+    const newcomer = s.top.artists.find((a) => a.name === 'Newcomer')!
+    // Alpha charted last period; Newcomer did not. Neither fact says anything
+    // about whether they had ever been played before.
+    expect(alpha.prevRank).toBe(1)
+    expect(newcomer.prevRank).toBeNull()
+  })
+})

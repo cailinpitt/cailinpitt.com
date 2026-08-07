@@ -32,8 +32,16 @@ export interface RankedArtist {
   count: number
   share: number
   image: string | null
-  /** Rank in the previous period, or null if absent from it. */
+  /**
+   * Rank in the previous period's top list, or null if absent from it.
+   *
+   * Null means "not on last period's chart" — **not** "never heard before". An
+   * artist with years of history that simply ranked below the cut is null here.
+   * Use `isNew` for the other question; the caller fills it from first_uts.
+   */
   prevRank: number | null
+  /** First ever heard inside this period. Set by the caller. */
+  isNew?: boolean
 }
 export interface RankedAlbum extends Omit<RankedArtist, 'name'> {
   album: string

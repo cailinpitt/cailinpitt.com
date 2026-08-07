@@ -60,15 +60,39 @@ export function Headline({ stats }: { stats: PeriodStats }) {
   )
 }
 
-/** Rank movement against the previous period. */
-function Movement({ rank, prevRank }: { rank: number; prevRank: number | null }) {
-  if (prevRank === null) return <span className="move new">new</span>
-  const diff = prevRank - rank
-  if (diff === 0) return <span className="move flat">–</span>
+/**
+ * Rank movement against the previous period.
+ *
+ * "New" means first ever heard, which is a different question from "wasn't on
+ * last period's chart" — an artist can have years of plays and still be absent
+ * from a top 25. Conflating them labelled long-standing artists new, and
+ * contradicted the Discovery section, which has always meant first-ever play.
+ */
+function Movement({
+  rank,
+  prevRank,
+  isNew,
+}: {
+  rank: number
+  prevRank: number | null
+  isNew?: boolean
+}) {
+  if (isNew) return <span className="move new">new</span>
+  // On the chart before, so show the climb or fall.
+  if (prevRank !== null) {
+    const diff = prevRank - rank
+    if (diff === 0) return <span className="move flat">–</span>
+    return (
+      <span className={`move ${diff > 0 ? 'up' : 'down'}`}>
+        {diff > 0 ? '▲' : '▼'}
+        {Math.abs(diff)}
+      </span>
+    )
+  }
+  // Heard before, but not on the last chart. Chart language for exactly this.
   return (
-    <span className={`move ${diff > 0 ? 'up' : 'down'}`}>
-      {diff > 0 ? '▲' : '▼'}
-      {Math.abs(diff)}
+    <span className="move reentry" title="Back on the chart after missing the last period">
+      ↩
     </span>
   )
 }
@@ -109,7 +133,7 @@ function TopArtistList({ artists }: { artists: RankedArtist[] }) {
             </span>
             <span className="rank-count">
               {formatNumber(a.count)}
-              <Movement rank={i + 1} prevRank={a.prevRank} />
+              <Movement rank={i + 1} prevRank={a.prevRank} isNew={a.isNew} />
             </span>
           </li>
         ))}
@@ -134,7 +158,7 @@ function TopAlbumList({ albums }: { albums: RankedAlbum[] }) {
             </span>
             <span className="rank-count">
               {formatNumber(a.count)}
-              <Movement rank={i + 1} prevRank={a.prevRank} />
+              <Movement rank={i + 1} prevRank={a.prevRank} isNew={a.isNew} />
             </span>
             <ListenLinks query={albumQuery(a.artist, a.album)} />
           </li>
@@ -160,7 +184,7 @@ function TopTrackList({ tracks }: { tracks: RankedTrack[] }) {
             </span>
             <span className="rank-count">
               {formatNumber(t.count)}
-              <Movement rank={i + 1} prevRank={t.prevRank} />
+              <Movement rank={i + 1} prevRank={t.prevRank} isNew={t.isNew} />
             </span>
             <ListenLinks query={trackQuery(t.artist, t.track)} />
           </li>

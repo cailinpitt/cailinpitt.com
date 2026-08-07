@@ -333,6 +333,12 @@ the thresholds live. It deliberately stays quiet rather than guessing: cards and
 when their inputs are missing, genre and geography claims need >=50% coverage, and a period under
 50 scrobbles gets no story at all.
 
+**"New" means first ever heard, not new to the chart.** A leaderboard entry absent from the
+previous period's top 25 is not necessarily new — it may have years of plays and simply have ranked
+lower. `prevRank` answers the chart question and drives ▲/▼ (and ↩ for a re-entry); `isNew` answers
+the history one, filled from `artists.first_uts` by `markNewEntries()`. Conflating them contradicted
+the Discovery section, which has always meant first-ever play.
+
 **The rule that makes it affordable: aggregation happens on the cron, never on a request.** A
 period endpoint reads a finished KV blob or 404s. `/<year>` and `/<year>.json` on the Worker are
 aliases for the same blob, so `curl listening.cailinpitt.com/2025` shows the same year the site

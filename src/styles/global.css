@@ -4551,3 +4551,6 @@ a.guestbook-name:hover {
 .soundtrack-artist {
   color: var(--muted);
 }
+.period-tops .move.reentry {
+  color: var(--muted);
+}

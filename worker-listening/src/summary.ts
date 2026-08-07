@@ -168,6 +168,53 @@ export async function priorLastPlay(
   return new Map(rows.results.map((r) => [r.artist, r.last_uts]))
 }
 
+/**
+ * When each of these entities was first heard, ever.
+ *
+ * This is what separates "new to me" from "new to the chart". A leaderboard
+ * entry absent from last period's top 25 is not necessarily new — it may have
+ * years of history and simply have ranked lower — and labelling it "new" next to
+ * a Discovery section that means first-ever play is a straight contradiction.
+ *
+ * Keyed lookups against the summary tables, so this is ~25 primary-key seeks per
+ * list rather than anything resembling a scan.
+ */
+export async function firstSeenArtists(
+  db: D1Database,
+  artists: string[],
+): Promise<Map<string, number>> {
+  const unique = [...new Set(artists)].slice(0, MAX_BINDS)
+  if (!unique.length) return new Map()
+  const rows = await db
+    .prepare(
+      `SELECT artist, first_uts FROM artists
+        WHERE artist IN (${unique.map((_, i) => `?${i + 1}`).join(', ')})`,
+    )
+    .bind(...unique)
+    .all<{ artist: string; first_uts: number }>()
+  return new Map(rows.results.map((r) => [r.artist, r.first_uts]))
+}
+
+/** Same, for (name, artist) pairs — albums or tracks. Two binds each. */
+export async function firstSeenPairs(
+  db: D1Database,
+  table: 'albums' | 'tracks',
+  pairs: { name: string; artist: string }[],
+): Promise<Map<string, number>> {
+  const column = table === 'albums' ? 'album' : 'track'
+  const capped = pairs.slice(0, Math.floor(MAX_BINDS / 2))
+  if (!capped.length) return new Map()
+
+  const clause = capped
+    .map((_, i) => `(${column} = ?${i * 2 + 1} AND artist = ?${i * 2 + 2})`)
+    .join(' OR ')
+  const rows = await db
+    .prepare(`SELECT ${column} AS name, artist, first_uts FROM ${table} WHERE ${clause}`)
+    .bind(...capped.flatMap((p) => [p.name, p.artist]))
+    .all<{ name: string; artist: string; first_uts: number }>()
+  return new Map(rows.results.map((r) => [`${r.name}${SEP}${r.artist}`, r.first_uts]))
+}
+
 /** Returns that landed inside a period, longest silence first. */
 export async function returnsIn(
   db: D1Database,

@@ -18,6 +18,8 @@ import {
   allTimeTotals,
   discoveryIn,
   fetchPeriodRows,
+  firstSeenArtists,
+  firstSeenPairs,
   playsBefore,
   returnsIn,
 } from './summary'
@@ -141,6 +143,8 @@ export async function computePeriod(
     windows,
   })
 
+  await markNewEntries(env.DB, stats, period.start)
+
   stats.discovery = {
     ...discovery,
     returning,
@@ -148,6 +152,38 @@ export async function computePeriod(
     rate: stats.tracks ? Math.round((discovery.tracks / stats.tracks) * 1000) / 10 : 0,
   }
   return stats
+}
+
+/**
+ * Flag the leaderboard entries that are genuinely first-time, not just new to
+ * the chart.
+ *
+ * Three keyed lookups of ~25 rows each. Without this the UI can only ask "was it
+ * on last period's chart", which labels a long-standing artist "new" the moment
+ * it drops out of the top 25 for one period — the exact thing that made Dust
+ * read as new in 2026 after five years of plays.
+ */
+async function markNewEntries(
+  db: D1Database,
+  stats: PeriodStats,
+  start: number,
+): Promise<void> {
+  const [artists, albums, tracks] = await Promise.all([
+    firstSeenArtists(db, stats.top.artists.map((a) => a.name)),
+    firstSeenPairs(db, 'albums', stats.top.albums.map((a) => ({ name: a.album, artist: a.artist }))),
+    firstSeenPairs(db, 'tracks', stats.top.tracks.map((t) => ({ name: t.track, artist: t.artist }))),
+  ])
+
+  const SEP = '\u001f'
+  // Absent from the summary tables means never seen before this period, which
+  // only happens mid-backfill; treating it as "not new" is the quiet default.
+  for (const a of stats.top.artists) a.isNew = (artists.get(a.name) ?? 0) >= start
+  for (const a of stats.top.albums) {
+    a.isNew = (albums.get(`${a.album}${SEP}${a.artist}`) ?? 0) >= start
+  }
+  for (const t of stats.top.tracks) {
+    t.isNew = (tracks.get(`${t.track}${SEP}${t.artist}`) ?? 0) >= start
+  }
 }
 
 /**

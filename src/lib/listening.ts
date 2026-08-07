@@ -123,7 +123,10 @@ export interface RankedArtist {
   count: number
   share: number
   image: string | null
+  /** Rank on the *previous period's chart*, or null if it wasn't on it. */
   prevRank: number | null
+  /** First ever heard in this period. Absent on blobs built before this existed. */
+  isNew?: boolean
 }
 export interface RankedAlbum extends Omit<RankedArtist, 'name'> {
   album: string
