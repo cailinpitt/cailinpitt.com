@@ -479,19 +479,27 @@ export interface WorkUnit {
 }
 
 /**
- * How many completed periods to build in one tick.
+ * How much work one tick may take on, as a cost budget rather than a count.
  *
- * The backfill is **finite**: ~356 periods, one KV write each, and then it stops
- * because pickWork finds nothing missing. So the daily write cost is 356 total
- * however fast it runs — spreading it over eighteen hours costs exactly what
- * two hours costs. An earlier throttle here paced it as though it ran forever,
- * which bought nothing and made a rebuild take most of a day.
+ * The backfill is **finite**: ~356 periods, one KV write each, then pickWork
+ * finds nothing and it stops. Its daily write cost is 356 total however fast it
+ * runs, so pacing buys nothing — an earlier throttle here treated it as though
+ * it ran forever and made a rebuild take most of a day.
  *
- * What does bind is per-invocation: a period costs ~10 D1 queries against a
- * ceiling of about 50, and ingest wants a couple. Three keeps a wide margin
- * while clearing the whole archive in roughly two hours.
+ * Two things actually bind, and they disagree about what "one period" costs:
+ *
+ *  - **D1 queries per invocation**, ~50. A period costs 8, and ingest plus the
+ *    archive-bounds lookup want 3, so ~5 periods is the ceiling.
+ *  - **CPU per invocation.** A week is ~380 rows to fold, a year ~18,700. Five
+ *    weeks is nothing; five years is 93,000 rows in one tick.
+ *
+ * So a year counts as more than a week. Weighting them means a tick takes five
+ * weeks or one year plus a couple of months, never five years.
  */
-const BACKFILL_PER_TICK = 3
+const TICK_BUDGET = 5
+
+/** What each granularity costs against TICK_BUDGET, by rows to aggregate. */
+const PERIOD_COST: Record<Exclude<PeriodKind, 'all'>, number> = { y: 5, m: 2, w: 1 }
 
 /**
  * Pick at most one period to (re)compute this tick.
@@ -539,13 +547,19 @@ export async function pickWork(
   // listing; batching from a single snapshot is what keeps a tick from picking
   // the same period twice, and a rare cross-tick repeat only costs one write.
   const batch: Period[] = []
+  let spent = 0
   for (const kind of ['y', 'm', 'w'] as Exclude<PeriodKind, 'all'>[]) {
     const have = new Set(index[kind])
     for (const period of enumeratePeriods(kind, start, now, offset)) {
       // Only completed periods are frozen; the live one is handled above.
       if (period.end > now || have.has(period.key)) continue
+      // Always take at least one, so a year can never be too expensive to start.
+      if (batch.length && spent + PERIOD_COST[kind] > TICK_BUDGET) {
+        return { periods: batch, backfill: true }
+      }
       batch.push(period)
-      if (batch.length >= BACKFILL_PER_TICK) return { periods: batch, backfill: true }
+      spent += PERIOD_COST[kind]
+      if (spent >= TICK_BUDGET) return { periods: batch, backfill: true }
     }
   }
   return batch.length ? { periods: batch, backfill: true } : null

@@ -253,19 +253,27 @@ export async function discoveryIn(
   end: number,
 ): Promise<DiscoveryCounts> {
   const range = 'first_uts >= ?1 AND first_uts < ?2'
-  const [artists, albums, tracks, names] = await db.batch<{ n: number } & { artist: string; first_uts: number }>([
-    db.prepare(`SELECT COUNT(*) AS n FROM artists WHERE ${range}`).bind(start, end),
-    db.prepare(`SELECT COUNT(*) AS n FROM albums  WHERE ${range}`).bind(start, end),
-    db.prepare(`SELECT COUNT(*) AS n FROM tracks  WHERE ${range}`).bind(start, end),
+  // The three counts as scalar subqueries in one statement rather than three.
+  // Each is still its own index range; this is purely about the per-invocation
+  // query ceiling, which is what caps how many periods a cron tick can build.
+  const [counts, names] = await db.batch<Record<string, number> & { artist: string; first_uts: number }>([
+    db
+      .prepare(
+        `SELECT (SELECT COUNT(*) FROM artists WHERE ${range}) AS artists,
+                (SELECT COUNT(*) FROM albums  WHERE ${range}) AS albums,
+                (SELECT COUNT(*) FROM tracks  WHERE ${range}) AS tracks`,
+      )
+      .bind(start, end),
     db
       .prepare(`SELECT artist, first_uts FROM artists WHERE ${range} ORDER BY first_uts LIMIT 50`)
       .bind(start, end),
   ])
 
+  const row = counts.results[0]
   return {
-    artists: artists.results[0]?.n ?? 0,
-    albums: albums.results[0]?.n ?? 0,
-    tracks: tracks.results[0]?.n ?? 0,
+    artists: Number(row?.artists ?? 0),
+    albums: Number(row?.albums ?? 0),
+    tracks: Number(row?.tracks ?? 0),
     newArtists: names.results.map((r) => ({ name: r.artist, uts: r.first_uts })),
   }
 }

@@ -119,7 +119,7 @@ The cron fires every minute, but only the cheap work runs that often:
 | 15 min | recompute 7d/30d windows + recent daily logs | in-window rows only — **but only because of `INDEXED BY`**, see below |
 | 6 h | recompute the year heatmap | ~one year of rows |
 | 30 min / 2 h / 6 h / 24 h | recompute the live week / month / year / all-time blob | ~380 / 1,560 / 18,700 / 0 rows |
-| 1 min | build up to 3 *completed* period blobs, until none are missing | once per period, ever |
+| 1 min | build completed period blobs to a cost budget, until none are missing | once per period, ever |
 | — | all-time total | free with each Last.fm response (`@attr.total`); never `COUNT(*)` |
 
 Reads are served from KV, so page loads never touch D1 or Last.fm.
@@ -135,8 +135,12 @@ spreading them over two hours costs. An earlier version throttled it to one
 period every three minutes, reasoning as though it ran forever; that bought
 nothing and made a rebuild after a `PREFIX` bump take most of a day.
 
-What actually binds is per-invocation: a period costs ~10 D1 queries against a
-ceiling of about 50. Hence 3 per tick, which clears the archive in ~2 hours.
+What actually binds is per-invocation, and two limits disagree about what a
+period costs: **D1 queries** (~8 each against a ceiling of ~50, so about five
+periods) and **CPU** (a week is ~380 rows to fold, a year ~18,700 — five years in
+one tick is 93,000). So the batch is sized by a cost budget with a year weighted
+five times a week, which clears the archive in **~85 minutes**: a tick takes five
+weeks, or one year, never five years.
 
 The write budget still shapes everything *recurring*: KV allows 1,000/day,
 `now:v1` spends ~300 and the live period blobs ~65. It is also why there is no
