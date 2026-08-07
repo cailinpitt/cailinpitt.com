@@ -32,8 +32,10 @@ import { readLookups } from './enrich'
  * every period under the new prefix within a day.
  *
  * v2: genres (Tier B) and listening time (Tier C).
+ * v3: rebuild after the genre/duration backfill landed — v2 blobs were computed
+ *     against near-empty lookups and would otherwise stay that way forever.
  */
-export const PREFIX = 'p:v2:'
+export const PREFIX = 'p:v3:'
 
 export const blobKey = (kind: PeriodKind, key: string) => `${PREFIX}${kind}:${key}`
 

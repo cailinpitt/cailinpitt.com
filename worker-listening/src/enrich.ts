@@ -202,6 +202,27 @@ export async function buildDurationMap(env: Env): Promise<DurationMap> {
   return map
 }
 
+/**
+ * Newest `fetched_at` across the meta tables.
+ *
+ * This is the "has the source data changed" signal for the lookup blobs. A pure
+ * timer is not enough: a bulk load from scripts/enrich-listening.mjs writes tens
+ * of thousands of rows without going through enrichSome(), so a blob rebuilt
+ * just before it would stay pinned to a near-empty snapshot until the timer
+ * expired — and every period computed in that window would classify against
+ * nothing. Both columns are indexed, so this is two index seeks.
+ *
+ * track_meta needs no check of its own: its rows are always written in the same
+ * batch as the album row that produced them.
+ */
+export async function metaWatermark(db: D1Database): Promise<number> {
+  const [artists, albums] = await db.batch<{ v: number | null }>([
+    db.prepare('SELECT MAX(fetched_at) AS v FROM artist_meta'),
+    db.prepare('SELECT MAX(fetched_at) AS v FROM album_meta'),
+  ])
+  return Math.max(artists.results[0]?.v ?? 0, albums.results[0]?.v ?? 0)
+}
+
 export interface MetaLookups {
   genres: GenreMap
   durations: DurationMap

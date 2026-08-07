@@ -11,7 +11,7 @@ import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork } from './period'
 import { summaryStatements } from './summary'
-import { enrichSome, refreshLookups } from './enrich'
+import { enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import {
   computeArtistDebuts,
@@ -273,12 +273,18 @@ async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
 async function runEnrichment(env: Env, now: number): Promise<boolean> {
   const handled = await enrichSome(env, now)
 
-  const stamp = await env.KV.get(KEY.lookupsBuiltAt)
-  const age = now - Number(stamp ?? 0)
-  if (age >= LOOKUP_INTERVAL) {
+  // Rebuild when the source data has actually moved, not merely when a timer
+  // expired. See metaWatermark() — a bulk SQL load lands tens of thousands of
+  // rows without passing through enrichSome(), and a timer alone would leave the
+  // lookups pinned to a pre-load snapshot for up to a day.
+  const stamp = await readJSON<{ at: number; watermark: number }>(env, KEY.lookupsBuiltAt)
+  const watermark = await metaWatermark(env.DB)
+  const stale = !stamp || now - stamp.at >= LOOKUP_INTERVAL || stamp.watermark !== watermark
+
+  if (stale) {
     const counts = await refreshLookups(env)
-    await env.KV.put(KEY.lookupsBuiltAt, String(now))
-    console.log(JSON.stringify({ level: 'info', stage: 'lookups', ...counts }))
+    await env.KV.put(KEY.lookupsBuiltAt, JSON.stringify({ at: now, watermark }))
+    console.log(JSON.stringify({ level: 'info', stage: 'lookups', watermark, ...counts }))
     return true
   }
   return handled > 0
