@@ -55,6 +55,25 @@ export interface Bundle {
   recentDays: DayLog[]
   /** Cursor for /days pagination: fetch older logs with ?before=<uts>. */
   nextBefore: number | null
+  /**
+   * A five-field projection of the current year's period blob.
+   *
+   * Rides along in the bundle rather than being its own endpoint: /listening
+   * already fetches this, and a separate request would cost a Worker invocation
+   * per page view to deliver 21 KB when the page reads five numbers. Same
+   * reasoning as /now.json projecting away its 40-track tail.
+   *
+   * Absent when the year blob isn't built yet; the section then renders nothing.
+   */
+  year?: {
+    key: string
+    scrobbles: number
+    artists: number
+    hours: number
+    newArtists: number
+    /** Null unless enough of the year is classified to name one. */
+    topGenre: string | null
+  } | null
 }
 
 // Bucket a scrobble into a local calendar day using a fixed UTC offset. Kept

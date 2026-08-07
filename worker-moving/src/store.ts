@@ -229,8 +229,14 @@ export interface ActivityWindow {
  * range, so a year costs a few hundred small rows.
  *
  * The range test is overlap, not containment: an activity that started before
- * `from` can still be running inside it.
+ * `from` can still be running inside it. But `started_at + elapsed_time` is not
+ * indexable, so the lower bound is expressed on `started_at` alone — nothing can
+ * have started more than MAX_ACTIVITY_SECONDS before `from` and still overlap.
+ * That keeps this an index range instead of a full scan as the table grows.
  */
+/** Generous ceiling on activity length; the longest on record is ~15.5 hours. */
+const MAX_ACTIVITY_SECONDS = 24 * 60 * 60
+
 export async function fetchWindows(
   db: D1Database,
   from: number,
@@ -239,10 +245,11 @@ export async function fetchWindows(
   const rows = await db
     .prepare(
       `SELECT id, kind, started_at, elapsed_time FROM activities
-        WHERE started_at < ?2 AND started_at + elapsed_time > ?1
+        WHERE started_at >= ?1 AND started_at < ?2
+          AND started_at + elapsed_time > ?3
         ORDER BY started_at`,
     )
-    .bind(from, to)
+    .bind(from - MAX_ACTIVITY_SECONDS, to, from)
     .all<{ id: string; kind: string; started_at: number; elapsed_time: number }>()
 
   return rows.results.map((r) => ({

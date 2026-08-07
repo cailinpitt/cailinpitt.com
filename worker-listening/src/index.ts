@@ -431,6 +431,11 @@ async function getBundle(env: Env): Promise<Bundle> {
   // so the fallback costs nothing on the normal path.
   const total = nowInfo.totalScrobbles || (await totalFallback(env))
 
+  // One KV read on a bundle cache miss (not per request — this is edge-cached),
+  // projected down to what the page actually shows.
+  const yearKey = String(new Date((now + (Number(env.TZ_OFFSET_SECONDS) || 0)) * 1000).getUTCFullYear())
+  const yearBlob = await readJSON<PeriodStats>(env, blobKey('y', yearKey))
+
   return {
     updatedAt: nowInfo.updatedAt,
     user: env.LASTFM_USER,
@@ -443,6 +448,17 @@ async function getBundle(env: Env): Promise<Bundle> {
     recentDays: mergeRecent(stats.recentDays, nowInfo.recent, Number(env.TZ_OFFSET_SECONDS) || 0),
     // Unchanged: the cursor points at the *oldest* day, which merging never touches.
     nextBefore: stats.nextBefore,
+    year: yearBlob
+      ? {
+          key: yearBlob.key,
+          scrobbles: yearBlob.scrobbles,
+          artists: yearBlob.artists,
+          hours: yearBlob.listening?.seconds ? Math.round(yearBlob.listening.seconds / 3600) : 0,
+          newArtists: yearBlob.discovery?.artists ?? 0,
+          // Same coverage floor the period page and wrapped use.
+          topGenre: yearBlob.genreCoverage >= 50 ? (yearBlob.genres?.[0]?.name ?? null) : null,
+        }
+      : null,
   }
 }
 

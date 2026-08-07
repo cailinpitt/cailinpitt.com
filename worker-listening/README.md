@@ -103,6 +103,42 @@ duplicates. Those dropped rows must not reach the summary tables or `plays`
 drifts upward every minute forever — hence `RETURNING` on the archive insert,
 which yields only rows that were actually stored.
 
+### Budget after the period work
+
+Measured against the free tier: D1 5M rows read/day, KV 1,000 writes/day and 100k
+reads/day, Workers 100k requests/day.
+
+| | Per day | Of budget |
+|---|---|---|
+| D1 rows read — live week (48×380) + month (12×1,560) + year (4×18,700) | ~112k | 2% |
+| D1 rows read — all-time fold, summary tables, discovery ranges | ~15k | <1% |
+| D1 rows read — historical backfill, first day only (~2M once) | — | one-off |
+| KV writes — `now:v1` | ~300 | 30% |
+| KV writes — live periods (48+12+4+1) | 65 | 7% |
+| KV writes — completed periods, throttled to every 3rd minute | ≤480 | 48% |
+| KV writes — lookup blobs, on watermark change | ~3 | <1% |
+| **KV writes total** | **~850 peak / ~370 steady** | under the 1,000 ceiling |
+
+The backfill is the only thing that approaches the KV write ceiling, and only on
+the day it runs — once the archive is walked, completed periods are never
+rewritten and the steady state is ~370.
+
+**Two things that were nearly cost regressions, and how they were avoided:**
+
+*The year summary on `/listening`.* The obvious implementation fetches
+`/p/y/<year>.json` from the page. That is a 21 KB response to display five
+numbers, and — because a Cache API hit still executes the Worker — one extra
+Worker invocation on **every** page view, against the 100k/day ceiling. It is
+instead projected into the bundle the page already fetches, costing one KV read
+per bundle cache miss rather than one request per view. Same reasoning as
+`/now.json` dropping its 40-track tail.
+
+*Returning-artist detection.* Asking "when did this artist last play before this
+period" at read time walks every prior play of a heavy artist. Materializing the
+return *events* instead (one `LAG()` pass, a few hundred rows) makes it an index
+range, and ingest maintains it with 1–3 primary-key seeks — only on ticks that
+actually inserted something.
+
 **KV writes are the tight budget, not reads.** The free tier allows 100,000 reads but only **1,000
 writes/day**, and the cron fires 1,440 times — so nothing on the per-minute path may write
 unconditionally. `ingest()` reads `now:v1` and rewrites it only when the observable state

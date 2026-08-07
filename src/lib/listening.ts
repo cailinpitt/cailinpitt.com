@@ -61,6 +61,19 @@ export interface Bundle {
   heatmap: Heatmap
   recentDays: DayLog[]
   nextBefore: number | null
+  /**
+   * Five-field projection of the current year, carried by the bundle rather than
+   * fetched separately — see the note on Bundle in the Worker's stats.ts.
+   * Optional: a Worker deployed before this existed simply omits it.
+   */
+  year?: {
+    key: string
+    scrobbles: number
+    artists: number
+    hours: number
+    newArtists: number
+    topGenre: string | null
+  } | null
 }
 
 export type WindowKey = '7d' | '30d'

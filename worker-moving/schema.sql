@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS activities (
 -- Matches fetchActivities() exactly, both ordering columns in the query's
 -- direction, so paging is an index seek rather than a sort of a growing archive.
 CREATE INDEX IF NOT EXISTS idx_activities_seq ON activities (start_date DESC, id DESC);
+-- Range scans for /windows.json (the listening crossover).
+CREATE INDEX IF NOT EXISTS idx_activities_started ON activities (started_at);
 
 -- Precomputed totals, read once per bundle. Not COUNT(*) subqueries, for the
 -- reason given on the same table in worker-watching/schema.sql.
