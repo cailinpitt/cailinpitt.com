@@ -354,9 +354,10 @@ cost per visitor is flat no matter how much traffic arrives.
   what was recorded. It is the one cross-Worker dependency, and it is deliberately one-way and
   failure-tolerant: `fetchWindows` never rejects, so an unreachable moving Worker costs that section
   and nothing else. Set `MOVING_API` empty to turn it off.
-- Every period and wrapped page reuses `/og/listening.jpg` rather than generating its own card.
-  There are ~360 of them growing by 52 a year, and at ~1 card/second that was ~6 minutes of every
-  build spent on URLs nobody shares — the same trade the photo permalinks make.
+- Period pages reuse `/og/listening.jpg` rather than generating their own card. There are ~360 of
+  them growing by 52 a year, and at ~1 card/second that was ~6 minutes of every build spent on URLs
+  nobody shares — the same trade the photo permalinks make. **The wrapped pages are the exception**
+  and keep bespoke cards: six of them, and a year in review is the one page here worth sharing.
 - Completed periods are baked into `public/listening-data/` at build time (gitignored) and served
   as static assets, which don't count against the Workers request ceiling. The client falls back to
   the API when a file is absent.

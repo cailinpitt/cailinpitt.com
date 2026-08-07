@@ -107,11 +107,14 @@ export type PeriodKind = 'w' | 'm' | 'y' | 'all'
 /**
  * The card every /listening sub-page shares.
  *
- * Period and wrapped pages number in the hundreds — 284 weeks, 66 months, and
- * growing by 52 a year — and generating a card apiece added ~6 minutes to every
- * build to produce images for URLs nobody shares. They point at the section's
- * card instead, which makes generate-og.mjs skip them entirely. Same trade the
- * ~500 photo permalinks already make.
+ * Period pages number in the hundreds — 284 weeks, 66 months, and growing by 52
+ * a year — and generating a card apiece added ~6 minutes to every build to
+ * produce images for URLs nobody shares. They point at the section's card
+ * instead, which makes generate-og.mjs skip them entirely. Same trade the ~500
+ * photo permalinks already make.
+ *
+ * The wrapped pages are the exception and keep their own cards: there are six,
+ * and a year in review is the one page here anyone would share.
  */
 export const LISTENING_OG_CARD = '/og/listening.jpg'
 
