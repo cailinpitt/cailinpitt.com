@@ -216,6 +216,13 @@ instead of ~10k. If you change `windowStats()`, re-verify against the SQL it rep
 `COUNT(DISTINCT album)` counts album *names*, not name+artist, and it's easy to "fix" that into a
 discrepancy.
 
+**5. `UNION ALL` is capped at five branches.** D1 sets SQLITE_MAX_COMPOUND_SELECT
+to 5, not SQLite's default 500, so a six-branch compound query fails at runtime
+with `too many terms in compound SELECT` — and only at runtime, since nothing
+about it is a type error. `countInWindows()` uses `db.batch()` of small
+statements instead, which is bounded by the ~50-statements-per-invocation limit.
+If you need N of something in one round trip, reach for `batch()`, not `UNION`.
+
 **4. Two things that look cheap and aren't:** `SELECT COUNT(*)` over the archive reads ~100k rows
 (at the 15-minute cadence that blows past 5M/day), and a per-tick counter key in KV costs a write
 every time it moves.

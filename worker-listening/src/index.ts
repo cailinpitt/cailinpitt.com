@@ -74,10 +74,12 @@ const EDGE_TTL = 60
 const DURING_MAX_SPAN = 24 * 60 * 60
 
 /**
- * Most windows /during-counts will answer for at once. Each adds two bound
- * parameters against D1's ceiling of 100, so this is the real limit.
+ * Most windows /during-counts will answer for at once.
+ *
+ * One statement per window, against D1's ~50-per-invocation ceiling. 30 matches
+ * a page of activities exactly and leaves headroom.
  */
-const COUNTS_MAX_WINDOWS = 40
+const COUNTS_MAX_WINDOWS = 30
 
 /**
  * Row cap for /during, chosen so the *request* ceiling binds before the D1 one.

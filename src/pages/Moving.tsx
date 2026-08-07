@@ -187,8 +187,9 @@ function useTrackCounts(activities: Activity[]): Map<string, number> {
 
     const controller = new AbortController()
     let active = true
-    // The endpoint caps the windows it will answer for in one call.
-    const batch = pending.slice(0, 40)
+    // The endpoint caps the windows it answers for in one call (D1 allows ~50
+    // statements per invocation, and this is one per window).
+    const batch = pending.slice(0, 30)
     void fetchDuringCounts(
       batch.map((a) => ({ from: a.startedAt!, to: a.startedAt! + a.windowSeconds! })),
       controller.signal,

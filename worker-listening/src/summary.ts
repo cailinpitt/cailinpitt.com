@@ -250,13 +250,16 @@ export async function fetchPeriodRows(
 /**
  * How many scrobbles fall inside each of several windows.
  *
- * One statement, one range per window, rather than a scan of the span they sit
- * in — 30 activities spread over three weeks would be ~1,500 rows read as a
- * single range, but only ~300 as thirty small ones, because each seeks straight
- * to its own slice of idx_scrobbles_uts.
+ * One small range query per window, sent as a single batch. Each seeks straight
+ * to its own slice of idx_scrobbles_uts, so thirty activities spread over three
+ * weeks cost ~300 rows rather than the ~1,500 a single range over the whole span
+ * would read.
  *
- * UNION ALL does not guarantee order, so each branch carries its index and the
- * result is sorted on it.
+ * **Not `UNION ALL`.** That is the obvious way to make it one statement, and D1
+ * rejects it: SQLITE_MAX_COMPOUND_SELECT is 5 there, far below SQLite's default
+ * of 500, so six windows fail with "too many terms in compound SELECT". A batch
+ * has no such ceiling — it is bounded instead by D1's ~50 statements per
+ * invocation, which is what COUNTS_MAX_WINDOWS respects.
  */
 export async function countInWindows(
   db: D1Database,
@@ -264,21 +267,17 @@ export async function countInWindows(
 ): Promise<number[]> {
   if (!windows.length) return []
 
-  const branches = windows.map((_, i) => {
-    const a = i * 2 + 1
-    return (
-      `SELECT ${i} AS i, COUNT(*) AS n FROM scrobbles INDEXED BY idx_scrobbles_uts ` +
-      `WHERE uts >= ?${a} AND uts < ?${a + 1}`
-    )
-  })
-  const rows = await db
-    .prepare(`${branches.join(' UNION ALL ')} ORDER BY i`)
-    .bind(...windows.flatMap((w) => [w.from, w.to]))
-    .all<{ i: number; n: number }>()
-
-  const out = new Array(windows.length).fill(0) as number[]
-  for (const r of rows.results) out[r.i] = r.n
-  return out
+  const results = await db.batch<{ n: number }>(
+    windows.map((w) =>
+      db
+        .prepare(
+          `SELECT COUNT(*) AS n FROM scrobbles INDEXED BY idx_scrobbles_uts
+            WHERE uts >= ?1 AND uts < ?2`,
+        )
+        .bind(w.from, w.to),
+    ),
+  )
+  return results.map((r) => r.results[0]?.n ?? 0)
 }
 
 /** Daily play counts in a range, for streaks over periods too long to scan raw. */
