@@ -4282,3 +4282,112 @@ a.guestbook-name:hover {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
+
+/* ---- wrapped (/listening/wrapped) --------------------------------------- */
+
+.wrapped-header {
+  margin-bottom: 3rem;
+}
+.wrapped-header .eyebrow a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.wrapped-header h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0;
+}
+.wrapped-year {
+  font-size: var(--step-4);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.wrapped-sub {
+  font-size: var(--step-1);
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.wrapped-cards {
+  list-style: none;
+  margin: 0 0 3rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.wrapped-card {
+  background: var(--bg);
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 9rem;
+  justify-content: center;
+}
+/* The opening card is the headline; give it the whole row where there's space. */
+.wrapped-card:first-child {
+  grid-column: 1 / -1;
+}
+.wrapped-kicker {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.wrapped-value {
+  margin: 0;
+  font-size: var(--step-2);
+  line-height: 1.1;
+  /* Long artist and track titles must wrap rather than overflow the card. */
+  overflow-wrap: anywhere;
+}
+.wrapped-card:first-child .wrapped-value {
+  font-size: var(--step-3);
+}
+.wrapped-detail {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.wrapped-traits {
+  margin-bottom: 2.5rem;
+}
+.trait-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+.trait-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.trait-label {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--accent);
+}
+.trait-detail {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.wrapped-more {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}

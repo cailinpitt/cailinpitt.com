@@ -292,6 +292,9 @@ function YearLinks() {
         Dig in
       </h2>
       <nav className="year-nav">
+        <Link className="year-nav-lead" to="/listening/wrapped">
+          {now.getFullYear()} wrapped
+        </Link>
         <Link className="year-nav-lead" to={urlFor('w', currentKey('w', now))}>
           This week
         </Link>

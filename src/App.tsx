@@ -29,6 +29,17 @@ export const routes: RouteRecord[] = [
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },
       { path: 'listening', lazy: () => import('./pages/Listening') },
+      // Static segments outrank dynamic ones in React Router, so these win over
+      // 'listening/:a' below rather than being parsed as a period key.
+      {
+        path: 'listening/wrapped',
+        lazy: () => import('./pages/ListeningWrapped'),
+      },
+      {
+        path: 'listening/wrapped/:year',
+        lazy: () => import('./pages/ListeningWrapped'),
+        getStaticPaths: () => listeningYears().map((y) => `/listening/wrapped/${y}`),
+      },
       // Years and all-time sit one level down, weeks and months two — one page
       // serves all four. Concrete paths for the prerenderer come from date
       // arithmetic over a constant start date rather than the listening API, so a

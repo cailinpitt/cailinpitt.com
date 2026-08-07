@@ -323,6 +323,12 @@ movement, the hour/weekday/168-cell "when I listen" charts, discovery, streaks, 
 listens and milestones. Design notes and the full stat catalog live in
 [`plan-listening-stats.md`](plan-listening-stats.md).
 
+`/listening/wrapped` (and `/listening/wrapped/<year>`) tells the same year as a narrative. It reads
+the same blob and adds no endpoint — everything is derived in `src/lib/wrapped.ts`, which is where
+the thresholds live. It deliberately stays quiet rather than guessing: cards and traits are dropped
+when their inputs are missing, genre and geography claims need >=50% coverage, and a period under
+50 scrobbles gets no story at all.
+
 **The rule that makes it affordable: aggregation happens on the cron, never on a request.** A
 period endpoint reads a finished KV blob or 404s. Nothing a visitor can do causes a D1 scan, so
 cost per visitor is flat no matter how much traffic arrives.
