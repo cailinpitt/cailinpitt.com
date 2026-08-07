@@ -39,6 +39,20 @@ export const PREFIX = 'p:v3:'
 
 export const blobKey = (kind: PeriodKind, key: string) => `${PREFIX}${kind}:${key}`
 
+/**
+ * When a year blob was last written.
+ *
+ * All-time is folded out of the year blobs rather than scanned, so it is stale
+ * the moment any year changes — but on its own 24-hour timer it would keep
+ * serving the old fold for up to a day. That is visible: during a rebuild it
+ * reports one year's seconds divided by every scrobble.
+ *
+ * A single timestamp is enough to detect it, and costs one KV read per tick
+ * against reading all six year blobs. Sharing PREFIX is safe: listPeriods()
+ * skips any key without a `kind:key` shape.
+ */
+export const YEARS_TOUCHED_KEY = `${PREFIX}years-touched`
+
 /** Which period blobs exist, by kind. */
 export interface PeriodIndex {
   w: string[]
@@ -381,6 +395,12 @@ export async function pickWork(
     const blob = await env.KV.get<PeriodStats>(blobKey(kind, period.key), 'json')
     if (!blob || now - blob.computedAt >= LIVE_INTERVAL[kind]) {
       return { period, backfill: false }
+    }
+    // All-time is derived from the year blobs, so a year rebuild invalidates it
+    // regardless of its own age.
+    if (kind === 'all') {
+      const touched = Number(await env.KV.get(YEARS_TOUCHED_KEY)) || 0
+      if (touched > blob.computedAt) return { period, backfill: false }
     }
   }
 

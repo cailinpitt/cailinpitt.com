@@ -9,7 +9,7 @@
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
-import { blobKey, computePeriod, listPeriods, pickWork } from './period'
+import { blobKey, computePeriod, listPeriods, pickWork, YEARS_TOUCHED_KEY } from './period'
 import { summaryStatements } from './summary'
 import { enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
@@ -236,6 +236,10 @@ async function runPeriodWork(env: Env, now: number): Promise<void> {
 
   const stats = await computePeriod(env, unit.period, now)
   await env.KV.put(blobKey(unit.period.kind, unit.period.key), JSON.stringify(stats))
+  // Tell the all-time fold that its inputs moved. Year builds are rare — six on a
+  // fresh archive, then the live year every six hours — so this is a handful of
+  // KV writes a day.
+  if (unit.period.kind === 'y') await env.KV.put(YEARS_TOUCHED_KEY, String(now))
   console.log(
     JSON.stringify({
       level: 'info',
