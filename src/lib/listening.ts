@@ -1,6 +1,8 @@
 // Client for the listening API (the Cloudflare Worker in /worker). The page is
 // prerendered as a static shell and fetches this data in the browser.
 
+import { currentKey } from './periodKeys'
+
 const API_BASE = import.meta.env.VITE_LISTENING_API ?? 'https://listening.cailinpitt.com'
 
 export interface NowPlaying {
@@ -301,7 +303,11 @@ export class PeriodNotReady extends Error {
  * slower path rather than a broken page.
  */
 async function fetchPeriodBlob(kind: PeriodKind, key: string, signal?: AbortSignal) {
-  if (kind !== 'all') {
+  // Only *completed* periods are ever baked, so trying the local path for the
+  // current week/month/year is a guaranteed 404 before the real request — on the
+  // period pages most likely to be visited. All-time is never complete either.
+  const isLive = kind === 'all' || key === currentKey(kind)
+  if (!isLive) {
     const local = await fetch(`/listening-data/${kind}/${key}.json`, { signal }).catch(() => null)
     // `ok` is not enough. A dev server — and any host with an SPA fallback —
     // answers an unknown path with index.html and a 200, which would sail
