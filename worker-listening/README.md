@@ -135,12 +135,21 @@ spreading them over two hours costs. An earlier version throttled it to one
 period every three minutes, reasoning as though it ran forever; that bought
 nothing and made a rebuild after a `PREFIX` bump take most of a day.
 
-What actually binds is per-invocation, and two limits disagree about what a
-period costs: **D1 queries** (~8 each against a ceiling of ~50, so about five
-periods) and **CPU** (a week is ~380 rows to fold, a year ~18,700 — five years in
-one tick is 93,000). So the batch is sized by a cost budget with a year weighted
-five times a week, which clears the archive in **~85 minutes**: a tick takes five
-weeks, or one year, never five years.
+What actually binds is **CPU: 10 ms per invocation, scheduled events included.**
+That is far tighter than the D1 query ceiling and is the real limit on how much a
+tick can do. Batching several periods per tick blew through it, and the failure
+mode is quiet — the invocation ends as `exceededCpu`, writes nothing, and the
+backfill stalls on whatever period it reached with no error in the logs. It looks
+exactly like the cron having stopped.
+
+Two things kept it inside the budget:
+
+- **One period per tick** (`TICK_BUDGET`). Raise it only with `wrangler tail`
+  open, watching for an `exceededCpu` outcome.
+- **The lookup blobs are parsed once per isolate, not once per period.** Genres,
+  durations and origins total ~1 MB of JSON, and `KV.get(key, 'json')` parses on
+  every call. The duration map is also joined against `tracks` so it holds only
+  what has been played — 18k entries rather than the 50k `album.getInfo` returns.
 
 The write budget still shapes everything *recurring*: KV allows 1,000/day,
 `now:v1` spends ~300 and the live period blobs ~65. It is also why there is no

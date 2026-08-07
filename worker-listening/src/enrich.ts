@@ -283,8 +283,14 @@ export async function buildOriginMap(env: Env): Promise<OriginMap> {
 
 /** Rebuild the (track, artist) → seconds map. */
 export async function buildDurationMap(env: Env): Promise<DurationMap> {
+  // Joined against `tracks` so the map holds only what has actually been played.
+  // album.getInfo returns every track on a record, scrobbled or not, which put
+  // 50k entries in a blob that 18k would cover — and this blob is parsed by the
+  // period builder, where its size is CPU.
   const rows = await env.DB.prepare(
-    'SELECT track, artist, duration FROM track_meta WHERE duration IS NOT NULL',
+    `SELECT m.track, m.artist, m.duration FROM track_meta m
+       JOIN tracks t ON t.track = m.track AND t.artist = m.artist
+      WHERE m.duration IS NOT NULL`,
   ).all<{ track: string; artist: string; duration: number }>()
 
   const map: DurationMap = {}
@@ -320,14 +326,34 @@ export interface MetaLookups {
   origins: OriginMap
 }
 
-/** Read both lookups. Missing blobs degrade to empty, not to an error. */
+/**
+ * Parsed lookups, held for the life of the isolate.
+ *
+ * These blobs total ~1 MB of JSON, and `env.KV.get(key, 'json')` parses on every
+ * call. Period building reads them once per period, so a tick building several
+ * was spending its whole 10 ms CPU budget re-parsing identical bytes — enough to
+ * fail the invocation outright with exceededCpu, which silently stalls the
+ * backfill because nothing gets written.
+ *
+ * Isolates are recycled freely, so this is best-effort: a cold one pays the
+ * parse, and the TTL keeps a long-lived one from serving a stale map forever.
+ */
+let lookupCache: { at: number; value: MetaLookups } | null = null
+const LOOKUP_CACHE_MS = 10 * 60 * 1000
+
+/** Read all three lookups. Missing blobs degrade to empty, not to an error. */
 export async function readLookups(env: Env): Promise<MetaLookups> {
+  const fresh = lookupCache && Date.now() - lookupCache.at < LOOKUP_CACHE_MS
+  if (lookupCache && fresh) return lookupCache.value
+
   const [genres, durations, origins] = await Promise.all([
     env.KV.get<GenreMap>(META_KEY.genres, 'json'),
     env.KV.get<DurationMap>(META_KEY.durations, 'json'),
     env.KV.get<OriginMap>(META_KEY.origins, 'json'),
   ])
-  return { genres: genres ?? {}, durations: durations ?? {}, origins: origins ?? {} }
+  const value = { genres: genres ?? {}, durations: durations ?? {}, origins: origins ?? {} }
+  lookupCache = { at: Date.now(), value }
+  return value
 }
 
 /**

@@ -495,8 +495,14 @@ export interface WorkUnit {
  *
  * So a year counts as more than a week. Weighting them means a tick takes five
  * weeks or one year plus a couple of months, never five years.
+ *
+ * **Currently 1.** The free plan enforces a 10 ms CPU ceiling on scheduled
+ * invocations too, and a batch of five blew straight through it — the tick fails
+ * with exceededCpu, writes nothing, and the backfill silently stalls on whatever
+ * period it reached. Raise this only with `wrangler tail` open: the symptom is
+ * an `exceededCpu` outcome, not an error in the logs.
  */
-const TICK_BUDGET = 5
+const TICK_BUDGET = 1
 
 /** What each granularity costs against TICK_BUDGET, by rows to aggregate. */
 const PERIOD_COST: Record<Exclude<PeriodKind, 'all'>, number> = { y: 5, m: 2, w: 1 }
