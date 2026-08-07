@@ -4214,3 +4214,71 @@ a.guestbook-name:hover {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* ---- artist origin and era (Tier D) ------------------------------------- */
+
+.period-origins {
+  margin-bottom: 3rem;
+}
+.origin-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 2rem;
+  margin-bottom: 0.75rem;
+}
+.origin-block {
+  margin: 0;
+}
+.origin-block figcaption {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.origin-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+/* Flag column collapses to zero for the era chart, which has no flags. */
+.origin-list li {
+  display: grid;
+  grid-template-columns: auto 8rem 1fr 3rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.origin-flag {
+  font-size: 1.05em;
+  line-height: 1;
+}
+.origin-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.origin-decade {
+  grid-column: 1 / 3;
+  font-variant-numeric: tabular-nums;
+}
+.origin-bar {
+  display: block;
+  height: 0.65rem;
+  width: var(--w);
+  min-width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.7;
+}
+.origin-share {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}

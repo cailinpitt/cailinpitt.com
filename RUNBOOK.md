@@ -222,6 +222,37 @@ bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy; the backfil
 walk then rebuilds every period under the new prefix within a day. Old keys are
 orphaned and only cost KV storage, which isn't a metered constraint here.
 
+### Artist origin and era (Tier D)
+
+```bash
+cd worker-listening
+wrangler d1 execute cailinpitt-listening --remote --file=schema-v4.sql
+npm run deploy
+
+node ../scripts/musicbrainz-listening.mjs      # ~75 min, resumable
+wrangler d1 execute cailinpitt-listening --remote --file=../scripts/musicbrainz.sql
+```
+
+`schema-v4.sql` is `ALTER TABLE ... ADD COLUMN`, which SQLite can't make
+conditional — re-running it errors on the second pass. That's harmless.
+
+MusicBrainz caps at one request per second, hence the runtime. Accuracy comes
+from Last.fm's `artist.getInfo` MBID, which turns a fuzzy name search into an
+exact lookup; measured across the top artists here, the two methods never
+disagreed.
+
+**Reviewing the fuzzy matches.** Artists resolved by name search — the only ones
+that can be confidently *wrong* — are listed in `scripts/musicbrainz.review.txt`.
+The failure mode is a name shared by two acts: Last.fm resolves "Turnstile" to a
+Spanish group rather than the Baltimore band. Correct any in `ORIGIN_OVERRIDES`
+(`worker-listening/src/musicbrainz.ts`), which is applied when the lookup blob is
+built, so a correction needs no re-fetch — redeploy, then delete
+`meta:v1:built-at` from KV to rebuild immediately.
+
+**Era is groups only.** MusicBrainz's `life-span.begin` is a formation year for a
+band but a *birth* year for a person, so counting both would file Charli xcx
+under the 1990s. Solo artists are excluded from the era chart by design.
+
 ### Baking periods into the build
 
 Completed periods are fetched at build time into `public/listening-data/` so they

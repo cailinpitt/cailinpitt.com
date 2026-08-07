@@ -195,6 +195,18 @@ export interface PeriodStats {
   genreSeries: { key: string; label: string; genres: Record<string, number> }[]
   genreCoverage: number
 
+  /**
+   * Artist origin and era (Tier D). Country shares are of plays with a *known*
+   * country, like genres; `coverage` says how many that is.
+   */
+  origins: {
+    countries: { code: string; count: number; share: number }[]
+    decades: { decade: number; count: number; share: number }[]
+    groupShare: number
+    soloShare: number
+    coverage: number
+  }
+
   /** Listening time (Tier C). `seconds` is extrapolated over unknown durations. */
   listening: {
     seconds: number

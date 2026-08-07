@@ -132,6 +132,7 @@ export async function computePeriod(
     previous,
     genreOf: lookups.genres,
     durationOf: lookups.durations,
+    originOf: lookups.origins,
   })
 
   stats.discovery = {
@@ -189,8 +190,27 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
   let coverageWeighted = 0
   let longestTrack: PeriodStats['listening']['longest'] = null
   const secondsByArtist = new Map<string, number>()
+  const countryCounts = new Map<string, number>()
+  const decadeCounts = new Map<number, number>()
+  let countryPlays = 0
+  let groupWeighted = 0
+  let soloWeighted = 0
 
   for (const b of blobs) {
+    const o = b.origins
+    if (o) {
+      for (const c of o.countries ?? []) {
+        countryCounts.set(c.code, (countryCounts.get(c.code) ?? 0) + c.count)
+        countryPlays += c.count
+      }
+      for (const d of o.decades ?? []) {
+        decadeCounts.set(d.decade, (decadeCounts.get(d.decade) ?? 0) + d.count)
+      }
+      // Shares are per-year percentages; weight by the year's volume so a quiet
+      // year doesn't count as much as a busy one.
+      groupWeighted += (o.groupShare / 100) * b.scrobbles
+      soloWeighted += (o.soloShare / 100) * b.scrobbles
+    }
     for (const g of b.genres ?? []) {
       // The blob stores shares of classified plays; recover the play count so
       // years with different coverage combine honestly.
@@ -316,6 +336,31 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
     genreDiversity: 0,
     genreSeries: [],
     genreCoverage: scrobbles ? Math.round((genrePlays / scrobbles) * 1000) / 10 : 0,
+
+    origins: {
+      countries: [...countryCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 12)
+        .map(([code, count]) => ({
+          code,
+          count,
+          share: countryPlays ? Math.round((count / countryPlays) * 1000) / 10 : 0,
+        })),
+      decades: (() => {
+        let total = 0
+        for (const n of decadeCounts.values()) total += n
+        return [...decadeCounts.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([decade, count]) => ({
+            decade,
+            count,
+            share: total ? Math.round((count / total) * 1000) / 10 : 0,
+          }))
+      })(),
+      groupShare: scrobbles ? Math.round((groupWeighted / scrobbles) * 1000) / 10 : 0,
+      soloShare: scrobbles ? Math.round((soloWeighted / scrobbles) * 1000) / 10 : 0,
+      coverage: scrobbles ? Math.round((countryPlays / scrobbles) * 1000) / 10 : 0,
+    },
 
     listening: {
       seconds: totalSeconds,

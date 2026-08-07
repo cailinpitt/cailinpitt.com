@@ -59,3 +59,6 @@ scripts/moving-backfill.sql
 # the Last.fm API, and loaded into D1 once. Same rule as scripts/backfill.sql.
 /scripts/enrich.sql
 /scripts/enrich.sql.progress.json
+/scripts/musicbrainz.sql
+/scripts/musicbrainz.sql.progress.json
+/scripts/musicbrainz.review.txt

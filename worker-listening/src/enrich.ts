@@ -7,8 +7,9 @@
 // per period would be ~18k rows every time. Instead the whole lookup is
 // published to KV once a day and read as a single value.
 
-import { fetchAlbumInfo, fetchArtistTags, type RawTag } from './lastfm'
+import { fetchAlbumInfo, fetchArtistInfo, fetchArtistTags, type RawTag } from './lastfm'
 import { primaryGenre } from './genres'
+import { ORIGIN_OVERRIDES, resolveArtist } from './musicbrainz'
 
 const SEP = '\u001f'
 
@@ -18,10 +19,23 @@ const PER_TICK = 2
 export const META_KEY = {
   genres: 'meta:v1:genres',
   durations: 'meta:v1:durations',
+  origins: 'meta:v1:origins',
 } as const
 
 /** artist → canonical genre. */
 export type GenreMap = Record<string, string>
+
+/** artist → origin, for the geography and era sections. */
+export interface Origin {
+  /** ISO 3166-1 alpha-2. */
+  c: string | null
+  /** 'Group' | 'Person' | … */
+  k: string | null
+  /** Year the act began. */
+  y: number | null
+}
+/** Keys are deliberately one character: this map carries ~4,300 entries. */
+export type OriginMap = Record<string, Origin>
 /** "track${SEP}artist" → seconds. */
 export type DurationMap = Record<string, number>
 
@@ -191,6 +205,82 @@ export async function buildGenreMap(env: Env): Promise<GenreMap> {
   return map
 }
 
+/**
+ * Enrich one artist's origin from MusicBrainz.
+ *
+ * Kept to a single artist per call: MusicBrainz asks for one request per second,
+ * and resolveArtist() may make two (an MBID lookup, then a name search). The
+ * bulk of the archive is done by scripts/musicbrainz-listening.mjs; this only
+ * has to keep up with newly-heard artists.
+ */
+export async function enrichOneOrigin(env: Env, now: number): Promise<boolean> {
+  const row = await env.DB.prepare(
+    `SELECT a.artist FROM artists a
+       LEFT JOIN artist_meta m ON m.artist = a.artist
+      WHERE m.mb_fetched_at IS NULL
+      ORDER BY a.plays DESC LIMIT 1`,
+  ).first<{ artist: string }>()
+  if (!row) return false
+
+  const artist = row.artist
+  try {
+    // Last.fm's artist.getInfo carries the MBID, which turns a fuzzy name search
+    // into an exact lookup. It is cheap and rate-limited far more generously.
+    let mbid: string | null = null
+    try {
+      const info = await fetchArtistInfo(env.LASTFM_API_KEY, artist)
+      mbid = info.mbid
+    } catch {
+      /* fall through to the name search */
+    }
+
+    const origin = await resolveArtist(artist, mbid)
+    await env.DB.prepare(
+      `INSERT INTO artist_meta (artist, fetched_at, mbid, country, kind, formed_year,
+                                mb_fetched_at, mb_missing)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?2, ?7)
+       ON CONFLICT(artist) DO UPDATE SET
+         mbid = excluded.mbid, country = excluded.country, kind = excluded.kind,
+         formed_year = excluded.formed_year, mb_fetched_at = excluded.mb_fetched_at,
+         mb_missing = excluded.mb_missing`,
+    )
+      .bind(artist, now, origin.mbid, origin.country, origin.kind, origin.formedYear,
+        origin.found ? 0 : 1)
+      .run()
+    return true
+  } catch (err) {
+    console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', artist, error: String(err) }))
+    // Mark it attempted so one unresolvable artist can't head the queue forever.
+    await env.DB.prepare(
+      `INSERT INTO artist_meta (artist, fetched_at, mb_fetched_at, mb_missing)
+       VALUES (?1, ?2, ?2, 1)
+       ON CONFLICT(artist) DO UPDATE SET mb_fetched_at = ?2, mb_missing = 1`,
+    )
+      .bind(artist, now)
+      .run()
+    return true
+  }
+}
+
+/** Rebuild the artist → origin map. */
+export async function buildOriginMap(env: Env): Promise<OriginMap> {
+  const rows = await env.DB.prepare(
+    `SELECT artist, country, kind, formed_year FROM artist_meta
+      WHERE country IS NOT NULL OR kind IS NOT NULL OR formed_year IS NOT NULL`,
+  ).all<{ artist: string; country: string | null; kind: string | null; formed_year: number | null }>()
+
+  const map: OriginMap = {}
+  for (const r of rows.results) {
+    map[r.artist] = { c: r.country, k: r.kind, y: r.formed_year }
+  }
+  // Manual corrections win, and apply even to artists MusicBrainz had nothing
+  // for — see ORIGIN_OVERRIDES for why this can't be automated.
+  for (const [artist, o] of Object.entries(ORIGIN_OVERRIDES)) {
+    map[artist] = { c: o.country, k: o.kind, y: o.formedYear }
+  }
+  return map
+}
+
 /** Rebuild the (track, artist) → seconds map. */
 export async function buildDurationMap(env: Env): Promise<DurationMap> {
   const rows = await env.DB.prepare(
@@ -216,25 +306,28 @@ export async function buildDurationMap(env: Env): Promise<DurationMap> {
  * batch as the album row that produced them.
  */
 export async function metaWatermark(db: D1Database): Promise<number> {
-  const [artists, albums] = await db.batch<{ v: number | null }>([
+  const [artists, albums, mb] = await db.batch<{ v: number | null }>([
     db.prepare('SELECT MAX(fetched_at) AS v FROM artist_meta'),
     db.prepare('SELECT MAX(fetched_at) AS v FROM album_meta'),
+    db.prepare('SELECT MAX(mb_fetched_at) AS v FROM artist_meta'),
   ])
-  return Math.max(artists.results[0]?.v ?? 0, albums.results[0]?.v ?? 0)
+  return Math.max(artists.results[0]?.v ?? 0, albums.results[0]?.v ?? 0, mb.results[0]?.v ?? 0)
 }
 
 export interface MetaLookups {
   genres: GenreMap
   durations: DurationMap
+  origins: OriginMap
 }
 
 /** Read both lookups. Missing blobs degrade to empty, not to an error. */
 export async function readLookups(env: Env): Promise<MetaLookups> {
-  const [genres, durations] = await Promise.all([
+  const [genres, durations, origins] = await Promise.all([
     env.KV.get<GenreMap>(META_KEY.genres, 'json'),
     env.KV.get<DurationMap>(META_KEY.durations, 'json'),
+    env.KV.get<OriginMap>(META_KEY.origins, 'json'),
   ])
-  return { genres: genres ?? {}, durations: durations ?? {} }
+  return { genres: genres ?? {}, durations: durations ?? {}, origins: origins ?? {} }
 }
 
 /**
@@ -244,11 +337,22 @@ export async function readLookups(env: Env): Promise<MetaLookups> {
  * inside KV's 25 MB value ceiling, and reading it once per period compute is far
  * cheaper than the ~18k D1 row reads the equivalent join would cost.
  */
-export async function refreshLookups(env: Env): Promise<{ genres: number; durations: number }> {
-  const [genres, durations] = await Promise.all([buildGenreMap(env), buildDurationMap(env)])
+export async function refreshLookups(
+  env: Env,
+): Promise<{ genres: number; durations: number; origins: number }> {
+  const [genres, durations, origins] = await Promise.all([
+    buildGenreMap(env),
+    buildDurationMap(env),
+    buildOriginMap(env),
+  ])
   await Promise.all([
     env.KV.put(META_KEY.genres, JSON.stringify(genres)),
     env.KV.put(META_KEY.durations, JSON.stringify(durations)),
+    env.KV.put(META_KEY.origins, JSON.stringify(origins)),
   ])
-  return { genres: Object.keys(genres).length, durations: Object.keys(durations).length }
+  return {
+    genres: Object.keys(genres).length,
+    durations: Object.keys(durations).length,
+    origins: Object.keys(origins).length,
+  }
 }

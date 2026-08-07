@@ -399,6 +399,100 @@ function GenreTrend({ stats, top }: { stats: PeriodStats; top: PeriodStats['genr
   )
 }
 
+// ---- origin and era ------------------------------------------------------
+
+/** ISO 3166-1 alpha-2 → display name. Only what turns up in a music library. */
+const COUNTRY_NAMES: Record<string, string> = {
+  US: 'United States', GB: 'United Kingdom', CA: 'Canada', AU: 'Australia',
+  NZ: 'New Zealand', IE: 'Ireland', JP: 'Japan', KR: 'South Korea', CN: 'China',
+  TW: 'Taiwan', DE: 'Germany', FR: 'France', SE: 'Sweden', NO: 'Norway',
+  DK: 'Denmark', FI: 'Finland', IS: 'Iceland', NL: 'Netherlands', BE: 'Belgium',
+  ES: 'Spain', PT: 'Portugal', IT: 'Italy', CH: 'Switzerland', AT: 'Austria',
+  PL: 'Poland', CZ: 'Czechia', HU: 'Hungary', RO: 'Romania', RU: 'Russia',
+  UA: 'Ukraine', GR: 'Greece', TR: 'Turkey', IL: 'Israel', BR: 'Brazil',
+  AR: 'Argentina', CL: 'Chile', CO: 'Colombia', MX: 'Mexico', PE: 'Peru',
+  ZA: 'South Africa', NG: 'Nigeria', GH: 'Ghana', KE: 'Kenya', EG: 'Egypt',
+  MA: 'Morocco', IN: 'India', PK: 'Pakistan', ID: 'Indonesia', PH: 'Philippines',
+  TH: 'Thailand', VN: 'Vietnam', MY: 'Malaysia', SG: 'Singapore', JM: 'Jamaica',
+  CU: 'Cuba', PR: 'Puerto Rico', DO: 'Dominican Republic',
+  XW: 'International', XE: 'Europe',
+}
+
+const countryName = (code: string) => COUNTRY_NAMES[code] ?? code
+
+/** 'US' → 🇺🇸, built from regional indicators rather than stored. */
+function countryFlag(code: string): string {
+  if (!/^[A-Za-z]{2}$/.test(code) || code === 'XW' || code === 'XE') return '🌐'
+  const base = 0x1f1e6 - 'A'.charCodeAt(0)
+  return String.fromCodePoint(...[...code.toUpperCase()].map((c) => base + c.charCodeAt(0)))
+}
+
+export function OriginSection({ stats }: { stats: PeriodStats }) {
+  const o = stats.origins
+  if (!o?.countries?.length && !o?.decades?.length) return null
+
+  const maxCountry = Math.max(...(o.countries ?? []).map((c) => c.share), 1)
+  const maxDecade = Math.max(...(o.decades ?? []).map((d) => d.share), 1)
+
+  return (
+    <section className="period-origins" aria-labelledby="origins-heading">
+      <h2 id="origins-heading" className="eyebrow">
+        Where it comes from
+      </h2>
+
+      <div className="origin-cols">
+        {o.countries.length > 0 && (
+          <figure className="origin-block">
+            <figcaption>By country</figcaption>
+            <ul className="origin-list">
+              {o.countries.map((c) => (
+                <li key={c.code}>
+                  <span className="origin-flag" aria-hidden="true">
+                    {countryFlag(c.code)}
+                  </span>
+                  <span className="origin-name">{countryName(c.code)}</span>
+                  <span
+                    className="origin-bar"
+                    style={{ '--w': `${(c.share / maxCountry) * 100}%` } as React.CSSProperties}
+                  />
+                  <span className="origin-share">{c.share}%</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        )}
+
+        {o.decades.length > 0 && (
+          <figure className="origin-block">
+            <figcaption>By era the act started</figcaption>
+            <ul className="origin-list">
+              {o.decades.map((d) => (
+                <li key={d.decade}>
+                  <span className="origin-name origin-decade">{d.decade}s</span>
+                  <span
+                    className="origin-bar"
+                    style={{ '--w': `${(d.share / maxDecade) * 100}%` } as React.CSSProperties}
+                  />
+                  <span className="origin-share">{d.share}%</span>
+                </li>
+              ))}
+            </ul>
+          </figure>
+        )}
+      </div>
+
+      <p className="genre-note">
+        {o.groupShare + o.soloShare > 0 && (
+          <>
+            {o.groupShare}% bands, {o.soloShare}% solo artists.{' '}
+          </>
+        )}
+        Based on the {o.coverage}% of plays whose artist has a known origin.
+      </p>
+    </section>
+  )
+}
+
 // ---- listening time ------------------------------------------------------
 
 /** 9420 → "2h 37m". Hours and minutes only; seconds are noise at these totals. */

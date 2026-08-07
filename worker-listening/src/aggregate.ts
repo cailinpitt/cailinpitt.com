@@ -144,6 +144,17 @@ export interface PeriodStats {
   /** Share of scrobbles whose artist has a known genre. */
   genreCoverage: number
 
+  /** Tier D. Empty until MusicBrainz enrichment has run. */
+  origins: {
+    countries: { code: string; count: number; share: number }[]
+    /** Plays by the decade the artist began, oldest first. */
+    decades: { decade: number; count: number; share: number }[]
+    groupShare: number
+    soloShare: number
+    /** Share of plays whose artist has a known country. */
+    coverage: number
+  }
+
   /** Tier C. Zeroed until durations have been enriched. */
   listening: {
     seconds: number
@@ -282,6 +293,8 @@ export interface AggregateInput {
   genreOf?: Record<string, string>
   /** `${track}${SEP}${artist}` → seconds. Absent before enrichment has run. */
   durationOf?: Record<string, number>
+  /** artist → {c: country, k: kind, y: year formed}. Absent before enrichment. */
+  originOf?: Record<string, { c: string | null; k: string | null; y: number | null }>
 }
 
 /** How many genres a period reports. Beyond this the tail is all sub-1% slices. */
@@ -294,6 +307,13 @@ export function aggregate(input: AggregateInput): PeriodStats {
   const { rows, period, offset, now, playsBefore, previous } = input
   const genreOf = input.genreOf ?? {}
   const durationOf = input.durationOf ?? {}
+
+  const originOf = input.originOf ?? {}
+  const countryCounts = new Map<string, number>()
+  const decadeCounts = new Map<number, number>()
+  let knownCountryPlays = 0
+  let groupPlays = 0
+  let soloPlays = 0
 
   const genreCounts = new Map<string, number>()
   const genreByBucket = new Map<string, Map<string, number>>()
@@ -403,6 +423,24 @@ export function aggregate(input: AggregateInput): PeriodStats {
       let inBucket = genreByBucket.get(bucket)
       if (!inBucket) genreByBucket.set(bucket, (inBucket = new Map()))
       inBucket.set(genre, (inBucket.get(genre) ?? 0) + 1)
+    }
+
+    const origin = originOf[r.artist]
+    if (origin) {
+      if (origin.c) {
+        knownCountryPlays++
+        countryCounts.set(origin.c, (countryCounts.get(origin.c) ?? 0) + 1)
+      }
+      // Groups only. MusicBrainz's life-span.begin is the formation year for a
+      // band but the *birth* year for a person, so mixing them would file solo
+      // artists into an era by when they were born — Charli xcx would land in
+      // the 1990s. Different quantities; don't add them up.
+      if (origin.y && origin.k === 'Group') {
+        const decade = Math.floor(origin.y / 10) * 10
+        decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1)
+      }
+      if (origin.k === 'Group') groupPlays++
+      else if (origin.k === 'Person') soloPlays++
     }
 
     const seconds = durationOf[`${r.track}${SEP}${r.artist}`]
@@ -555,6 +593,29 @@ export function aggregate(input: AggregateInput): PeriodStats {
     return { key: point.key, label: point.label, genres: shares }
   })
 
+  // Country shares are of plays with a known country, matching how genre shares
+  // work — so the leader board reads the same way regardless of coverage.
+  const countries = [...countryCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 12)
+    .map(([code, count]) => ({
+      code,
+      count,
+      share: knownCountryPlays ? Math.round((count / knownCountryPlays) * 1000) / 10 : 0,
+    }))
+
+  let decadeTotal = 0
+  for (const count of decadeCounts.values()) decadeTotal += count
+  const decades = [...decadeCounts.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([decade, count]) => ({
+      decade,
+      count,
+      share: decadeTotal ? Math.round((count / decadeTotal) * 1000) / 10 : 0,
+    }))
+
+  const kindPlays = groupPlays + soloPlays
+
   // Extrapolate over unknown durations rather than under-reporting: with 80%
   // coverage, scaling by 1/0.8 is a far better estimate of hours listened than
   // silently dropping a fifth of the plays. `coverage` says how much is measured.
@@ -628,6 +689,14 @@ export function aggregate(input: AggregateInput): PeriodStats {
     genreDiversity: genreSimpson ? Math.round(1 / genreSimpson) : 0,
     genreSeries,
     genreCoverage: scrobbles ? Math.round((knownGenrePlays / scrobbles) * 1000) / 10 : 0,
+
+    origins: {
+      countries,
+      decades,
+      groupShare: kindPlays ? Math.round((groupPlays / kindPlays) * 1000) / 10 : 0,
+      soloShare: kindPlays ? Math.round((soloPlays / kindPlays) * 1000) / 10 : 0,
+      coverage: scrobbles ? Math.round((knownCountryPlays / scrobbles) * 1000) / 10 : 0,
+    },
 
     listening: {
       seconds: estimatedSeconds,

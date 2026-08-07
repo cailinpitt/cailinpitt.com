@@ -11,7 +11,7 @@ import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork, YEARS_TOUCHED_KEY } from './period'
 import { summaryStatements } from './summary'
-import { enrichSome, metaWatermark, refreshLookups } from './enrich'
+import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import {
   computeArtistDebuts,
@@ -277,6 +277,17 @@ async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
 async function runEnrichment(env: Env, now: number): Promise<boolean> {
   const handled = await enrichSome(env, now)
 
+  // One MusicBrainz artist per pass, at most. They cap at one request per second
+  // and resolveArtist() can make two calls, so this is the slowest queue by far —
+  // the bulk of the archive is done by scripts/musicbrainz-listening.mjs and this
+  // only keeps up with newly-heard artists.
+  let origins = false
+  try {
+    origins = await enrichOneOrigin(env, now)
+  } catch (err) {
+    console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', error: String(err) }))
+  }
+
   // Rebuild when the source data has actually moved, not merely when a timer
   // expired. See metaWatermark() — a bulk SQL load lands tens of thousands of
   // rows without passing through enrichSome(), and a timer alone would leave the
@@ -291,7 +302,7 @@ async function runEnrichment(env: Env, now: number): Promise<boolean> {
     console.log(JSON.stringify({ level: 'info', stage: 'lookups', watermark, ...counts }))
     return true
   }
-  return handled > 0
+  return handled > 0 || origins
 }
 
 async function tick(env: Env): Promise<void> {

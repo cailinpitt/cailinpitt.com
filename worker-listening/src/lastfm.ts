@@ -163,6 +163,27 @@ export async function fetchArtistTags(
   }
 }
 
+/**
+ * An artist's MusicBrainz id, so the origin lookup can be exact instead of a
+ * fuzzy name search. Frequently absent, which is why the caller falls back.
+ */
+export async function fetchArtistInfo(
+  apiKey: string,
+  artist: string,
+): Promise<{ mbid: string | null; listeners: number | null }> {
+  const data = await call<{
+    artist?: { mbid?: string; stats?: { listeners?: string } }
+    error?: number
+  }>({ method: 'artist.getinfo', artist }, apiKey)
+
+  if (data.error) return { mbid: null, listeners: null }
+  const listeners = Number(data.artist?.stats?.listeners)
+  return {
+    mbid: data.artist?.mbid || null,
+    listeners: Number.isFinite(listeners) ? listeners : null,
+  }
+}
+
 export interface AlbumInfo {
   tags: RawTag[]
   /** Every track on the record, with its duration in seconds where known. */
