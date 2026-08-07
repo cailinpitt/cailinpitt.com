@@ -97,6 +97,14 @@ async function main() {
           skipped++
           continue
         }
+        // The index lists every blob in KV, which includes the live week, month
+        // and year — they share the key prefix. Baking one would freeze a
+        // still-changing period into the build and serve it as though it were
+        // final, so trust the blob's own flag rather than the index.
+        if (!blob.complete) {
+          skipped++
+          continue
+        }
         await writeFile(path.join(OUT, kind, `${key}.json`), JSON.stringify(blob))
         written++
       } catch (err) {

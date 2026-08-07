@@ -652,9 +652,10 @@ export default {
       }
 
       if (url.pathname === '/periods.json') {
-        return cached(url, 'periods', ctx, cors, async () =>
-          json(await listPeriods(env), ARCHIVE_EDGE_TTL),
-        )
+        // Short TTL, unlike the other archival endpoints: this list grows every
+        // few minutes while the backfill walks history, and an hour-long cache
+        // pins an early, near-empty copy for the whole of it.
+        return cached(url, 'periods', ctx, cors, async () => json(await listPeriods(env), EDGE_TTL))
       }
 
       if (url.pathname === '/years.json') {
