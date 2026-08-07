@@ -38,6 +38,28 @@ Completed periods are immutable and served with a 24-hour edge TTL; the site
 additionally bakes them into the build as static assets, which don't count
 against the Workers request ceiling at all.
 
+### Unauthenticated endpoints are a budget anyone can spend
+
+An edge cache does not protect a D1-backed endpoint from abuse: vary a query
+parameter and the cache key is fresh. So the only real lever is **rows read per
+request**, sized so the Workers request ceiling (100k/day) binds before D1's
+row-read ceiling (5M/day) — Cloudflare then cuts off traffic instead of the
+database going dark.
+
+| Endpoint | Rows/request | Requests to exhaust 5M |
+|---|---|---|
+| `/during` | 60 | ~83k (past the 100k request cap) |
+| `/days` | 900 | ~5.5k |
+| `/p/…`, `/listening.json`, `/now.json` | 0 — KV only | n/a |
+
+`/days` is the remaining soft spot, and it predates the period work. Its bound
+used to be `maxDays * 250` = 3,500 rows for the 14 days `/timeline` asks for,
+which is ~1,400 requests to a whole day's budget; it is now capped at 900.
+
+**If this ever matters in practice, the fix is a Cloudflare Rate Limiting rule,
+not more tuning here.** The free plan includes one, and rate limiting is the
+right layer for it — no per-request cap makes an open endpoint immune.
+
 **`/during` is cheap by construction, not by caching.** It is an index range over
 `idx_scrobbles_uts` returning a couple of dozen rows, asked only when a visitor
 expands an activity on /moving — a page of thirty costs nothing to render. The

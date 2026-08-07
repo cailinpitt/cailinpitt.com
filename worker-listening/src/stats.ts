@@ -197,6 +197,9 @@ export async function fetchLastPlayed(db: D1Database): Promise<Scrobble | null> 
  */
 const ROWS_PER_DAY = 250
 
+/** Hard ceiling on one /days response, whatever `limit` asks for. */
+const MAX_DAY_ROWS = 900
+
 /** Older per-day logs for pagination (?before=<uts>). */
 export async function fetchOlderDays(
   db: D1Database,
@@ -209,7 +212,13 @@ export async function fetchOlderDays(
   // it. A row cap rather than a time bound on purpose: gaps in listening cost
   // nothing, because the index walk descends through uts and simply finds no
   // rows for silent days, so this stays correct across a month of silence.
-  const limit = maxDays * ROWS_PER_DAY
+  // Absolute ceiling as well as a per-day one. maxDays * ROWS_PER_DAY reaches
+  // 3,500 for the 14 days /timeline asks for, and since the range below is
+  // open-ended that is 3,500 rows genuinely read — ~1,400 requests would spend a
+  // whole day's D1 budget. 900 still covers 14 days at this archive's ~51/day;
+  // a stretch of unusually heavy days truncates, and the caller just paginates
+  // again, which `more` below already handles.
+  const limit = Math.min(maxDays * ROWS_PER_DAY, MAX_DAY_ROWS)
   const rows = await db
     .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts < ?1 ORDER BY uts DESC LIMIT ?2`)
     .bind(before, limit)

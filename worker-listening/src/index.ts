@@ -73,8 +73,28 @@ const EDGE_TTL = 60
 /** Widest span /during will answer. An activity is hours, not days. */
 const DURING_MAX_SPAN = 24 * 60 * 60
 
-/** Row cap for /during. A long ride is ~40 tracks; this is headroom, not a target. */
-const DURING_MAX_ROWS = 200
+/**
+ * Row cap for /during, chosen so the *request* ceiling binds before the D1 one.
+ *
+ * Every unauthenticated endpoint over D1 is a budget an attacker can spend, and
+ * an edge cache does not help — vary a query param and the key is fresh. So the
+ * lever is rows per request: at 60, exhausting 5M row-reads takes ~83k requests,
+ * which is past the Workers free-plan ceiling of 100k/day. Cloudflare cuts off
+ * requests before D1 dies, which is the failure mode you want.
+ *
+ * 60 covers ~3.5 hours at a track every 3.5 minutes. Longer activities truncate,
+ * which is the right trade for a decorative list.
+ */
+const DURING_MAX_ROWS = 60
+
+/**
+ * Snap /during's bounds to a minute.
+ *
+ * Callers pass an activity's start, which is already stable, so this is lossless
+ * for them. What it removes is the cheapest cache-bust: nudging `from` by a
+ * second no longer mints a new cache entry and a new query.
+ */
+const DURING_SNAP = 60
 
 /** Where a browser landing on the terminal endpoint gets sent. */
 const SITE_LISTENING = 'https://cailinpitt.com/listening'
@@ -765,11 +785,17 @@ export default {
         if (to - from > DURING_MAX_SPAN) {
           return new Response('Range too wide', { status: 400, headers: cors })
         }
-        return cached(url, 'during', ctx, cors, async () => {
-          const rows = await fetchPeriodRows(env.DB, from, to, DURING_MAX_ROWS)
+        // Snap before both the cache key and the query, so they agree.
+        const snapFrom = Math.floor(from / DURING_SNAP) * DURING_SNAP
+        const snapTo = Math.ceil(to / DURING_SNAP) * DURING_SNAP
+        const key = new URL(url.toString())
+        key.searchParams.set('from', String(snapFrom))
+        key.searchParams.set('to', String(snapTo))
+        return cached(key, 'during', ctx, cors, async () => {
+          const rows = await fetchPeriodRows(env.DB, snapFrom, snapTo, DURING_MAX_ROWS)
           // A window that has already ended can never gain scrobbles, so it is
           // immutable and cached hard; one still in progress is not.
-          const settled = to < Math.floor(Date.now() / 1000) - 3600
+          const settled = snapTo < Math.floor(Date.now() / 1000) - 3600
           return json({ tracks: rows }, settled ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL)
         })
       }
