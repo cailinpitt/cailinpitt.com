@@ -37,6 +37,12 @@ Completed periods are immutable and served with a 24-hour edge TTL; the site
 additionally bakes them into the build as static assets, which don't count
 against the Workers request ceiling at all.
 
+**The blob namespace is part of the edge cache key.** `PREFIX` is folded into the
+cache variant for `/p/…` and `/<year>`, so bumping it invalidates the edge along
+with KV. Without that, bumping the prefix would rebuild every period correctly
+and change nothing a visitor could see for up to 24 hours — the rebuild would be
+invisible behind a stale cache entry.
+
 ## Setup
 
 From this directory (`npm install`, `wrangler login` first):

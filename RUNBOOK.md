@@ -218,7 +218,8 @@ delete `meta:v1:built-at` from KV.
 **Editing the taxonomy** in `worker-listening/src/genres.ts` is expected — it
 encodes taste. Raw tags are stored, not canonical genres, so a change needs no
 re-fetching. But completed period blobs are frozen, so after editing it you must
-bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy; the backfill
+bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy — the prefix is
+part of the edge cache key too, so this invalidates both KV and the edge; the backfill
 walk then rebuilds every period under the new prefix within a day. Old keys are
 orphaned and only cost KV storage, which isn't a metered constraint here.
 

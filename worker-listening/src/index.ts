@@ -9,7 +9,7 @@
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
-import { blobKey, computePeriod, listPeriods, pickWork, YEARS_TOUCHED_KEY } from './period'
+import { blobKey, computePeriod, listPeriods, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
 import { priorLastPlay, summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
@@ -653,7 +653,8 @@ export default {
         // Straight off the period blob — no computation, same as /p/y/<year>.
         // These URLs stay because `curl listening.cailinpitt.com/2025` is a
         // published address, but they are now an alias, not a second code path.
-        return cached(url, asJson ? 'year-json' : 'year-text', ctx, cors, async () => {
+        // Same blobs as /p/y/<year>, so the same namespace-aware variant.
+        return cached(url, `${asJson ? 'year-json' : 'year-text'}:${PREFIX}`, ctx, cors, async () => {
           const review = await readJSON<PeriodStats>(env, blobKey('y', String(year)))
           if (!review) {
             return new Response(`${year} is not built yet\n`, {
@@ -680,7 +681,11 @@ export default {
         const period = parsePeriod(kind, key, offset)
         if (!period) return new Response('Bad period', { status: 400, headers: cors })
 
-        return cached(url, 'period', ctx, cors, async () => {
+        // The blob namespace is part of the cache variant, so bumping PREFIX
+        // invalidates the edge too. Without this, a completed period would keep
+        // serving its previous body for the full 24-hour TTL after a rebuild —
+        // the rebuild would be correct and invisible.
+        return cached(url, `period:${PREFIX}`, ctx, cors, async () => {
           const blob = await readJSON<PeriodStats>(env, blobKey(period.kind, period.key))
           if (!blob) {
             // Not computed yet. Short cache so the page picks it up once the
