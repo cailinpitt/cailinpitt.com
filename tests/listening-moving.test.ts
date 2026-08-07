@@ -23,7 +23,7 @@ const window_ = (id: string, kind: string, iso: string, minutes: number) => ({
   id,
   kind,
   startedAt: at(iso),
-  elapsedTime: minutes * 60,
+  seconds: minutes * 60,
 })
 
 function run(
@@ -134,6 +134,33 @@ describe('the moving crossover', () => {
     )
     expect(s.moving.plays).toBe(0)
     expect(s.moving.activities).toBe(0)
+  })
+
+  it('falls back to elapsedTime when the moving Worker predates `seconds`', () => {
+    // Version skew between the two Workers must not silently drop the section.
+    const s = aggregate({
+      rows: [scrobble('2026-08-03T09:10:00', 'A', 'Alpha')],
+      period: week,
+      offset: OFFSET,
+      now: week.end + 60,
+      playsBefore: 0,
+      previous: null,
+      windows: [{ id: 'a1', kind: 'ride', startedAt: at('2026-08-03T09:00:00'), elapsedTime: 1800 }],
+    })
+    expect(s.moving.plays).toBe(1)
+  })
+
+  it('ignores a window with no usable length', () => {
+    const s = aggregate({
+      rows: [scrobble('2026-08-03T09:10:00', 'A', 'Alpha')],
+      period: week,
+      offset: OFFSET,
+      now: week.end + 60,
+      playsBefore: 0,
+      previous: null,
+      windows: [{ id: 'a1', kind: 'ride', startedAt: at('2026-08-03T09:00:00') }],
+    })
+    expect(s.moving.plays).toBe(0)
   })
 
   it('leaves every other stat untouched', () => {

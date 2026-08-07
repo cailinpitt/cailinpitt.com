@@ -216,9 +216,27 @@ export interface ActivityWindow {
   kind: string
   /** Unix seconds, UTC. */
   startedAt: number
-  /** Seconds. Elapsed rather than moving, so pauses stay inside the window. */
+  /**
+   * The window's usable length in seconds — what "during this activity" means.
+   *
+   * Not raw `elapsed_time`. Recordings routinely get left running long after the
+   * activity ends: across 2021 the elapsed total is 1,081 hours against 304 of
+   * actual moving, and 84 activities exceed four hours. Anything consuming this
+   * as a time window would sweep up a whole evening after a 40-minute ride.
+   *
+   * Not raw `moving_time` either — that excludes genuine pauses at lights and
+   * rest stops, which are still part of the activity.
+   *
+   * So: moving time plus a pause allowance, never exceeding what was actually
+   * recorded.
+   */
+  seconds: number
+  /** The raw recorded span, for callers that want to see the difference. */
   elapsedTime: number
 }
+
+/** How much stopped time still counts as being on the activity. */
+const PAUSE_GRACE = 30 * 60
 
 /**
  * Activities overlapping a time range, as bare windows.
@@ -244,18 +262,27 @@ export async function fetchWindows(
 ): Promise<ActivityWindow[]> {
   const rows = await db
     .prepare(
-      `SELECT id, kind, started_at, elapsed_time FROM activities
+      `SELECT id, kind, started_at, elapsed_time,
+              MIN(elapsed_time, MAX(moving_time, 0) + ?4) AS window_seconds
+         FROM activities
         WHERE started_at >= ?1 AND started_at < ?2
-          AND started_at + elapsed_time > ?3
+          AND started_at + MIN(elapsed_time, MAX(moving_time, 0) + ?4) > ?3
         ORDER BY started_at`,
     )
-    .bind(from - MAX_ACTIVITY_SECONDS, to, from)
-    .all<{ id: string; kind: string; started_at: number; elapsed_time: number }>()
+    .bind(from - MAX_ACTIVITY_SECONDS, to, from, PAUSE_GRACE)
+    .all<{
+      id: string
+      kind: string
+      started_at: number
+      elapsed_time: number
+      window_seconds: number
+    }>()
 
   return rows.results.map((r) => ({
     id: r.id,
     kind: r.kind,
     startedAt: r.started_at,
+    seconds: r.window_seconds,
     elapsedTime: r.elapsed_time,
   }))
 }

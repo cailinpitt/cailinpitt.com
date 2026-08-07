@@ -348,7 +348,10 @@ cost per visitor is flat no matter how much traffic arrives.
   sides. `tests/period-keys.test.ts` pins them to each other; if they drift, pages resolve to the
   wrong data.
 - **While moving** intersects scrobble timestamps with activity windows from `worker-moving`
-  (`/windows.json`). It is the one cross-Worker dependency, and it is deliberately one-way and
+  (`/windows.json`). The window is **not** raw `elapsed_time` — recordings get left running, and
+  across 2021 elapsed totals 1,081 hours against 304 of actual movement, so a 40-minute ride would
+  have claimed the whole evening. It is moving time plus a 30-minute pause allowance, capped at
+  what was recorded. It is the one cross-Worker dependency, and it is deliberately one-way and
   failure-tolerant: `fetchWindows` never rejects, so an unreachable moving Worker costs that section
   and nothing else. Set `MOVING_API` empty to turn it off.
 - Completed periods are baked into `public/listening-data/` at build time (gitignored) and served

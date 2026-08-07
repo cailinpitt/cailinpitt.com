@@ -14,7 +14,15 @@ export interface ActivityWindow {
   kind: string
   /** Unix seconds, UTC. */
   startedAt: number
-  elapsedTime: number
+  /**
+   * Usable window length — moving time plus a pause allowance, capped at what
+   * was recorded. See the note in worker-moving's store.ts: raw elapsed time
+   * runs ~3.6x longer than actual movement because recordings get left running,
+   * which would sweep a whole evening into "while moving".
+   */
+  seconds?: number
+  /** Raw recorded span. Only used as a fallback for an older moving Worker. */
+  elapsedTime?: number
 }
 
 /** Give up rather than let a slow neighbour stall the cron tick. */

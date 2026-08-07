@@ -313,7 +313,7 @@ export interface AggregateInput {
   /** artist → {c: country, k: kind, y: year formed}. Absent before enrichment. */
   originOf?: Record<string, { c: string | null; k: string | null; y: number | null }>
   /** Activity windows overlapping the period. */
-  windows?: { id: string; kind: string; startedAt: number; elapsedTime: number }[]
+  windows?: { id: string; kind: string; startedAt: number; seconds?: number; elapsedTime?: number }[]
 }
 
 /** How many genres a period reports. Beyond this the tail is all sub-1% slices. */
@@ -404,7 +404,14 @@ export function aggregate(input: AggregateInput): PeriodStats {
 
   // Both lists are ascending, so the overlap is a merge rather than a lookup per
   // row: `windowAt` only ever moves forward. O(rows + windows).
-  const windows = (input.windows ?? []).slice().sort((a, b) => a.startedAt - b.startedAt)
+  // `seconds` is the bounded window; `elapsedTime` is the raw span a moving
+  // Worker deployed before that distinction existed would send. Preferring the
+  // former keeps a version skew between the two Workers from silently widening
+  // every window back out to hours.
+  const windows = (input.windows ?? [])
+    .map((w) => ({ ...w, length: w.seconds ?? w.elapsedTime ?? 0 }))
+    .filter((w) => w.length > 0)
+    .sort((a, b) => a.startedAt - b.startedAt)
   let windowAt = 0
   let movingPlays = 0
   const movingKinds = new Map<string, number>()
@@ -486,7 +493,7 @@ export function aggregate(input: AggregateInput): PeriodStats {
     // one. Activities don't overlap in practice, so the first hit is the answer.
     while (
       windowAt < windows.length &&
-      windows[windowAt].startedAt + windows[windowAt].elapsedTime <= r.uts
+      windows[windowAt].startedAt + windows[windowAt].length <= r.uts
     ) {
       windowAt++
     }
