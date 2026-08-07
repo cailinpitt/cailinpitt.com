@@ -358,6 +358,17 @@ cost per visitor is flat no matter how much traffic arrives.
   as static assets, which don't count against the Workers request ceiling. The client falls back to
   the API when a file is absent.
 
+### Music while moving
+
+`/moving` rows expand to show what was playing during that activity. It costs nothing until
+someone opens one: the row then asks the listening Worker's `/during?from=&to=`, which is an index
+range of a couple of dozen scrobbles. No precomputation, no extra KV, and a finished window caches
+at the edge for a day.
+
+The window comes from `windowSeconds` on the activity, served by `worker-moving` so the rule lives
+in one place — moving time plus a 30-minute pause allowance, capped at what was recorded, never raw
+`elapsed_time`.
+
 ## Reading
 
 `/reading` shows books (from [hardcover.app](https://hardcover.app)) and saved articles with cover

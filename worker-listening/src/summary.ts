@@ -235,13 +235,14 @@ export async function fetchPeriodRows(
   db: D1Database,
   start: number,
   end: number,
+  limit?: number,
 ): Promise<Scrobble[]> {
   const rows = await db
     .prepare(
       `SELECT ${ROW_COLS} FROM scrobbles INDEXED BY idx_scrobbles_uts
-        WHERE uts >= ?1 AND uts < ?2 ORDER BY uts`,
+        WHERE uts >= ?1 AND uts < ?2 ORDER BY uts${limit ? ' LIMIT ?3' : ''}`,
     )
-    .bind(start, end)
+    .bind(...(limit ? [start, end, limit] : [start, end]))
     .all<Scrobble>()
   return rows.results
 }

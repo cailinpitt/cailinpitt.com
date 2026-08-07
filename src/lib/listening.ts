@@ -351,6 +351,24 @@ export async function fetchBundle(signal?: AbortSignal): Promise<Bundle> {
   return res.json() as Promise<Bundle>
 }
 
+/**
+ * What was playing between two instants — the soundtrack to an activity.
+ *
+ * Fetched on demand rather than precomputed: nothing is spent unless a visitor
+ * expands an activity, and the Worker answers from an index range of a couple of
+ * dozen rows. A finished window is immutable, so it caches at the edge for a day.
+ */
+export async function fetchDuring(
+  from: number,
+  to: number,
+  signal?: AbortSignal,
+): Promise<Scrobble[]> {
+  const res = await fetch(`${API_BASE}/during?from=${from}&to=${to}`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  const data = (await res.json()) as { tracks?: Scrobble[] }
+  return data.tracks ?? []
+}
+
 export async function fetchOlderDays(
   before: number,
   limit = 5,

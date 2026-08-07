@@ -10,7 +10,7 @@ import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
-import { priorLastPlay, summaryStatements } from './summary'
+import { fetchPeriodRows, priorLastPlay, summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import { computeOnThisDay, listYears, type OnThisDay } from './year'
@@ -69,6 +69,12 @@ const TOTAL_FALLBACK_TTL = 300
 
 /** Edge-cache lifetime for the read endpoints. */
 const EDGE_TTL = 60
+
+/** Widest span /during will answer. An activity is hours, not days. */
+const DURING_MAX_SPAN = 24 * 60 * 60
+
+/** Row cap for /during. A long ride is ~40 tracks; this is headroom, not a target. */
+const DURING_MAX_ROWS = 200
 
 /** Where a browser landing on the terminal endpoint gets sent. */
 const SITE_LISTENING = 'https://cailinpitt.com/listening'
@@ -743,6 +749,31 @@ export default {
       if (url.pathname === '/listening.json') {
         return cached(url, 'json', ctx, cors, async () => json(await getBundle(env), EDGE_TTL))
       }
+      // What was playing between two instants. Built for /moving, which asks it
+      // per activity when someone expands one.
+      //
+      // Cheap by construction rather than by caching: an index range over
+      // idx_scrobbles_uts returning a couple of dozen rows, and only when a
+      // visitor actually asks. The span cap is what keeps it that way — without
+      // it this is a full-archive scan with extra steps.
+      if (url.pathname === '/during') {
+        const from = Number(url.searchParams.get('from'))
+        const to = Number(url.searchParams.get('to'))
+        if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
+          return new Response('Bad range', { status: 400, headers: cors })
+        }
+        if (to - from > DURING_MAX_SPAN) {
+          return new Response('Range too wide', { status: 400, headers: cors })
+        }
+        return cached(url, 'during', ctx, cors, async () => {
+          const rows = await fetchPeriodRows(env.DB, from, to, DURING_MAX_ROWS)
+          // A window that has already ended can never gain scrobbles, so it is
+          // immutable and cached hard; one still in progress is not.
+          const settled = to < Math.floor(Date.now() / 1000) - 3600
+          return json({ tracks: rows }, settled ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL)
+        })
+      }
+
       if (url.pathname === '/days') {
         return cached(url, 'days', ctx, cors, async () => {
           const offset = Number(env.TZ_OFFSET_SECONDS) || 0

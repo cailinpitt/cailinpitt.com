@@ -17,6 +17,7 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 - `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination
 - `GET /now.json` — now-playing only; uncached
 - `GET /p/<kind>/<key>.json` — one period's stats: `w/2026-W32`, `m/2026-08`, `y/2026`, `all/all`
+- `GET /during?from=<uts>&to=<uts>` — tracks played in a window; powers /moving's per-activity soundtrack
 - `GET /periods.json` — which period blobs exist, for the navigator and the build-time bake
 - `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
 
@@ -36,6 +37,13 @@ amount of traffic to these endpoints can cost more than a KV read.
 Completed periods are immutable and served with a 24-hour edge TTL; the site
 additionally bakes them into the build as static assets, which don't count
 against the Workers request ceiling at all.
+
+**`/during` is cheap by construction, not by caching.** It is an index range over
+`idx_scrobbles_uts` returning a couple of dozen rows, asked only when a visitor
+expands an activity on /moving — a page of thirty costs nothing to render. The
+24-hour span cap is what keeps it that way: without it the endpoint is a
+full-archive scan with extra steps. A window that ended over an hour ago can
+never gain scrobbles, so it caches for a day; one still in progress does not.
 
 **The blob namespace is part of the edge cache key.** `PREFIX` is folded into the
 cache variant for `/p/…` and `/<year>`, so bumping it invalidates the edge along

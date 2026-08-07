@@ -19,6 +19,14 @@ export interface Activity {
   elevationFt: number
   movingTime: number
   trainer: boolean
+  /** Unix seconds, UTC. Absent on a Worker deployed before the crossover. */
+  startedAt?: number
+  /**
+   * The activity's usable window in seconds — moving time plus a pause
+   * allowance, capped at what was recorded. Used with `startedAt` to ask the
+   * listening API what was playing. Optional for the same reason.
+   */
+  windowSeconds?: number
 }
 
 export interface ActivityPage {

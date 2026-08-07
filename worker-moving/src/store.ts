@@ -15,7 +15,7 @@ const MAX_ACTIVITY_PAGE = 100
 // weren't served.
 const COLS =
   'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
-  'elapsed_time, trainer'
+  'elapsed_time, trainer, MIN(elapsed_time, MAX(moving_time, 0) + 1800) AS window_seconds'
 
 export interface Activity {
   id: string
@@ -28,8 +28,15 @@ export interface Activity {
   distanceMi: number
   elevationFt: number
   movingTime: number
-  /** Seconds including pauses — the window's true length. */
+  /** Seconds including pauses — the raw recorded span. */
   elapsedTime: number
+  /**
+   * The activity's usable window, in seconds — what "during this activity"
+   * means. Moving time plus a pause allowance, capped at what was recorded; see
+   * the note on ActivityWindow for why raw elapsed time is the wrong answer.
+   * Served here too so callers don't have to re-derive the rule.
+   */
+  windowSeconds: number
   trainer: boolean
 }
 
@@ -66,6 +73,7 @@ interface Row {
   elevation_ft: number
   moving_time: number
   elapsed_time: number
+  window_seconds: number
   trainer: number
 }
 
@@ -79,6 +87,7 @@ const toActivity = (r: Row): Activity => ({
   elevationFt: r.elevation_ft,
   movingTime: r.moving_time,
   elapsedTime: r.elapsed_time,
+  windowSeconds: r.window_seconds,
   trainer: r.trainer === 1,
 })
 
@@ -235,7 +244,8 @@ export interface ActivityWindow {
   elapsedTime: number
 }
 
-/** How much stopped time still counts as being on the activity. */
+/** How much stopped time still counts as being on the activity. Mirrored
+ * literally in COLS above, which cannot interpolate. */
 const PAUSE_GRACE = 30 * 60
 
 /**

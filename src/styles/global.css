@@ -4492,3 +4492,62 @@ a.guestbook-name:hover {
   gap: 1.5rem;
   margin-top: 1.25rem;
 }
+
+/* ---- what was playing during an activity (/moving) ---------------------- */
+
+/* Spans the row's full width beneath the summary line, so opening one doesn't
+   disturb the grid the rows are aligned on. */
+.moving-soundtrack {
+  grid-column: 1 / -1;
+  margin-top: 0.35rem;
+}
+.soundtrack-toggle {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  cursor: pointer;
+}
+.soundtrack-toggle:hover:not(:disabled) {
+  color: var(--accent);
+}
+.soundtrack-toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.soundtrack-note {
+  margin-left: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.soundtrack-list {
+  list-style: none;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0 0 0 0.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.soundtrack-list li {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: var(--step--1);
+}
+.soundtrack-list time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.soundtrack-track,
+.soundtrack-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.soundtrack-artist {
+  color: var(--muted);
+}
