@@ -5,10 +5,16 @@
 //    /sync used for the initial backfill and to pick up a ride on demand.
 
 import { sync } from './sync'
-import { ACTIVITY_PAGE, buildBundle, buildNow, fetchActivities } from './store'
+import { ACTIVITY_PAGE, buildBundle, buildNow, fetchActivities, fetchWindows } from './store'
 import { renderText } from './text'
 
 const EDGE_TTL = 300
+
+/**
+ * Time windows are read by the listening Worker's cron when it builds a period,
+ * and past activities never change — so they cache far longer than the feed.
+ */
+const WINDOW_EDGE_TTL = 3600
 
 const SITE_MOVING = 'https://cailinpitt.com/moving'
 
@@ -177,6 +183,18 @@ export default {
 
       if (url.pathname === '/now.json') {
         return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), EDGE_TTL))
+      }
+
+      // Bare time windows, for the listening crossover. Deliberately not part of
+      // /moving.json: it is a different question asked at a different cadence,
+      // and the bundle has no business carrying a year of them.
+      if (url.pathname === '/windows.json') {
+        const from = Number(url.searchParams.get('from')) || 0
+        const to = Number(url.searchParams.get('to')) || Math.floor(Date.now() / 1000)
+        if (!(to > from)) return new Response('Bad range', { status: 400, headers: cors })
+        return cached(url, 'windows', ctx, cors, async () =>
+          json({ windows: await fetchWindows(env.DB, from, to) }, WINDOW_EDGE_TTL),
+        )
       }
 
       if (url.pathname === '/activities') {

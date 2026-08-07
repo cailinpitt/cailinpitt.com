@@ -133,3 +133,10 @@ available; prefer the export.
 - **`stats` is recomputed on every sync**, not incremented — a run sees only a
   week, so the totals have to come from the archive itself. `rides` counts both
   `ride` and `ebike`.
+
+
+## `/windows.json`
+
+Bare activity time windows (`id`, `kind`, `startedAt`, `elapsedTime`) overlapping a range,
+for the listening crossover. Overlap, not containment — an activity started before
+`from` can still be running inside it. Cached an hour: past activities never change.

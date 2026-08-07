@@ -9,7 +9,13 @@ const MAX_ACTIVITY_PAGE = 100
 
 // name and commute are stored but deliberately not served: the log renders a
 // summary built from the numbers, and neither field reaches the page.
-const COLS = 'id, sport_type, kind, start_date, distance_mi, elevation_ft, moving_time, trainer'
+// `started_at` and `elapsed_time` are what make an activity a *window* in time
+// rather than a date, which is what the listening crossover needs to ask "what
+// was playing during this ride". Both were already stored and synced; they just
+// weren't served.
+const COLS =
+  'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
+  'elapsed_time, trainer'
 
 export interface Activity {
   id: string
@@ -17,9 +23,13 @@ export interface Activity {
   kind: string
   /** YYYY-MM-DD, athlete-local. */
   startDate: string
+  /** Unix seconds, UTC. The start of the activity's window. */
+  startedAt: number
   distanceMi: number
   elevationFt: number
   movingTime: number
+  /** Seconds including pauses — the window's true length. */
+  elapsedTime: number
   trainer: boolean
 }
 
@@ -51,9 +61,11 @@ interface Row {
   sport_type: string
   kind: string
   start_date: string
+  started_at: number
   distance_mi: number
   elevation_ft: number
   moving_time: number
+  elapsed_time: number
   trainer: number
 }
 
@@ -62,9 +74,11 @@ const toActivity = (r: Row): Activity => ({
   sportType: r.sport_type,
   kind: (r.kind as Activity['kind']) ?? 'other',
   startDate: r.start_date,
+  startedAt: r.started_at,
   distanceMi: r.distance_mi,
   elevationFt: r.elevation_ft,
   movingTime: r.moving_time,
+  elapsedTime: r.elapsed_time,
   trainer: r.trainer === 1,
 })
 
@@ -195,4 +209,46 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
       distanceMiThisYear: thisYear.distanceMi,
     },
   }
+}
+
+export interface ActivityWindow {
+  id: string
+  kind: string
+  /** Unix seconds, UTC. */
+  startedAt: number
+  /** Seconds. Elapsed rather than moving, so pauses stay inside the window. */
+  elapsedTime: number
+}
+
+/**
+ * Activities overlapping a time range, as bare windows.
+ *
+ * Exists for the listening crossover, which needs to ask "was I moving when this
+ * scrobble happened" for a whole period at once. Serving that off /activities
+ * would mean paginating the full records; this is four columns and one index
+ * range, so a year costs a few hundred small rows.
+ *
+ * The range test is overlap, not containment: an activity that started before
+ * `from` can still be running inside it.
+ */
+export async function fetchWindows(
+  db: D1Database,
+  from: number,
+  to: number,
+): Promise<ActivityWindow[]> {
+  const rows = await db
+    .prepare(
+      `SELECT id, kind, started_at, elapsed_time FROM activities
+        WHERE started_at < ?2 AND started_at + elapsed_time > ?1
+        ORDER BY started_at`,
+    )
+    .bind(from, to)
+    .all<{ id: string; kind: string; started_at: number; elapsed_time: number }>()
+
+  return rows.results.map((r) => ({
+    id: r.id,
+    kind: r.kind,
+    startedAt: r.started_at,
+    elapsedTime: r.elapsed_time,
+  }))
 }
