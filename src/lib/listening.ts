@@ -65,25 +65,6 @@ export interface Bundle {
 
 export type WindowKey = '7d' | '30d'
 
-export interface YearReview {
-  year: number
-  scrobbles: number
-  artists: number
-  albums: number
-  tracks: number
-  activeDays: number
-  perDay: number
-  newArtists: number
-  topArtists: ArtistStat[]
-  topAlbums: AlbumStat[]
-  topTracks: TrackStat[]
-  /** Twelve counts, January first. */
-  months: number[]
-  busiestDay: { date: string; count: number } | null
-  firstScrobble: Scrobble | null
-  complete: boolean
-}
-
 export interface OnThisDayYear {
   year: number
   count: number
@@ -96,22 +77,182 @@ export interface OnThisDay {
   years: OnThisDayYear[]
 }
 
-export async function fetchYear(year: number, signal?: AbortSignal): Promise<YearReview> {
-  const res = await fetch(`${API_BASE}/${year}.json`, { signal })
-  if (!res.ok) throw new Error(`Listening API ${res.status}`)
-  return res.json() as Promise<YearReview>
-}
-
-export async function fetchYears(signal?: AbortSignal): Promise<number[]> {
-  const res = await fetch(`${API_BASE}/years.json`, { signal })
-  if (!res.ok) throw new Error(`Listening API ${res.status}`)
-  return res.json() as Promise<number[]>
-}
-
 export async function fetchOnThisDay(signal?: AbortSignal): Promise<OnThisDay> {
   const res = await fetch(`${API_BASE}/on-this-day.json`, { signal })
   if (!res.ok) throw new Error(`Listening API ${res.status}`)
   return res.json() as Promise<OnThisDay>
+}
+
+// ---- period stats (week / month / year / all time) ------------------------
+//
+// One blob per period, precomputed by the Worker's cron. The page never asks the
+// API to aggregate anything — a period that hasn't been computed yet 404s and the
+// UI says so, rather than triggering a scan of the archive.
+
+export type PeriodKind = 'w' | 'm' | 'y' | 'all'
+
+export interface RankedArtist {
+  name: string
+  count: number
+  share: number
+  image: string | null
+  prevRank: number | null
+}
+export interface RankedAlbum extends Omit<RankedArtist, 'name'> {
+  album: string
+  artist: string
+}
+export interface RankedTrack extends Omit<RankedArtist, 'name'> {
+  track: string
+  artist: string
+}
+export interface SeriesPoint {
+  key: string
+  label: string
+  count: number
+}
+export interface Session {
+  start: number
+  end: number
+  tracks: number
+  topArtist: string | null
+}
+export interface Run {
+  artist: string
+  album?: string
+  start: number
+  tracks: number
+  distinct: number
+}
+export interface Milestone {
+  n: number
+  uts: number
+  track: string
+  artist: string
+}
+
+export interface PeriodStats {
+  kind: PeriodKind
+  key: string
+  label: string
+  start: number
+  end: number
+  complete: boolean
+  computedAt: number
+
+  scrobbles: number
+  artists: number
+  albums: number
+  tracks: number
+  perDay: number
+  activeDays: number
+  silentDays: number
+
+  top: { artists: RankedArtist[]; albums: RankedAlbum[]; tracks: RankedTrack[] }
+
+  /** When the listening happened. */
+  clock: number[] // 24, local hour
+  weekdays: number[] // 7, Monday first
+  grid: number[] // 168, weekday * 24 + hour
+  peakHour: number | null
+  quietestHour: number | null
+  peakWeekday: number | null
+  weekendShare: number
+  lateNightShare: number
+
+  series: SeriesPoint[]
+  busiestDay: { date: string; count: number } | null
+  busiestHour: { hour: number; count: number } | null
+
+  streaks: { longest: number; longestSilence: number }
+  sessions: { count: number; avgTracks: number; longest: Session | null }
+  binges: Run[]
+  albumListens: Run[]
+
+  loyalty: {
+    repeatRate: number
+    top10Share: number
+    effectiveArtists: number
+    obsession: { track: string; artist: string; count: number; date: string } | null
+  }
+
+  curios: {
+    remix: number
+    live: number
+    acoustic: number
+    collab: number
+    longestTitle: { track: string; artist: string } | null
+  }
+
+  milestones: Milestone[]
+  first: Scrobble | null
+  last: Scrobble | null
+
+  discovery: {
+    artists: number
+    albums: number
+    tracks: number
+    rate: number
+    newArtists: { name: string; uts: number }[]
+  }
+  abandoned: string[]
+  delta: {
+    scrobbles: number | null
+    artists: number | null
+    tracks: number | null
+    perDay: number | null
+  }
+}
+
+/** Which period blobs exist, for the navigator. */
+export interface PeriodIndex {
+  w: string[]
+  m: string[]
+  y: string[]
+  all: boolean
+}
+
+/** Thrown when a period is valid but the cron hasn't built it yet. */
+export class PeriodNotReady extends Error {
+  constructor() {
+    super('period not ready')
+    this.name = 'PeriodNotReady'
+  }
+}
+
+/**
+ * Completed periods are baked into the site build as static assets (see
+ * scripts/bake-listening.mjs), which do not consume Worker requests at all.
+ * Try the local copy first and fall back to the API, so a missing bake is a
+ * slower path rather than a broken page.
+ */
+async function fetchPeriodBlob(kind: PeriodKind, key: string, signal?: AbortSignal) {
+  if (kind !== 'all') {
+    const local = await fetch(`/listening-data/${kind}/${key}.json`, { signal }).catch(() => null)
+    // `ok` is not enough. A dev server — and any host with an SPA fallback —
+    // answers an unknown path with index.html and a 200, which would sail
+    // through here and then blow up in res.json(). Only a JSON content-type
+    // means the bake actually produced this file.
+    if (local?.ok && local.headers.get('content-type')?.includes('json')) return local
+  }
+  return fetch(`${API_BASE}/p/${kind}/${key}.json`, { signal })
+}
+
+export async function fetchPeriod(
+  kind: PeriodKind,
+  key: string,
+  signal?: AbortSignal,
+): Promise<PeriodStats> {
+  const res = await fetchPeriodBlob(kind, key, signal)
+  if (res.status === 404) throw new PeriodNotReady()
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<PeriodStats>
+}
+
+export async function fetchPeriodIndex(signal?: AbortSignal): Promise<PeriodIndex> {
+  const res = await fetch(`${API_BASE}/periods.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<PeriodIndex>
 }
 
 /** Lightweight now-playing payload for the homepage bar (see /now.json). */

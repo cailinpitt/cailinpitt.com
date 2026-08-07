@@ -7,6 +7,10 @@
 //    /days endpoint for paginating older daily logs straight from D1.
 
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
+import type { PeriodStats } from './aggregate'
+import { parsePeriod } from './periods'
+import { blobKey, computePeriod, listPeriods, pickWork } from './period'
+import { summaryStatements } from './summary'
 import { renderText, renderYear } from './text'
 import {
   computeArtistDebuts,
@@ -134,8 +138,12 @@ function insertStatements(env: Env, rows: Scrobble[]): D1PreparedStatement[] {
       .join(', ')
     out.push(
       env.DB.prepare(
+        // RETURNING yields only the rows that were actually stored. The hour of
+        // overlap this pull re-offers is dropped by OR IGNORE and must not reach
+        // the summary counters, which increment rather than recompute.
         `INSERT OR IGNORE INTO scrobbles (uts, track, artist, album, mbid, image)
-         VALUES ${tuples}`,
+         VALUES ${tuples}
+         RETURNING uts, track, artist, album, mbid, image`,
       ).bind(...chunk.flatMap((s) => [s.uts, s.track, s.artist, s.album, s.mbid, s.image])),
     )
   }
@@ -161,7 +169,13 @@ async function ingest(env: Env): Promise<void> {
   // rest into multi-row INSERTs takes a normal tick to zero or one statement.
   const since = prev?.lastPlayed ? prev.lastPlayed.uts - INGEST_GRACE : 0
   const fresh = recent.scrobbles.filter((s) => s.uts > since)
-  if (fresh.length) await env.DB.batch(insertStatements(env, fresh))
+  if (fresh.length) {
+    const written = await env.DB.batch<Scrobble>(insertStatements(env, fresh))
+    // Layer 1 moves only for rows that were genuinely new (see summaryStatements).
+    const inserted = written.flatMap((r) => r.results ?? [])
+    const summary = summaryStatements(env, inserted)
+    if (summary.length) await env.DB.batch(summary)
+  }
 
   // Last.fm returns newest-first, so scrobbles[0] is the most recent completed play.
   const next: NowBlob = {
@@ -192,7 +206,46 @@ async function refreshHeatmap(env: Env): Promise<void> {
   await env.KV.put(KEY.heatmap, JSON.stringify(blob))
 }
 
-/** One cron tick: always ingest; recompute the rest only when stale. */
+/**
+ * Compute at most one period blob.
+ *
+ * Strictly one per tick: a year is ~18,700 rows to read and fold, and stacking
+ * several into one invocation is how both the CPU ceiling and the KV write
+ * budget get blown. 1,440 ticks a day is a lot of room.
+ */
+async function runPeriodWork(env: Env, now: number): Promise<void> {
+  const [index, bounds] = await Promise.all([listPeriods(env), archiveBounds(env)])
+  const unit = await pickWork(env, index, bounds.firstDay, now)
+  if (!unit) return
+
+  const stats = await computePeriod(env, unit.period, now)
+  await env.KV.put(blobKey(unit.period.kind, unit.period.key), JSON.stringify(stats))
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      stage: 'period',
+      key: `${unit.period.kind}:${unit.period.key}`,
+      backfill: unit.backfill,
+      scrobbles: stats.scrobbles,
+    }),
+  )
+}
+
+/** First and last day in the archive, straight off the `days` table's primary key. */
+async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
+  const row = await env.DB.prepare('SELECT MIN(day) AS firstDay FROM days').first<{
+    firstDay: string | null
+  }>()
+  return { firstDay: row?.firstDay ?? null }
+}
+
+/**
+ * One cron tick: always ingest, then **one** unit of heavy work.
+ *
+ * The legacy stats/heatmap refreshes and a period compute are all expensive, so
+ * they take turns rather than stacking. The legacy pair go first because
+ * /listening and the homepage read them directly.
+ */
 async function tick(env: Env): Promise<void> {
   // A Last.fm hiccup during ingest must not stop the D1-derived refreshes below.
   try {
@@ -203,10 +256,18 @@ async function tick(env: Env): Promise<void> {
   const now = Math.floor(Date.now() / 1000)
 
   const stats = await readJSON<StatsBlob>(env, KEY.stats)
-  if (!stats || now - stats.computedAt >= HEAVY_INTERVAL) await refreshStats(env)
+  if (!stats || now - stats.computedAt >= HEAVY_INTERVAL) {
+    await refreshStats(env)
+    return
+  }
 
   const heat = await readJSON<HeatmapBlob>(env, KEY.heatmap)
-  if (!heat || now - heat.computedAt >= HEATMAP_INTERVAL) await refreshHeatmap(env)
+  if (!heat || now - heat.computedAt >= HEATMAP_INTERVAL) {
+    await refreshHeatmap(env)
+    return
+  }
+
+  await runPeriodWork(env, now)
 }
 
 // ---- read API ------------------------------------------------------------
@@ -559,6 +620,43 @@ export default {
             : textResponse(renderYear(review, !url.searchParams.has('T'))),
         )
       }
+      // ---- period blobs ---------------------------------------------------
+      //
+      // Read-only by construction: a missing blob is a 404, never a computation.
+      // The cron owns every one of these, so no amount of traffic here can
+      // trigger a D1 scan.
+      const periodMatch = url.pathname.match(/^\/p\/(w|m|y|all)\/([\w-]+)\.json$/)
+      if (periodMatch) {
+        const [, kind, key] = periodMatch
+        const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+        // Validate before touching KV, so a junk key can't spend a read.
+        const period = parsePeriod(kind, key, offset)
+        if (!period) return new Response('Bad period', { status: 400, headers: cors })
+
+        return cached(url, 'period', ctx, cors, async () => {
+          const blob = await readJSON<PeriodStats>(env, blobKey(period.kind, period.key))
+          if (!blob) {
+            // Not computed yet. Short cache so the page picks it up once the
+            // cron gets to it, rather than pinning a 404 at the edge for an hour.
+            return new Response(JSON.stringify({ error: 'not ready' }), {
+              status: 404,
+              headers: {
+                'content-type': 'application/json; charset=utf-8',
+                'cache-control': 'public, max-age=60',
+              },
+            })
+          }
+          // A finished period can never change again, so let it be cached hard.
+          return json(blob, blob.complete ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL * 5)
+        })
+      }
+
+      if (url.pathname === '/periods.json') {
+        return cached(url, 'periods', ctx, cors, async () =>
+          json(await listPeriods(env), ARCHIVE_EDGE_TTL),
+        )
+      }
+
       if (url.pathname === '/years.json') {
         return cached(url, 'years', ctx, cors, async () => json(await getYears(env), ARCHIVE_EDGE_TTL))
       }

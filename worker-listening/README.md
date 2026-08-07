@@ -16,7 +16,21 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 - `GET /listening.json` — the full bundle (now-playing, 7d/30d stats, heatmap, recent days)
 - `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination
 - `GET /now.json` — now-playing only; uncached
+- `GET /p/<kind>/<key>.json` — one period's stats: `w/2026-W32`, `m/2026-08`, `y/2026`, `all/all`
+- `GET /periods.json` — which period blobs exist, for the navigator and the build-time bake
 - `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
+
+### Period blobs are read-only
+
+`/p/…` never computes anything. A period that the cron hasn't built yet returns
+404 with a short cache, and the page says "not built yet" rather than triggering
+a scan. This is the rule that keeps traffic off D1: a year is ~18,700 rows to
+aggregate and the free plan allows 10 ms of CPU per fetch invocation, so no
+amount of traffic to these endpoints can cost more than a KV read.
+
+Completed periods are immutable and served with a 24-hour edge TTL; the site
+additionally bakes them into the build as static assets, which don't count
+against the Workers request ceiling at all.
 
 ## Setup
 
@@ -58,11 +72,31 @@ The cron fires every minute, but only the cheap work runs that often:
 | Cadence | Work | Cost |
 |---|---|---|
 | 1 min | fetch Last.fm, `INSERT OR IGNORE`, refresh now-playing | no table scans; **KV write only when the track changed** |
+| 1 min | maintain the Layer 1 summary tables | only for rows `RETURNING` proved were new |
 | 15 min | recompute 7d/30d windows + recent daily logs | in-window rows only — **but only because of `INDEXED BY`**, see below |
 | 6 h | recompute the year heatmap | ~one year of rows |
+| 30 min / 2 h / 6 h / 24 h | recompute the live week / month / year / all-time blob | ~380 / 1,560 / 18,700 / 0 rows |
+| 3 min | build one *completed* period blob, until none are missing | once per period, ever |
 | — | all-time total | free with each Last.fm response (`@attr.total`); never `COUNT(*)` |
 
 Reads are served from KV, so page loads never touch D1 or Last.fm.
+
+**A tick does ingest plus at most one heavy thing.** Stacking the legacy refresh
+and a period compute into one invocation is how the CPU ceiling and the KV write
+budget both get blown, so they take turns. At 1,440 ticks a day there is no hurry.
+
+**The write budget is what caps the backfill.** KV allows 1,000 writes/day;
+`now:v1` spends ~300 and the four live period blobs ~65. Backfilling a period
+every minute would spend another 1,440, so it is throttled to every third minute
+(~480/day) — which still clears all ~356 historical periods inside a day. This is
+also why there is no period *index* key: maintaining one would cost an extra
+write per frozen period, so `/periods.json` lists KV instead, which costs a read.
+
+**Layer 1 counters increment, so they must only see genuinely new rows.** Ingest
+re-offers an hour of overlap on every pull and lets `INSERT OR IGNORE` drop the
+duplicates. Those dropped rows must not reach the summary tables or `plays`
+drifts upward every minute forever — hence `RETURNING` on the archive insert,
+which yields only rows that were actually stored.
 
 **KV writes are the tight budget, not reads.** The free tier allows 100,000 reads but only **1,000
 writes/day**, and the cron fires 1,440 times — so nothing on the per-minute path may write

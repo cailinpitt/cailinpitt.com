@@ -5,6 +5,7 @@ import { CurlHint } from '../components/CurlHint'
 import { ListenLinks } from '../components/ListenLinks'
 import { Art, StatTile, TopAlbums, TopArtists, TopTracks } from '../components/ListeningBits'
 import { listeningYears } from '../lib/listeningYears'
+import { currentKey, urlFor } from '../lib/periodKeys'
 import {
   fetchBundle,
   fetchNow,
@@ -279,18 +280,30 @@ function OnThisDayYearBlock({ year: y }: { year: OnThisDayYear }) {
 
 // ---- year links ----------------------------------------------------------
 
+/**
+ * Entry points into the period views. The current week and month lead, because
+ * they're the two that change; the years and all-time are the archive behind them.
+ */
 function YearLinks() {
+  const now = new Date()
   return (
     <section className="year-links" aria-labelledby="years-heading">
       <h2 id="years-heading" className="eyebrow">
-        By year
+        Dig in
       </h2>
       <nav className="year-nav">
+        <Link className="year-nav-lead" to={urlFor('w', currentKey('w', now))}>
+          This week
+        </Link>
+        <Link className="year-nav-lead" to={urlFor('m', currentKey('m', now))}>
+          This month
+        </Link>
         {listeningYears().map((y) => (
           <Link key={y} to={`/listening/${y}`}>
             {y}
           </Link>
         ))}
+        <Link to="/listening/all">All time</Link>
       </nav>
     </section>
   )

@@ -49,3 +49,8 @@ scripts/.watching-slugs.json
 # Generated from the Strava bulk export; re-derivable, and thousands of lines.
 # scripts/moving-recategorize.sql is hand-written and *is* tracked.
 scripts/moving-backfill.sql
+
+# Completed listening periods, baked from the API at build time by
+# scripts/bake-listening.mjs. Generated, immutable, and re-fetchable — the client
+# falls back to the API when a file is absent, so these never belong in git.
+/public/listening-data/

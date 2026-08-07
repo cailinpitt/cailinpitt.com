@@ -3538,3 +3538,504 @@ a.guestbook-name:hover {
   line-height: 1;
   letter-spacing: -0.1em;
 }
+
+/* ---- period views (/listening/<period>) --------------------------------- */
+/* Week, month, year and all-time share one stylesheet the same way they share
+   one component — nothing here is granularity-specific. */
+
+.period-page .listening-header .eyebrow a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.period-page .listening-header .eyebrow a:hover {
+  color: var(--accent);
+}
+
+.period-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+.period-steps {
+  display: flex;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.period-step {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.period-step:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.period-step.disabled {
+  opacity: 0.35;
+}
+
+/* Headline numbers. `compact` is the same grid at a smaller rhythm, used by the
+   secondary sections so they don't compete with the top of the page. */
+.period-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 0 3rem;
+}
+.period-tiles > div {
+  background: var(--bg);
+  padding: 1rem 1.1rem;
+}
+.period-tiles dt {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.period-tiles dd {
+  margin: 0;
+  font-size: var(--step-2);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.period-tiles.compact {
+  margin-bottom: 1.5rem;
+}
+.period-tiles.compact dd {
+  font-size: var(--step-1);
+}
+
+.delta {
+  margin-left: 0.5rem;
+  font-size: var(--step--1);
+  font-family: var(--font-sans);
+  vertical-align: middle;
+}
+.delta.up,
+.period-tops .move.up {
+  color: #3f8f5f;
+}
+.delta.down,
+.period-tops .move.down {
+  color: #b3543a;
+}
+@media (prefers-color-scheme: dark) {
+  .delta.up,
+  .move.up {
+    color: #6fbf8b;
+  }
+  .delta.down,
+  .move.down {
+    color: #e08a6c;
+  }
+}
+
+/* ---- leaderboards ---- */
+
+.tops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+.top-col h3 {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.75rem;
+}
+.period-tops .rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: rank;
+}
+.period-tops .rank-list li {
+  display: grid;
+  grid-template-columns: 1.4rem 2rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.period-tops .rank-list li:last-child {
+  border-bottom: 0;
+}
+.period-tops .rank-n {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.period-tops .rank-art {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 3px;
+  object-fit: cover;
+}
+.period-tops .rank-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.period-tops .rank-name,
+.period-tops .rank-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.period-tops .rank-name {
+  font-size: var(--step--1);
+}
+.period-tops .rank-sub {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+/* Share bar sits under the label rather than beside it, so long titles keep
+   their full width and the bars still line up down the column. */
+.period-tops .rank-bar {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  width: var(--share);
+  min-width: 2px;
+  opacity: 0.55;
+}
+.period-tops .rank-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.period-tops .move {
+  margin-left: 0.35rem;
+  font-size: 0.85em;
+}
+.period-tops .move.flat {
+  opacity: 0.4;
+}
+.period-tops .move.new {
+  color: var(--accent);
+}
+
+/* ---- when I listen ---- */
+
+.period-when {
+  margin-bottom: 3rem;
+}
+.when-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0 0 1.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.when-summary p {
+  margin: 0;
+}
+.when-summary strong {
+  color: var(--fg);
+}
+.when-charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+.when-charts figcaption,
+.when-grid figcaption {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.when-charts figure,
+.when-grid {
+  margin: 0;
+}
+
+.clock-bars {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  align-items: end;
+  gap: 2px;
+  height: 6rem;
+}
+.clock-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+.clock-bar {
+  display: block;
+  width: 100%;
+  height: var(--h);
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 1px 1px 0 0;
+}
+.clock-tick {
+  position: absolute;
+  bottom: -1.2rem;
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.clock-chart {
+  padding-bottom: 1.4rem;
+}
+
+.weekday-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.weekday-row {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 3rem;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.weekday-bar {
+  display: block;
+  height: 0.7rem;
+  width: var(--w);
+  min-width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.75;
+}
+.weekday-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The 168-cell grid. Intensity rides a single --v custom property so the cells
+   need no per-level classes. */
+.grid-plot {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-x: auto;
+}
+.grid-row {
+  display: grid;
+  grid-template-columns: 2.4rem repeat(24, minmax(0.55rem, 1fr));
+  align-items: center;
+  gap: 2px;
+}
+.grid-day,
+.grid-tick {
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+.grid-tick {
+  text-align: center;
+}
+.grid-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) calc(var(--v) * 100%), var(--surface));
+}
+.grid-axis {
+  margin-top: 0.15rem;
+}
+
+/* ---- trend ---- */
+
+.period-trend {
+  margin-bottom: 3rem;
+}
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 7rem;
+  padding-bottom: 1.3rem;
+  overflow-x: auto;
+}
+.trend-col {
+  flex: 1 1 0;
+  min-width: 0.4rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+}
+.trend-bar {
+  display: block;
+  width: 100%;
+  height: var(--h);
+  min-height: 1px;
+  background: var(--accent);
+  border-radius: 2px 2px 0 0;
+  opacity: 0.8;
+}
+.trend-label {
+  position: absolute;
+  bottom: -1.15rem;
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+/* A month of day labels won't fit; show every third. */
+.period-trend .trend-col:nth-child(3n + 2) .trend-label {
+  display: none;
+}
+.period-trend .trend-col:nth-child(3n + 3) .trend-label {
+  display: none;
+}
+
+/* ---- discovery, habits, extras ---- */
+
+.period-discovery,
+.period-habits,
+.period-extras,
+.period-bookends {
+  margin-bottom: 3rem;
+}
+.discovery-list {
+  margin-top: 1.5rem;
+}
+.discovery-list h3 {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.muted-note {
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.chip-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+}
+.chip-list li {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--fg);
+}
+.chip-list.muted li {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.habit-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.habit-notes li {
+  font-size: var(--step--1);
+  color: var(--muted);
+  padding-left: 1rem;
+  position: relative;
+}
+.habit-notes li::before {
+  content: '·';
+  position: absolute;
+  left: 0.25rem;
+  color: var(--accent);
+}
+.habit-notes strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.bookends {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+.bookend {
+  display: grid;
+  grid-template-columns: auto 3rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.bookend-tag {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.bookend-art {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 3px;
+  object-fit: cover;
+}
+.bookend-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bookend-track,
+.bookend-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bookend-artist {
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.zoom-out {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+
+.year-nav-lead {
+  font-weight: 600;
+}

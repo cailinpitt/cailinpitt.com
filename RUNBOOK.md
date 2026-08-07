@@ -139,6 +139,51 @@ deploy so the custom domain exists).
 
 ## Listening
 
+### One-time migration for the period views (do this in order)
+
+The summary tables must exist **before** the new Worker ships, because every
+ingest tick writes to them. Deploying first doesn't lose scrobbles — the tick
+catches its own errors — but it logs a failure every minute until the tables
+land.
+
+```bash
+cd worker-listening
+# 1. create the Layer 1 tables
+wrangler d1 execute cailinpitt-listening --remote --file=schema-v2.sql
+# 2. populate them from the existing archive (~400k row reads, one time)
+wrangler d1 execute cailinpitt-listening --remote --file=backfill-summary.sql
+# 3. now deploy the Worker that maintains them
+npm run deploy
+```
+
+Step 2 writes absolute values (`plays = COUNT(*)`), so it is safe to re-run if
+it is interrupted. It must not race a *running* new Worker, though — the tick
+increments these counters, so run it before the deploy, not after.
+
+After deploying, the cron backfills period blobs on its own: years first, then
+months, then weeks, one every three minutes. All ~356 periods finish inside a
+day; `/listening/<year>` pages work within about twenty minutes. Watch it with:
+
+```bash
+curl -s https://listening.cailinpitt.com/periods.json | python3 -m json.tool | head
+```
+
+Until a period is built, its page says so rather than erroring.
+
+### Baking periods into the build
+
+Completed periods are fetched at build time into `public/listening-data/` so they
+serve as static assets instead of Worker requests. It runs automatically as
+`prebuild`, and never fails a build — an unreachable Worker just means the client
+fetches at runtime instead.
+
+```bash
+npm run listening:bake                 # refresh the local copy by hand
+LISTENING_API=http://127.0.0.1:8787 npm run listening:bake
+```
+
+### Everything else
+
 ```bash
 # backfill full scrobble history (repo root; needs LASTFM_API_KEY)
 node scripts/backfill-listening.mjs

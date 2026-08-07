@@ -315,6 +315,29 @@ bundle; the static page fetches it in the browser.
   and no D1. Today's bar inherits the heatmap's ~6h cadence and can read low. **Requires the Worker
   to be deployed**; until then it 404s and the sparkline doesn't render.
 
+### Period views
+
+`/listening/2026`, `/listening/2026/08`, `/listening/2026/W32` and `/listening/all` are one page
+(`ListeningPeriod.tsx`) rendering one blob shape at four granularities: leaderboards with rank
+movement, the hour/weekday/168-cell "when I listen" charts, discovery, streaks, sessions, album
+listens and milestones. Design notes and the full stat catalog live in
+[`plan-listening-stats.md`](plan-listening-stats.md).
+
+**The rule that makes it affordable: aggregation happens on the cron, never on a request.** A
+period endpoint reads a finished KV blob or 404s. Nothing a visitor can do causes a D1 scan, so
+cost per visitor is flat no matter how much traffic arrives.
+
+- Week keys are **ISO weeks** (Monday-start, `2026-W32`). The `/listening` heatmap is Sunday-start
+  because it mimics a contribution calendar; it isn't addressable, so the two never need to agree.
+- Static paths come from date arithmetic over `FIRST_LISTENING_DAY`, not the API — same reason
+  `listeningYears.ts` does, so a Worker outage can't fail a deploy.
+- `src/lib/periodKeys.ts` and `worker-listening/src/periods.ts` do the same calendar maths on both
+  sides. `tests/period-keys.test.ts` pins them to each other; if they drift, pages resolve to the
+  wrong data.
+- Completed periods are baked into `public/listening-data/` at build time (gitignored) and served
+  as static assets, which don't count against the Workers request ceiling. The client falls back to
+  the API when a file is absent.
+
 ## Reading
 
 `/reading` shows books (from [hardcover.app](https://hardcover.app)) and saved articles with cover

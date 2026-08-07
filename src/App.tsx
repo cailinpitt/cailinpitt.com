@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { RouteError } from './components/RouteError'
 import { photoIds } from 'virtual:site-index'
 import { listeningYears } from './lib/listeningYears'
+import { allPeriods, urlFor } from './lib/periodKeys'
 
 /**
  * Give every page the same error boundary.
@@ -28,12 +29,25 @@ export const routes: RouteRecord[] = [
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },
       { path: 'listening', lazy: () => import('./pages/Listening') },
+      // Years and all-time sit one level down, weeks and months two — one page
+      // serves all four. Concrete paths for the prerenderer come from date
+      // arithmetic over a constant start date rather than the listening API, so a
+      // Worker outage can't fail an unrelated deploy.
       {
-        path: 'listening/:year',
-        lazy: () => import('./pages/ListeningYear'),
-        // Concrete paths for the prerenderer. Sourced from a constant rather than
-        // the listening API so a Worker outage can't fail an unrelated deploy.
-        getStaticPaths: () => listeningYears().map((y) => `/listening/${y}`),
+        path: 'listening/:a',
+        lazy: () => import('./pages/ListeningPeriod'),
+        getStaticPaths: () => [
+          '/listening/all',
+          ...listeningYears().map((y) => `/listening/${y}`),
+        ],
+      },
+      {
+        path: 'listening/:a/:b',
+        lazy: () => import('./pages/ListeningPeriod'),
+        getStaticPaths: () =>
+          allPeriods()
+            .filter((p) => p.kind === 'm' || p.kind === 'w')
+            .map((p) => urlFor(p.kind, p.key)),
       },
       { path: 'reading', lazy: () => import('./pages/Reading') },
       { path: 'watching', lazy: () => import('./pages/Watching') },
