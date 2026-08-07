@@ -46,6 +46,7 @@ export const ORIGIN_OVERRIDES: Record<
   { country: string | null; kind: string | null; formedYear: number | null }
 > = {
   Turnstile: { country: 'US', kind: 'Group', formedYear: 2010 },
+  "Her's": { country: 'GB', kind: 'Group', formedYear: 2015 },
 }
 
 export interface ArtistOrigin {
