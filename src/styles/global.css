@@ -4391,3 +4391,36 @@ a.guestbook-name:hover {
   font-family: var(--font-sans);
   font-size: var(--step--1);
 }
+
+/* Cross-links between a year's numbers and its narrative, and between years. */
+.wrapped-link {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  margin: -1.5rem 0 2.5rem;
+}
+.wrapped-years {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 2.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.wrapped-year-link {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wrapped-year-link:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.wrapped-year-link.active {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+  font-weight: 600;
+}

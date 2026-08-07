@@ -97,6 +97,7 @@ describe('the thin-data floor', () => {
 describe('cards', () => {
   it('leads with the totals and includes the leaderboards', () => {
     const cards = buildCards(stats())
+    expect(cards[0].kicker).toBe('I played')
     expect(cards[0].value).toBe('10,000 tracks')
     expect(cards.some((c) => c.value === 'Alpha')).toBe(true)
     expect(cards.some((c) => c.value === 'Song')).toBe(true)
@@ -112,10 +113,10 @@ describe('cards', () => {
   it('refuses to name a top genre on thin coverage', () => {
     // 30% classified is not a fact about the year, however confident the share looks.
     const cards = buildCards(stats({ genreCoverage: 30 }))
-    expect(cards.some((c) => c.kicker === 'Your sound')).toBe(false)
+    expect(cards.some((c) => c.kicker === 'My sound')).toBe(false)
 
     const good = buildCards(stats({ genreCoverage: 90 }))
-    expect(good.some((c) => c.kicker === 'Your sound')).toBe(true)
+    expect(good.some((c) => c.kicker === 'My sound')).toBe(true)
   })
 
   it('refuses to talk about geography on thin coverage', () => {
@@ -204,6 +205,17 @@ describe('traits', () => {
       }),
     )
     expect(t.map((x) => x.label)).toContain('Hardcore devotee')
+  })
+
+  it('speaks in the first person, never addressing the reader', () => {
+    // This is Cailin's data on Cailin's site; "you played" would imply otherwise.
+    const all = [
+      ...deriveTraits(stats({ lateNightShare: 25, weekendShare: 45 })).flatMap((t) => [t.label, t.detail]),
+      ...buildCards(stats()).flatMap((c) => [c.kicker, c.value, c.detail ?? '']),
+    ]
+    for (const text of all) {
+      expect(text, text).not.toMatch(/\byou(r|rs)?\b/i)
+    }
   })
 
   it('always cites a number in its evidence', () => {

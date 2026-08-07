@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { buildCards, deriveTraits, MIN_SCROBBLES, type Card, type Trait } from '../lib/wrapped'
 import { currentKey, withinArchive } from '../lib/periodKeys'
+import { listeningYears } from '../lib/listeningYears'
 import { fetchPeriod, PeriodNotReady, type PeriodStats } from '../lib/listening'
 
 type State =
@@ -64,6 +65,8 @@ export function Component() {
           </h1>
         </header>
 
+        <WrappedYearNav year={year} />
+
         {state.status === 'loading' && <p className="muted-note">Putting it together…</p>}
 
         {state.status === 'pending' && (
@@ -79,6 +82,33 @@ export function Component() {
         {state.status === 'ready' && <WrappedBody stats={state.stats} year={year} />}
       </section>
     </>
+  )
+}
+
+/**
+ * Every year with an archive, as its own wrapped.
+ *
+ * Sourced from the same constant `listeningYears()` the prerenderer uses, so the
+ * list can't drift from the pages that actually exist, and it needs no API call.
+ */
+function WrappedYearNav({ year }: { year: string }) {
+  const years = listeningYears()
+  if (years.length < 2) return null
+  return (
+    <nav className="wrapped-years" aria-label="Year">
+      {years.map((y) => {
+        const key = String(y)
+        return key === year ? (
+          <span key={y} className="wrapped-year-link active" aria-current="page">
+            {y}
+          </span>
+        ) : (
+          <Link key={y} className="wrapped-year-link" to={`/listening/wrapped/${y}`}>
+            {y}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
 
@@ -128,7 +158,7 @@ function Traits({ traits }: { traits: Trait[] }) {
   return (
     <section className="wrapped-traits" aria-labelledby="traits-heading">
       <h2 id="traits-heading" className="eyebrow">
-        What that makes you
+        What that makes me
       </h2>
       <ul className="trait-list">
         {traits.map((t) => (

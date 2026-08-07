@@ -323,7 +323,11 @@ movement, the hour/weekday/168-cell "when I listen" charts, discovery, streaks, 
 listens and milestones. Design notes and the full stat catalog live in
 [`plan-listening-stats.md`](plan-listening-stats.md).
 
-`/listening/wrapped` (and `/listening/wrapped/<year>`) tells the same year as a narrative. It reads
+`/listening/wrapped` (and `/listening/wrapped/<year>`) tells the same year as a narrative. Every
+`/listening/<year>` page links to its story, and the wrapped page carries a year switcher, so no
+year is reachable only by typing a URL. The copy is **first person** — this is Cailin's listening on
+Cailin's site, so it says "I played", never "you played"; a test asserts no card or trait addresses
+the reader. It reads
 the same blob and adds no endpoint — everything is derived in `src/lib/wrapped.ts`, which is where
 the thresholds live. It deliberately stays quiet rather than guessing: cards and traits are dropped
 when their inputs are missing, genre and geography claims need >=50% coverage, and a period under

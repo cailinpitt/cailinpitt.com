@@ -11,12 +11,16 @@
 //    what survives. A half-enriched archive gets fewer cards, not wrong ones.
 //  - **Thresholds are stated, not hidden.** They're arbitrary by nature, so they
 //    live in one block with the reasoning attached.
+//
+// Voice: first person. This is Cailin's listening on Cailin's site, so the copy
+// says "I played", never "you played" — addressing the reader would imply the
+// numbers were theirs. Matches /listening ("What I have on").
 
 import type { PeriodStats } from './listening'
 
 /**
  * A period needs at least this many scrobbles before any of it means anything.
- * Below this, "your top artist" is noise and the traits are coin flips.
+ * Below this, "my top artist" is noise and the traits are coin flips.
  */
 export const MIN_SCROBBLES = 50
 
@@ -68,48 +72,48 @@ export function deriveTraits(stats: PeriodStats): Trait[] {
   if (discovery >= T.explorerDiscovery && concentration <= T.loyalistConcentration) {
     out.push({
       label: 'Explorer',
-      detail: `${discovery}% of the tracks you played were ones you'd never heard before.`,
+      detail: `${discovery}% of the tracks I played were ones I'd never heard before.`,
     })
   } else if (discovery <= T.loyalistDiscovery || concentration >= T.loyalistConcentration) {
     out.push({
       label: 'Loyalist',
-      detail: `${concentration}% of your plays came from just ten artists.`,
+      detail: `${concentration}% of my plays came from just ten artists.`,
     })
   }
 
   if (stats.loyalty?.repeatRate >= T.repeaterRate) {
     out.push({
       label: 'Repeater',
-      detail: `You played the average track ${stats.loyalty.repeatRate} times.`,
+      detail: `I played the average track ${stats.loyalty.repeatRate} times.`,
     })
   }
 
   if (stats.lateNightShare >= T.nightOwl) {
     out.push({
       label: 'Night owl',
-      detail: `${stats.lateNightShare}% of your listening happened after midnight.`,
+      detail: `${stats.lateNightShare}% of my listening happened after midnight.`,
     })
   } else if (stats.peakHour !== null && stats.peakHour <= T.earlyPeak) {
     out.push({
       label: 'Early riser',
-      detail: `Your busiest hour was ${formatHour(stats.peakHour)}.`,
+      detail: `My busiest hour was ${formatHour(stats.peakHour)}.`,
     })
   } else if (stats.peakHour !== null && stats.peakHour >= T.latePeak) {
     out.push({
       label: 'Evening listener',
-      detail: `Your busiest hour was ${formatHour(stats.peakHour)}.`,
+      detail: `My busiest hour was ${formatHour(stats.peakHour)}.`,
     })
   }
 
   if (stats.weekendShare >= T.weekendHeavy) {
     out.push({
       label: 'Weekend listener',
-      detail: `${stats.weekendShare}% of your plays landed on Saturday or Sunday.`,
+      detail: `${stats.weekendShare}% of my plays landed on Saturday or Sunday.`,
     })
   } else if (stats.weekendShare > 0 && stats.weekendShare <= T.weekdayHeavy) {
     out.push({
       label: 'Weekday listener',
-      detail: `Only ${stats.weekendShare}% of your plays were at the weekend.`,
+      detail: `Only ${stats.weekendShare}% of my plays were at the weekend.`,
     })
   }
 
@@ -118,12 +122,12 @@ export function deriveTraits(stats: PeriodStats): Trait[] {
     if (stats.genreDiversity >= T.eclecticGenres) {
       out.push({
         label: 'Eclectic',
-        detail: `Your listening spread across the equivalent of ${stats.genreDiversity} genres.`,
+        detail: `My listening spread across the equivalent of ${stats.genreDiversity} genres.`,
       })
     } else if (stats.genres[0] && stats.genres[0].share >= 40) {
       out.push({
         label: `${titleCase(stats.genres[0].name)} devotee`,
-        detail: `${stats.genres[0].share}% of your classified plays were ${stats.genres[0].name}.`,
+        detail: `${stats.genres[0].share}% of my classified plays were ${stats.genres[0].name}.`,
       })
     }
   }
@@ -131,14 +135,14 @@ export function deriveTraits(stats: PeriodStats): Trait[] {
   if (stats.albumListens?.length >= 3) {
     out.push({
       label: 'Album listener',
-      detail: `You played ${stats.albumListens.length} records front to back.`,
+      detail: `I played ${stats.albumListens.length} records front to back.`,
     })
   }
 
   if (stats.streaks?.longest >= T.notableStreak) {
     out.push({
       label: 'Consistent',
-      detail: `You listened every day for ${stats.streaks.longest} days straight.`,
+      detail: `I listened every day for ${stats.streaks.longest} days straight.`,
     })
   }
 
@@ -187,7 +191,7 @@ export function buildCards(stats: PeriodStats): Card[] {
   if (stats.scrobbles < MIN_SCROBBLES) return cards
 
   cards.push({
-    kicker: 'You played',
+    kicker: 'I played',
     value: `${num(stats.scrobbles)} tracks`,
     detail: `across ${num(stats.artists)} artists and ${num(stats.albums)} albums.`,
   })
@@ -207,7 +211,7 @@ export function buildCards(stats: PeriodStats): Card[] {
   const topArtist = stats.top?.artists?.[0]
   if (topArtist) {
     cards.push({
-      kicker: 'Your top artist',
+      kicker: 'Most played artist',
       value: topArtist.name,
       detail: `${num(topArtist.count)} plays — ${topArtist.share}% of everything.`,
     })
@@ -235,15 +239,15 @@ export function buildCards(stats: PeriodStats): Card[] {
   // genre drawn from 12% coverage is not a fact about the year.
   if (stats.genreCoverage >= 50 && stats.genres?.[0]) {
     cards.push({
-      kicker: 'Your sound',
+      kicker: 'My sound',
       value: titleCase(stats.genres[0].name),
-      detail: `${stats.genres[0].share}% of your classified plays.`,
+      detail: `${stats.genres[0].share}% of my classified plays.`,
     })
   }
 
   if (stats.discovery?.artists > 0) {
     cards.push({
-      kicker: 'New to you',
+      kicker: 'New to me',
       value: `${num(stats.discovery.artists)} artists`,
       detail: `heard for the first time.`,
     })
@@ -251,9 +255,9 @@ export function buildCards(stats: PeriodStats): Card[] {
 
   if (stats.peakHour !== null && stats.peakWeekday !== null) {
     cards.push({
-      kicker: 'Your moment',
+      kicker: 'My moment',
       value: `${WEEKDAYS[stats.peakWeekday]}s at ${formatHour(stats.peakHour)}`,
-      detail: 'when you listened most.',
+      detail: 'when I listened most.',
     })
   }
 
@@ -268,7 +272,7 @@ export function buildCards(stats: PeriodStats): Card[] {
 
   if (stats.busiestDay) {
     cards.push({
-      kicker: 'Your biggest day',
+      kicker: 'My biggest day',
       value: num(stats.busiestDay.count),
       detail: `tracks on ${stats.busiestDay.date}.`,
     })

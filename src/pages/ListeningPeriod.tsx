@@ -104,6 +104,12 @@ export function Component() {
 
         <PeriodNav kind={period.kind} periodKey={period.key} />
 
+        {period.kind === 'y' && (
+          <p className="wrapped-link">
+            <Link to={`/listening/wrapped/${period.key}`}>Read {period.key} as a story →</Link>
+          </p>
+        )}
+
         {state.status === 'loading' && <PeriodSkeleton />}
 
         {state.status === 'pending' && (
