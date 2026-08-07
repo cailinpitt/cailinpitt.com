@@ -11,6 +11,7 @@ import {
   fetchNow,
   fetchOlderDays,
   fetchOnThisDay,
+  fetchPeriod,
   formatDayLabel,
   formatNumber,
   formatRelative,
@@ -23,6 +24,7 @@ import {
   type NowState,
   type OnThisDay,
   type OnThisDayYear,
+  type PeriodStats,
   type Scrobble,
   type StatWindow,
   type WindowKey,
@@ -138,6 +140,8 @@ export function Component() {
             />
 
             <HeatmapSection heatmap={bundle.heatmap} />
+
+            <ThisYear />
 
             <YearLinks />
 
@@ -279,6 +283,78 @@ function OnThisDayYearBlock({ year: y }: { year: OnThisDayYear }) {
 }
 
 // ---- year links ----------------------------------------------------------
+
+/**
+ * The year so far: the headline numbers the bundle doesn't carry.
+ *
+ * Fetched separately from /listening.json rather than folded into it — the
+ * bundle is on a 60-second cache because now-playing lives in it, and a year
+ * blob changes every six hours at most. Its own request rides a much longer
+ * cache and can't slow the rest of the page down.
+ *
+ * Renders nothing at all if the year isn't built or the fetch fails: this is a
+ * summary of what's below, not load-bearing.
+ */
+function ThisYear() {
+  const [stats, setStats] = useState<PeriodStats | null>(null)
+  const year = currentKey('y')
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchPeriod('y', year, controller.signal)
+      .then(setStats)
+      .catch(() => {
+        /* silently absent */
+      })
+    return () => controller.abort()
+  }, [year])
+
+  if (!stats || stats.scrobbles === 0) return null
+
+  const hours = stats.listening?.seconds ? Math.round(stats.listening.seconds / 3600) : 0
+  // The same coverage floor the period page and wrapped use — a leading genre
+  // drawn from a tenth of the year isn't a fact about the year.
+  const genre = stats.genreCoverage >= 50 ? stats.genres?.[0] : null
+
+  return (
+    <section className="this-year" aria-labelledby="this-year-heading">
+      <div className="this-year-head">
+        <h2 id="this-year-heading" className="eyebrow">
+          {year} so far
+        </h2>
+        <Link className="this-year-more" to={`/listening/${year}`}>
+          Full year →
+        </Link>
+      </div>
+      <dl className="period-tiles compact">
+        <div>
+          <dt>Scrobbles</dt>
+          <dd>{formatNumber(stats.scrobbles)}</dd>
+        </div>
+        <div>
+          <dt>Artists</dt>
+          <dd>{formatNumber(stats.artists)}</dd>
+        </div>
+        {hours > 0 && (
+          <div>
+            <dt>Hours</dt>
+            <dd>{formatNumber(hours)}</dd>
+          </div>
+        )}
+        {genre && (
+          <div>
+            <dt>Top genre</dt>
+            <dd className="this-year-genre">{genre.name}</dd>
+          </div>
+        )}
+        <div>
+          <dt>New artists</dt>
+          <dd>{formatNumber(stats.discovery?.artists ?? 0)}</dd>
+        </div>
+      </dl>
+    </section>
+  )
+}
 
 /**
  * Entry points into the period views. The current week and month lead, because

@@ -4424,3 +4424,30 @@ a.guestbook-name:hover {
   border-color: var(--fg);
   font-weight: 600;
 }
+
+/* Year-so-far summary on /listening. */
+.this-year {
+  margin-bottom: 3rem;
+}
+.this-year-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.this-year-head .eyebrow {
+  margin: 0;
+}
+.this-year-more {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.this-year .period-tiles {
+  margin-bottom: 0;
+}
+.this-year-genre {
+  /* Genre names are lowercase in the taxonomy; keep them that way. */
+  font-size: var(--step-0) !important;
+}
