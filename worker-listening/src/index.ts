@@ -11,6 +11,7 @@ import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork } from './period'
 import { summaryStatements } from './summary'
+import { enrichSome, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import {
   computeArtistDebuts,
@@ -35,6 +36,19 @@ import {
 const HEAVY_INTERVAL = 15 * 60 // 7d/30d windows + recent logs
 const HEATMAP_INTERVAL = 6 * 60 * 60 // year heatmap
 
+/**
+ * Enrichment runs on every other minute, two entities at a time.
+ *
+ * That is ~1,440 lookups a day, so the initial 4,340 artists + 8,854 albums
+ * would take about nine days from the cron alone — which is why there is a
+ * backfill script (scripts/enrich-listening.mjs) to do it in one pass. This
+ * cadence is for keeping up with new artists afterwards, a handful a day.
+ */
+const ENRICH_EVERY_MINUTES = 2
+
+/** How often the artist→genre and track→duration lookup blobs are republished. */
+const LOOKUP_INTERVAL = 24 * 60 * 60
+
 const KEY = {
   now: 'now:v1',
   stats: 'stats:v1',
@@ -44,6 +58,8 @@ const KEY = {
   totalFallback: 'meta:total:fallback',
   years: 'years:v1',
   debuts: 'debuts:v1',
+  /** When the genre/duration lookup blobs were last rebuilt. */
+  lookupsBuiltAt: 'meta:v1:built-at',
   year: (y: number) => `year:v1:${y}`,
   onThisDay: (date: string) => `onthisday:v1:${date}`,
 } as const
@@ -246,6 +262,28 @@ async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
  * they take turns rather than stacking. The legacy pair go first because
  * /listening and the homepage read them directly.
  */
+/**
+ * Enrichment: a couple of Last.fm lookups, then republish the lookup blobs on a
+ * slow cadence.
+ *
+ * The blobs are two KV writes, so they are rebuilt daily rather than whenever
+ * the underlying tables change — a period computed before the rebuild simply
+ * classifies slightly fewer artists, which self-corrects on its next build.
+ */
+async function runEnrichment(env: Env, now: number): Promise<boolean> {
+  const handled = await enrichSome(env, now)
+
+  const stamp = await env.KV.get(KEY.lookupsBuiltAt)
+  const age = now - Number(stamp ?? 0)
+  if (age >= LOOKUP_INTERVAL) {
+    const counts = await refreshLookups(env)
+    await env.KV.put(KEY.lookupsBuiltAt, String(now))
+    console.log(JSON.stringify({ level: 'info', stage: 'lookups', ...counts }))
+    return true
+  }
+  return handled > 0
+}
+
 async function tick(env: Env): Promise<void> {
   // A Last.fm hiccup during ingest must not stop the D1-derived refreshes below.
   try {
@@ -265,6 +303,17 @@ async function tick(env: Env): Promise<void> {
   if (!heat || now - heat.computedAt >= HEATMAP_INTERVAL) {
     await refreshHeatmap(env)
     return
+  }
+
+  // Enrichment before period work, and only on some ticks. Genres and durations
+  // feed the period blobs, so filling them first means fewer periods get built
+  // against a half-empty lookup and then need rebuilding.
+  if (new Date(now * 1000).getUTCMinutes() % ENRICH_EVERY_MINUTES === 0) {
+    try {
+      if (await runEnrichment(env, now)) return
+    } catch (err) {
+      console.log(JSON.stringify({ level: 'warn', stage: 'enrich', error: String(err) }))
+    }
   }
 
   await runPeriodWork(env, now)

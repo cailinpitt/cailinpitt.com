@@ -184,6 +184,26 @@ export interface PeriodStats {
     longestTitle: { track: string; artist: string } | null
   }
 
+  /**
+   * Genres (Tier B). Shares are of *classified* plays, not of all plays, so they
+   * sum to 100 regardless of how much of the archive has been enriched;
+   * `genreCoverage` is what says how much that is.
+   */
+  genres: { name: string; count: number; share: number }[]
+  newGenres: string[]
+  genreDiversity: number
+  genreSeries: { key: string; label: string; genres: Record<string, number> }[]
+  genreCoverage: number
+
+  /** Listening time (Tier C). `seconds` is extrapolated over unknown durations. */
+  listening: {
+    seconds: number
+    coverage: number
+    avgTrackSeconds: number
+    topByTime: { name: string; seconds: number }[]
+    longest: { track: string; artist: string; seconds: number } | null
+  }
+
   milestones: Milestone[]
   first: Scrobble | null
   last: Scrobble | null

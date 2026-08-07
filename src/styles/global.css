@@ -4039,3 +4039,178 @@ a.guestbook-name:hover {
 .year-nav-lead {
   font-weight: 600;
 }
+
+/* ---- genres and listening time (Tier B / C) ----------------------------- */
+
+.period-genres,
+.period-time {
+  margin-bottom: 3rem;
+}
+
+/* Single stacked bar: the whole period's genre mix in one glance. */
+.genre-bar {
+  display: flex;
+  height: 0.85rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-bottom: 1rem;
+}
+.genre-slice {
+  display: block;
+  min-width: 2px;
+}
+
+.genre-list {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.25rem 1.5rem;
+}
+.genre-list li {
+  display: grid;
+  grid-template-columns: 0.6rem 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.genre-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 999px;
+}
+.genre-share {
+  font-variant-numeric: tabular-nums;
+}
+.genre-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 3rem;
+  text-align: right;
+}
+.genre-note {
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin: 0;
+}
+
+.genre-trend {
+  margin: 1.75rem 0 0;
+}
+.genre-trend figcaption {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.genre-stack {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 6rem;
+  padding-bottom: 1.3rem;
+  overflow-x: auto;
+}
+.genre-stack-col {
+  flex: 1 1 0;
+  min-width: 0.5rem;
+  height: 100%;
+  position: relative;
+}
+/* Columns are full height and renormalized, so this reads as share, not volume. */
+.genre-stack-bars {
+  display: flex;
+  flex-direction: column-reverse;
+  height: 100%;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.genre-stack-seg {
+  display: block;
+  width: 100%;
+}
+.genre-stack-label {
+  position: absolute;
+  bottom: -1.15rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.genre-stack-col:nth-child(3n + 2) .genre-stack-label,
+.genre-stack-col:nth-child(3n + 3) .genre-stack-label {
+  display: none;
+}
+
+.time-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.time-headline strong {
+  font-size: var(--step-3);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.time-headline span {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.time-ranks h3 {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+/* The time leaderboard has no artwork, so it needs its own column template. */
+.period-time .time-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  max-width: 28rem;
+}
+.period-time .time-list li {
+  display: grid;
+  grid-template-columns: 1.4rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.period-time .time-list li:last-child {
+  border-bottom: 0;
+}
+.period-time .rank-n {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.period-time .rank-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--step--1);
+}
+.period-time .rank-count {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

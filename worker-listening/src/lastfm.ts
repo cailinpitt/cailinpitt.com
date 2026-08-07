@@ -119,3 +119,93 @@ export async function fetchRecentTracks(opts: FetchRecentOptions): Promise<Recen
     totalPages: Number(rt?.['@attr']?.totalPages ?? 1),
   }
 }
+
+// ---- enrichment ----------------------------------------------------------
+
+export interface RawTag {
+  name: string
+  count: number
+}
+
+async function call<T>(params: Record<string, string>, apiKey: string): Promise<T> {
+  const query = new URLSearchParams({ ...params, api_key: apiKey, format: 'json' })
+  const res = await fetch(`${ENDPOINT}?${query.toString()}`, {
+    headers: { 'user-agent': 'cailinpitt.com-listening/1.0 (+https://cailinpitt.com)' },
+  })
+  if (!res.ok) throw new Error(`Last.fm HTTP ${res.status}`)
+  return (await res.json()) as T
+}
+
+/**
+ * An artist's genre tags.
+ *
+ * Returns [] rather than throwing when Last.fm simply has nothing for an artist
+ * — a real outcome for obscure names, and one the caller records so it isn't
+ * retried every tick forever. Error 6 is "not found", which is not a failure.
+ */
+export async function fetchArtistTags(
+  apiKey: string,
+  artist: string,
+): Promise<{ tags: RawTag[]; found: boolean }> {
+  const data = await call<{
+    toptags?: { tag?: { name: string; count: number }[] | { name: string; count: number } }
+    error?: number
+  }>({ method: 'artist.gettoptags', artist }, apiKey)
+
+  if (data.error === 6) return { tags: [], found: false }
+  if (data.error) throw new Error(`Last.fm error ${data.error}`)
+
+  const raw = data.toptags?.tag
+  const list = raw ? (Array.isArray(raw) ? raw : [raw]) : []
+  return {
+    tags: list.map((t) => ({ name: String(t.name), count: Number(t.count) || 0 })),
+    found: true,
+  }
+}
+
+export interface AlbumInfo {
+  tags: RawTag[]
+  /** Every track on the record, with its duration in seconds where known. */
+  tracks: { name: string; duration: number | null }[]
+  found: boolean
+}
+
+/**
+ * One album's tags and the durations of every track on it.
+ *
+ * This is the reason durations are affordable: 8,854 album calls cover all
+ * 18,114 distinct tracks, where track.getInfo would need one call each.
+ */
+export async function fetchAlbumInfo(
+  apiKey: string,
+  artist: string,
+  album: string,
+): Promise<AlbumInfo> {
+  const data = await call<{
+    album?: {
+      tags?: { tag?: { name: string; count?: number }[] | { name: string; count?: number } }
+      tracks?: { track?: { name: string; duration?: string | number }[] | { name: string; duration?: string | number } }
+    }
+    error?: number
+  }>({ method: 'album.getinfo', artist, album }, apiKey)
+
+  if (data.error === 6) return { tags: [], tracks: [], found: false }
+  if (data.error) throw new Error(`Last.fm error ${data.error}`)
+
+  const a = data.album
+  const rawTags = a?.tags?.tag
+  const tagList = rawTags ? (Array.isArray(rawTags) ? rawTags : [rawTags]) : []
+  const rawTracks = a?.tracks?.track
+  const trackList = rawTracks ? (Array.isArray(rawTracks) ? rawTracks : [rawTracks]) : []
+
+  return {
+    // Album tags carry no weight, so they all count equally.
+    tags: tagList.map((t) => ({ name: String(t.name), count: Number(t.count) || 1 })),
+    tracks: trackList.map((t) => {
+      const seconds = Number(t.duration)
+      // 0 is Last.fm's "unknown", not a zero-length track.
+      return { name: String(t.name), duration: Number.isFinite(seconds) && seconds > 0 ? seconds : null }
+    }),
+    found: true,
+  }
+}

@@ -133,6 +133,28 @@ export interface PeriodStats {
     longestTitle: { track: string; artist: string } | null
   }
 
+  /** Tier B. Empty until enrichment has run. */
+  genres: { name: string; count: number; share: number }[]
+  /** Genres whose first-ever play in the archive falls in this period. */
+  newGenres: string[]
+  /** Inverse-Simpson over genres: how many genres it "felt like". */
+  genreDiversity: number
+  /** Share by genre per series bucket, for the stacked trend. */
+  genreSeries: { key: string; label: string; genres: Record<string, number> }[]
+  /** Share of scrobbles whose artist has a known genre. */
+  genreCoverage: number
+
+  /** Tier C. Zeroed until durations have been enriched. */
+  listening: {
+    seconds: number
+    /** Share of scrobbles with a known duration — the rest are extrapolated. */
+    coverage: number
+    avgTrackSeconds: number
+    /** Artists ranked by time rather than play count; the two disagree usefully. */
+    topByTime: { name: string; seconds: number }[]
+    longest: { track: string; artist: string; seconds: number } | null
+  }
+
   milestones: Milestone[]
   first: Scrobble | null
   last: Scrobble | null
@@ -256,10 +278,30 @@ export interface AggregateInput {
   /** Total scrobbles strictly before the period, for milestone numbering. */
   playsBefore: number
   previous?: PeriodStats | null
+  /** artist → canonical genre. Absent before enrichment has run. */
+  genreOf?: Record<string, string>
+  /** `${track}${SEP}${artist}` → seconds. Absent before enrichment has run. */
+  durationOf?: Record<string, number>
 }
+
+/** How many genres a period reports. Beyond this the tail is all sub-1% slices. */
+const GENRE_N = 12
+
+/** Genres tracked per bucket in the stacked trend. */
+const GENRE_SERIES_N = 6
 
 export function aggregate(input: AggregateInput): PeriodStats {
   const { rows, period, offset, now, playsBefore, previous } = input
+  const genreOf = input.genreOf ?? {}
+  const durationOf = input.durationOf ?? {}
+
+  const genreCounts = new Map<string, number>()
+  const genreByBucket = new Map<string, Map<string, number>>()
+  const secondsByArtist = new Map<string, number>()
+  let knownGenrePlays = 0
+  let knownDurationPlays = 0
+  let knownSeconds = 0
+  let longestTrack: { track: string; artist: string; seconds: number } | null = null
 
   const artists = new Map<string, Counter<{ name: string }>>()
   const albums = new Map<string, Counter<{ album: string; artist: string }>>()
@@ -348,6 +390,29 @@ export function aggregate(input: AggregateInput): PeriodStats {
     if (COLLAB.test(r.artist)) curios.collab++
     if (!longestTitle || r.track.length > longestTitle.track.length) {
       longestTitle = { track: r.track, artist: r.artist }
+    }
+
+    const genre = genreOf[r.artist]
+    if (genre) {
+      knownGenrePlays++
+      genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1)
+      // Bucket the same way buildSeries does, so the stacked trend lines up with
+      // the plain one above it.
+      const bucket =
+        period.kind === 'y' ? day.slice(0, 7) : period.kind === 'all' ? day.slice(0, 4) : day
+      let inBucket = genreByBucket.get(bucket)
+      if (!inBucket) genreByBucket.set(bucket, (inBucket = new Map()))
+      inBucket.set(genre, (inBucket.get(genre) ?? 0) + 1)
+    }
+
+    const seconds = durationOf[`${r.track}${SEP}${r.artist}`]
+    if (seconds) {
+      knownDurationPlays++
+      knownSeconds += seconds
+      secondsByArtist.set(r.artist, (secondsByArtist.get(r.artist) ?? 0) + seconds)
+      if (!longestTrack || seconds > longestTrack.seconds) {
+        longestTrack = { track: r.track, artist: r.artist, seconds }
+      }
     }
 
     const n = playsBefore + i + 1
@@ -457,6 +522,49 @@ export function aggregate(input: AggregateInput): PeriodStats {
   const perDay = Math.round((scrobbles / elapsedDays) * 10) / 10
   const pct = (a: number, b: number) => (b ? Math.round(((a - b) / b) * 1000) / 10 : null)
 
+  // Genre shares are of *classified* plays, not of all plays. Dividing by the
+  // total would make every share shrink as coverage fell, so an unenriched
+  // archive would read as "20% hardcore, 80% nothing" instead of "hardcore leads,
+  // based on the 40% we can classify". `genreCoverage` reports the caveat.
+  const genres = [...genreCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, GENRE_N)
+    .map(([name, count]) => ({
+      name,
+      count,
+      share: knownGenrePlays ? Math.round((count / knownGenrePlays) * 1000) / 10 : 0,
+    }))
+
+  let genreSimpson = 0
+  for (const count of genreCounts.values()) {
+    genreSimpson += (count / (knownGenrePlays || 1)) ** 2
+  }
+
+  const topGenreNames = new Set(genres.slice(0, GENRE_SERIES_N).map((g) => g.name))
+  const genreSeries = buildSeries(period, byDay, now, offset).map((point) => {
+    const inBucket = genreByBucket.get(point.key)
+    const shares: Record<string, number> = {}
+    if (inBucket) {
+      let bucketTotal = 0
+      for (const count of inBucket.values()) bucketTotal += count
+      for (const [name, count] of inBucket) {
+        if (!topGenreNames.has(name)) continue
+        shares[name] = bucketTotal ? Math.round((count / bucketTotal) * 1000) / 10 : 0
+      }
+    }
+    return { key: point.key, label: point.label, genres: shares }
+  })
+
+  // Extrapolate over unknown durations rather than under-reporting: with 80%
+  // coverage, scaling by 1/0.8 is a far better estimate of hours listened than
+  // silently dropping a fifth of the plays. `coverage` says how much is measured.
+  const durationCoverage = scrobbles ? knownDurationPlays / scrobbles : 0
+  const estimatedSeconds = durationCoverage > 0 ? Math.round(knownSeconds / durationCoverage) : 0
+  const topByTime = [...secondsByArtist.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10)
+    .map(([name, seconds]) => ({ name, seconds }))
+
   return {
     kind: period.kind,
     key: period.key,
@@ -509,6 +617,26 @@ export function aggregate(input: AggregateInput): PeriodStats {
     },
 
     curios: { ...curios, longestTitle },
+
+    genres,
+    // Genres present now but absent from the previous period. Not "first ever" —
+    // that needs an archive-wide first-play per genre, which belongs with the
+    // discovery rollups rather than here.
+    newGenres: previous
+      ? genres.map((g) => g.name).filter((name) => !previous.genres?.some((p) => p.name === name))
+      : [],
+    genreDiversity: genreSimpson ? Math.round(1 / genreSimpson) : 0,
+    genreSeries,
+    genreCoverage: scrobbles ? Math.round((knownGenrePlays / scrobbles) * 1000) / 10 : 0,
+
+    listening: {
+      seconds: estimatedSeconds,
+      coverage: Math.round(durationCoverage * 1000) / 10,
+      avgTrackSeconds: knownDurationPlays ? Math.round(knownSeconds / knownDurationPlays) : 0,
+      topByTime,
+      longest: longestTrack,
+    },
+
     milestones,
     first: rows[0] ?? null,
     last: rows[rows.length - 1] ?? null,

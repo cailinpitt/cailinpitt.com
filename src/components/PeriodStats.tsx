@@ -300,6 +300,169 @@ export function TrendSection({ series, label }: { series: SeriesPoint[]; label: 
   )
 }
 
+// ---- genres --------------------------------------------------------------
+
+/**
+ * Colors for the genre stack. Deliberately a fixed cycle keyed by rank rather
+ * than by name: a genre keeps its color down the page, and no genre needs an
+ * entry in a palette that would go stale the moment the taxonomy changes.
+ */
+const GENRE_HUES = [18, 200, 280, 140, 45, 330]
+
+const genreColor = (i: number, alpha = 1) =>
+  `hsl(${GENRE_HUES[i % GENRE_HUES.length]} 55% 55% / ${alpha})`
+
+export function GenreSection({ stats }: { stats: PeriodStats }) {
+  // Absent entirely on blobs built before enrichment ran.
+  if (!stats.genres?.length) return null
+  const top = stats.genres
+
+  return (
+    <section className="period-genres" aria-labelledby="genres-heading">
+      <h2 id="genres-heading" className="eyebrow">
+        Genres
+      </h2>
+
+      <div className="genre-bar" role="img" aria-label="Share of listening by genre">
+        {top.map((g, i) => (
+          <span
+            key={g.name}
+            className="genre-slice"
+            style={{ width: `${g.share}%`, background: genreColor(i) }}
+            title={`${g.name}: ${g.share}%`}
+          />
+        ))}
+      </div>
+
+      <ol className="genre-list">
+        {top.map((g, i) => (
+          <li key={g.name}>
+            <span className="genre-dot" style={{ background: genreColor(i) }} aria-hidden="true" />
+            <span className="genre-name">{g.name}</span>
+            <span className="genre-share">{g.share}%</span>
+            <span className="genre-count">{formatNumber(g.count)}</span>
+          </li>
+        ))}
+      </ol>
+
+      <p className="genre-note">
+        {stats.genreDiversity > 0 && <>Felt like {stats.genreDiversity} genres. </>}
+        {stats.newGenres.length > 0 && (
+          <>New this {kindWord(stats.kind)}: {stats.newGenres.join(', ')}. </>
+        )}
+        {/* The caveat belongs next to the numbers, not in a footnote nobody reads. */}
+        Based on the {stats.genreCoverage}% of plays whose artist has a known genre.
+      </p>
+
+      {stats.genreSeries?.length > 1 && <GenreTrend stats={stats} top={top} />}
+    </section>
+  )
+}
+
+/** Stacked share-over-time. The one chart that shows taste actually moving. */
+function GenreTrend({ stats, top }: { stats: PeriodStats; top: PeriodStats['genres'] }) {
+  const names = top.slice(0, 6).map((g) => g.name)
+  const index = new Map(names.map((n, i) => [n, i]))
+
+  return (
+    <figure className="genre-trend">
+      <figcaption>Share over time</figcaption>
+      <div className="genre-stack" role="img" aria-label="Genre share over time">
+        {stats.genreSeries.map((point) => {
+          const entries = names
+            .map((name) => ({ name, share: point.genres[name] ?? 0 }))
+            .filter((e) => e.share > 0)
+          const total = entries.reduce((sum, e) => sum + e.share, 0)
+          return (
+            <div className="genre-stack-col" key={point.key} title={point.label}>
+              <div className="genre-stack-bars">
+                {/* Renormalize to the bucket's classified plays so every column
+                    is full height and the comparison is share, not volume. */}
+                {entries.map((e) => (
+                  <span
+                    key={e.name}
+                    className="genre-stack-seg"
+                    style={{
+                      height: `${total ? (e.share / total) * 100 : 0}%`,
+                      background: genreColor(index.get(e.name) ?? 0),
+                    }}
+                    title={`${point.label} — ${e.name}: ${Math.round(e.share)}%`}
+                  />
+                ))}
+              </div>
+              <span className="genre-stack-label">{point.label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </figure>
+  )
+}
+
+// ---- listening time ------------------------------------------------------
+
+/** 9420 → "2h 37m". Hours and minutes only; seconds are noise at these totals. */
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.round((seconds % 3600) / 60)
+  if (!hours) return `${minutes}m`
+  return minutes ? `${formatNumber(hours)}h ${minutes}m` : `${formatNumber(hours)}h`
+}
+
+const mmss = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, '0')}`
+
+export function TimeSection({ stats }: { stats: PeriodStats }) {
+  const t = stats.listening
+  if (!t || !t.seconds) return null
+  const days = t.seconds / 86_400
+
+  return (
+    <section className="period-time" aria-labelledby="time-heading">
+      <h2 id="time-heading" className="eyebrow">
+        Time spent
+      </h2>
+
+      <div className="time-headline">
+        <strong>{formatDuration(t.seconds)}</strong>
+        <span>
+          {days >= 1 ? `${days.toFixed(1)} days of music` : 'of music'} · average track{' '}
+          {mmss(t.avgTrackSeconds)}
+        </span>
+      </div>
+
+      {t.topByTime.length > 0 && (
+        <div className="time-ranks">
+          <h3>Most hours</h3>
+          <ol className="rank-list time-list">
+            {t.topByTime.map((a, i) => (
+              <li key={a.name}>
+                <span className="rank-n">{i + 1}</span>
+                <span className="rank-name">{a.name}</span>
+                <span className="rank-count">{formatDuration(a.seconds)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <p className="genre-note">
+        {t.longest && (
+          <>
+            Longest track played: {t.longest.track} by {t.longest.artist} ({mmss(t.longest.seconds)}).{' '}
+          </>
+        )}
+        {/* Extrapolated, and says so — with partial coverage the alternative is
+            silently under-reporting by however much is missing. */}
+        {t.coverage < 99
+          ? `Estimated from the ${t.coverage}% of plays with a known length.`
+          : 'Measured from track lengths.'}
+      </p>
+    </section>
+  )
+}
+
 // ---- discovery -----------------------------------------------------------
 
 export function DiscoverySection({ stats }: { stats: PeriodStats }) {

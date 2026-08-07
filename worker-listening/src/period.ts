@@ -20,8 +20,20 @@ import {
   fetchPeriodRows,
   playsBefore,
 } from './summary'
+import { readLookups } from './enrich'
 
-export const PREFIX = 'p:v1:'
+/**
+ * Blob namespace. **Bump this whenever a stored period's shape or meaning
+ * changes** — a new stat, or an edit to the genre taxonomy in genres.ts.
+ *
+ * Completed periods are frozen forever, so there is no other way to make them
+ * pick up a change. Bumping orphans the old keys (they cost storage only, and
+ * KV storage is not a metered constraint here) and the backfill walk rebuilds
+ * every period under the new prefix within a day.
+ *
+ * v2: genres (Tier B) and listening time (Tier C).
+ */
+export const PREFIX = 'p:v2:'
 
 export const blobKey = (kind: PeriodKind, key: string) => `${PREFIX}${kind}:${key}`
 
@@ -85,16 +97,26 @@ export async function computePeriod(
   if (period.kind === 'all') return computeAllTime(env, now)
 
   const prev = previousPeriod(period, offset)
-  const [rows, discovery, before, previous] = await Promise.all([
+  const [rows, discovery, before, previous, lookups] = await Promise.all([
     fetchPeriodRows(env.DB, period.start, period.end),
     discoveryIn(env.DB, period.start, period.end),
     playsBefore(env.DB, dayKey(period.start, offset)),
     prev
       ? env.KV.get<PeriodStats>(blobKey(prev.kind, prev.key), 'json')
       : Promise.resolve(null),
+    readLookups(env),
   ])
 
-  const stats = aggregate({ rows, period, offset, now, playsBefore: before, previous })
+  const stats = aggregate({
+    rows,
+    period,
+    offset,
+    now,
+    playsBefore: before,
+    previous,
+    genreOf: lookups.genres,
+    durationOf: lookups.durations,
+  })
 
   stats.discovery = {
     ...discovery,
@@ -144,6 +166,33 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
   const binges: PeriodStats['binges'] = []
   const albumListens: PeriodStats['albumListens'] = []
   const milestones: PeriodStats['milestones'] = []
+  // Genres and time fold out of the year blobs the same way the clock does.
+  const genreCounts = new Map<string, number>()
+  let genrePlays = 0
+  let totalSeconds = 0
+  let coverageWeighted = 0
+  let longestTrack: PeriodStats['listening']['longest'] = null
+  const secondsByArtist = new Map<string, number>()
+
+  for (const b of blobs) {
+    for (const g of b.genres ?? []) {
+      // The blob stores shares of classified plays; recover the play count so
+      // years with different coverage combine honestly.
+      const count = g.count ?? 0
+      genreCounts.set(g.name, (genreCounts.get(g.name) ?? 0) + count)
+      genrePlays += count
+    }
+    if (b.listening) {
+      totalSeconds += b.listening.seconds
+      coverageWeighted += (b.listening.coverage / 100) * b.scrobbles
+      if (b.listening.longest && (!longestTrack || b.listening.longest.seconds > longestTrack.seconds)) {
+        longestTrack = b.listening.longest
+      }
+      for (const a of b.listening.topByTime ?? []) {
+        secondsByArtist.set(a.name, (secondsByArtist.get(a.name) ?? 0) + a.seconds)
+      }
+    }
+  }
 
   for (const b of blobs) {
     for (let i = 0; i < 24; i++) clock[i] += b.clock[i] ?? 0
@@ -236,6 +285,33 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
     },
 
     curios: { remix: 0, live: 0, acoustic: 0, collab: 0, longestTitle: null },
+
+    genres: [...genreCounts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 12)
+      .map(([name, count]) => ({
+        name,
+        count,
+        share: genrePlays ? Math.round((count / genrePlays) * 1000) / 10 : 0,
+      })),
+    // "New" has no meaning across all of time, and a per-year stack would just be
+    // the year blobs again.
+    newGenres: [],
+    genreDiversity: 0,
+    genreSeries: [],
+    genreCoverage: scrobbles ? Math.round((genrePlays / scrobbles) * 1000) / 10 : 0,
+
+    listening: {
+      seconds: totalSeconds,
+      coverage: scrobbles ? Math.round((coverageWeighted / scrobbles) * 1000) / 10 : 0,
+      avgTrackSeconds: scrobbles ? Math.round(totalSeconds / scrobbles) : 0,
+      topByTime: [...secondsByArtist.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 10)
+        .map(([name, seconds]) => ({ name, seconds })),
+      longest: longestTrack,
+    },
+
     milestones: milestones.sort((a, b) => a.n - b.n),
     first: null,
     last: null,

@@ -10,10 +10,12 @@ import { Seo } from '../components/Seo'
 import {
   BookendsSection,
   DiscoverySection,
+  GenreSection,
   HabitsSection,
   Headline,
   Leaderboards,
   MilestonesSection,
+  TimeSection,
   TrendSection,
   WhenSection,
   ZoomOut,
@@ -123,6 +125,8 @@ export function Component() {
             <Headline stats={state.stats} />
             <TrendSection series={state.stats.series} label={trendLabel(period.kind)} />
             <Leaderboards stats={state.stats} />
+            <GenreSection stats={state.stats} />
+            <TimeSection stats={state.stats} />
             <WhenSection stats={state.stats} />
             <DiscoverySection stats={state.stats} />
             <HabitsSection stats={state.stats} />

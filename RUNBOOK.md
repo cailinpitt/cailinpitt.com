@@ -170,6 +170,40 @@ curl -s https://listening.cailinpitt.com/periods.json | python3 -m json.tool | h
 
 Until a period is built, its page says so rather than erroring.
 
+### Genres and listening time (Tier B / C)
+
+Same rule as before: tables first, then deploy.
+
+```bash
+cd worker-listening
+wrangler d1 execute cailinpitt-listening --remote --file=schema-v3.sql
+npm run deploy
+```
+
+The cron enriches two entities a minute, which would take about nine days to
+work through 4,340 artists and 8,854 albums. The backfill does it in roughly an
+hour instead:
+
+```bash
+node scripts/enrich-listening.mjs            # ~1 hour, resumable
+cd worker-listening
+wrangler d1 execute cailinpitt-listening --remote --file=../scripts/enrich.sql
+```
+
+Durations come from `album.getInfo`, which returns the whole tracklist per call —
+8,854 album lookups cover all 18,114 tracks.
+
+Genre stats read an artist→genre blob rebuilt daily, so after loading the SQL the
+genres appear on periods built from the next rebuild onward. To force it sooner,
+delete `meta:v1:built-at` from KV.
+
+**Editing the taxonomy** in `worker-listening/src/genres.ts` is expected — it
+encodes taste. Raw tags are stored, not canonical genres, so a change needs no
+re-fetching. But completed period blobs are frozen, so after editing it you must
+bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy; the backfill
+walk then rebuilds every period under the new prefix within a day. Old keys are
+orphaned and only cost KV storage, which isn't a metered constraint here.
+
 ### Baking periods into the build
 
 Completed periods are fetched at build time into `public/listening-data/` so they
