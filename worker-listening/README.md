@@ -20,6 +20,11 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 - `GET /periods.json` — which period blobs exist, for the navigator and the build-time bake
 - `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
 
+`/<year>` and `/<year>.json` are aliases for `/p/y/<year>.json` — the published
+`curl listening.cailinpitt.com/2025` address kept working, but it is no longer a
+second implementation. The year-in-review that used to be computed from D1 on
+request is gone.
+
 ### Period blobs are read-only
 
 `/p/…` never computes anything. A period that the cron hasn't built yet returns

@@ -334,7 +334,10 @@ when their inputs are missing, genre and geography claims need >=50% coverage, a
 50 scrobbles gets no story at all.
 
 **The rule that makes it affordable: aggregation happens on the cron, never on a request.** A
-period endpoint reads a finished KV blob or 404s. Nothing a visitor can do causes a D1 scan, so
+period endpoint reads a finished KV blob or 404s. `/<year>` and `/<year>.json` on the Worker are
+aliases for the same blob, so `curl listening.cailinpitt.com/2025` shows the same year the site
+does, genres and listening time included — there is no longer a second year implementation
+aggregating from D1 per cache miss. Nothing a visitor can do causes a D1 scan, so
 cost per visitor is flat no matter how much traffic arrives.
 
 - Week keys are **ISO weeks** (Monday-start, `2026-W32`). The `/listening` heatmap is Sunday-start

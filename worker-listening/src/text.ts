@@ -6,7 +6,7 @@
 
 import type { Bundle, StatWindow } from './stats'
 import type { Scrobble } from './lastfm'
-import type { YearReview } from './year'
+import type { PeriodStats } from './aggregate'
 
 const WIDTH = 72
 const BAR_WIDTH = 26
@@ -249,9 +249,18 @@ function monthBars(months: number[], c: Ink): string[] {
   return ['', `  ${c.accentDim('by month')}`, ...rows]
 }
 
-export function renderYear(y: YearReview, color: boolean): string {
+/**
+ * A year for the terminal, rendered from the same period blob the web page uses.
+ *
+ * Previously this took a `YearReview` computed from D1 on request. That was a
+ * ~18,700-row aggregation on the read path — the one thing the period
+ * architecture exists to prevent — and it meant `curl` saw a different, poorer
+ * year than the site. One shape now feeds both, so genres and listening time
+ * come along for free and the two can't drift.
+ */
+export function renderYear(y: PeriodStats, color: boolean): string {
   const c = ink(color)
-  const title = `cailinpitt.com/listening · ${y.year}${y.complete ? '' : ' (in progress)'}`
+  const title = `cailinpitt.com/listening · ${y.key}${y.complete ? '' : ' (in progress)'}`
   const inner = WIDTH - 4
 
   const headline = [
@@ -262,8 +271,9 @@ export function renderYear(y: YearReview, color: boolean): string {
   ]
   const second = [
     `${num(y.activeDays)} days with music`,
-    `${num(y.newArtists)} new artists`,
+    `${num(y.discovery?.artists ?? 0)} new artists`,
   ]
+  if (y.listening?.seconds) second.push(`${num(Math.round(y.listening.seconds / 3600))}h listened`)
 
   const lines = [
     '',
@@ -280,35 +290,64 @@ export function renderYear(y: YearReview, color: boolean): string {
       `  ${c.dim(`busiest day ${y.busiestDay.date} — ${num(y.busiestDay.count)} scrobbles`)}`,
     )
   }
-  if (y.firstScrobble) {
+  if (y.peakHour !== null && y.peakHour !== undefined) {
+    lines.push(`  ${c.dim(`peak hour ${hourLabel(y.peakHour)} · ${y.lateNightShare}% after midnight`)}`)
+  }
+  if (y.first) {
     lines.push('', `  ${c.accentDim('first play of the year')}`)
-    lines.push(`    ${c.bold(clip(y.firstScrobble.track, WIDTH - 6))}`)
-    lines.push(`    ${c.dim(clip(y.firstScrobble.artist, WIDTH - 6))}`)
+    lines.push(`    ${c.bold(clip(y.first.track, WIDTH - 6))}`)
+    lines.push(`    ${c.dim(clip(y.first.artist, WIDTH - 6))}`)
   }
 
-  lines.push(...topArtists({ topArtists: y.topArtists } as StatWindow, c))
+  lines.push(
+    ...topList(
+      'top artists',
+      y.top.artists.map((a) => ({ primary: a.name, secondary: '', count: a.count })),
+      c,
+    ),
+  )
   lines.push(
     ...topList(
       'top albums',
-      y.topAlbums.map((a) => ({ primary: a.album, secondary: a.artist, count: a.count })),
+      y.top.albums.map((a) => ({ primary: a.album, secondary: a.artist, count: a.count })),
       c,
     ),
   )
   lines.push(
     ...topList(
       'top tracks',
-      y.topTracks.map((t) => ({ primary: t.track, secondary: t.artist, count: t.count })),
+      y.top.tracks.map((t) => ({ primary: t.track, secondary: t.artist, count: t.count })),
       c,
     ),
   )
-  lines.push(...monthBars(y.months, c))
+
+  // Only worth printing when enough of the year is actually classified — the
+  // same threshold the web page uses.
+  if (y.genreCoverage >= 50 && y.genres?.length) {
+    lines.push(
+      ...topList(
+        'top genres',
+        y.genres.slice(0, 5).map((g) => ({ primary: g.name, secondary: '', count: g.count })),
+        c,
+      ),
+    )
+  }
+
+  lines.push(...monthBars(y.series.map((p) => p.count), c))
   lines.push(
     '',
     `  ${c.dim('─'.repeat(WIDTH - 4))}`,
-    `  ${c.faint('?T for no color · /' + y.year + '.json for JSON · / for the current view')}`,
+    `  ${c.faint('?T for no color · /' + y.key + '.json for JSON · / for the current view')}`,
     '',
   )
   return lines.join('\n')
+}
+
+/** 17 → "5pm". Matches the web page's phrasing. */
+function hourLabel(hour: number): string {
+  if (hour === 0) return 'midnight'
+  if (hour === 12) return 'noon'
+  return hour < 12 ? `${hour}am` : `${hour - 12}pm`
 }
 
 // ---- entry point ---------------------------------------------------------

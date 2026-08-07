@@ -13,14 +13,7 @@ import { blobKey, computePeriod, listPeriods, pickWork, YEARS_TOUCHED_KEY } from
 import { summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
-import {
-  computeArtistDebuts,
-  computeOnThisDay,
-  computeYear,
-  listYears,
-  type OnThisDay,
-  type YearReview,
-} from './year'
+import { computeOnThisDay, listYears, type OnThisDay } from './year'
 import {
   computeHeatmap,
   computeStats,
@@ -57,21 +50,12 @@ const KEY = {
   // totalFallback(). Written at most once per TTL, and only when now:v1 is absent.
   totalFallback: 'meta:total:fallback',
   years: 'years:v1',
-  debuts: 'debuts:v1',
   /** When the genre/duration lookup blobs were last rebuilt. */
   lookupsBuiltAt: 'meta:v1:built-at',
-  year: (y: number) => `year:v1:${y}`,
   onThisDay: (date: string) => `onthisday:v1:${date}`,
 } as const
 
 const DAY = 86_400
-
-/**
- * A finished year can never change, so its blob is written once and kept. Only
- * the year in progress is recomputed, twice a day — an annual summary has no
- * business moving faster than that, and each pass is ~60k D1 row reads.
- */
-const YEAR_INTERVAL = 12 * 60 * 60
 
 /**
  * Edge TTL for the archival endpoints. These are derived from data that changes
@@ -490,39 +474,6 @@ async function getYears(env: Env): Promise<number[]> {
   return years
 }
 
-/**
- * Artist debut counts per year — one ~100k-row scan that serves every year, so it
- * is cached for a day rather than recomputed inside each year's build. Without
- * this, computing all six years would repeat the same scan six times.
- */
-async function getDebuts(env: Env): Promise<Record<string, number>> {
-  const cached = await readJSON<Record<string, number>>(env, KEY.debuts)
-  if (cached) return cached
-  const debuts = await computeArtistDebuts(env.DB, tzOffset(env))
-  await env.KV.put(KEY.debuts, JSON.stringify(debuts), { expirationTtl: DAY })
-  return debuts
-}
-
-interface YearBlob {
-  review: YearReview
-  computedAt: number
-}
-
-async function getYear(env: Env, year: number): Promise<YearReview | null> {
-  const years = await getYears(env)
-  if (!years.includes(year)) return null
-
-  const now = Math.floor(Date.now() / 1000)
-  const blob = await readJSON<YearBlob>(env, KEY.year(year))
-  // `complete` years are immutable — never recompute one, whatever its age.
-  if (blob && (blob.review.complete || now - blob.computedAt < YEAR_INTERVAL)) return blob.review
-
-  const debuts = await getDebuts(env)
-  const review = await computeYear(env.DB, tzOffset(env), year, now, debuts[String(year)] ?? 0)
-  await env.KV.put(KEY.year(year), JSON.stringify({ review, computedAt: now } satisfies YearBlob))
-  return review
-}
-
 /** Seconds until the next local midnight — how long an "on this day" blob stays valid. */
 function untilLocalMidnight(now: number, offset: number): number {
   const elapsed = (now + offset) % 86_400
@@ -680,15 +631,22 @@ export default {
             },
           })
         }
-        const review = await getYear(env, year)
-        if (!review) {
-          return new Response(`No scrobbles for ${year}\n`, { status: 404, headers: cors })
-        }
-        return cached(url, asJson ? 'year-json' : 'year-text', ctx, cors, async () =>
-          asJson
-            ? json(review, ARCHIVE_EDGE_TTL)
-            : textResponse(renderYear(review, !url.searchParams.has('T'))),
-        )
+        // Straight off the period blob — no computation, same as /p/y/<year>.
+        // These URLs stay because `curl listening.cailinpitt.com/2025` is a
+        // published address, but they are now an alias, not a second code path.
+        return cached(url, asJson ? 'year-json' : 'year-text', ctx, cors, async () => {
+          const review = await readJSON<PeriodStats>(env, blobKey('y', String(year)))
+          if (!review) {
+            return new Response(`${year} is not built yet\n`, {
+              status: 404,
+              headers: { 'cache-control': 'public, max-age=60' },
+            })
+          }
+          const ttl = review.complete ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL * 5
+          return asJson
+            ? json(review, ttl)
+            : textResponse(renderYear(review, !url.searchParams.has('T')))
+        })
       }
       // ---- period blobs ---------------------------------------------------
       //
