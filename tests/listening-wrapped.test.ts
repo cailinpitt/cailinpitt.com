@@ -64,7 +64,7 @@ function stats(over: Partial<PeriodStats> = {}): PeriodStats {
     milestones: [],
     first: null,
     last: null,
-    discovery: { artists: 200, albums: 300, tracks: 900, rate: 30, newArtists: [] },
+    discovery: { artists: 200, albums: 300, tracks: 900, rate: 30, newArtists: [], returning: [] },
     abandoned: [],
     delta: { scrobbles: null, artists: null, tracks: null, perDay: null },
     ...over,

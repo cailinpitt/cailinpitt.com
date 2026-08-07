@@ -177,6 +177,8 @@ export interface PeriodStats {
     tracks: number
     rate: number
     newArtists: { name: string; uts: number }[]
+    /** Artists back after a year or more away. Filled by the caller. */
+    returning: { name: string; gapDays: number }[]
   }
   /** Top artists of the previous period with no plays at all in this one. */
   abandoned: string[]
@@ -711,7 +713,7 @@ export function aggregate(input: AggregateInput): PeriodStats {
     last: rows[rows.length - 1] ?? null,
 
     // Overwritten by the caller, which has the summary tables to hand.
-    discovery: { artists: 0, albums: 0, tracks: 0, rate: 0, newArtists: [] },
+    discovery: { artists: 0, albums: 0, tracks: 0, rate: 0, newArtists: [], returning: [] },
     abandoned: previous
       ? previous.top.artists.slice(0, 10).map((a) => a.name).filter((name) => !artists.has(name))
       : [],

@@ -561,7 +561,7 @@ export function TimeSection({ stats }: { stats: PeriodStats }) {
 
 export function DiscoverySection({ stats }: { stats: PeriodStats }) {
   const d = stats.discovery
-  if (!d.artists && !d.tracks && !stats.abandoned.length) return null
+  if (!d.artists && !d.tracks && !stats.abandoned.length && !d.returning?.length) return null
   return (
     <section className="period-discovery" aria-labelledby="discovery-heading">
       <h2 id="discovery-heading" className="eyebrow">
@@ -597,6 +597,20 @@ export function DiscoverySection({ stats }: { stats: PeriodStats }) {
         </div>
       )}
 
+      {d.returning?.length > 0 && (
+        <div className="discovery-list">
+          <h3>Back after a while</h3>
+          <p className="muted-note">Artists returning after a year or more away.</p>
+          <ul className="chip-list">
+            {d.returning.map((a) => (
+              <li key={a.name}>
+                {a.name} <span className="chip-note">{formatGap(a.gapDays)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {stats.abandoned.length > 0 && (
         <div className="discovery-list">
           <h3>Dropped off</h3>
@@ -610,6 +624,14 @@ export function DiscoverySection({ stats }: { stats: PeriodStats }) {
       )}
     </section>
   )
+}
+
+/** 400 → "1y 1m". Gaps are long by definition, so days alone read poorly. */
+function formatGap(days: number): string {
+  const years = Math.floor(days / 365)
+  const months = Math.round((days % 365) / 30)
+  if (!years) return `${months || 1}mo`
+  return months ? `${years}y ${months}mo` : `${years}y`
 }
 
 const kindWord = (kind: PeriodStats['kind']) =>

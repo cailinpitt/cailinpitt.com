@@ -19,6 +19,7 @@ import {
   discoveryIn,
   fetchPeriodRows,
   playsBefore,
+  returnsIn,
 } from './summary'
 import { readLookups } from './enrich'
 
@@ -113,9 +114,10 @@ export async function computePeriod(
   if (period.kind === 'all') return computeAllTime(env, now)
 
   const prev = previousPeriod(period, offset)
-  const [rows, discovery, before, previous, lookups] = await Promise.all([
+  const [rows, discovery, returning, before, previous, lookups] = await Promise.all([
     fetchPeriodRows(env.DB, period.start, period.end),
     discoveryIn(env.DB, period.start, period.end),
+    returnsIn(env.DB, period.start, period.end),
     playsBefore(env.DB, dayKey(period.start, offset)),
     prev
       ? env.KV.get<PeriodStats>(blobKey(prev.kind, prev.key), 'json')
@@ -137,6 +139,7 @@ export async function computePeriod(
 
   stats.discovery = {
     ...discovery,
+    returning,
     // Share of the period's distinct tracks that were first-ever plays.
     rate: stats.tracks ? Math.round((discovery.tracks / stats.tracks) * 1000) / 10 : 0,
   }
@@ -382,6 +385,8 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
       tracks: totals.tracks,
       rate: 100,
       newArtists: [],
+      // "Returning" has no meaning across all of time — everything is a first play.
+      returning: [],
     },
     abandoned: [],
     delta: { scrobbles: null, artists: null, tracks: null, perDay: null },

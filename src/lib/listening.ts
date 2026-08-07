@@ -226,6 +226,8 @@ export interface PeriodStats {
     tracks: number
     rate: number
     newArtists: { name: string; uts: number }[]
+    /** Artists back after a year or more away. */
+    returning: { name: string; gapDays: number }[]
   }
   abandoned: string[]
   delta: {

@@ -10,7 +10,7 @@ import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork, YEARS_TOUCHED_KEY } from './period'
-import { summaryStatements } from './summary'
+import { priorLastPlay, summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import { computeOnThisDay, listYears, type OnThisDay } from './year'
@@ -173,7 +173,10 @@ async function ingest(env: Env): Promise<void> {
     const written = await env.DB.batch<Scrobble>(insertStatements(env, fresh))
     // Layer 1 moves only for rows that were genuinely new (see summaryStatements).
     const inserted = written.flatMap((r) => r.results ?? [])
-    const summary = summaryStatements(env, inserted)
+    // Read the prior last_uts before the upsert overwrites it — that gap is the
+    // only thing that makes a "returning artist" detectable.
+    const prior = await priorLastPlay(env.DB, inserted.map((r) => r.artist))
+    const summary = summaryStatements(env, inserted, prior)
     if (summary.length) await env.DB.batch(summary)
   }
 

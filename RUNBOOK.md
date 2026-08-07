@@ -253,6 +253,24 @@ built, so a correction needs no re-fetch — redeploy, then delete
 band but a *birth* year for a person, so counting both would file Charli xcx
 under the 1990s. Solo artists are excluded from the era chart by design.
 
+### Returning artists
+
+```bash
+cd worker-listening
+wrangler d1 execute cailinpitt-listening --remote --file=schema-v5.sql
+wrangler d1 execute cailinpitt-listening --remote --file=backfill-returns.sql
+npm run deploy
+```
+
+The backfill is one `LAG()` pass over the archive (~101k rows, once). After it,
+ingest maintains the table incrementally: each tick reads the artists' previous
+`last_uts` *before* the summary upsert overwrites it, which is the only moment
+the gap is visible.
+
+The 365-day threshold lives in two places that must agree — `RETURN_GAP` in
+`src/summary.ts` and the `WHERE` clause in `backfill-returns.sql`. Changing one
+means re-running the backfill.
+
 ### Baking periods into the build
 
 Completed periods are fetched at build time into `public/listening-data/` so they

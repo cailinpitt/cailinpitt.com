@@ -12,6 +12,14 @@ const SEP = '\u001f'
 /** 100 bound parameters per query is a hard D1 limit. */
 const MAX_BINDS = 100
 
+/**
+ * A silence this long before a play makes it a "return".
+ *
+ * Must match the threshold in backfill-returns.sql, or history and live ingest
+ * disagree about what counts.
+ */
+export const RETURN_GAP = 365 * 86_400
+
 export interface DiscoveryCounts {
   artists: number
   albums: number
@@ -29,7 +37,12 @@ export interface DiscoveryCounts {
  * The caller therefore feeds this the RETURNING output of the archive insert,
  * never the raw Last.fm page.
  */
-export function summaryStatements(env: Env, inserted: Scrobble[]): D1PreparedStatement[] {
+export function summaryStatements(
+  env: Env,
+  inserted: Scrobble[],
+  /** Each artist's last play *before* this batch — see priorLastPlay(). */
+  prior: Map<string, number> = new Map(),
+): D1PreparedStatement[] {
   if (!inserted.length) return []
   const offset = Number(env.TZ_OFFSET_SECONDS) || 0
 
@@ -119,7 +132,57 @@ export function summaryStatements(env: Env, inserted: Scrobble[]): D1PreparedSta
       ).bind(day, plays),
     )
   }
+
+  // Returns are detected against the last_uts captured *before* the artists
+  // upsert above — once it lands, the gap is gone.
+  for (const [artist, v] of artists) {
+    const before = prior.get(artist)
+    if (before === undefined || v.first - before < RETURN_GAP) continue
+    out.push(
+      env.DB.prepare(
+        'INSERT OR REPLACE INTO returns (artist, uts, gap_days) VALUES (?1, ?2, ?3)',
+      ).bind(artist, v.first, Math.floor((v.first - before) / 86_400)),
+    )
+  }
   return out
+}
+
+/**
+ * Each artist's current `last_uts`, for the artists in a batch.
+ *
+ * Must be read before summaryStatements() runs: its UPSERT overwrites the very
+ * value that makes a gap detectable. A normal tick has 0–3 artists, so this is a
+ * handful of primary-key seeks.
+ */
+export async function priorLastPlay(
+  db: D1Database,
+  artists: string[],
+): Promise<Map<string, number>> {
+  const unique = [...new Set(artists)].slice(0, MAX_BINDS)
+  if (!unique.length) return new Map()
+  const placeholders = unique.map((_, i) => `?${i + 1}`).join(', ')
+  const rows = await db
+    .prepare(`SELECT artist, last_uts FROM artists WHERE artist IN (${placeholders})`)
+    .bind(...unique)
+    .all<{ artist: string; last_uts: number }>()
+  return new Map(rows.results.map((r) => [r.artist, r.last_uts]))
+}
+
+/** Returns that landed inside a period, longest silence first. */
+export async function returnsIn(
+  db: D1Database,
+  start: number,
+  end: number,
+  limit = 10,
+): Promise<{ name: string; gapDays: number }[]> {
+  const rows = await db
+    .prepare(
+      `SELECT artist, gap_days FROM returns WHERE uts >= ?1 AND uts < ?2
+        ORDER BY gap_days DESC LIMIT ?3`,
+    )
+    .bind(start, end, limit)
+    .all<{ artist: string; gap_days: number }>()
+  return rows.results.map((r) => ({ name: r.artist, gapDays: r.gap_days }))
 }
 
 /**
