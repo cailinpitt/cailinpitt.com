@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Periods complete on their own schedule — a week every Monday, a month every
+  # month — and scripts/bake-listening.mjs only captures the ones that exist at
+  # build time. Without this, the newest completed periods stay unbaked until
+  # some unrelated commit happens to trigger a deploy, so the optimisation
+  # decays quietly the longer you go without pushing.
+  #
+  # Mondays, shortly after the week rolls over in US Central.
+  schedule:
+    - cron: '30 9 * * 1'
   # Called by ingest-photos.yml after it commits a photo from the phone. That
   # push is made with the default GITHUB_TOKEN, and GitHub deliberately does not
   # let such a push trigger `on: push` — it's the loop guard. So the ingest
