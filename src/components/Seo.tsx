@@ -80,6 +80,12 @@ export function Seo({
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
   const src = image ?? ogCardPath(path)
   const img = src.startsWith('http') ? src : `${SITE_URL}${src}`
+  // Our own cards are 1200x630 whether this page generated one or is reusing
+  // another page's, so the dimensions follow the *image*, not whether it was
+  // supplied. A page passing a photograph declares nothing, since it isn't.
+  const isOgCard = src.startsWith('/og/') || src.startsWith(`${SITE_URL}/og/`)
+  // Whether *this page* gets a card rendered for it. A page reusing another's
+  // has nothing to hint about, so the build-time hint below is suppressed.
   const generated = !image
 
   return (
@@ -103,8 +109,8 @@ export function Seo({
       <meta property="og:url" content={url} />
       <meta property="og:image" content={img} />
       <meta property="og:image:alt" content={imageAlt ?? fullTitle} />
-      {generated && <meta property="og:image:width" content="1200" />}
-      {generated && <meta property="og:image:height" content="630" />}
+      {isOgCard && <meta property="og:image:width" content="1200" />}
+      {isOgCard && <meta property="og:image:height" content="630" />}
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

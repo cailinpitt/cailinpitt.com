@@ -10,7 +10,12 @@ import { Seo } from '../components/Seo'
 import { buildCards, deriveTraits, MIN_SCROBBLES, type Card, type Trait } from '../lib/wrapped'
 import { currentKey, withinArchive } from '../lib/periodKeys'
 import { listeningYears } from '../lib/listeningYears'
-import { fetchPeriod, PeriodNotReady, type PeriodStats } from '../lib/listening'
+import {
+  fetchPeriod,
+  LISTENING_OG_CARD,
+  PeriodNotReady,
+  type PeriodStats,
+} from '../lib/listening'
 
 type State =
   | { status: 'loading' }
@@ -53,6 +58,8 @@ export function Component() {
         title={`Listening · ${year} wrapped`}
         description={`Cailin Pitt's ${year} in music — top artists, tracks and genres, listening time, and the patterns behind them.`}
         path={`/listening/wrapped/${year}`}
+        image={LISTENING_OG_CARD}
+        imageAlt="Listening — cailinpitt.com"
       />
       <section className="listening wrapped">
         <header className="wrapped-header">

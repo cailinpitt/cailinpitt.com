@@ -21,6 +21,10 @@
 // and doesn't want a generated one. That is how the ~500 photo permalinks stay
 // cheap — each of those shares the photograph itself, so rendering a card apiece
 // would be most of a deploy for no gain.
+//
+// The ~360 /listening period and wrapped pages do the same, pointing at
+// /og/listening.jpg. At ~1 card/second they were adding ~6 minutes to every
+// build for URLs nobody shares. See LISTENING_OG_CARD in src/lib/listening.ts.
 
 import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'

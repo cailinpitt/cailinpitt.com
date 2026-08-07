@@ -31,7 +31,12 @@ import {
   urlFor,
   type PeriodKind,
 } from '../lib/periodKeys'
-import { fetchPeriod, PeriodNotReady, type PeriodStats } from '../lib/listening'
+import {
+  fetchPeriod,
+  LISTENING_OG_CARD,
+  PeriodNotReady,
+  type PeriodStats,
+} from '../lib/listening'
 
 const GRANULARITIES: { kind: PeriodKind; label: string }[] = [
   { kind: 'w', label: 'Week' },
@@ -94,6 +99,8 @@ export function Component() {
         title={`Listening · ${label}`}
         description={`What Cailin Pitt listened to in ${label} — top artists, albums and tracks, listening patterns and discoveries.`}
         path={urlFor(period.kind, period.key)}
+        image={LISTENING_OG_CARD}
+        imageAlt="Listening — cailinpitt.com"
       />
       <section className="listening period-page">
         <header className="listening-header">
