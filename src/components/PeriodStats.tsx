@@ -122,7 +122,7 @@ function TopAlbumList({ albums }: { albums: RankedAlbum[] }) {
   return (
     <div className="top-col">
       <h3>Albums</h3>
-      <ol className="rank-list">
+      <ol className="rank-list has-links">
         {albums.map((a, i) => (
           <li key={`${a.album}-${a.artist}`}>
             <span className="rank-n">{i + 1}</span>
@@ -148,7 +148,7 @@ function TopTrackList({ tracks }: { tracks: RankedTrack[] }) {
   return (
     <div className="top-col">
       <h3>Tracks</h3>
-      <ol className="rank-list">
+      <ol className="rank-list has-links">
         {tracks.map((t, i) => (
           <li key={`${t.track}-${t.artist}`}>
             <span className="rank-n">{i + 1}</span>

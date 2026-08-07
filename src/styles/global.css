@@ -1986,6 +1986,15 @@ h3 {
   content: ' · ';
   color: var(--muted);
 }
+/* Ride the bar's trailing edge rather than trailing the text.
+   On the homepage the bar is shrink-to-fit, so there is no free space and this
+   changes nothing; on /now the bars are full width, and without it the icons
+   crowd the artist name with the rest of the bar left empty. */
+.now-bar-links {
+  margin-left: auto;
+  padding-left: 1rem;
+}
+
 .now-bar-main {
   display: inline-flex;
   align-items: center;
@@ -3665,11 +3674,18 @@ a.guestbook-name:hover {
 }
 .period-tops .rank-list li {
   display: grid;
+  /* rank · art · title block · count. Artists stop here. */
   grid-template-columns: 1.4rem 2rem 1fr auto;
   align-items: center;
   gap: 0.6rem;
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--rule);
+}
+/* Albums and tracks add a fifth child, the Spotify/Apple links. Without a column
+   for it the grid wrapped it onto an implicit second row, left-aligned under the
+   rank number — which is exactly what it looked like. */
+.period-tops .rank-list.has-links li {
+  grid-template-columns: 1.4rem 2rem 1fr auto auto;
 }
 .period-tops .rank-list li:last-child {
   border-bottom: 0;
