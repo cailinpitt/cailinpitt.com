@@ -502,8 +502,11 @@ export function aggregate(input: AggregateInput): PeriodStats {
       else movingTracks.set(mk, { track: r.track, artist: r.artist, count: 1 })
     }
 
+    // Scrobble 1 is a milestone like any other — it is simply the first one, and
+    // treating it as such means it folds into all-time with the rest rather than
+    // needing a field of its own.
     const n = playsBefore + i + 1
-    if (n % MILESTONE_STEP === 0) {
+    if (n === 1 || n % MILESTONE_STEP === 0) {
       milestones.push({ n, uts: r.uts, track: r.track, artist: r.artist })
     }
 

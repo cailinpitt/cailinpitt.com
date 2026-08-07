@@ -811,7 +811,23 @@ export function MilestonesSection({ stats }: { stats: PeriodStats }) {
         <ul className="habit-notes">
           {milestones.map((m) => (
             <li key={m.n}>
-              Scrobble <strong>{formatNumber(m.n)}</strong> was {m.track} by {m.artist}.
+              {/* Scrobble 1 is a milestone in the data, but "Scrobble 1 was…"
+                  reads like a stub. It gets the sentence it deserves. */}
+              {m.n === 1 ? (
+                <>
+                  The <strong>very first scrobble</strong>, on{' '}
+                  {new Date(m.uts * 1000).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                  , was {m.track} by {m.artist}.
+                </>
+              ) : (
+                <>
+                  Scrobble <strong>{formatNumber(m.n)}</strong> was {m.track} by {m.artist}.
+                </>
+              )}
             </li>
           ))}
         </ul>

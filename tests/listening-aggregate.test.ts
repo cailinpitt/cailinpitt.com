@@ -219,6 +219,22 @@ describe('milestones', () => {
   it('reports none when the period crosses no milestone', () => {
     expect(run([scrobble('2026-08-03T09:00:00', 'A', 'Alpha')], 10).milestones).toHaveLength(0)
   })
+
+  it('treats the very first scrobble as milestone 1', () => {
+    // Only the period that actually contains the archive's opening play.
+    const first = run(
+      [
+        scrobble('2026-08-03T09:00:00', 'Opener', 'Alpha'),
+        scrobble('2026-08-03T09:05:00', 'Second', 'Alpha'),
+      ],
+      0,
+    )
+    expect(first.milestones).toHaveLength(1)
+    expect(first.milestones[0]).toMatchObject({ n: 1, track: 'Opener' })
+
+    // Any later period starts past it and reports nothing.
+    expect(run([scrobble('2026-08-03T09:00:00', 'A', 'Alpha')], 500).milestones).toHaveLength(0)
+  })
 })
 
 describe('comparison against the previous period', () => {
