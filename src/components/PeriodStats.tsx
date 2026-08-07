@@ -557,6 +557,85 @@ export function TimeSection({ stats }: { stats: PeriodStats }) {
   )
 }
 
+// ---- listened while moving -----------------------------------------------
+
+/** Activity kinds, in the words the moving page uses. */
+const KIND_LABELS: Record<string, string> = {
+  ride: 'riding',
+  ebike: 'e-biking',
+  lift: 'lifting',
+  walk: 'walking',
+  run: 'running',
+  yoga: 'yoga',
+  climb: 'climbing',
+  other: 'other',
+}
+
+const kindLabel = (kind: string) => KIND_LABELS[kind] ?? kind
+
+/**
+ * The crossover: scrobbles whose timestamp falls inside a logged activity.
+ *
+ * Absent on blobs built before this existed, and empty whenever the moving
+ * Worker had nothing to say — including when it couldn't be reached. Both read
+ * the same way here, which is the point: there is simply nothing to show.
+ */
+export function MovingSection({ stats }: { stats: PeriodStats }) {
+  const m = stats.moving
+  if (!m?.plays) return null
+
+  return (
+    <section className="period-moving" aria-labelledby="moving-heading">
+      <h2 id="moving-heading" className="eyebrow">
+        While moving
+      </h2>
+
+      <p className="moving-lede">
+        <strong>{formatNumber(m.plays)}</strong> plays landed inside{' '}
+        <strong>{formatNumber(m.activities)}</strong> logged{' '}
+        {m.activities === 1 ? 'activity' : 'activities'} — {m.share}% of everything played.
+      </p>
+
+      {m.byKind.length > 0 && (
+        <ul className="chip-list">
+          {m.byKind.map((k) => (
+            <li key={k.kind}>
+              {kindLabel(k.kind)} <span className="chip-note">{formatNumber(k.count)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="moving-cols">
+        {m.topArtists.length > 0 && (
+          <div className="discovery-list">
+            <h3>Soundtrack</h3>
+            <ul className="chip-list">
+              {m.topArtists.map((a) => (
+                <li key={a.name}>
+                  {a.name} <span className="chip-note">{formatNumber(a.count)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {m.topTracks.length > 0 && (
+          <div className="discovery-list">
+            <h3>On repeat mid-activity</h3>
+            <ul className="chip-list">
+              {m.topTracks.map((t) => (
+                <li key={`${t.track}-${t.artist}`}>
+                  {t.track} <span className="chip-note">{t.artist}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
 // ---- discovery -----------------------------------------------------------
 
 export function DiscoverySection({ stats }: { stats: PeriodStats }) {

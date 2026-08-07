@@ -26,7 +26,10 @@
     // or 127.0.0.1 port is additionally allowed in code, so local dev needs no
     // entry here regardless of which port Vite grabs. The first entry is the
     // fallback sent to origins that don't match.
-    "ALLOWED_ORIGIN": "https://cailinpitt.com"
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Where to read activity windows for the "listened while moving" section.
+    // Unset it to turn the crossover off; period builds carry on without it.
+    "MOVING_API": "https://moving.cailinpitt.com"
   },
 
   // Bindings. Fill in the ids after creating the resources (see README):

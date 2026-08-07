@@ -4455,3 +4455,24 @@ a.guestbook-name:hover {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- listened while moving (Tier F) ------------------------------------- */
+
+.period-moving {
+  margin-bottom: 3rem;
+}
+.moving-lede {
+  font-size: var(--step--1);
+  color: var(--muted);
+  margin: 0 0 1rem;
+}
+.moving-lede strong {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.moving-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}

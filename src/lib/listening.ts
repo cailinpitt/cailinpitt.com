@@ -229,6 +229,16 @@ export interface PeriodStats {
     longest: { track: string; artist: string; seconds: number } | null
   }
 
+  /** What was playing during a logged activity (Tier F). */
+  moving: {
+    plays: number
+    share: number
+    activities: number
+    byKind: { kind: string; count: number }[]
+    topArtists: { name: string; count: number }[]
+    topTracks: { track: string; artist: string; count: number }[]
+  }
+
   milestones: Milestone[]
   first: Scrobble | null
   last: Scrobble | null

@@ -15,6 +15,7 @@ import {
   Headline,
   Leaderboards,
   MilestonesSection,
+  MovingSection,
   OriginSection,
   TimeSection,
   TrendSection,
@@ -136,6 +137,7 @@ export function Component() {
             <TimeSection stats={state.stats} />
             <OriginSection stats={state.stats} />
             <WhenSection stats={state.stats} />
+            <MovingSection stats={state.stats} />
             <DiscoverySection stats={state.stats} />
             <HabitsSection stats={state.stats} />
             <BookendsSection stats={state.stats} />

@@ -166,6 +166,21 @@ export interface PeriodStats {
     longest: { track: string; artist: string; seconds: number } | null
   }
 
+  /**
+   * Tier F: what was playing during a logged activity. Empty when the moving
+   * Worker has nothing for the period, or couldn't be reached.
+   */
+  moving: {
+    plays: number
+    /** Share of the period's scrobbles that happened mid-activity. */
+    share: number
+    activities: number
+    /** Plays by activity kind — ride, lift, run… */
+    byKind: { kind: string; count: number }[]
+    topArtists: { name: string; count: number }[]
+    topTracks: { track: string; artist: string; count: number }[]
+  }
+
   milestones: Milestone[]
   first: Scrobble | null
   last: Scrobble | null
@@ -297,6 +312,8 @@ export interface AggregateInput {
   durationOf?: Record<string, number>
   /** artist → {c: country, k: kind, y: year formed}. Absent before enrichment. */
   originOf?: Record<string, { c: string | null; k: string | null; y: number | null }>
+  /** Activity windows overlapping the period. */
+  windows?: { id: string; kind: string; startedAt: number; elapsedTime: number }[]
 }
 
 /** How many genres a period reports. Beyond this the tail is all sub-1% slices. */
@@ -385,6 +402,16 @@ export function aggregate(input: AggregateInput): PeriodStats {
     runAlbum = null
   }
 
+  // Both lists are ascending, so the overlap is a merge rather than a lookup per
+  // row: `windowAt` only ever moves forward. O(rows + windows).
+  const windows = (input.windows ?? []).slice().sort((a, b) => a.startedAt - b.startedAt)
+  let windowAt = 0
+  let movingPlays = 0
+  const movingKinds = new Map<string, number>()
+  const movingArtists = new Map<string, number>()
+  const movingTracks = new Map<string, { track: string; artist: string; count: number }>()
+  const movingIds = new Set<string>()
+
   let prevUts = 0
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]
@@ -453,6 +480,26 @@ export function aggregate(input: AggregateInput): PeriodStats {
       if (!longestTrack || seconds > longestTrack.seconds) {
         longestTrack = { track: r.track, artist: r.artist, seconds }
       }
+    }
+
+    // Advance past windows that ended before this play, then test the current
+    // one. Activities don't overlap in practice, so the first hit is the answer.
+    while (
+      windowAt < windows.length &&
+      windows[windowAt].startedAt + windows[windowAt].elapsedTime <= r.uts
+    ) {
+      windowAt++
+    }
+    const w = windows[windowAt]
+    if (w && r.uts >= w.startedAt) {
+      movingPlays++
+      movingIds.add(w.id)
+      movingKinds.set(w.kind, (movingKinds.get(w.kind) ?? 0) + 1)
+      movingArtists.set(r.artist, (movingArtists.get(r.artist) ?? 0) + 1)
+      const mk = `${r.track}${SEP}${r.artist}`
+      const seen = movingTracks.get(mk)
+      if (seen) seen.count++
+      else movingTracks.set(mk, { track: r.track, artist: r.artist, count: 1 })
     }
 
     const n = playsBefore + i + 1
@@ -706,6 +753,22 @@ export function aggregate(input: AggregateInput): PeriodStats {
       avgTrackSeconds: knownDurationPlays ? Math.round(knownSeconds / knownDurationPlays) : 0,
       topByTime,
       longest: longestTrack,
+    },
+
+    moving: {
+      plays: movingPlays,
+      share: scrobbles ? Math.round((movingPlays / scrobbles) * 1000) / 10 : 0,
+      activities: movingIds.size,
+      byKind: [...movingKinds.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([kind, count]) => ({ kind, count })),
+      topArtists: [...movingArtists.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 8)
+        .map(([name, count]) => ({ name, count })),
+      topTracks: [...movingTracks.values()]
+        .sort((a, b) => b.count - a.count || a.track.localeCompare(b.track))
+        .slice(0, 5),
     },
 
     milestones,

@@ -22,6 +22,7 @@ import {
   returnsIn,
 } from './summary'
 import { readLookups } from './enrich'
+import { fetchWindows } from './moving'
 
 /**
  * Blob namespace. **Bump this whenever a stored period's shape or meaning
@@ -114,11 +115,13 @@ export async function computePeriod(
   if (period.kind === 'all') return computeAllTime(env, now)
 
   const prev = previousPeriod(period, offset)
-  const [rows, discovery, returning, before, previous, lookups] = await Promise.all([
+  const [rows, discovery, returning, before, windows, previous, lookups] = await Promise.all([
     fetchPeriodRows(env.DB, period.start, period.end),
     discoveryIn(env.DB, period.start, period.end),
     returnsIn(env.DB, period.start, period.end),
     playsBefore(env.DB, dayKey(period.start, offset)),
+    // Never rejects — see fetchWindows. A moving outage costs this section only.
+    fetchWindows(env, period.start, period.end),
     prev
       ? env.KV.get<PeriodStats>(blobKey(prev.kind, prev.key), 'json')
       : Promise.resolve(null),
@@ -135,6 +138,7 @@ export async function computePeriod(
     genreOf: lookups.genres,
     durationOf: lookups.durations,
     originOf: lookups.origins,
+    windows,
   })
 
   stats.discovery = {
@@ -198,6 +202,10 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
   let countryPlays = 0
   let groupWeighted = 0
   let soloWeighted = 0
+  let movingPlays = 0
+  let movingActivities = 0
+  const movingKinds = new Map<string, number>()
+  const movingArtists = new Map<string, number>()
 
   for (const b of blobs) {
     const o = b.origins
@@ -213,6 +221,16 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
       // year doesn't count as much as a busy one.
       groupWeighted += (o.groupShare / 100) * b.scrobbles
       soloWeighted += (o.soloShare / 100) * b.scrobbles
+    }
+    if (b.moving) {
+      movingPlays += b.moving.plays
+      movingActivities += b.moving.activities
+      for (const k of b.moving.byKind ?? []) {
+        movingKinds.set(k.kind, (movingKinds.get(k.kind) ?? 0) + k.count)
+      }
+      for (const a of b.moving.topArtists ?? []) {
+        movingArtists.set(a.name, (movingArtists.get(a.name) ?? 0) + a.count)
+      }
     }
     for (const g of b.genres ?? []) {
       // The blob stores shares of classified plays; recover the play count so
@@ -374,6 +392,20 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
         .slice(0, 10)
         .map(([name, seconds]) => ({ name, seconds })),
       longest: longestTrack,
+    },
+
+    moving: {
+      plays: movingPlays,
+      share: scrobbles ? Math.round((movingPlays / scrobbles) * 1000) / 10 : 0,
+      activities: movingActivities,
+      byKind: [...movingKinds.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([kind, count]) => ({ kind, count })),
+      topArtists: [...movingArtists.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, 8)
+        .map(([name, count]) => ({ name, count })),
+      topTracks: [],
     },
 
     milestones: milestones.sort((a, b) => a.n - b.n),

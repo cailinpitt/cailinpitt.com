@@ -347,6 +347,10 @@ cost per visitor is flat no matter how much traffic arrives.
 - `src/lib/periodKeys.ts` and `worker-listening/src/periods.ts` do the same calendar maths on both
   sides. `tests/period-keys.test.ts` pins them to each other; if they drift, pages resolve to the
   wrong data.
+- **While moving** intersects scrobble timestamps with activity windows from `worker-moving`
+  (`/windows.json`). It is the one cross-Worker dependency, and it is deliberately one-way and
+  failure-tolerant: `fetchWindows` never rejects, so an unreachable moving Worker costs that section
+  and nothing else. Set `MOVING_API` empty to turn it off.
 - Completed periods are baked into `public/listening-data/` at build time (gitignored) and served
   as static assets, which don't count against the Workers request ceiling. The client falls back to
   the API when a file is absent.

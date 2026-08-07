@@ -61,6 +61,7 @@ function stats(over: Partial<PeriodStats> = {}): PeriodStats {
       coverage: 85,
     },
     listening: { seconds: 2_721_600, coverage: 80, avgTrackSeconds: 210, topByTime: [], longest: null },
+    moving: { plays: 0, share: 0, activities: 0, byKind: [], topArtists: [], topTracks: [] },
     milestones: [],
     first: null,
     last: null,
