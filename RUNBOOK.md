@@ -241,7 +241,19 @@ from Last.fm's `artist.getInfo` MBID, which turns a fuzzy name search into an
 exact lookup; measured across the top artists here, the two methods never
 disagreed.
 
-**Reviewing the fuzzy matches.** Artists resolved by name search — the only ones
+**Reviewing the fuzzy matches.** Use `node scripts/review-origins.mjs`, which
+ranks them by play count and hides everything under 0.1% of the archive — a wrong
+country on a one-play artist moves nothing. `--verify 20` then asks MusicBrainz
+which of the top names are shared by more than one act, which is the actual
+signal. (The `score` column in the review file is not: MusicBrainz returns 100
+for any exact name match, including when several acts share the name.)
+
+```bash
+node scripts/review-origins.mjs             # ranked by plays
+node scripts/review-origins.mjs --verify 20 # + name-collision check, after the backfill
+```
+
+Original note: Artists resolved by name search — the only ones
 that can be confidently *wrong* — are listed in `scripts/musicbrainz.review.txt`.
 The failure mode is a name shared by two acts: Last.fm resolves "Turnstile" to a
 Spanish group rather than the Baltimore band. Correct any in `ORIGIN_OVERRIDES`
