@@ -247,6 +247,40 @@ export async function fetchPeriodRows(
   return rows.results
 }
 
+/**
+ * How many scrobbles fall inside each of several windows.
+ *
+ * One statement, one range per window, rather than a scan of the span they sit
+ * in — 30 activities spread over three weeks would be ~1,500 rows read as a
+ * single range, but only ~300 as thirty small ones, because each seeks straight
+ * to its own slice of idx_scrobbles_uts.
+ *
+ * UNION ALL does not guarantee order, so each branch carries its index and the
+ * result is sorted on it.
+ */
+export async function countInWindows(
+  db: D1Database,
+  windows: { from: number; to: number }[],
+): Promise<number[]> {
+  if (!windows.length) return []
+
+  const branches = windows.map((_, i) => {
+    const a = i * 2 + 1
+    return (
+      `SELECT ${i} AS i, COUNT(*) AS n FROM scrobbles INDEXED BY idx_scrobbles_uts ` +
+      `WHERE uts >= ?${a} AND uts < ?${a + 1}`
+    )
+  })
+  const rows = await db
+    .prepare(`${branches.join(' UNION ALL ')} ORDER BY i`)
+    .bind(...windows.flatMap((w) => [w.from, w.to]))
+    .all<{ i: number; n: number }>()
+
+  const out = new Array(windows.length).fill(0) as number[]
+  for (const r of rows.results) out[r.i] = r.n
+  return out
+}
+
 /** Daily play counts in a range, for streaks over periods too long to scan raw. */
 export async function fetchDays(
   db: D1Database,

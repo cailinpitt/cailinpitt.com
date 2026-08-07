@@ -360,8 +360,11 @@ cost per visitor is flat no matter how much traffic arrives.
 
 ### Music while moving
 
-`/moving` rows expand to show what was playing during that activity. It costs nothing until
-someone opens one: the row then asks the listening Worker's `/during?from=&to=`, which is an index
+`/moving` rows expand to show what was playing during that activity — and the expander only
+appears on activities that actually have music. That check is one batched `/during-counts` request
+per page of activities rather than one per row, and it doubles as the label ("♫ 12 tracks").
+
+Expanding costs nothing until someone opens a row: the row then asks the listening Worker's `/during?from=&to=`, which is an index
 range of a couple of dozen scrobbles. No precomputation, no extra KV, and a finished window caches
 at the edge for a day.
 

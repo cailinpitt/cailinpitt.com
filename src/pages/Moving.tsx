@@ -3,6 +3,7 @@ import { Seo } from '../components/Seo'
 import { CurlHint } from '../components/CurlHint'
 import { StatTile } from '../components/ListeningBits'
 import { MovingRow } from '../components/MovingBits'
+import { fetchDuringCounts } from '../lib/listening'
 import { pageSchema } from '../lib/structuredData'
 import {
   byDate,
@@ -119,6 +120,7 @@ function MovingLog({
   }, [cursor, loading])
 
   const days = useMemo(() => byDate(items), [items])
+  const trackCounts = useTrackCounts(items)
 
   if (!items.length) {
     return <p className="moving-empty">Nothing logged yet.</p>
@@ -139,7 +141,11 @@ function MovingLog({
           </div>
           <ul className="moving-list">
             {activities.map((activity) => (
-              <MovingRow key={activity.id} activity={activity} />
+              <MovingRow
+                key={activity.id}
+                activity={activity}
+                trackCount={trackCounts.get(activity.id) ?? -1}
+              />
             ))}
           </ul>
         </div>
@@ -157,6 +163,53 @@ function MovingLog({
       )}
     </section>
   )
+}
+
+/**
+ * How many tracks were playing during each loaded activity, in one request.
+ *
+ * Batched deliberately: the alternative is asking per row, which is thirty
+ * requests for a page nobody may interact with. Re-runs when the list grows,
+ * asking only about the activities it hasn't already covered.
+ *
+ * Failure is silent — the map stays empty, every row reports "unknown", and the
+ * expanders simply all show. That degrades to the previous behavior rather than
+ * to a broken page.
+ */
+function useTrackCounts(activities: Activity[]): Map<string, number> {
+  const [counts, setCounts] = useState<Map<string, number>>(new Map())
+
+  useEffect(() => {
+    const pending = activities.filter(
+      (a) => a.startedAt && a.windowSeconds && !counts.has(a.id),
+    )
+    if (!pending.length) return
+
+    const controller = new AbortController()
+    let active = true
+    // The endpoint caps the windows it will answer for in one call.
+    const batch = pending.slice(0, 40)
+    void fetchDuringCounts(
+      batch.map((a) => ({ from: a.startedAt!, to: a.startedAt! + a.windowSeconds! })),
+      controller.signal,
+    ).then((result) => {
+      if (!active || !result.length) return
+      setCounts((prev) => {
+        const next = new Map(prev)
+        batch.forEach((a, i) => next.set(a.id, result[i] ?? 0))
+        return next
+      })
+    })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+    // `counts` is read inside but must not retrigger this: it is what the effect
+    // writes. Keying on the activity list alone is what stops the loop.
+  }, [activities])
+
+  return counts
 }
 
 // ---- loading state --------------------------------------------------------

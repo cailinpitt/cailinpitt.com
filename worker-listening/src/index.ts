@@ -10,7 +10,7 @@ import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, listPeriods, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
-import { fetchPeriodRows, priorLastPlay, summaryStatements } from './summary'
+import { countInWindows, fetchPeriodRows, priorLastPlay, summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import { computeOnThisDay, listYears, type OnThisDay } from './year'
@@ -72,6 +72,12 @@ const EDGE_TTL = 60
 
 /** Widest span /during will answer. An activity is hours, not days. */
 const DURING_MAX_SPAN = 24 * 60 * 60
+
+/**
+ * Most windows /during-counts will answer for at once. Each adds two bound
+ * parameters against D1's ceiling of 100, so this is the real limit.
+ */
+const COUNTS_MAX_WINDOWS = 40
 
 /**
  * Row cap for /during, chosen so the *request* ceiling binds before the D1 one.
@@ -798,6 +804,34 @@ export default {
           const settled = snapTo < Math.floor(Date.now() / 1000) - 3600
           return json({ tracks: rows }, settled ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL)
         })
+      }
+
+      // Which of these windows have any music at all.
+      //
+      // Asked once per /moving page render so the UI can hide the expander on
+      // activities with nothing to show — thirty separate /during calls would be
+      // absurd, and a toggle that opens to "nothing" is worse than no toggle.
+      //
+      // Costs one request and ~300 rows for a page of thirty, and the window
+      // list is stable until a new activity syncs, so it caches well.
+      if (url.pathname === '/during-counts') {
+        const spec = url.searchParams.get('w') ?? ''
+        const windows: { from: number; to: number }[] = []
+        for (const pair of spec.split(',').slice(0, COUNTS_MAX_WINDOWS)) {
+          const [a, b] = pair.split('-').map(Number)
+          if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) continue
+          if (b - a > DURING_MAX_SPAN) continue
+          // Snapped like /during, for the same reason.
+          windows.push({
+            from: Math.floor(a / DURING_SNAP) * DURING_SNAP,
+            to: Math.ceil(b / DURING_SNAP) * DURING_SNAP,
+          })
+        }
+        if (!windows.length) return new Response('No windows', { status: 400, headers: cors })
+
+        return cached(url, 'during-counts', ctx, cors, async () =>
+          json({ counts: await countInWindows(env.DB, windows) }, ARCHIVE_EDGE_TTL),
+        )
       }
 
       if (url.pathname === '/days') {

@@ -20,12 +20,16 @@ const CYCLING = new Set(['ride', 'ebike'])
  * answers from an index range over a couple of dozen rows and caches a finished
  * window for a day, so a second open is free.
  */
-function Soundtrack({ activity }: { activity: Activity }) {
+function Soundtrack({ activity, count }: { activity: Activity; count: number }) {
   const [tracks, setTracks] = useState<Scrobble[] | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'failed'>('idle')
 
   // Needs both halves of the window; an older moving Worker sends neither.
-  if (!activity.startedAt || !activity.windowSeconds) return null
+  // `count` of 0 means the batched check found nothing in this window, so there
+  // is no expander to offer — a toggle that opens onto "nothing" is worse than
+  // no toggle. Counts are unknown until that fetch lands, which is why the
+  // caller passes -1 rather than 0 in the meantime.
+  if (!activity.startedAt || !activity.windowSeconds || count === 0) return null
 
   const open = tracks !== null
 
@@ -50,7 +54,11 @@ function Soundtrack({ activity }: { activity: Activity }) {
   return (
     <div className="moving-soundtrack">
       <button type="button" className="soundtrack-toggle" onClick={toggle} disabled={state === 'loading'}>
-        {state === 'loading' ? 'Loading…' : open ? 'Hide what was playing' : '♫ What was playing'}
+        {state === 'loading'
+          ? 'Loading…'
+          : open
+            ? 'Hide what was playing'
+            : `♫ ${count > 0 ? `${count} track${count === 1 ? '' : 's'}` : 'What was playing'}`}
       </button>
       {state === 'failed' && <span className="soundtrack-note">Could not load that.</span>}
       {open && tracks.length === 0 && <span className="soundtrack-note">Nothing scrobbled.</span>}
@@ -69,7 +77,14 @@ function Soundtrack({ activity }: { activity: Activity }) {
   )
 }
 
-export function MovingRow({ activity }: { activity: Activity }) {
+export function MovingRow({
+  activity,
+  trackCount = -1,
+}: {
+  activity: Activity
+  /** -1 while the batched count is still in flight; 0 hides the expander. */
+  trackCount?: number
+}) {
   const climbed = CYCLING.has(activity.kind) && activity.elevationFt >= 100
 
   const details: string[] = []
@@ -86,7 +101,7 @@ export function MovingRow({ activity }: { activity: Activity }) {
       </span>
       <span className="moving-summary">{summary(activity)}</span>
       <span className="moving-detail">{details.join(' · ')}</span>
-      <Soundtrack activity={activity} />
+      <Soundtrack activity={activity} count={trackCount} />
     </li>
   )
 }

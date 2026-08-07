@@ -369,6 +369,30 @@ export async function fetchDuring(
   return data.tracks ?? []
 }
 
+/**
+ * How many tracks fall inside each window, in one request.
+ *
+ * Used by /moving to decide which activities are worth offering an expander on.
+ * Asking per activity would be thirty requests a page; this is one, and the
+ * window list is stable enough to cache well. Returns [] on failure, so a
+ * hiccup hides the expanders rather than breaking the page.
+ */
+export async function fetchDuringCounts(
+  windows: { from: number; to: number }[],
+  signal?: AbortSignal,
+): Promise<number[]> {
+  if (!windows.length) return []
+  const spec = windows.map((w) => `${w.from}-${w.to}`).join(',')
+  try {
+    const res = await fetch(`${API_BASE}/during-counts?w=${spec}`, { signal })
+    if (!res.ok) return []
+    const data = (await res.json()) as { counts?: number[] }
+    return data.counts ?? []
+  } catch {
+    return []
+  }
+}
+
 export async function fetchOlderDays(
   before: number,
   limit = 5,

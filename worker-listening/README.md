@@ -17,6 +17,7 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 - `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination
 - `GET /now.json` — now-playing only; uncached
 - `GET /p/<kind>/<key>.json` — one period's stats: `w/2026-W32`, `m/2026-08`, `y/2026`, `all/all`
+- `GET /during-counts?w=<from>-<to>,…` — how many tracks fall in each window, batched
 - `GET /during?from=<uts>&to=<uts>` — tracks played in a window; powers /moving's per-activity soundtrack
 - `GET /periods.json` — which period blobs exist, for the navigator and the build-time bake
 - `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
@@ -49,6 +50,7 @@ database going dark.
 | Endpoint | Rows/request | Requests to exhaust 5M |
 |---|---|---|
 | `/during` | 60 | ~83k (past the 100k request cap) |
+| `/during-counts` | ~300 (40 windows) | ~17k |
 | `/days` | 900 | ~5.5k |
 | `/p/…`, `/listening.json`, `/now.json` | 0 — KV only | n/a |
 
