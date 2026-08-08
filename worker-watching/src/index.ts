@@ -17,6 +17,20 @@ import { renderText } from './text'
 /** Edge-cache lifetime. The underlying data changes daily at most. */
 const EDGE_TTL = 300
 
+/**
+ * Browser freshness and origin protection, as two separate numbers.
+ *
+ * They used to be one, which tied "how fresh the page looks" to "how much D1
+ * work a traffic spike can cause". Only `s-maxage` does the second job — it
+ * collapses a colo's visitors into one origin build per window — so it keeps
+ * the old value, while `max-age` drops to something a person would accept
+ * waiting.
+ *
+ * `stale-while-revalidate` lets the refresh happen behind an instant response
+ * rather than in front of one.
+ */
+const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
+
 /** Where a browser landing on the API gets sent. */
 const SITE_WATCHING = 'https://cailinpitt.com/watching'
 
@@ -63,11 +77,13 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 // after the cache, so a cached entry stays origin-independent. Storing it would
 // serve one visitor's access-control-allow-origin to everyone behind the same
 // cache entry.
-function json(body: unknown, maxAge: number): Response {
+function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   return new Response(JSON.stringify(body), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': `public, max-age=${maxAge}`,
+      'cache-control':
+        `public, max-age=${ttl.browser}, s-maxage=${ttl.edge}` +
+        `, stale-while-revalidate=${ttl.edge}`,
     },
   })
 }
@@ -200,20 +216,20 @@ export default {
 
       if (url.pathname === '/watching.json') {
         return cached(url, 'bundle', ctx, cors, async () =>
-          json(await buildBundle(env.DB, localYear(Number(env.TZ_OFFSET_SECONDS) || 0)), EDGE_TTL),
+          json(await buildBundle(env.DB, localYear(Number(env.TZ_OFFSET_SECONDS) || 0)), LIVE_TTL),
         )
       }
 
       // Small payload for the terminal — see buildNow().
       if (url.pathname === '/now.json') {
-        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), EDGE_TTL))
+        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), LIVE_TTL))
       }
 
       if (url.pathname === '/films') {
         return cached(url, 'films', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || FILM_PAGE
-          return json(await fetchFilms(env.DB, cursor, limit), EDGE_TTL)
+          return json(await fetchFilms(env.DB, cursor, limit), LIVE_TTL)
         })
       }
 

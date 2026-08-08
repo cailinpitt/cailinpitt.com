@@ -11,10 +11,27 @@ import { renderText } from './text'
 const EDGE_TTL = 300
 
 /**
+ * Browser freshness and origin protection, as two separate numbers.
+ *
+ * They used to be one, which tied "how fresh the page looks" to "how much D1
+ * work a traffic spike can cause". Only `s-maxage` does the second job — it
+ * collapses a colo's visitors into one origin build per window — so it keeps
+ * the old value, while `max-age` drops to something a person would accept
+ * waiting. With the cron pulling Strava every 30 minutes, a ride was otherwise
+ * invisible for the whole TTL after it landed.
+ *
+ * `stale-while-revalidate` lets the refresh happen behind an instant response
+ * rather than in front of one.
+ */
+const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
+
+/**
  * Time windows are read by the listening Worker's cron when it builds a period,
- * and past activities never change — so they cache far longer than the feed.
+ * and past activities never change — so they cache far longer than the feed,
+ * and there is no reason for a browser to hold them any less long.
  */
 const WINDOW_EDGE_TTL = 3600
+const WINDOW_TTL = { browser: WINDOW_EDGE_TTL, edge: WINDOW_EDGE_TTL }
 
 const SITE_MOVING = 'https://cailinpitt.com/moving'
 
@@ -51,11 +68,13 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
 
 // Omits CORS deliberately: it varies by Origin and is applied by withCors()
 // after the cache, so a cached entry stays origin-independent.
-function json(body: unknown, maxAge: number): Response {
+function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   return new Response(JSON.stringify(body), {
     headers: {
       'content-type': 'application/json; charset=utf-8',
-      'cache-control': `public, max-age=${maxAge}`,
+      'cache-control':
+        `public, max-age=${ttl.browser}, s-maxage=${ttl.edge}` +
+        `, stale-while-revalidate=${ttl.edge}`,
     },
   })
 }
@@ -177,12 +196,12 @@ export default {
 
       if (url.pathname === '/moving.json') {
         return cached(url, 'bundle', ctx, cors, async () =>
-          json(await buildBundle(env.DB, localYear(Number(env.TZ_OFFSET_SECONDS) || 0)), EDGE_TTL),
+          json(await buildBundle(env.DB, localYear(Number(env.TZ_OFFSET_SECONDS) || 0)), LIVE_TTL),
         )
       }
 
       if (url.pathname === '/now.json') {
-        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), EDGE_TTL))
+        return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), LIVE_TTL))
       }
 
       // Bare time windows, for the listening crossover. Deliberately not part of
@@ -193,7 +212,7 @@ export default {
         const to = Number(url.searchParams.get('to')) || Math.floor(Date.now() / 1000)
         if (!(to > from)) return new Response('Bad range', { status: 400, headers: cors })
         return cached(url, 'windows', ctx, cors, async () =>
-          json({ windows: await fetchWindows(env.DB, from, to) }, WINDOW_EDGE_TTL),
+          json({ windows: await fetchWindows(env.DB, from, to) }, WINDOW_TTL),
         )
       }
 
@@ -202,7 +221,7 @@ export default {
         const kind = url.searchParams.get('kind')
         const limit = Number(url.searchParams.get('limit')) || ACTIVITY_PAGE
         return cached(url, `list:${kind ?? 'all'}`, ctx, cors, async () =>
-          json(await fetchActivities(env.DB, cursor, limit, kind), EDGE_TTL),
+          json(await fetchActivities(env.DB, cursor, limit, kind), LIVE_TTL),
         )
       }
 

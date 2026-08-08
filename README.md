@@ -27,7 +27,8 @@ file explains how things work.
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
   [header nav](#header-nav) · [theme](#color-theme) · [markdown source](#markdown-source) ·
   [provenance](#provenance)
-- [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) · [Deploy](#deploy)
+- [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) ·
+  [Caching](#caching) · [Deploy](#deploy)
 
 ## Blog posts
 
@@ -765,6 +766,27 @@ every blog image as missing. Run it locally.
 | `photos` | The two rules the feed can't get wrong: ids are permanent public URLs (slugging + collision suffix pinned), and order is year then date. Tests `scripts/photo-manifest.mjs` against the site's own sort and checks they agree. Also pins what `photos:rm` considers part of a photo |
 
 CI runs `typecheck` → `test` → `build`, so a broken invariant stops the deploy.
+
+## Caching
+
+Every Worker read endpoint sends **two** cache lifetimes, and they do different jobs:
+
+- **`s-maxage`** is the edge TTL. This is the one that protects the free tier — it collapses a
+  colo's visitors into one origin build per window, so no amount of traffic multiplies into D1 or
+  KV work.
+- **`max-age`** is only what a browser holds. It buys nothing at the origin, and every second of it
+  is a second the page can be wrong.
+
+They used to be one number, which tied "how fresh the page looks" to "how much a traffic spike
+costs". Live endpoints (`/moving.json`, `/reading.json`, `/watching.json`, and their `/now.json`s)
+now sit at `max-age=60, s-maxage=300`; settled data — `/windows.json`, `/during`, a completed
+period — stays cached hard at both layers, because it can never change. `worker-listening` was
+already written this way and is unchanged.
+
+> **The Cloudflare zone setting has to agree.** *Speed → Optimization → Content Optimization →
+> Browser Cache TTL* overrides `max-age` on any response the edge caches. Set to a fixed value it
+> silently replaces every number above — the Workers still ask for 60 and browsers are told
+> something else entirely. It must be **Respect Existing Headers** for any of this to take effect.
 
 ## Deploy
 
