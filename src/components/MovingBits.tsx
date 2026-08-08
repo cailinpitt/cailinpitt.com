@@ -7,7 +7,15 @@
 
 import { useState } from 'react'
 import { fetchDuring, formatTime, type Scrobble } from '../lib/listening'
-import { duration, heartRate, kindIcon, measure, summary, type Activity } from '../lib/moving'
+import {
+  duration,
+  heartRate,
+  kindIcon,
+  measure,
+  soundtrackWindow,
+  summary,
+  type Activity,
+} from '../lib/moving'
 
 /** Cycling is the only kind where "indoor" means anything — a lift always is. */
 const CYCLING = new Set(['ride', 'ebike'])
@@ -29,7 +37,8 @@ function Soundtrack({ activity, count }: { activity: Activity; count: number }) 
   // is no expander to offer — a toggle that opens onto "nothing" is worse than
   // no toggle. Counts are unknown until that fetch lands, which is why the
   // caller passes -1 rather than 0 in the meantime.
-  if (!activity.startedAt || !activity.windowSeconds || count === 0) return null
+  const span = soundtrackWindow(activity)
+  if (!span || count === 0) return null
 
   const open = tracks !== null
 
@@ -40,10 +49,7 @@ function Soundtrack({ activity, count }: { activity: Activity; count: number }) 
     }
     setState('loading')
     try {
-      const rows = await fetchDuring(
-        activity.startedAt!,
-        activity.startedAt! + activity.windowSeconds!,
-      )
+      const rows = await fetchDuring(span.from, span.to)
       setTracks(rows)
       setState('idle')
     } catch {

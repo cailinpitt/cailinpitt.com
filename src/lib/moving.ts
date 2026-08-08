@@ -31,11 +31,41 @@ export interface Activity {
   /** Unix seconds, UTC. Absent on a Worker deployed before the crossover. */
   startedAt?: number
   /**
-   * The activity's usable window in seconds — moving time plus a pause
-   * allowance, capped at what was recorded. Used with `startedAt` to ask the
-   * listening API what was playing. Optional for the same reason.
+   * The activity's *movement* window in seconds — moving time plus a 30-minute
+   * pause allowance, capped at what was recorded.
+   *
+   * This is the listening Worker's "while moving" rule, and it is deliberately
+   * tight: a recording left running would otherwise let a 40-minute ride claim
+   * a whole evening of scrobbles as time spent moving. Not what the soundtrack
+   * expander asks for — see soundtrackWindow(). Optional for the same reason
+   * as `startedAt`.
    */
   windowSeconds?: number
+  /** The whole recorded span in seconds, pauses and all. */
+  elapsedTime?: number
+}
+
+/**
+ * The span the "what was playing" expander asks about: the whole recording.
+ *
+ * Not `windowSeconds`, which answers a different question. That one exists to
+ * keep the *statistic* honest — hours spent moving to music — and clamps a long
+ * recording down to moving time plus half an hour. But a ride with real stops
+ * in it (an errand run, a day of working from three coffee shops) is one outing
+ * to the person who took it, and the music kept playing through the stops. 21
+ * of the last 100 activities here ran 3x longer than their moving time, so this
+ * is the normal case, not the odd one.
+ *
+ * Over-including costs a slightly longer list on a row nobody has to expand.
+ * Under-including silently drops most of the answer: one 5h41m ride showed 5 of
+ * its 37 tracks. Those are not symmetric, so this takes the recorded span and
+ * falls back to the tight window only when an older Worker sends no elapsed
+ * time.
+ */
+export function soundtrackWindow(activity: Activity): { from: number; to: number } | null {
+  const span = activity.elapsedTime ?? activity.windowSeconds
+  if (!activity.startedAt || !span || span <= 0) return null
+  return { from: activity.startedAt, to: activity.startedAt + span }
 }
 
 export interface ActivityPage {

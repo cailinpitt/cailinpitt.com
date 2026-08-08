@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { heartRate, type Activity } from '../src/lib/moving'
+import { heartRate, soundtrackWindow, type Activity } from '../src/lib/moving'
 
 // Heart rate is the one activity field that is genuinely absent most of the
 // time: it exists only when a monitor was worn, and every row predating the
@@ -45,5 +45,39 @@ describe('heartRate', () => {
 
   it('is null when there is a peak but no average, rather than half a reading', () => {
     expect(heartRate(activity({ maxHr: 178 }))).toBeNull()
+  })
+})
+
+// The soundtrack expander asks about the whole recording, not the movement
+// window. Getting this wrong is silent: one 5h41m ride showed 5 of its 37
+// tracks, because the tight window closed while the music kept going.
+
+describe('soundtrackWindow', () => {
+  const ride = (over: Partial<Activity> = {}) =>
+    activity({ startedAt: 1_000_000, movingTime: 4383, elapsedTime: 20507, windowSeconds: 6183, ...over })
+
+  it('spans the whole recording, pauses included', () => {
+    // The real Aug 7 ride: 1h13m moving, 5h41m recorded across three cafes.
+    expect(soundtrackWindow(ride())).toEqual({ from: 1_000_000, to: 1_020_507 })
+  })
+
+  it('does not use the movement window, which would close 4 hours early', () => {
+    const span = soundtrackWindow(ride())!
+    expect(span.to - span.from).toBe(20507)
+    expect(span.to - span.from).not.toBe(6183)
+  })
+
+  it('falls back to the movement window when elapsed time is absent', () => {
+    // An older moving Worker serves windowSeconds but no elapsedTime.
+    expect(soundtrackWindow(ride({ elapsedTime: undefined }))).toEqual({
+      from: 1_000_000,
+      to: 1_006_183,
+    })
+  })
+
+  it('is null when there is nothing to ask about', () => {
+    expect(soundtrackWindow(ride({ startedAt: undefined }))).toBeNull()
+    expect(soundtrackWindow(ride({ elapsedTime: undefined, windowSeconds: undefined }))).toBeNull()
+    expect(soundtrackWindow(ride({ elapsedTime: 0, windowSeconds: undefined }))).toBeNull()
   })
 })

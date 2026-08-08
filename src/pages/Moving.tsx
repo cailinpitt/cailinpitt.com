@@ -10,6 +10,7 @@ import {
   fetchMoving,
   fetchOlderActivities,
   longDate,
+  soundtrackWindow,
   type Activity,
   type MovingBundle,
 } from '../lib/moving'
@@ -180,9 +181,10 @@ function useTrackCounts(activities: Activity[]): Map<string, number> {
   const [counts, setCounts] = useState<Map<string, number>>(new Map())
 
   useEffect(() => {
-    const pending = activities.filter(
-      (a) => a.startedAt && a.windowSeconds && !counts.has(a.id),
-    )
+    // Same span the expander will ask for, so the count and the list agree.
+    const pending = activities
+      .map((a) => ({ activity: a, span: soundtrackWindow(a) }))
+      .filter((p) => p.span !== null && !counts.has(p.activity.id))
     if (!pending.length) return
 
     const controller = new AbortController()
@@ -191,13 +193,13 @@ function useTrackCounts(activities: Activity[]): Map<string, number> {
     // statements per invocation, and this is one per window).
     const batch = pending.slice(0, 30)
     void fetchDuringCounts(
-      batch.map((a) => ({ from: a.startedAt!, to: a.startedAt! + a.windowSeconds! })),
+      batch.map((p) => p.span!),
       controller.signal,
     ).then((result) => {
       if (!active || !result.length) return
       setCounts((prev) => {
         const next = new Map(prev)
-        batch.forEach((a, i) => next.set(a.id, result[i] ?? 0))
+        batch.forEach((p, i) => next.set(p.activity.id, result[i] ?? 0))
         return next
       })
     })

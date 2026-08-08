@@ -394,9 +394,26 @@ Expanding costs nothing until someone opens a row: the row then asks the listeni
 range of a couple of dozen scrobbles. No precomputation, no extra KV, and a finished window caches
 at the edge for a day.
 
-The window comes from `windowSeconds` on the activity, served by `worker-moving` so the rule lives
-in one place — moving time plus a 30-minute pause allowance, capped at what was recorded, never raw
-`elapsed_time`.
+**There are two windows, and they answer different questions.** `worker-moving` serves both.
+
+| | Span | Used by |
+|---|---|---|
+| `windowSeconds` | moving time + a 30-minute pause allowance, capped at what was recorded | the **statistic** — `/windows.json`, and the listening period pages' "while moving" hours |
+| `elapsedTime` | the whole recording, pauses and all | the **expander** — `soundtrackWindow()` in `src/lib/moving.ts` |
+
+The tight one exists so a recording left running can't let a 40-minute ride claim a whole evening
+as time spent moving; across 2021, elapsed totals 1,081 hours against 304 of actual movement. That
+is the right rule for an hours-listened figure and the wrong one for "what was playing on this
+ride": a ride with real stops in it — an errand run, a day working from three coffee shops — is one
+outing to the person who took it, and the music kept playing through the stops. **21 of the last
+100 activities ran 3x longer than their moving time**, so that is the normal case here, not the odd
+one. One 5h41m ride was showing 5 of its 37 tracks.
+
+The two failure modes aren't symmetric: over-including costs a slightly longer list on a row nobody
+has to expand, while under-including silently drops most of the answer. So the expander takes the
+recorded span, and falls back to `windowSeconds` only when an older Worker sends no `elapsedTime`.
+Both the batched count and the expanded list go through `soundtrackWindow()`, so the label and the
+list can't disagree.
 
 ## Reading
 

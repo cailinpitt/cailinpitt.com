@@ -158,14 +158,14 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
           ...yearNodes,
         ],
       },
-      { name: 'about', kind: 'page', to: '/about', source: '/about.md', meta: 'who I am', keywords: 'bio me cailin' },
+      { name: 'about', kind: 'page', to: '/about', source: '/about.md', meta: 'about me', keywords: 'bio me cailin' },
       // Reachable as a file (`cat now`, `open now`); typing `now` on its own is
       // still the command, which answers roughly the same question anyway.
       { name: 'now', kind: 'page', to: '/now', source: '/now.md', meta: 'what I am up to', keywords: 'currently today' },
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
       { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
       { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
-      { name: 'moving', kind: 'page', to: '/moving', meta: 'rides and lifts', keywords: 'bike cycling ebike lifting gym miles' },
+      { name: 'moving', kind: 'page', to: '/moving', meta: 'exercise', keywords: 'bike cycling ebike lifting gym exercise' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
       // The two pages written as a single Markdown file publish their source the
       // way a post does, so `cat` reads them too.
