@@ -1,8 +1,8 @@
 # worker-moving
 
 The API behind [cailinpitt.com/moving](https://cailinpitt.com/moving). Bike
-rides and lifting sessions come from the Strava API; D1 stores them and a daily
-cron pulls anything new.
+rides and lifting sessions come from the Strava API; D1 stores them and a cron
+every 30 minutes pulls anything new.
 
 Sibling of `worker-watching`, and deliberately shaped like it — same CORS rules,
 same edge-cached bundle, same `curl` text view, same admin-token `/sync`. No R2:
@@ -30,8 +30,10 @@ activity:
 
 Two limits worth knowing:
 
-- **1,000 non-upload requests a day**, 100 per 15 minutes. A steady-state daily
-  run spends one. A full `--refresh` over ~2,200 activities spends about 12.
+- **1,000 non-upload requests a day**, 100 per 15 minutes. A steady-state run
+  spends one, so the 30-minute cron spends about 48 a day — the access token is
+  cached in `auth`, so most runs skip the refresh. A full `--refresh` over
+  ~2,200 activities spends about 12.
 - **The refresh token rotates on every exchange.** It therefore cannot live in a
   Worker secret, which is write-only from the Worker's side — the `auth` table
   in D1 holds the current one and the secret only seeds the first run.
@@ -74,7 +76,7 @@ npm run schema:remote
 
 ## Backfill
 
-A daily run only looks at the last week. To import everything behind that, use
+A cron run only looks at the last week. To import everything behind that, use
 the bulk export rather than the API — it costs no requests and is already on
 disk:
 

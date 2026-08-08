@@ -432,7 +432,7 @@ miles", "Lifted for 43m". Owned by `worker-moving/`.
 - **Nothing user-facing names the source.** The page, nav, terminal view, and row copy are all
   deliberately vague about where the data comes from; the Worker and these docs say Strava freely.
   Keep that in mind when editing copy.
-- **Activities sync from the Strava API** on a daily cron, asking only for the last week plus a
+- **Activities sync from the Strava API** every 30 minutes, asking only for the last week plus a
   7-day overlap so renames and late manual entries land. Standard Tier access requires an active
   Strava subscription as of June 2026, and downstream relays are now barred from serving Strava
   data, so there is no free automated path.

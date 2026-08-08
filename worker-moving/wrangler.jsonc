@@ -8,10 +8,10 @@
   // log workers. Auto-provisions the DNS record + cert.
   "routes": [{ "pattern": "moving.cailinpitt.com", "custom_domain": true }],
 
-  // Daily, matching the reading and watching workers. Strava's rate limit is
-  // 1,000 non-upload requests a day, so a single run costs nothing against it.
-  // 09:00 UTC ≈ 04:00 Central.
-  "triggers": { "crons": ["0 9 * * *"] },
+  // Every 30 minutes, so an activity shows up on the page the same day it
+  // happens. The access token is cached in D1, so a run is one Strava request;
+  // 48 a day sits well under the 1,000/day non-upload limit.
+  "triggers": { "crons": ["*/30 * * * *"] },
 
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 
