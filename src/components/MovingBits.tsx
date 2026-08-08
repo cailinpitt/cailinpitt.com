@@ -7,7 +7,7 @@
 
 import { useState } from 'react'
 import { fetchDuring, formatTime, type Scrobble } from '../lib/listening'
-import { duration, kindIcon, measure, summary, type Activity } from '../lib/moving'
+import { duration, heartRate, kindIcon, measure, summary, type Activity } from '../lib/moving'
 
 /** Cycling is the only kind where "indoor" means anything — a lift always is. */
 const CYCLING = new Set(['ride', 'ebike'])
@@ -92,6 +92,9 @@ export function MovingRow({
   if (activity.distanceMi > 0) details.push(duration(activity.movingTime))
   if (climbed) details.push(`${Math.round(activity.elevationFt).toLocaleString('en-US')} ft up`)
   if (CYCLING.has(activity.kind) && activity.trainer) details.push('indoor')
+  // Only when a monitor was actually worn, which is a minority of the archive.
+  const bpm = heartRate(activity)
+  if (bpm) details.push(bpm)
 
   return (
     <li className={`moving-row moving-${activity.kind}`}>

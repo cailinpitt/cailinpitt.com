@@ -18,12 +18,13 @@ function pageBudget(env: Env): number {
   return Number.isFinite(configured) && configured > 0 ? configured : 8
 }
 
-/** D1 caps bound parameters at 100 per query; each activity binds 13. */
+/** D1 caps bound parameters at 100 per query; each activity binds 14, so 7 rows
+ * is 98. Adding another column means dropping this to 6. */
 const ROWS_PER_INSERT = 7
 
 const COLUMNS =
   'id, name, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, ' +
-  'moving_time, elapsed_time, trainer, commute'
+  'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr'
 
 export interface SyncResult {
   mode: 'incremental' | 'backfill' | 'refresh'
@@ -151,6 +152,8 @@ const MUTABLE = [
   'elapsed_time',
   'trainer',
   'commute',
+  'avg_hr',
+  'max_hr',
 ] as const
 
 /**
@@ -176,7 +179,7 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
   const statements: D1PreparedStatement[] = []
   for (let i = 0; i < activities.length; i += ROWS_PER_INSERT) {
     const chunk = activities.slice(i, i + ROWS_PER_INSERT)
-    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
+    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
     const values = chunk.flatMap((a) => [
       a.id,
       a.name,
@@ -190,6 +193,10 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
       a.elapsedTime,
       a.trainer ? 1 : 0,
       a.commute ? 1 : 0,
+      // Null, not 0: an activity recorded without a monitor has no heart rate,
+      // and a zero would average in as if the heart had stopped.
+      a.avgHr,
+      a.maxHr,
     ])
     // Strava is the authority on every column, so an edit upstream — a rename,
     // a corrected sport type — has to land. The WHERE only skips the write when

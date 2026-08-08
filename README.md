@@ -467,6 +467,11 @@ miles", "Lifted for 43m". Owned by `worker-moving/`.
   `scripts/moving-recategorize.sql`: the sync only rewrites rows it fetched.
 - **No polylines, coordinates, or streams are stored**, and `name` and `commute` are stored but not
   served — the log renders a summary built from the numbers.
+- **Heart rate rides along on the activity summary**, so it costs no extra Strava requests. A row
+  shows "142 bpm" only when a monitor was worn, which is a minority of the archive; the columns are
+  nullable and a zero is treated as no reading, never as a reading of zero. Adding it to an existing
+  database needs `worker-moving/schema-v2.sql` and then one `npm run moving:sync -- --refresh` to
+  fill in history — the incremental sync only rewrites the last week.
 - **Terminal view:** `curl moving.cailinpitt.com`; `?T` disables color.
 - Run the sync now: `npm run moving:sync` (`-- --refresh` re-pulls history).
 - API base: `VITE_MOVING_API` (default `https://moving.cailinpitt.com`).

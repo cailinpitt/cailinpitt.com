@@ -22,7 +22,14 @@ CREATE TABLE IF NOT EXISTS activities (
   -- No polylines, coordinates, or per-activity streams: the page shows a date
   -- and a distance, and what isn't stored can't leak.
   trainer       INTEGER NOT NULL DEFAULT 0,
-  commute       INTEGER NOT NULL DEFAULT 0
+  commute       INTEGER NOT NULL DEFAULT 0,
+  -- Heart rate, when the activity was recorded with a monitor. NULL — not 0 —
+  -- when it wasn't: plenty of activities have none, and a zero would average
+  -- into the numbers as if the heart had stopped. Whole bpm; Strava reports
+  -- averages to one decimal, which is noise on a summary line.
+  -- Two summary numbers only, never a stream, for the same reason as above.
+  avg_hr        INTEGER,
+  max_hr        INTEGER
 );
 
 -- Matches fetchActivities() exactly, both ordering columns in the query's

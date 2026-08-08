@@ -15,7 +15,8 @@ const MAX_ACTIVITY_PAGE = 100
 // weren't served.
 const COLS =
   'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
-  'elapsed_time, trainer, MIN(elapsed_time, MAX(moving_time, 0) + 1800) AS window_seconds'
+  'elapsed_time, trainer, avg_hr, max_hr, ' +
+  'MIN(elapsed_time, MAX(moving_time, 0) + 1800) AS window_seconds'
 
 export interface Activity {
   id: string
@@ -38,6 +39,14 @@ export interface Activity {
    */
   windowSeconds: number
   trainer: boolean
+  /**
+   * Average bpm, or null when the activity was recorded without a monitor —
+   * which is most of the archive, and every row predating the column. Callers
+   * render nothing rather than a zero.
+   */
+  avgHr: number | null
+  /** Peak bpm, or null on the same terms. */
+  maxHr: number | null
 }
 
 export interface ActivityPage {
@@ -75,6 +84,8 @@ interface Row {
   elapsed_time: number
   window_seconds: number
   trainer: number
+  avg_hr: number | null
+  max_hr: number | null
 }
 
 const toActivity = (r: Row): Activity => ({
@@ -89,6 +100,8 @@ const toActivity = (r: Row): Activity => ({
   elapsedTime: r.elapsed_time,
   windowSeconds: r.window_seconds,
   trainer: r.trainer === 1,
+  avgHr: r.avg_hr ?? null,
+  maxHr: r.max_hr ?? null,
 })
 
 // Composite cursor — `<start_date>:<id>` — because start_date is not unique:

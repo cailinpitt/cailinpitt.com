@@ -25,6 +25,10 @@ export interface SummaryActivity {
   elapsedTime: number
   trainer: boolean
   commute: boolean
+  /** Average bpm, or null when the activity carries no heart rate. */
+  avgHr: number | null
+  /** Peak bpm, or null. */
+  maxHr: number | null
 }
 
 const METERS_PER_MILE = 1609.344
@@ -124,6 +128,26 @@ interface RawActivity {
   elapsed_time?: number
   trainer?: boolean
   commute?: boolean
+  has_heartrate?: boolean
+  average_heartrate?: number
+  max_heartrate?: number
+}
+
+/**
+ * Heart rate, or null when the activity wasn't recorded with a monitor.
+ *
+ * Strava sends these on the activity *summary*, so the log gets them for free —
+ * no per-activity request, and no change to the rate-limit budget.
+ *
+ * `has_heartrate` is checked rather than trusting the numbers: it is false on an
+ * activity with no monitor, where the averages are absent entirely. Rounded to
+ * whole bpm, and a non-positive reading is treated as no reading at all.
+ */
+function heartRate(raw: RawActivity): { avgHr: number | null; maxHr: number | null } {
+  if (!raw.has_heartrate) return { avgHr: null, maxHr: null }
+  const bpm = (value: number | undefined) =>
+    typeof value === 'number' && value > 0 ? Math.round(value) : null
+  return { avgHr: bpm(raw.average_heartrate), maxHr: bpm(raw.max_heartrate) }
 }
 
 function toActivity(raw: RawActivity): SummaryActivity {
@@ -143,6 +167,7 @@ function toActivity(raw: RawActivity): SummaryActivity {
     elapsedTime: raw.elapsed_time ?? 0,
     trainer: Boolean(raw.trainer),
     commute: Boolean(raw.commute),
+    ...heartRate(raw),
   }
 }
 

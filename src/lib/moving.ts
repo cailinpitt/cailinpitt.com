@@ -19,6 +19,15 @@ export interface Activity {
   elevationFt: number
   movingTime: number
   trainer: boolean
+  /**
+   * Average bpm, when the activity was recorded with a heart-rate monitor.
+   * Null or absent otherwise — most of the archive, and everything logged
+   * before the column existed. Optional so an older Worker reads as "no heart
+   * rate" rather than breaking the type.
+   */
+  avgHr?: number | null
+  /** Peak bpm, on the same terms. Served, but not rendered on the log. */
+  maxHr?: number | null
   /** Unix seconds, UTC. Absent on a Worker deployed before the crossover. */
   startedAt?: number
   /**
@@ -141,6 +150,17 @@ const VERBS: Record<ActivityKind, string> = {
   yoga: 'Yoga',
   climb: 'Climbed',
   other: 'Moved',
+}
+
+/**
+ * "142 bpm", or null when the activity carries no heart rate.
+ *
+ * Null and zero both mean "no monitor" — see the Worker's schema for why a
+ * stored zero would be a lie rather than a reading.
+ */
+export function heartRate(activity: Activity): string | null {
+  const avg = activity.avgHr
+  return typeof avg === 'number' && avg > 0 ? `${Math.round(avg)} bpm` : null
 }
 
 /**

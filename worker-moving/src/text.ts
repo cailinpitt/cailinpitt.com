@@ -104,11 +104,23 @@ function summary(activity: Activity): string {
     : `${verb} for ${duration(activity.movingTime)}`
 }
 
+/**
+ * " · 142 bpm", or nothing when the activity was recorded without a monitor.
+ *
+ * Mirrors heartRate() in src/lib/moving.ts, the same way summary() does — the
+ * terminal view and the page have to read the same.
+ */
+function heartRate(activity: Activity): string {
+  const avg = activity.avgHr
+  return typeof avg === 'number' && avg > 0 ? ` · ${Math.round(avg)} bpm` : ''
+}
+
 function activityLine(activity: Activity, c: Ink): string {
+  const body = summary(activity) + heartRate(activity)
   return (
     c.dim(fit(shortDate(activity.startDate), 7)) +
     c.accentDim(fit(MARKS[activity.kind] ?? MARKS.other, 7)) +
-    clip(summary(activity), WIDTH - 14)
+    clip(body, WIDTH - 14)
   ).trimEnd()
 }
 

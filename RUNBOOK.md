@@ -411,6 +411,20 @@ npm run moving:sync -- --backfill      # walk backwards through history via the 
 npm run moving:auth                    # one-time OAuth, prints a refresh token
 ```
 
+Adding heart rate to an existing database (once, before deploying the Worker that
+reads it):
+
+```bash
+cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
+  --remote --file=schema-v2.sql
+cd .. && npm run moving:sync -- --refresh   # fill in history; ~12 API requests
+```
+
+`schema.sql` is `CREATE TABLE IF NOT EXISTS`, so it cannot add a column to a table
+that already exists. Re-running `schema-v2.sql` fails with "duplicate column name",
+which is how you know it was already applied. The `--refresh` is what backfills the
+archive — the incremental sync only ever rewrites the last week.
+
 Import history from the bulk export (strava.com/settings/privacy → request an archive):
 
 ```bash

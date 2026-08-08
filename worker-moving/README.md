@@ -118,8 +118,9 @@ available; prefer the export.
 - **Ids are Strava's own activity ids**, which is what makes the export and the
   API interchangeable: a row imported from the CSV and the same activity fetched
   later are the same row, so the two halves cannot duplicate each other.
-- **Rows are `INSERT OR REPLACE`** from the API and `INSERT OR IGNORE` from the
-  backfill, so the live API always wins over the older snapshot.
+- **Rows are upserted** from the API and `INSERT OR IGNORE` from the backfill, so
+  the live API always wins over the older snapshot. The upsert only writes when
+  a column actually differs — see the note on `changed` below.
 - **`kind` is derived from `sport_type`**, not stored by Strava: ride, ebike,
   lift, walk, run, yoga, climb, other. E-bikes are split from ordinary rides
   because they are different efforts and the page labels them differently.
@@ -129,9 +130,18 @@ available; prefer the export.
 - **Distances are stored in miles and feet**, converted on write, so nothing
   converts on the read path.
 - **No polylines, coordinates, or streams are stored.** The page shows a date
-  and a distance; what isn't stored can't leak.
+  and a distance; what isn't stored can't leak. Heart rate is the one exception
+  to "numbers only", and it is two summary values — `avg_hr`, `max_hr` — never
+  a per-second series.
+- **Heart rate is null, not zero, when there was no monitor.** Most of the
+  archive has none, and every row predating the column does. A stored zero
+  would render "0 bpm" under a ride and drag any future average down, so the
+  columns are nullable and `has_heartrate` is checked before either is read —
+  Strava omits the values entirely on an activity without one. Strava sends
+  them on the activity *summary*, so this costs no extra API requests.
 - **`name` and `commute` are stored but not served.** The log renders a summary
-  built from the numbers instead.
+  built from the numbers instead. `max_hr` is served but not rendered — the log
+  line shows the average, and the peak is there for anything reading the JSON.
 - **`stats` is recomputed from the archive**, not incremented — a run sees only a
   week, so the totals have to come from the whole table. `rides` counts both
   `ride` and `ebike`.
