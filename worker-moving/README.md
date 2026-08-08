@@ -139,9 +139,14 @@ available; prefer the export.
   columns are nullable and `has_heartrate` is checked before either is read —
   Strava omits the values entirely on an activity without one. Strava sends
   them on the activity *summary*, so this costs no extra API requests.
+- **Both figures are labelled.** A row reads "145 avg · 178 max" behind a heart,
+  because an unlabelled bpm number is ambiguous between the two. The page draws
+  a `♥` glyph; the terminal view draws `<3`, since that output lands in whatever
+  encoding the reader's terminal happens to use and a mojibaked glyph is worse
+  than a plain one. `max` renders only when present — it is a separate field
+  from the average, and a row can carry one without the other.
 - **`name` and `commute` are stored but not served.** The log renders a summary
-  built from the numbers instead. `max_hr` is served but not rendered — the log
-  line shows the average, and the peak is there for anything reading the JSON.
+  built from the numbers instead.
 - **`stats` is recomputed from the archive**, not incremented — a run sees only a
   week, so the totals have to come from the whole table. `rides` counts both
   `ride` and `ebike`.

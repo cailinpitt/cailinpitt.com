@@ -3523,6 +3523,16 @@ a.guestbook-name:hover {
   text-align: right;
   white-space: nowrap;
 }
+/* The heart on a heart-rate reading. A text glyph rather than an emoji: the
+   kind icons are emoji because they carry the row, but this sits inside the
+   muted detail line, where a full-color emoji would outweigh everything around
+   it. Accent-colored so it reads as a mark and not as punctuation. */
+.moving-hr-icon {
+  color: var(--accent);
+  /* Nudged down: the glyph's ink sits high in its box against lining figures. */
+  vertical-align: -0.05em;
+  margin-right: 0.25em;
+}
 
 @media (max-width: 32rem) {
   /* Detail wraps under the line rather than squeezing it to nothing. */

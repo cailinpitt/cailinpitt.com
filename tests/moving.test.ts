@@ -19,26 +19,31 @@ const activity = (over: Partial<Activity> = {}): Activity => ({
 })
 
 describe('heartRate', () => {
-  it('reads as bpm when a monitor was worn', () => {
-    expect(heartRate(activity({ avgHr: 142 }))).toBe('142 bpm')
+  it('reports the average and the peak when a monitor was worn', () => {
+    expect(heartRate(activity({ avgHr: 145, maxHr: 178 }))).toEqual({ avg: 145, max: 178 })
   })
 
   it('rounds, because Strava reports a decimal that is noise on one line', () => {
-    expect(heartRate(activity({ avgHr: 140.3 }))).toBe('140 bpm')
-    expect(heartRate(activity({ avgHr: 140.7 }))).toBe('141 bpm')
+    expect(heartRate(activity({ avgHr: 140.3, maxHr: 177.5 }))).toEqual({ avg: 140, max: 178 })
   })
 
   it('says nothing for an activity with no heart rate', () => {
     expect(heartRate(activity())).toBeNull()
-    expect(heartRate(activity({ avgHr: null }))).toBeNull()
+    expect(heartRate(activity({ avgHr: null, maxHr: null }))).toBeNull()
   })
 
   it('treats zero as no reading, not as a reading of zero', () => {
-    // A stored 0 would otherwise render "0 bpm" under a ride.
-    expect(heartRate(activity({ avgHr: 0 }))).toBeNull()
+    // A stored 0 would otherwise render "0 avg" under a ride.
+    expect(heartRate(activity({ avgHr: 0, maxHr: 0 }))).toBeNull()
   })
 
-  it('ignores maxHr, which is served but not rendered on the log', () => {
+  it('keeps the average when only the peak is missing', () => {
+    // The two are separate fields; the row renders whichever it gets.
+    expect(heartRate(activity({ avgHr: 145 }))).toEqual({ avg: 145, max: null })
+    expect(heartRate(activity({ avgHr: 145, maxHr: 0 }))).toEqual({ avg: 145, max: null })
+  })
+
+  it('is null when there is a peak but no average, rather than half a reading', () => {
     expect(heartRate(activity({ maxHr: 178 }))).toBeNull()
   })
 })

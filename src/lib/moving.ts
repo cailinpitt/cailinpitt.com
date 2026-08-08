@@ -153,14 +153,22 @@ const VERBS: Record<ActivityKind, string> = {
 }
 
 /**
- * "142 bpm", or null when the activity carries no heart rate.
+ * Whole-bpm average and peak, or null when the activity carries no heart rate.
  *
- * Null and zero both mean "no monitor" — see the Worker's schema for why a
- * stored zero would be a lie rather than a reading.
+ * Returns the numbers rather than a formatted string because the row renders
+ * them as marked-up parts — a heart glyph, then labelled figures. Null and zero
+ * both mean "no monitor": see the Worker's schema for why a stored zero would
+ * be a lie rather than a reading.
+ *
+ * `max` can be null on its own. An activity always has an average if it has any
+ * heart rate at all, but the peak is a separate field and old rows may lack it,
+ * so the caller renders whichever it gets.
  */
-export function heartRate(activity: Activity): string | null {
-  const avg = activity.avgHr
-  return typeof avg === 'number' && avg > 0 ? `${Math.round(avg)} bpm` : null
+export function heartRate(activity: Activity): { avg: number; max: number | null } | null {
+  const bpm = (value: number | null | undefined) =>
+    typeof value === 'number' && value > 0 ? Math.round(value) : null
+  const avg = bpm(activity.avgHr)
+  return avg === null ? null : { avg, max: bpm(activity.maxHr) }
 }
 
 /**

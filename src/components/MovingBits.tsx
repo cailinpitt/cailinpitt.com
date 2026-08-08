@@ -92,9 +92,9 @@ export function MovingRow({
   if (activity.distanceMi > 0) details.push(duration(activity.movingTime))
   if (climbed) details.push(`${Math.round(activity.elevationFt).toLocaleString('en-US')} ft up`)
   if (CYCLING.has(activity.kind) && activity.trainer) details.push('indoor')
-  // Only when a monitor was actually worn, which is a minority of the archive.
-  const bpm = heartRate(activity)
-  if (bpm) details.push(bpm)
+  // Rendered as markup rather than pushed into `details`: the glyph is coloured
+  // and hidden from screen readers, which a joined string can't express.
+  const hr = heartRate(activity)
 
   return (
     <li className={`moving-row moving-${activity.kind}`}>
@@ -103,7 +103,32 @@ export function MovingRow({
         {kindIcon(activity.kind)}
       </span>
       <span className="moving-summary">{summary(activity)}</span>
-      <span className="moving-detail">{details.join(' · ')}</span>
+      <span className="moving-detail">
+        {details.join(' · ')}
+        {hr && (
+          <>
+            {details.length > 0 && ' · '}
+            {/* The glyph carries the meaning visually; the label carries it for
+                a screen reader, which would otherwise hear "black heart suit". */}
+            <span className="moving-hr-icon" aria-hidden="true">
+              ♥
+            </span>
+            <span className="visually-hidden">average heart rate </span>
+            {hr.avg}
+            <span aria-hidden="true"> avg</span>
+            <span className="visually-hidden"> bpm</span>
+            {hr.max !== null && (
+              <>
+                {' · '}
+                <span className="visually-hidden">maximum heart rate </span>
+                {hr.max}
+                <span aria-hidden="true"> max</span>
+                <span className="visually-hidden"> bpm</span>
+              </>
+            )}
+          </>
+        )}
+      </span>
       <Soundtrack activity={activity} count={trackCount} />
     </li>
   )

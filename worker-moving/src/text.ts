@@ -105,14 +105,20 @@ function summary(activity: Activity): string {
 }
 
 /**
- * " · 142 bpm", or nothing when the activity was recorded without a monitor.
+ * " · <3 145 avg · 178 max", or nothing when there was no monitor.
  *
  * Mirrors heartRate() in src/lib/moving.ts, the same way summary() does — the
- * terminal view and the page have to read the same.
+ * terminal view and the page have to read the same. The page draws a ♥; here it
+ * is ASCII, because this output goes to whatever terminal and encoding the
+ * reader happens to have, and a mojibaked glyph is worse than a plain one.
  */
 function heartRate(activity: Activity): string {
-  const avg = activity.avgHr
-  return typeof avg === 'number' && avg > 0 ? ` · ${Math.round(avg)} bpm` : ''
+  const bpm = (value: number | null | undefined) =>
+    typeof value === 'number' && value > 0 ? Math.round(value) : null
+  const avg = bpm(activity.avgHr)
+  if (avg === null) return ''
+  const max = bpm(activity.maxHr)
+  return ` · <3 ${avg} avg` + (max === null ? '' : ` · ${max} max`)
 }
 
 function activityLine(activity: Activity, c: Ink): string {

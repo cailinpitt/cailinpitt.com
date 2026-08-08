@@ -468,7 +468,8 @@ miles", "Lifted for 43m". Owned by `worker-moving/`.
 - **No polylines, coordinates, or streams are stored**, and `name` and `commute` are stored but not
   served — the log renders a summary built from the numbers.
 - **Heart rate rides along on the activity summary**, so it costs no extra Strava requests. A row
-  shows "142 bpm" only when a monitor was worn, which is a minority of the archive; the columns are
+  reads "♥ 145 avg · 178 max" only when a monitor was worn, which is a minority of the archive; both
+  figures are labelled because a bare bpm number is ambiguous between the two. The columns are
   nullable and a zero is treated as no reading, never as a reading of zero. Adding it to an existing
   database needs `worker-moving/schema-v2.sql` and then one `npm run moving:sync -- --refresh` to
   fill in history — the incremental sync only rewrites the last week.
