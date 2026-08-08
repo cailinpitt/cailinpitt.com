@@ -25,6 +25,7 @@ import {
   type Bundle,
   type DayLog,
 } from './stats'
+import { compactDays, type CompactDay } from './compact'
 
 const HEAVY_INTERVAL = 15 * 60 // 7d/30d windows + recent logs
 const HEATMAP_INTERVAL = 6 * 60 * 60 // year heatmap
@@ -441,6 +442,23 @@ async function getSparkline(env: Env): Promise<{ from: string; days: number[] }>
   return { from, days }
 }
 
+/**
+ * The daily log with the tracks folded away — /timeline's first page.
+ *
+ * Reads the same two blobs getBundle does and applies the same merge, so the
+ * two pages can never disagree about a day; it just drops what /timeline never
+ * renders. Deliberately no cold-KV rebuild: getBundle owns that path, and a
+ * timeline missing its scrobble stream still shows six other ones.
+ */
+async function getTimelineDays(
+  env: Env,
+): Promise<{ days: CompactDay[]; nextBefore: number | null }> {
+  const [nowInfo, stats] = await Promise.all([getNow(env), readJSON<StatsBlob>(env, KEY.stats)])
+  if (!stats) return { days: [], nextBefore: null }
+  const merged = mergeRecent(stats.recentDays, nowInfo.recent, Number(env.TZ_OFFSET_SECONDS) || 0)
+  return { days: compactDays(merged), nextBefore: stats.nextBefore }
+}
+
 async function getBundle(env: Env): Promise<Bundle> {
   const now = Math.floor(Date.now() / 1000)
   const [nowInfo, statsBlob, heatBlob] = await Promise.all([
@@ -841,12 +859,22 @@ export default {
         )
       }
 
+      // /timeline's first page: the same days /listening.json carries, minus the
+      // track lists it never renders.
+      if (url.pathname === '/timeline.json') {
+        return cached(url, 'timeline', ctx, cors, async () =>
+          json(await getTimelineDays(env), EDGE_TTL),
+        )
+      }
       if (url.pathname === '/days') {
-        return cached(url, 'days', ctx, cors, async () => {
+        // `compact=1` is part of the cache variant: one path, two bodies.
+        const compact = url.searchParams.get('compact') === '1'
+        return cached(url, compact ? 'days-compact' : 'days', ctx, cors, async () => {
           const offset = Number(env.TZ_OFFSET_SECONDS) || 0
           const before = Number(url.searchParams.get('before')) || Math.floor(Date.now() / 1000)
           const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 5, 1), 14)
-          return json(await fetchOlderDays(env.DB, offset, before, limit), 300)
+          const page = await fetchOlderDays(env.DB, offset, before, limit)
+          return json(compact ? { ...page, days: compactDays(page.days) } : page, 300)
         })
       }
       return new Response('Not found', { status: 404, headers: cors })

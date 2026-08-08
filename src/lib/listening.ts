@@ -48,6 +48,18 @@ export interface DayLog {
   count: number
   tracks: Scrobble[]
 }
+/**
+ * A day with its track list folded away — what /timeline reads.
+ *
+ * The page shows a count and the day's most-played artist and renders no
+ * individual track, but the full log is ~93% of the bundle it used to pull.
+ * The Worker does the fold, so the two pages can't disagree about a day.
+ */
+export interface CompactDay {
+  date: string
+  count: number
+  topArtist: string | null
+}
 export interface Heatmap {
   from: string
   to: string
@@ -424,6 +436,26 @@ export async function fetchOlderDays(
   const res = await fetch(`${API_BASE}/days?before=${before}&limit=${limit}`, { signal })
   if (!res.ok) throw new Error(`Listening API ${res.status}`)
   return res.json() as Promise<{ days: DayLog[]; nextBefore: number | null }>
+}
+
+/** /timeline's first page: the same days as the bundle, without the tracks. */
+export async function fetchTimelineDays(
+  signal?: AbortSignal,
+): Promise<{ days: CompactDay[]; nextBefore: number | null }> {
+  const res = await fetch(`${API_BASE}/timeline.json`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<{ days: CompactDay[]; nextBefore: number | null }>
+}
+
+/** Older pages of the same, for "load older" on /timeline. */
+export async function fetchOlderCompactDays(
+  before: number,
+  limit = 5,
+  signal?: AbortSignal,
+): Promise<{ days: CompactDay[]; nextBefore: number | null }> {
+  const res = await fetch(`${API_BASE}/days?before=${before}&limit=${limit}&compact=1`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<{ days: CompactDay[]; nextBefore: number | null }>
 }
 
 // ---- music service search links ------------------------------------------

@@ -3,7 +3,7 @@ import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { dayKey, formatDayLabel, formatNumber, formatTime } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
-import { fetchBundle, fetchOlderDays, type DayLog } from '../lib/listening'
+import { fetchOlderCompactDays, fetchTimelineDays, type CompactDay } from '../lib/listening'
 import {
   fetchOlderArticles,
   fetchOlderBooks,
@@ -84,7 +84,7 @@ const filmDate = (film: Film) => film.watchedDate.slice(0, 10)
 const activityDate = (activity: Activity) => activity.startDate
 
 function useTimeline(posts: PostSummary[], photos: Photo[]) {
-  const [days, setDays] = useState<DayLog[]>([])
+  const [days, setDays] = useState<CompactDay[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [films, setFilms] = useState<Film[]>([])
@@ -103,13 +103,16 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     const controller = new AbortController()
     controllerRef.current = controller
     Promise.all([
-      fetchBundle(controller.signal),
+      // The compact projection, not the full bundle: this page shows a count and
+      // a top artist per day and renders no individual track, which is ~93% of
+      // what the bundle carries.
+      fetchTimelineDays(controller.signal),
       fetchReading(controller.signal),
       fetchWatching(controller.signal),
       fetchMoving(controller.signal),
     ])
       .then(([listening, reading, watching, moving]) => {
-        setDays(listening.recentDays)
+        setDays(listening.days)
         setBefore(listening.nextBefore)
         setArticles(reading.articles)
         setArticleCursor(reading.nextCursor)
@@ -137,7 +140,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     const controller = new AbortController()
     controllerRef.current = controller
     try {
-      const older = await fetchOlderDays(before, DAY_PAGE, controller.signal)
+      const older = await fetchOlderCompactDays(before, DAY_PAGE, controller.signal)
       const nextDays = [...days, ...older.days]
       const nextFloor =
         older.nextBefore != null && nextDays.length ? nextDays[nextDays.length - 1].date : null

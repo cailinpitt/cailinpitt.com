@@ -14,7 +14,9 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 ## Endpoints
 
 - `GET /listening.json` — the full bundle (now-playing, 7d/30d stats, heatmap, recent days)
-- `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination
+- `GET /days?before=<uts>&limit=<n>` — older daily logs, for pagination. `&compact=1` drops the
+  track lists, keeping the date, count, and top artist
+- `GET /timeline.json` — the bundle's recent days in that same compact shape, for /timeline
 - `GET /now.json` — now-playing only; uncached
 - `GET /p/<kind>/<key>.json` — one period's stats: `w/2026-W32`, `m/2026-08`, `y/2026`, `all/all`
 - `GET /during-counts?w=<from>-<to>,…` — how many tracks fall in each window, batched

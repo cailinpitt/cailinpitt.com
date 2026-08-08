@@ -33,6 +33,14 @@ export interface SyncResult {
   seen: number
   /** Of those, ones the archive had not stored before. */
   added: number
+  /**
+   * Rows the write actually moved — new ones plus genuine edits. The overlap
+   * window means `seen` is mostly rows identical to what is already stored, so
+   * this is the number that says whether the run did anything.
+   */
+  changed: number
+  /** Whether the totals were rebuilt. False on a run that changed nothing. */
+  recomputed: boolean
   /** Backfill only: false while there is still older history to walk. */
   complete: boolean
 }
@@ -93,11 +101,25 @@ export async function sync(
   }
 
   const added = await countNew(env.DB, collected)
-  await writeActivities(env.DB, collected)
-  await recomputeStats(env.DB)
+  const changed = await writeActivities(env.DB, collected)
+
+  // Recomputing scans the whole table twice. The cron runs every 30 minutes and
+  // almost every run re-offers the same week and changes nothing, so it is
+  // skipped unless a row actually moved — see STATS_MAX_AGE for why it still
+  // happens on a quiet day.
+  const recomputed = changed > 0 || (await statsStale(env.DB))
+  if (recomputed) await recomputeStats(env.DB)
 
   const mode = options.refresh ? 'refresh' : options.backfill ? 'backfill' : 'incremental'
-  return { mode, seen: collected.length, added, complete, ...(options.refresh && { page: lastPage }) }
+  return {
+    mode,
+    seen: collected.length,
+    added,
+    changed,
+    recomputed,
+    complete,
+    ...(options.refresh && { page: lastPage }),
+  }
 }
 
 /** How many of these the archive has never stored, for a run count that means something. */
@@ -116,8 +138,40 @@ async function countNew(db: D1Database, activities: SummaryActivity[]): Promise<
   return activities.filter((a) => !existing.has(a.id)).length
 }
 
-async function writeActivities(db: D1Database, activities: SummaryActivity[]): Promise<void> {
-  if (!activities.length) return
+/** Columns the upsert overwrites and compares on — everything but the key. */
+const MUTABLE = [
+  'name',
+  'sport_type',
+  'kind',
+  'start_date',
+  'started_at',
+  'distance_mi',
+  'elevation_ft',
+  'moving_time',
+  'elapsed_time',
+  'trainer',
+  'commute',
+] as const
+
+/**
+ * Store the fetched activities, and report how many rows actually moved.
+ *
+ * An upsert guarded by a `WHERE` that compares every column, rather than a bare
+ * `INSERT OR REPLACE`. The incremental pull re-offers a week of overlap on every
+ * run, so the vast majority of these rows are byte-identical to what is already
+ * stored; REPLACE rewrote them all and left no way to tell a real edit from the
+ * overlap. With the guard, `RETURNING` yields exactly the rows that were new or
+ * genuinely different — which is what lets the caller skip recomputing the
+ * totals on a run that changed nothing.
+ *
+ * `IS NOT` rather than `<>`, because a NULL on either side of `<>` is NULL, not
+ * true, and a column going to or from NULL is precisely an edit.
+ */
+async function writeActivities(db: D1Database, activities: SummaryActivity[]): Promise<number> {
+  if (!activities.length) return 0
+
+  const assignments = MUTABLE.map((c) => `${c} = excluded.${c}`).join(', ')
+  const differs = MUTABLE.map((c) => `activities.${c} IS NOT excluded.${c}`).join(' OR ')
 
   const statements: D1PreparedStatement[] = []
   for (let i = 0; i < activities.length; i += ROWS_PER_INSERT) {
@@ -137,15 +191,42 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
       a.trainer ? 1 : 0,
       a.commute ? 1 : 0,
     ])
-    // REPLACE, not IGNORE: Strava is the authority on every column, and a
-    // rename or corrected sport type arrives as an edit to a stored row.
+    // Strava is the authority on every column, so an edit upstream — a rename,
+    // a corrected sport type — has to land. The WHERE only skips the write when
+    // there is nothing to change.
     statements.push(
       db
-        .prepare(`INSERT OR REPLACE INTO activities (${COLUMNS}) VALUES ${placeholders}`)
+        .prepare(
+          `INSERT INTO activities (${COLUMNS}) VALUES ${placeholders}
+           ON CONFLICT(id) DO UPDATE SET ${assignments}
+           WHERE ${differs}
+           RETURNING id`,
+        )
         .bind(...values),
     )
   }
-  await db.batch(statements)
+  const written = await db.batch<{ id: string }>(statements)
+  return written.reduce((n, r) => n + (r.results?.length ?? 0), 0)
+}
+
+/**
+ * How long the totals may go without a recompute, however quiet Strava is.
+ *
+ * The `changed > 0` guard only sees rows this sync wrote. Anything that edits
+ * the table out of band — scripts/moving-recategorize.sql after a change to the
+ * `kind` mapping is the standing example — would otherwise leave the totals
+ * wrong indefinitely, where before every sync silently repaired them. A daily
+ * floor bounds that to a day and still skips ~47 of the 48 runs.
+ */
+const STATS_MAX_AGE = 24 * 60 * 60
+
+/** Whether the stored totals are old enough to rebuild on their own account. */
+async function statsStale(db: D1Database): Promise<boolean> {
+  const row = await db.prepare('SELECT updated_at FROM stats WHERE id = 1').first<{
+    updated_at: number
+  }>()
+  if (!row) return true
+  return Math.floor(Date.now() / 1000) - row.updated_at >= STATS_MAX_AGE
 }
 
 async function recomputeStats(db: D1Database): Promise<void> {

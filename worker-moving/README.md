@@ -132,9 +132,21 @@ available; prefer the export.
   and a distance; what isn't stored can't leak.
 - **`name` and `commute` are stored but not served.** The log renders a summary
   built from the numbers instead.
-- **`stats` is recomputed on every sync**, not incremented — a run sees only a
-  week, so the totals have to come from the archive itself. `rides` counts both
+- **`stats` is recomputed from the archive**, not incremented — a run sees only a
+  week, so the totals have to come from the whole table. `rides` counts both
   `ride` and `ebike`.
+- **…but only when a row actually moved.** That recompute scans the table twice,
+  and the cron fires every 30 minutes while re-offering the same week of overlap
+  each time, so nearly every run has nothing to say. The write is an upsert
+  guarded by a `WHERE` comparing every column, and `RETURNING` reports only the
+  rows that were new or genuinely different — `changed` in the sync result. Zero
+  means the totals cannot have moved, and the scan is skipped.
+- **A daily floor covers out-of-band edits.** `changed` only sees rows this sync
+  wrote, so anything that edits the table directly — `scripts/moving-recategorize.sql`
+  after a change to the `kind` mapping is the standing example — would otherwise
+  leave the totals wrong indefinitely, where before every sync quietly repaired
+  them. `STATS_MAX_AGE` forces a rebuild once a day regardless, which bounds that
+  to a day and still skips ~47 of the 48 runs.
 
 
 ## `/windows.json`

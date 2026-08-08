@@ -548,9 +548,15 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 `/timeline` is one row per day merging seven streams: scrobbles, saved articles, books
 started/finished, films watched, rides and lifts, published posts, photos taken. Nothing new is
-stored — it fetches the same `/listening.json`, `/reading.json`, `/watching.json`, and
-`/moving.json` bundles and merges them against build-time posts and photos
+stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching.json`, and
+`/moving.json` bundles the other pages read, and merges them against build-time posts and photos
 (`src/lib/timeline.ts`).
+
+- **It reads a projection, not the bundle.** The page shows a count and the day's most-played
+  artist and renders no individual track — but the daily track logs are ~93% of `/listening.json`
+  (ten days is ~735 track objects). `/timeline.json` is the same days with the tracks folded away,
+  built from the same KV blob by the same merge, so the two pages cannot disagree about a day.
+  "Load older" pages through `/days?compact=1`, the same projection over the D1 result.
 
 - **Depth is set by the listening days**, the densest stream and the only one worth a cursor.
   Everything else is filtered into that window; "load older" pulls another block. Once listening is

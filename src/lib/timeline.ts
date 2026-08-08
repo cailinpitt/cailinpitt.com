@@ -36,7 +36,7 @@ import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
 import type { Film } from './watching'
 import type { Activity } from './moving'
-import type { DayLog } from './listening'
+import type { CompactDay } from './listening'
 
 export interface TimelineDay {
   date: string
@@ -62,23 +62,8 @@ export function datedPhotos(photos: Photo[]): Photo[] {
   return photos.filter((photo) => !photo.approx)
 }
 
-/** The most-played artist in a day's tracks, or null if the day carries none. */
-function topArtist(day: DayLog): string | null {
-  const counts = new Map<string, number>()
-  for (const track of day.tracks) counts.set(track.artist, (counts.get(track.artist) ?? 0) + 1)
-  let best: string | null = null
-  let bestCount = 0
-  for (const [artist, count] of counts) {
-    if (count > bestCount) {
-      best = artist
-      bestCount = count
-    }
-  }
-  return best
-}
-
 export interface TimelineSources {
-  days: DayLog[]
+  days: CompactDay[]
   articles: Article[]
   books: Book[]
   films: Film[]
@@ -135,7 +120,7 @@ export function buildTimeline({
     const entry = dayFor(day.date)
     if (!entry) continue
     entry.scrobbles = day.count
-    entry.topArtist = topArtist(day)
+    entry.topArtist = day.topArtist
   }
 
   for (const article of articles) dayFor(dayKey(article.readAt))?.articles.push(article)
