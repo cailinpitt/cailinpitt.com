@@ -176,10 +176,12 @@ npm run images:publish     # = images:sync + images:upload; needs R2 creds in .e
 
 ### What `images:sync` does
 
-- **Compresses.** Each original becomes two WebPs in `images/<folder>/`: 2560px full size
-  and a 1000px `-1000.webp` thumbnail (quality 82, EXIF orientation baked in, metadata stripped).
-  Skipped when a rendition is newer than its original.
-- **Rebuilds `src/lib/photos.json`** from disk: `src`, `thumb`, `width`/`height`. Existing entries
+- **Compresses.** Each original becomes four WebPs in `images/<folder>/`: 2560px full size, plus
+  a grid rendition at each of `GRID_WIDTHS` — `-400.webp`, `-800.webp`, `-1000.webp` (quality 82,
+  EXIF orientation baked in, metadata stripped). Skipped when a rendition is newer than its
+  original. A file already ending in one of those suffixes is an output of this script, not a
+  photograph, and is skipped when the manifest is rebuilt.
+- **Rebuilds `src/lib/photos.json`** from disk: `src`, `thumb`, `widths`, `width`/`height`. Existing entries
   keep their id, alt, date, and EXIF, so hand-edits survive. New files are appended, list sorted
   newest-first.
 - **Assigns a permanent id** — `<year>-<filename>`, e.g. `2019-img-0116` — on first sight and
@@ -333,8 +335,9 @@ bundle; the static page fetches it in the browser.
 `/listening/2026`, `/listening/2026/08`, `/listening/2026/W32` and `/listening/all` are one page
 (`ListeningPeriod.tsx`) rendering one blob shape at four granularities: leaderboards with rank
 movement, the hour/weekday/168-cell "when I listen" charts, discovery, streaks, sessions, album
-listens and milestones. Design notes and the full stat catalog live in
-[`plan-listening-stats.md`](plan-listening-stats.md).
+listens and milestones. The full stat catalog is the `PeriodStats` shape in
+`worker-listening/src/aggregate.ts` — every field on it is something the page renders, and the cron
+is the only thing that writes one.
 
 `/listening/wrapped` (and `/listening/wrapped/<year>`) tells the same year as a narrative. Every
 `/listening/<year>` page links to its story, and the wrapped page carries a year switcher, so no
@@ -504,6 +507,15 @@ pagination. There are no galleries — `/2019`, `/latest`, `/past-work` and frie
 
 - **Every photo has a page** at `/photos/<id>`, prerendered, with the full-size image, date, camera
   settings, a map link when it has coordinates, and prev/next (←/→ work too).
+- **Tiles pick their own size.** A tile paints between ~117px (three across a phone) and ~306px,
+  so each carries a `srcset` over the grid renditions with a `sizes` describing the feed. A phone
+  takes the 400px file — 38 KB against the 1000px file's 139 KB — instead of downloading roughly
+  eight times the pixels it can show. `widths` on the manifest entry lists the renditions that
+  actually exist, so a photo synced before a width was added advertises only what it has, and
+  `src` stays the largest as the fallback for anything ignoring `srcset`.
+  **`GRID_WIDTHS` is declared twice** — `scripts/photo-manifest.mjs` encodes them,
+  `src/lib/photos.ts` offers them — and `tests/photos.test.ts` pins the two together, because a
+  width the srcset offers but the encoder never wrote is a 404 the browser picks on its own.
 - **Each tile paints its photo's average color** while the image loads (`tint` in the manifest,
   computed by `scripts/tint.mjs` during `images:sync`), so scrolling the feed is photographs
   arriving rather than a grid of identical gray squares. 7 bytes per photo.

@@ -33,7 +33,7 @@ import { fileURLToPath } from 'node:url'
 import { imageSize } from './image-size.mjs'
 import { readPhotoExif } from './exif.mjs'
 import { readTint } from './tint.mjs'
-import { assignPhotoId, byNewest, resolveDate } from './photo-manifest.mjs'
+import { assignPhotoId, byNewest, GRID_WIDTHS, renditionPath, resolveDate } from './photo-manifest.mjs'
 import { IMAGES_DIR, localImagePath } from './paths.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -49,6 +49,8 @@ const YEAR = /^\d{4}$/
 // page plus a grid thumbnail; blog images only ever render at content width, so one size.
 const THUMB_WIDTH = 1000
 const THUMB_SUFFIX = `-${THUMB_WIDTH}.webp`
+/** `-400.webp`, `-800.webp`, … — how a rendition is told apart from an original. */
+const GRID_SUFFIXES = GRID_WIDTHS.map((width) => `-${width}.webp`)
 const FULL_WIDTH = 2560
 const BLOG_WIDTH = 1600
 const QUALITY = 82
@@ -123,7 +125,12 @@ async function deriveFolder(sharp, folder, isPhoto) {
     const jobs = isPhoto
       ? [
           { out: path.join(to, `${base}.webp`), width: FULL_WIDTH },
-          { out: path.join(to, `${base}${THUMB_SUFFIX}`), width: THUMB_WIDTH },
+          // One per grid width, so a tile can pick the size it will actually
+          // paint at instead of always taking the largest.
+          ...GRID_WIDTHS.map((width) => ({
+            out: path.join(to, `${base}-${width}.webp`),
+            width,
+          })),
         ]
       : [{ out: path.join(to, `${base}.webp`), width: BLOG_WIDTH }]
 
@@ -179,6 +186,19 @@ function thumbFor(src) {
 }
 
 /**
+ * Which grid widths actually exist on disk for this photo.
+ *
+ * Recorded per entry rather than assumed from GRID_WIDTHS: a photo whose
+ * original has left the machine keeps whatever renditions were made when it was
+ * last synced, and the srcset must not advertise a file that would 404. It is
+ * also what photos:rm deletes by.
+ */
+function widthsFor(src) {
+  const found = GRID_WIDTHS.filter((width) => existsSync(localImagePath(renditionPath(src, width))))
+  return found.length ? found : undefined
+}
+
+/**
  * Map each original's filename stem to its path, so a manifest entry pointing at
  * `/images/2026/IMG_0004.webp` can find `originals/2026/IMG_0004.jpeg` — the
  * rendition has no EXIF of its own, having been encoded without metadata.
@@ -205,7 +225,10 @@ async function syncPhotos(existing) {
     const dir = path.join(IMAGES_DIR, year)
     const originals = await originalsByStem(year)
     // Thumbnails ride along on their full-size entry rather than being photos of their own.
-    const files = (await imageFiles(dir)).filter((name) => !name.endsWith(THUMB_SUFFIX))
+    // Every grid width, not just the thumb: a rendition is an output of this
+    // script, and treating one as an original would file it as a photo of its
+    // own and then derive renditions of the rendition.
+    const files = (await imageFiles(dir)).filter((name) => !GRID_SUFFIXES.some((s) => name.endsWith(s)))
     // Needed for EXIF (which reads originals/) and for the tint (which reads the
     // renditions right here), so it's wanted whenever there is anything to sync —
     // not only in a checkout that happens to have the originals.
@@ -217,6 +240,7 @@ async function syncPhotos(existing) {
       const file = path.join(dir, name)
       const prior = bySrc.get(src)
       const thumb = thumbFor(src)
+      const widths = widthsFor(src)
 
       /**
        * Capture metadata is re-read only when the entry has none (or --reexif /
@@ -259,6 +283,7 @@ async function syncPhotos(existing) {
         id: prior?.id ?? assignPhotoId(year, stemOf(name), used),
         src,
         thumb,
+        ...(widths ? { widths } : {}),
         alt: prior?.alt ?? `Photograph — ${year}`,
         ...(size ?? {}),
         ...(tint ? { tint } : {}),

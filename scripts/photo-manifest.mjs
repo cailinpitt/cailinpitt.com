@@ -65,6 +65,27 @@ export function resolveDate({ exif, existing, year }) {
 }
 
 /**
+ * Widths the grid renditions are encoded at, narrowest first.
+ *
+ * A feed tile is three-across at every viewport: ~117px on a phone, ~306px at
+ * the feed's 58rem cap. Times a 2–3x display that spans ~234–918 real pixels,
+ * which one 1000px file served badly at both ends — a phone was downloading
+ * about eight times the pixels it could show.
+ *
+ * 1000 stays because it is what `thumb` has always pointed at, and the photo's
+ * own page and older manifest entries both still expect it.
+ *
+ * Mirrored by GRID_WIDTHS in src/lib/photos.ts, which builds the srcset the
+ * browser actually reads; tests/photos.test.ts pins the two together.
+ */
+export const GRID_WIDTHS = [400, 800, 1000]
+
+/** The grid rendition of `src` at `width`: /images/2026/x.webp -> …/x-400.webp */
+export function renditionPath(src, width) {
+  return src.replace(/\.[^.]+$/, `-${width}.webp`)
+}
+
+/**
  * Everything on disk and in R2 that belongs to one photo, derived from its
  * manifest entry.
  *
@@ -80,8 +101,17 @@ export function resolveDate({ exif, existing, year }) {
 export function photoFiles(photo) {
   const [, , folder, file] = photo.src.split('/')
   const stem = file.replace(/\.[^.]+$/, '')
-  /** Root-relative paths under public/, which are also the R2 keys minus the leading slash. */
-  const renditions = [photo.src, photo.thumb].filter(Boolean)
+  /**
+   * Root-relative paths, which are also the R2 keys minus the leading slash.
+   *
+   * Driven by the entry's own `widths` rather than GRID_WIDTHS, so removing a
+   * photo deletes the renditions it actually has: an entry written before a
+   * width was added never had that file, and a stale constant must not make
+   * `photos:rm` report a phantom as missing. `thumb` is folded in for entries
+   * predating `widths` entirely.
+   */
+  const grid = (photo.widths ?? []).map((width) => renditionPath(photo.src, width))
+  const renditions = [...new Set([photo.src, photo.thumb, ...grid].filter(Boolean))]
   return { folder, stem, renditions, originalStem: stem }
 }
 

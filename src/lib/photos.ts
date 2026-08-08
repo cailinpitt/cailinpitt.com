@@ -15,6 +15,7 @@
 
 import type { PhotoExif } from './exif'
 import { formatShotDate, formatShotDateShort } from './exif'
+import { imageUrl } from './images'
 
 export interface Photo {
   /** Permalink slug: /photos/<id>. Stable for the life of the photo. */
@@ -23,6 +24,12 @@ export interface Photo {
   src: string
   /** Grid rendition (1000px), generated alongside `src` by `npm run images:sync`. */
   thumb?: string
+  /**
+   * Grid rendition widths that exist for this photo, narrowest first — what
+   * `thumbSrcset` offers the browser. Absent on an entry synced before the
+   * smaller sizes existed, which falls back to `thumb` alone.
+   */
+  widths?: number[]
   alt: string
   /** Dimensions of `src`, to hold the aspect ratio and prevent layout shift. */
   width?: number
@@ -88,6 +95,8 @@ export function formatPhotoDateShort(photo: Photo): string {
 export interface PhotoPreview {
   href: string
   src: string
+  /** Same narrow-first candidate list the feed tiles get; see thumbSrcset. */
+  srcset?: string
   /** "Jul 18" for a photo with a capture time, else its year. */
   label: string
   /** Placeholder color, as on the feed tiles. */
@@ -96,13 +105,49 @@ export interface PhotoPreview {
 
 /** The newest `count` photographs, each linking to its own page. */
 export function toPreviews(photos: Photo[], count: number): PhotoPreview[] {
-  return photos.slice(0, count).map((photo) => ({
-    href: `/photos/${photo.id}`,
-    src: photo.thumb ?? photo.src,
-    label: formatPhotoDateShort(photo),
-    tint: photo.tint,
-  }))
+  return photos.slice(0, count).map((photo) => {
+    const srcset = thumbSrcset(photo)
+    return {
+      href: `/photos/${photo.id}`,
+      src: photo.thumb ?? photo.src,
+      ...(srcset ? { srcset } : {}),
+      label: formatPhotoDateShort(photo),
+      tint: photo.tint,
+    }
+  })
 }
+
+/**
+ * Grid rendition widths, narrowest first. Mirrors GRID_WIDTHS in
+ * scripts/photo-manifest.mjs, which is what encodes them; tests/photos.test.ts
+ * pins the two together, because a width listed here that was never encoded is
+ * a 404 the browser picks on its own.
+ */
+export const GRID_WIDTHS = [400, 800, 1000]
+
+/** The grid rendition of `src` at `width`: /images/2026/x.webp -> …/x-400.webp */
+export const renditionPath = (src: string, width: number) =>
+  src.replace(/\.[^.]+$/, `-${width}.webp`)
+
+/**
+ * The `srcset` for a grid tile, or undefined when the photo has only the one
+ * rendition and a plain `src` says the same thing.
+ *
+ * Paired with a `sizes` that describes the three-across feed, this is what stops
+ * a phone downloading a 1000px file to paint a 117px square.
+ */
+export function thumbSrcset(photo: Pick<Photo, 'src' | 'widths'>): string | undefined {
+  if (!photo.widths || photo.widths.length < 2) return undefined
+  return photo.widths.map((w) => `${imageUrl(renditionPath(photo.src, w))} ${w}w`).join(', ')
+}
+
+/**
+ * How wide a feed tile actually paints: three across a grid that is 92vw until
+ * it hits the 58rem cap, less the two 4px gaps. Kept next to the srcset it
+ * describes — the two only work as a pair, and a `sizes` that disagrees with
+ * the CSS makes the browser choose the wrong file with total confidence.
+ */
+export const FEED_TILE_SIZES = '(min-width: 63rem) 306px, 30vw'
 
 /** Anchor id for the first photo of a year, so /photos#y2019 still lands. */
 export const yearAnchor = (year: string) => `y${year}`

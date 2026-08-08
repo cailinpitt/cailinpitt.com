@@ -3,6 +3,11 @@
     "id": "2026-0807-174520-6cb4",
     "src": "/images/2026/0807-174520-6cb4.webp",
     "thumb": "/images/2026/0807-174520-6cb4-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -26,9 +31,15 @@
     "id": "2026-0802-195928-9f70",
     "src": "/images/2026/0802-195928-9f70.webp",
     "thumb": "/images/2026/0802-195928-9f70-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
+    "tint": "#85969c",
     "year": "2026",
     "date": "2026-08-02T15:03:26",
     "exif": {
@@ -48,9 +59,15 @@
     "id": "2026-0801-182544-75b9",
     "src": "/images/2026/0801-182544-75b9.webp",
     "thumb": "/images/2026/0801-182544-75b9-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
+    "tint": "#acada6",
     "year": "2026",
     "date": "2026-08-01T18:25:44",
     "exif": {
@@ -70,6 +87,11 @@
     "id": "2026-img-1919",
     "src": "/images/2026/IMG_1919.webp",
     "thumb": "/images/2026/IMG_1919-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -93,6 +115,11 @@
     "id": "2026-img-1914",
     "src": "/images/2026/IMG_1914.webp",
     "thumb": "/images/2026/IMG_1914-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -116,6 +143,11 @@
     "id": "2026-img-1886",
     "src": "/images/2026/IMG_1886.webp",
     "thumb": "/images/2026/IMG_1886-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -139,6 +171,11 @@
     "id": "2026-img-1860",
     "src": "/images/2026/IMG_1860.webp",
     "thumb": "/images/2026/IMG_1860-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -162,6 +199,11 @@
     "id": "2026-img-1825",
     "src": "/images/2026/IMG_1825.webp",
     "thumb": "/images/2026/IMG_1825-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -185,6 +227,11 @@
     "id": "2026-dji-fly-20260718-193238-327-1784421170450-photo",
     "src": "/images/2026/dji_fly_20260718_193238_327_1784421170450_photo.webp",
     "thumb": "/images/2026/dji_fly_20260718_193238_327_1784421170450_photo-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -208,6 +255,11 @@
     "id": "2026-dji-fly-20260718-193222-326-1784421155290-photo",
     "src": "/images/2026/dji_fly_20260718_193222_326_1784421155290_photo.webp",
     "thumb": "/images/2026/dji_fly_20260718_193222_326_1784421155290_photo-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -231,6 +283,11 @@
     "id": "2026-img-1694",
     "src": "/images/2026/IMG_1694.webp",
     "thumb": "/images/2026/IMG_1694-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -254,6 +311,11 @@
     "id": "2026-img-1647",
     "src": "/images/2026/IMG_1647.webp",
     "thumb": "/images/2026/IMG_1647-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -277,6 +339,11 @@
     "id": "2026-img-1379",
     "src": "/images/2026/IMG_1379.webp",
     "thumb": "/images/2026/IMG_1379-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -300,6 +367,11 @@
     "id": "2026-img-1090",
     "src": "/images/2026/IMG_1090.webp",
     "thumb": "/images/2026/IMG_1090-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -323,6 +395,11 @@
     "id": "2026-img-0959",
     "src": "/images/2026/IMG_0959.webp",
     "thumb": "/images/2026/IMG_0959-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 2560,
     "height": 1920,
@@ -346,6 +423,11 @@
     "id": "2026-img-0647",
     "src": "/images/2026/IMG_0647.webp",
     "thumb": "/images/2026/IMG_0647-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -369,6 +451,11 @@
     "id": "2026-img-0593",
     "src": "/images/2026/IMG_0593.webp",
     "thumb": "/images/2026/IMG_0593-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -392,6 +479,11 @@
     "id": "2026-img-0577",
     "src": "/images/2026/IMG_0577.webp",
     "thumb": "/images/2026/IMG_0577-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -415,6 +507,11 @@
     "id": "2026-img-0524",
     "src": "/images/2026/IMG_0524.webp",
     "thumb": "/images/2026/IMG_0524-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -438,6 +535,11 @@
     "id": "2026-img-0414",
     "src": "/images/2026/IMG_0414.webp",
     "thumb": "/images/2026/IMG_0414-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -461,6 +563,11 @@
     "id": "2026-img-0385",
     "src": "/images/2026/IMG_0385.webp",
     "thumb": "/images/2026/IMG_0385-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -484,6 +591,11 @@
     "id": "2026-img-0289",
     "src": "/images/2026/IMG_0289.webp",
     "thumb": "/images/2026/IMG_0289-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -507,6 +619,11 @@
     "id": "2026-img-0255",
     "src": "/images/2026/IMG_0255.webp",
     "thumb": "/images/2026/IMG_0255-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -530,6 +647,11 @@
     "id": "2026-img-0004",
     "src": "/images/2026/IMG_0004.webp",
     "thumb": "/images/2026/IMG_0004-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -553,6 +675,11 @@
     "id": "2026-img-7960",
     "src": "/images/2026/IMG_7960.webp",
     "thumb": "/images/2026/IMG_7960-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -576,6 +703,11 @@
     "id": "2026-img-7891",
     "src": "/images/2026/IMG_7891.webp",
     "thumb": "/images/2026/IMG_7891-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -599,6 +731,11 @@
     "id": "2026-img-7208",
     "src": "/images/2026/IMG_7208.webp",
     "thumb": "/images/2026/IMG_7208-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2026",
     "width": 1920,
     "height": 2560,
@@ -622,6 +759,11 @@
     "id": "2022-who-do-you-love",
     "src": "/images/2022/who-do-you-love.webp",
     "thumb": "/images/2022/who-do-you-love-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1500,
@@ -634,6 +776,11 @@
     "id": "2022-earth",
     "src": "/images/2022/earth.webp",
     "thumb": "/images/2022/earth-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1500,
@@ -646,6 +793,11 @@
     "id": "2022-dji-0313",
     "src": "/images/2022/DJI_0313.webp",
     "thumb": "/images/2022/DJI_0313-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -658,6 +810,11 @@
     "id": "2022-dji-0312",
     "src": "/images/2022/DJI_0312.webp",
     "thumb": "/images/2022/DJI_0312-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -670,6 +827,11 @@
     "id": "2022-dji-0316",
     "src": "/images/2022/DJI_0316.webp",
     "thumb": "/images/2022/DJI_0316-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -682,6 +844,11 @@
     "id": "2022-dji-0295",
     "src": "/images/2022/DJI_0295.webp",
     "thumb": "/images/2022/DJI_0295-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -694,6 +861,11 @@
     "id": "2022-dji-0293",
     "src": "/images/2022/DJI_0293.webp",
     "thumb": "/images/2022/DJI_0293-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -706,6 +878,11 @@
     "id": "2022-dji-0283",
     "src": "/images/2022/DJI_0283.webp",
     "thumb": "/images/2022/DJI_0283-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -718,6 +895,11 @@
     "id": "2022-dji-0252",
     "src": "/images/2022/DJI_0252.webp",
     "thumb": "/images/2022/DJI_0252-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -730,6 +912,11 @@
     "id": "2022-dji-0266",
     "src": "/images/2022/DJI_0266.webp",
     "thumb": "/images/2022/DJI_0266-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -742,6 +929,11 @@
     "id": "2022-dji-0236",
     "src": "/images/2022/DJI_0236.webp",
     "thumb": "/images/2022/DJI_0236-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -754,6 +946,11 @@
     "id": "2022-dji-0242",
     "src": "/images/2022/DJI_0242.webp",
     "thumb": "/images/2022/DJI_0242-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -766,6 +963,11 @@
     "id": "2022-dji-0247",
     "src": "/images/2022/DJI_0247.webp",
     "thumb": "/images/2022/DJI_0247-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -778,6 +980,11 @@
     "id": "2022-dji-0227",
     "src": "/images/2022/DJI_0227.webp",
     "thumb": "/images/2022/DJI_0227-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -790,6 +997,11 @@
     "id": "2022-dji-0208",
     "src": "/images/2022/DJI_0208.webp",
     "thumb": "/images/2022/DJI_0208-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -802,6 +1014,11 @@
     "id": "2022-img-8733",
     "src": "/images/2022/IMG_8733.webp",
     "thumb": "/images/2022/IMG_8733-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -814,6 +1031,11 @@
     "id": "2022-img-8725",
     "src": "/images/2022/IMG_8725.webp",
     "thumb": "/images/2022/IMG_8725-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -826,6 +1048,11 @@
     "id": "2022-img-8724",
     "src": "/images/2022/IMG_8724.webp",
     "thumb": "/images/2022/IMG_8724-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -838,6 +1065,11 @@
     "id": "2022-img-8727",
     "src": "/images/2022/IMG_8727.webp",
     "thumb": "/images/2022/IMG_8727-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -850,6 +1082,11 @@
     "id": "2022-img-8307",
     "src": "/images/2022/IMG_8307.webp",
     "thumb": "/images/2022/IMG_8307-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -862,6 +1099,11 @@
     "id": "2022-img-8304",
     "src": "/images/2022/IMG_8304.webp",
     "thumb": "/images/2022/IMG_8304-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -874,6 +1116,11 @@
     "id": "2022-img-8231",
     "src": "/images/2022/IMG_8231.webp",
     "thumb": "/images/2022/IMG_8231-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -886,6 +1133,11 @@
     "id": "2022-img-8261-2",
     "src": "/images/2022/IMG_8261-2.webp",
     "thumb": "/images/2022/IMG_8261-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -898,6 +1150,11 @@
     "id": "2022-img-8240-2",
     "src": "/images/2022/IMG_8240-2.webp",
     "thumb": "/images/2022/IMG_8240-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -910,6 +1167,11 @@
     "id": "2022-img-8235",
     "src": "/images/2022/IMG_8235.webp",
     "thumb": "/images/2022/IMG_8235-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -922,6 +1184,11 @@
     "id": "2022-img-8220",
     "src": "/images/2022/IMG_8220.webp",
     "thumb": "/images/2022/IMG_8220-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -934,6 +1201,11 @@
     "id": "2022-img-8163",
     "src": "/images/2022/IMG_8163.webp",
     "thumb": "/images/2022/IMG_8163-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -946,6 +1218,11 @@
     "id": "2022-img-8165",
     "src": "/images/2022/IMG_8165.webp",
     "thumb": "/images/2022/IMG_8165-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -958,6 +1235,11 @@
     "id": "2022-img-8141",
     "src": "/images/2022/IMG_8141.webp",
     "thumb": "/images/2022/IMG_8141-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -970,6 +1252,11 @@
     "id": "2022-img-8068-jpg",
     "src": "/images/2022/IMG_8068_jpg.webp",
     "thumb": "/images/2022/IMG_8068_jpg-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -982,6 +1269,11 @@
     "id": "2022-img-7982",
     "src": "/images/2022/IMG_7982.webp",
     "thumb": "/images/2022/IMG_7982-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -994,6 +1286,11 @@
     "id": "2022-img-7957-jpg",
     "src": "/images/2022/IMG_7957_jpg.webp",
     "thumb": "/images/2022/IMG_7957_jpg-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1006,6 +1303,11 @@
     "id": "2022-img-7919",
     "src": "/images/2022/IMG_7919.webp",
     "thumb": "/images/2022/IMG_7919-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1018,6 +1320,11 @@
     "id": "2022-img-7730",
     "src": "/images/2022/IMG_7730.webp",
     "thumb": "/images/2022/IMG_7730-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1030,6 +1337,11 @@
     "id": "2022-img-7768",
     "src": "/images/2022/IMG_7768.webp",
     "thumb": "/images/2022/IMG_7768-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1042,6 +1354,11 @@
     "id": "2022-img-7805",
     "src": "/images/2022/IMG_7805.webp",
     "thumb": "/images/2022/IMG_7805-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1054,6 +1371,11 @@
     "id": "2022-img-7763",
     "src": "/images/2022/IMG_7763.webp",
     "thumb": "/images/2022/IMG_7763-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1066,6 +1388,11 @@
     "id": "2022-img-7592",
     "src": "/images/2022/IMG_7592.webp",
     "thumb": "/images/2022/IMG_7592-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1078,6 +1405,11 @@
     "id": "2022-e4b8a22f-f1ce-4377-bef6-8d53a9e5aac2",
     "src": "/images/2022/E4B8A22F-F1CE-4377-BEF6-8D53A9E5AAC2.webp",
     "thumb": "/images/2022/E4B8A22F-F1CE-4377-BEF6-8D53A9E5AAC2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1440,
     "height": 1800,
@@ -1090,6 +1422,11 @@
     "id": "2022-9e51d9db-3003-4889-afeb-032385c5ac9d",
     "src": "/images/2022/9E51D9DB-3003-4889-AFEB-032385C5AC9D.webp",
     "thumb": "/images/2022/9E51D9DB-3003-4889-AFEB-032385C5AC9D-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1440,
     "height": 1800,
@@ -1102,6 +1439,11 @@
     "id": "2022-3b569599-84cc-4e5e-a164-fda9fa5d384d",
     "src": "/images/2022/3B569599-84CC-4E5E-A164-FDA9FA5D384D.webp",
     "thumb": "/images/2022/3B569599-84CC-4E5E-A164-FDA9FA5D384D-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1440,
     "height": 1801,
@@ -1114,6 +1456,11 @@
     "id": "2022-ce9a40f0-956f-4bd9-9f6b-b60aa4550edc",
     "src": "/images/2022/CE9A40F0-956F-4BD9-9F6B-B60AA4550EDC.webp",
     "thumb": "/images/2022/CE9A40F0-956F-4BD9-9F6B-B60AA4550EDC-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1440,
     "height": 1800,
@@ -1126,6 +1473,11 @@
     "id": "2022-img-7219-2",
     "src": "/images/2022/IMG_7219-2.webp",
     "thumb": "/images/2022/IMG_7219-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1138,6 +1490,11 @@
     "id": "2022-img-6635",
     "src": "/images/2022/IMG_6635.webp",
     "thumb": "/images/2022/IMG_6635-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1150,6 +1507,11 @@
     "id": "2022-img-4972",
     "src": "/images/2022/IMG_4972.webp",
     "thumb": "/images/2022/IMG_4972-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1162,6 +1524,11 @@
     "id": "2022-img-4013-2",
     "src": "/images/2022/IMG_4013-2.webp",
     "thumb": "/images/2022/IMG_4013-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1174,6 +1541,11 @@
     "id": "2022-img-4118-2",
     "src": "/images/2022/IMG_4118-2.webp",
     "thumb": "/images/2022/IMG_4118-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1186,6 +1558,11 @@
     "id": "2022-img-4072-2",
     "src": "/images/2022/IMG_4072-2.webp",
     "thumb": "/images/2022/IMG_4072-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1198,6 +1575,11 @@
     "id": "2022-img-3825",
     "src": "/images/2022/IMG_3825.webp",
     "thumb": "/images/2022/IMG_3825-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1210,6 +1592,11 @@
     "id": "2022-img-3812",
     "src": "/images/2022/IMG_3812.webp",
     "thumb": "/images/2022/IMG_3812-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1222,6 +1609,11 @@
     "id": "2022-img-3114",
     "src": "/images/2022/IMG_3114.webp",
     "thumb": "/images/2022/IMG_3114-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1234,6 +1626,11 @@
     "id": "2022-img-3115",
     "src": "/images/2022/IMG_3115.webp",
     "thumb": "/images/2022/IMG_3115-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1139,
@@ -1246,6 +1643,11 @@
     "id": "2022-img-2483",
     "src": "/images/2022/IMG_2483.webp",
     "thumb": "/images/2022/IMG_2483-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1258,6 +1660,11 @@
     "id": "2022-img-0422-2",
     "src": "/images/2022/IMG_0422-2.webp",
     "thumb": "/images/2022/IMG_0422-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1000,
@@ -1270,6 +1677,11 @@
     "id": "2022-img-0424",
     "src": "/images/2022/IMG_0424.webp",
     "thumb": "/images/2022/IMG_0424-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1000,
@@ -1282,6 +1694,11 @@
     "id": "2022-img-2195",
     "src": "/images/2022/IMG_2195.webp",
     "thumb": "/images/2022/IMG_2195-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1294,6 +1711,11 @@
     "id": "2022-img-2247",
     "src": "/images/2022/IMG_2247.webp",
     "thumb": "/images/2022/IMG_2247-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 2000,
@@ -1306,6 +1728,11 @@
     "id": "2022-2022",
     "src": "/images/2022/2022.webp",
     "thumb": "/images/2022/2022-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1500,
@@ -1318,6 +1745,11 @@
     "id": "2022-img-5527-2",
     "src": "/images/2022/IMG_5527-2.webp",
     "thumb": "/images/2022/IMG_5527-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1330,6 +1762,11 @@
     "id": "2022-img-5001-2",
     "src": "/images/2022/IMG_5001-2.webp",
     "thumb": "/images/2022/IMG_5001-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2022",
     "width": 1500,
     "height": 1125,
@@ -1342,6 +1779,11 @@
     "id": "2021-untitled-1",
     "src": "/images/2021/Untitled-1.webp",
     "thumb": "/images/2021/Untitled-1-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1354,6 +1796,11 @@
     "id": "2021-colors",
     "src": "/images/2021/colors.webp",
     "thumb": "/images/2021/colors-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1366,6 +1813,11 @@
     "id": "2021-untitled-artwork",
     "src": "/images/2021/Untitled_Artwork.webp",
     "thumb": "/images/2021/Untitled_Artwork-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1496,
@@ -1378,6 +1830,11 @@
     "id": "2021-img-0419",
     "src": "/images/2021/IMG_0419.webp",
     "thumb": "/images/2021/IMG_0419-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1000,
@@ -1390,6 +1847,11 @@
     "id": "2021-untitled-4",
     "src": "/images/2021/Untitled-4.webp",
     "thumb": "/images/2021/Untitled-4-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1402,6 +1864,11 @@
     "id": "2021-untitled-3",
     "src": "/images/2021/Untitled-3.webp",
     "thumb": "/images/2021/Untitled-3-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1414,6 +1881,11 @@
     "id": "2021-save-the-planet-stop-driving-your-car",
     "src": "/images/2021/SAVE-THE-PLANET-STOP-DRIVING-YOUR-CAR.webp",
     "thumb": "/images/2021/SAVE-THE-PLANET-STOP-DRIVING-YOUR-CAR-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1426,6 +1898,11 @@
     "id": "2021-hands",
     "src": "/images/2021/hands.webp",
     "thumb": "/images/2021/hands-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1438,6 +1915,11 @@
     "id": "2021-good-night",
     "src": "/images/2021/good-night.webp",
     "thumb": "/images/2021/good-night-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1450,6 +1932,11 @@
     "id": "2021-sunday-night",
     "src": "/images/2021/sunday-night.webp",
     "thumb": "/images/2021/sunday-night-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1462,6 +1949,11 @@
     "id": "2021-sun-on-my-skin-small",
     "src": "/images/2021/sun-on-my-skin-small.webp",
     "thumb": "/images/2021/sun-on-my-skin-small-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1474,6 +1966,11 @@
     "id": "2021-lines",
     "src": "/images/2021/lines.webp",
     "thumb": "/images/2021/lines-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1486,6 +1983,11 @@
     "id": "2021-img-0340",
     "src": "/images/2021/IMG_0340.webp",
     "thumb": "/images/2021/IMG_0340-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1000,
@@ -1498,6 +2000,11 @@
     "id": "2021-img-0328",
     "src": "/images/2021/IMG_0328.webp",
     "thumb": "/images/2021/IMG_0328-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 2250,
@@ -1510,6 +2017,11 @@
     "id": "2021-img-0321",
     "src": "/images/2021/IMG_0321.webp",
     "thumb": "/images/2021/IMG_0321-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1000,
@@ -1522,6 +2034,11 @@
     "id": "2021-dji-0182",
     "src": "/images/2021/DJI_0182.webp",
     "thumb": "/images/2021/DJI_0182-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1125,
@@ -1534,6 +2051,11 @@
     "id": "2021-img-0313",
     "src": "/images/2021/IMG_0313.webp",
     "thumb": "/images/2021/IMG_0313-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 2250,
@@ -1546,6 +2068,11 @@
     "id": "2021-img-0308",
     "src": "/images/2021/IMG_0308.webp",
     "thumb": "/images/2021/IMG_0308-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1000,
@@ -1558,6 +2085,11 @@
     "id": "2021-yuck",
     "src": "/images/2021/yuck-.webp",
     "thumb": "/images/2021/yuck--1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1570,6 +2102,11 @@
     "id": "2021-i-m-trying",
     "src": "/images/2021/i-m-trying.webp",
     "thumb": "/images/2021/i-m-trying-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2021",
     "width": 1500,
     "height": 1500,
@@ -1582,6 +2119,11 @@
     "id": "2020-img-0290",
     "src": "/images/2020/IMG_0290.webp",
     "thumb": "/images/2020/IMG_0290-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1000,
@@ -1594,6 +2136,11 @@
     "id": "2020-i-think-things-will-get-better",
     "src": "/images/2020/i-think-things-will-get-better.webp",
     "thumb": "/images/2020/i-think-things-will-get-better-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1606,6 +2153,11 @@
     "id": "2020-img-0003",
     "src": "/images/2020/IMG_0003.webp",
     "thumb": "/images/2020/IMG_0003-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1618,6 +2170,11 @@
     "id": "2020-dji-0146-4",
     "src": "/images/2020/DJI_0146-4.webp",
     "thumb": "/images/2020/DJI_0146-4-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1630,6 +2187,11 @@
     "id": "2020-dji-0135-2",
     "src": "/images/2020/DJI_0135-2.webp",
     "thumb": "/images/2020/DJI_0135-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1642,6 +2204,11 @@
     "id": "2020-dji-0127",
     "src": "/images/2020/DJI_0127.webp",
     "thumb": "/images/2020/DJI_0127-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1654,6 +2221,11 @@
     "id": "2020-be-nice-to-yourself",
     "src": "/images/2020/be-nice-to-yourself.webp",
     "thumb": "/images/2020/be-nice-to-yourself-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1666,6 +2238,11 @@
     "id": "2020-dji-0117",
     "src": "/images/2020/DJI_0117.webp",
     "thumb": "/images/2020/DJI_0117-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1678,6 +2255,11 @@
     "id": "2020-times-are-hard",
     "src": "/images/2020/TIMES-ARE-HARD.webp",
     "thumb": "/images/2020/TIMES-ARE-HARD-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1690,6 +2272,11 @@
     "id": "2020-edmund-pettus-bridge",
     "src": "/images/2020/Edmund-Pettus-Bridge.webp",
     "thumb": "/images/2020/Edmund-Pettus-Bridge-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1702,6 +2289,11 @@
     "id": "2020-dji-0099",
     "src": "/images/2020/DJI_0099.webp",
     "thumb": "/images/2020/DJI_0099-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1714,6 +2306,11 @@
     "id": "2020-dji-0096",
     "src": "/images/2020/DJI_0096.webp",
     "thumb": "/images/2020/DJI_0096-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1726,6 +2323,11 @@
     "id": "2020-wear-a-fucking-mask",
     "src": "/images/2020/wear-a-fucking-mask.webp",
     "thumb": "/images/2020/wear-a-fucking-mask-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1738,6 +2340,11 @@
     "id": "2020-dji-0087-2",
     "src": "/images/2020/DJI_0087-2.webp",
     "thumb": "/images/2020/DJI_0087-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1750,6 +2357,11 @@
     "id": "2020-dji-0071-2",
     "src": "/images/2020/DJI_0071-2.webp",
     "thumb": "/images/2020/DJI_0071-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1125,
@@ -1762,6 +2374,11 @@
     "id": "2020-traffic-lights",
     "src": "/images/2020/traffic-lights.webp",
     "thumb": "/images/2020/traffic-lights-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1774,6 +2391,11 @@
     "id": "2020-cailin-aa",
     "src": "/images/2020/cailin-aa.webp",
     "thumb": "/images/2020/cailin-aa-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1786,6 +2408,11 @@
     "id": "2020-new-balance-is-cool",
     "src": "/images/2020/new-balance-is-cool.webp",
     "thumb": "/images/2020/new-balance-is-cool-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1798,6 +2425,11 @@
     "id": "2020-how-many-more",
     "src": "/images/2020/how-many-more.webp",
     "thumb": "/images/2020/how-many-more-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1810,6 +2442,11 @@
     "id": "2020-stay-true-to-yourself",
     "src": "/images/2020/stay-true-to-yourself.webp",
     "thumb": "/images/2020/stay-true-to-yourself-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1822,6 +2459,11 @@
     "id": "2020-black-trans-lives-matter",
     "src": "/images/2020/black-trans-lives-matter.webp",
     "thumb": "/images/2020/black-trans-lives-matter-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1834,6 +2476,11 @@
     "id": "2020-defund-the-police",
     "src": "/images/2020/defund-the-police.webp",
     "thumb": "/images/2020/defund-the-police-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1846,6 +2493,11 @@
     "id": "2020-a-better-world-is-possible2",
     "src": "/images/2020/a-better-world-is-possible2.webp",
     "thumb": "/images/2020/a-better-world-is-possible2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1858,6 +2510,11 @@
     "id": "2020-a-better-world-is-possible1",
     "src": "/images/2020/a-better-world-is-possible1.webp",
     "thumb": "/images/2020/a-better-world-is-possible1-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1870,6 +2527,11 @@
     "id": "2020-a-better-world-is-possible4",
     "src": "/images/2020/a-better-world-is-possible4.webp",
     "thumb": "/images/2020/a-better-world-is-possible4-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1882,6 +2544,11 @@
     "id": "2020-a-better-world-is-possible3",
     "src": "/images/2020/a-better-world-is-possible3.webp",
     "thumb": "/images/2020/a-better-world-is-possible3-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1894,6 +2561,11 @@
     "id": "2020-greetings-from-ohio",
     "src": "/images/2020/greetings-from-ohio.webp",
     "thumb": "/images/2020/greetings-from-ohio-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1906,6 +2578,11 @@
     "id": "2020-black-lives-matter",
     "src": "/images/2020/black-lives-matter.webp",
     "thumb": "/images/2020/black-lives-matter-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1918,6 +2595,11 @@
     "id": "2020-cincinnati-needs-bike-lanes",
     "src": "/images/2020/cincinnati-needs-bike-lanes.webp",
     "thumb": "/images/2020/cincinnati-needs-bike-lanes-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1930,6 +2612,11 @@
     "id": "2020-no-justice",
     "src": "/images/2020/no-justice.webp",
     "thumb": "/images/2020/no-justice-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1942,6 +2629,11 @@
     "id": "2020-i-am-trying",
     "src": "/images/2020/i-am-trying.webp",
     "thumb": "/images/2020/i-am-trying-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1954,6 +2646,11 @@
     "id": "2020-waves",
     "src": "/images/2020/waves.webp",
     "thumb": "/images/2020/waves-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1966,6 +2663,11 @@
     "id": "2020-pipes",
     "src": "/images/2020/pipes.webp",
     "thumb": "/images/2020/pipes-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1978,6 +2680,11 @@
     "id": "2020-covid-19-sucks",
     "src": "/images/2020/covid-19-sucks.webp",
     "thumb": "/images/2020/covid-19-sucks-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -1990,6 +2697,11 @@
     "id": "2020-tiles",
     "src": "/images/2020/tiles.webp",
     "thumb": "/images/2020/tiles-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2002,6 +2714,11 @@
     "id": "2020-smaller-circles",
     "src": "/images/2020/smaller-circles.webp",
     "thumb": "/images/2020/smaller-circles-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2014,6 +2731,11 @@
     "id": "2020-lines",
     "src": "/images/2020/lines.webp",
     "thumb": "/images/2020/lines-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2026,6 +2748,11 @@
     "id": "2020-3d-lines",
     "src": "/images/2020/3d-lines.webp",
     "thumb": "/images/2020/3d-lines-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2038,6 +2765,11 @@
     "id": "2020-computer",
     "src": "/images/2020/computer.webp",
     "thumb": "/images/2020/computer-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2050,6 +2782,11 @@
     "id": "2020-circle",
     "src": "/images/2020/circle.webp",
     "thumb": "/images/2020/circle-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2062,6 +2799,11 @@
     "id": "2020-reality",
     "src": "/images/2020/reality.webp",
     "thumb": "/images/2020/reality-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 501,
@@ -2074,6 +2816,11 @@
     "id": "2020-album-03",
     "src": "/images/2020/album_03.webp",
     "thumb": "/images/2020/album_03-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2086,6 +2833,11 @@
     "id": "2020-album-01",
     "src": "/images/2020/album_01.webp",
     "thumb": "/images/2020/album_01-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1499,
@@ -2098,6 +2850,11 @@
     "id": "2020-album-04",
     "src": "/images/2020/album_04.webp",
     "thumb": "/images/2020/album_04-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1499,
@@ -2110,6 +2867,11 @@
     "id": "2020-album-02",
     "src": "/images/2020/album_02.webp",
     "thumb": "/images/2020/album_02-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2122,6 +2884,11 @@
     "id": "2020-album-08",
     "src": "/images/2020/album_08.webp",
     "thumb": "/images/2020/album_08-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2134,6 +2901,11 @@
     "id": "2020-album-05",
     "src": "/images/2020/album_05.webp",
     "thumb": "/images/2020/album_05-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2146,6 +2918,11 @@
     "id": "2020-album-10",
     "src": "/images/2020/album_10.webp",
     "thumb": "/images/2020/album_10-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2158,6 +2935,11 @@
     "id": "2020-single-8",
     "src": "/images/2020/single-8.webp",
     "thumb": "/images/2020/single-8-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2170,6 +2952,11 @@
     "id": "2020-single-7",
     "src": "/images/2020/single-7.webp",
     "thumb": "/images/2020/single-7-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2182,6 +2969,11 @@
     "id": "2020-single-1",
     "src": "/images/2020/single-1.webp",
     "thumb": "/images/2020/single-1-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2194,6 +2986,11 @@
     "id": "2020-single-6",
     "src": "/images/2020/single-6.webp",
     "thumb": "/images/2020/single-6-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2206,6 +3003,11 @@
     "id": "2020-single-3",
     "src": "/images/2020/single-3.webp",
     "thumb": "/images/2020/single-3-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2218,6 +3020,11 @@
     "id": "2020-single-5",
     "src": "/images/2020/single-5.webp",
     "thumb": "/images/2020/single-5-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2230,6 +3037,11 @@
     "id": "2020-single-4",
     "src": "/images/2020/single-4.webp",
     "thumb": "/images/2020/single-4-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2242,6 +3054,11 @@
     "id": "2020-single-2",
     "src": "/images/2020/single-2.webp",
     "thumb": "/images/2020/single-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1500,
     "height": 1500,
@@ -2254,6 +3071,11 @@
     "id": "2020-artboard-1",
     "src": "/images/2020/Artboard-1.webp",
     "thumb": "/images/2020/Artboard-1-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2020",
     "width": 1080,
     "height": 1080,
@@ -2266,6 +3088,11 @@
     "id": "2019-img-0145",
     "src": "/images/2019/IMG_0145.webp",
     "thumb": "/images/2019/IMG_0145-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2278,6 +3105,11 @@
     "id": "2019-img-0116",
     "src": "/images/2019/IMG_0116.webp",
     "thumb": "/images/2019/IMG_0116-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2290,6 +3122,11 @@
     "id": "2019-img-0092",
     "src": "/images/2019/IMG_0092.webp",
     "thumb": "/images/2019/IMG_0092-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2302,6 +3139,11 @@
     "id": "2019-img-0096",
     "src": "/images/2019/IMG_0096.webp",
     "thumb": "/images/2019/IMG_0096-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2314,6 +3156,11 @@
     "id": "2019-img-9980",
     "src": "/images/2019/IMG_9980.webp",
     "thumb": "/images/2019/IMG_9980-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2326,6 +3173,11 @@
     "id": "2019-img-9961",
     "src": "/images/2019/IMG_9961.webp",
     "thumb": "/images/2019/IMG_9961-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2338,6 +3190,11 @@
     "id": "2019-img-0057",
     "src": "/images/2019/IMG_0057.webp",
     "thumb": "/images/2019/IMG_0057-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2350,6 +3207,11 @@
     "id": "2019-img-0050",
     "src": "/images/2019/IMG_0050.webp",
     "thumb": "/images/2019/IMG_0050-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2362,6 +3224,11 @@
     "id": "2019-img-0024",
     "src": "/images/2019/IMG_0024.webp",
     "thumb": "/images/2019/IMG_0024-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2374,6 +3241,11 @@
     "id": "2019-img-9960",
     "src": "/images/2019/IMG_9960.webp",
     "thumb": "/images/2019/IMG_9960-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2386,6 +3258,11 @@
     "id": "2019-img-9995",
     "src": "/images/2019/IMG_9995.webp",
     "thumb": "/images/2019/IMG_9995-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2398,6 +3275,11 @@
     "id": "2019-img-0011",
     "src": "/images/2019/IMG_0011.webp",
     "thumb": "/images/2019/IMG_0011-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2410,6 +3292,11 @@
     "id": "2019-img-9950",
     "src": "/images/2019/IMG_9950.webp",
     "thumb": "/images/2019/IMG_9950-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2422,6 +3309,11 @@
     "id": "2019-000313050020",
     "src": "/images/2019/000313050020.webp",
     "thumb": "/images/2019/000313050020-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2434,6 +3326,11 @@
     "id": "2019-000313050018",
     "src": "/images/2019/000313050018.webp",
     "thumb": "/images/2019/000313050018-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2446,6 +3343,11 @@
     "id": "2019-000313050014",
     "src": "/images/2019/000313050014.webp",
     "thumb": "/images/2019/000313050014-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2458,6 +3360,11 @@
     "id": "2019-000313050010",
     "src": "/images/2019/000313050010.webp",
     "thumb": "/images/2019/000313050010-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2470,6 +3377,11 @@
     "id": "2019-000313050011",
     "src": "/images/2019/000313050011.webp",
     "thumb": "/images/2019/000313050011-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2482,6 +3394,11 @@
     "id": "2019-000313050030",
     "src": "/images/2019/000313050030.webp",
     "thumb": "/images/2019/000313050030-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2494,6 +3411,11 @@
     "id": "2019-000313050027",
     "src": "/images/2019/000313050027.webp",
     "thumb": "/images/2019/000313050027-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2506,6 +3428,11 @@
     "id": "2019-000313050024",
     "src": "/images/2019/000313050024.webp",
     "thumb": "/images/2019/000313050024-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2518,6 +3445,11 @@
     "id": "2019-000313050026",
     "src": "/images/2019/000313050026.webp",
     "thumb": "/images/2019/000313050026-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2530,6 +3462,11 @@
     "id": "2019-000313050021",
     "src": "/images/2019/000313050021.webp",
     "thumb": "/images/2019/000313050021-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2542,6 +3479,11 @@
     "id": "2019-000413730012",
     "src": "/images/2019/000413730012.webp",
     "thumb": "/images/2019/000413730012-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2554,6 +3496,11 @@
     "id": "2019-000413730009",
     "src": "/images/2019/000413730009.webp",
     "thumb": "/images/2019/000413730009-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2566,6 +3513,11 @@
     "id": "2019-000413730010",
     "src": "/images/2019/000413730010.webp",
     "thumb": "/images/2019/000413730010-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2578,6 +3530,11 @@
     "id": "2019-000413730007",
     "src": "/images/2019/000413730007.webp",
     "thumb": "/images/2019/000413730007-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2590,6 +3547,11 @@
     "id": "2019-000413730002",
     "src": "/images/2019/000413730002.webp",
     "thumb": "/images/2019/000413730002-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2602,6 +3564,11 @@
     "id": "2019-000313050038",
     "src": "/images/2019/000313050038.webp",
     "thumb": "/images/2019/000313050038-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2614,6 +3581,11 @@
     "id": "2019-000313050036",
     "src": "/images/2019/000313050036.webp",
     "thumb": "/images/2019/000313050036-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2626,6 +3598,11 @@
     "id": "2019-000413730019",
     "src": "/images/2019/000413730019.webp",
     "thumb": "/images/2019/000413730019-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2638,6 +3615,11 @@
     "id": "2019-000413730033",
     "src": "/images/2019/000413730033.webp",
     "thumb": "/images/2019/000413730033-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2650,6 +3632,11 @@
     "id": "2019-000413730032",
     "src": "/images/2019/000413730032.webp",
     "thumb": "/images/2019/000413730032-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 994,
@@ -2662,6 +3649,11 @@
     "id": "2019-img-0243",
     "src": "/images/2019/IMG_0243.webp",
     "thumb": "/images/2019/IMG_0243-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2674,6 +3666,11 @@
     "id": "2019-img-0228",
     "src": "/images/2019/IMG_0228.webp",
     "thumb": "/images/2019/IMG_0228-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2686,6 +3683,11 @@
     "id": "2019-img-0226",
     "src": "/images/2019/IMG_0226.webp",
     "thumb": "/images/2019/IMG_0226-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2698,6 +3700,11 @@
     "id": "2019-img-0212",
     "src": "/images/2019/IMG_0212.webp",
     "thumb": "/images/2019/IMG_0212-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2710,6 +3717,11 @@
     "id": "2019-img-0204",
     "src": "/images/2019/IMG_0204.webp",
     "thumb": "/images/2019/IMG_0204-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2722,6 +3734,11 @@
     "id": "2019-img-0201",
     "src": "/images/2019/IMG_0201.webp",
     "thumb": "/images/2019/IMG_0201-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2734,6 +3751,11 @@
     "id": "2019-img-0183",
     "src": "/images/2019/IMG_0183.webp",
     "thumb": "/images/2019/IMG_0183-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2746,6 +3768,11 @@
     "id": "2019-img-0175",
     "src": "/images/2019/IMG_0175.webp",
     "thumb": "/images/2019/IMG_0175-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2758,6 +3785,11 @@
     "id": "2019-img-0245",
     "src": "/images/2019/IMG_0245.webp",
     "thumb": "/images/2019/IMG_0245-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2770,6 +3802,11 @@
     "id": "2019-img-0244",
     "src": "/images/2019/IMG_0244.webp",
     "thumb": "/images/2019/IMG_0244-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2782,6 +3819,11 @@
     "id": "2019-img-0237",
     "src": "/images/2019/IMG_0237.webp",
     "thumb": "/images/2019/IMG_0237-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2794,6 +3836,11 @@
     "id": "2019-img-0187",
     "src": "/images/2019/IMG_0187.webp",
     "thumb": "/images/2019/IMG_0187-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2806,6 +3853,11 @@
     "id": "2019-img-0170",
     "src": "/images/2019/IMG_0170.webp",
     "thumb": "/images/2019/IMG_0170-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2818,6 +3870,11 @@
     "id": "2019-img-0076",
     "src": "/images/2019/IMG_0076.webp",
     "thumb": "/images/2019/IMG_0076-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2830,6 +3887,11 @@
     "id": "2019-img-0035",
     "src": "/images/2019/IMG_0035.webp",
     "thumb": "/images/2019/IMG_0035-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2842,6 +3904,11 @@
     "id": "2019-img-0025",
     "src": "/images/2019/IMG_0025.webp",
     "thumb": "/images/2019/IMG_0025-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2854,6 +3921,11 @@
     "id": "2019-img-0158",
     "src": "/images/2019/IMG_0158.webp",
     "thumb": "/images/2019/IMG_0158-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2866,6 +3938,11 @@
     "id": "2019-img-0152",
     "src": "/images/2019/IMG_0152.webp",
     "thumb": "/images/2019/IMG_0152-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2878,6 +3955,11 @@
     "id": "2019-img-0151",
     "src": "/images/2019/IMG_0151.webp",
     "thumb": "/images/2019/IMG_0151-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2890,6 +3972,11 @@
     "id": "2019-img-0142",
     "src": "/images/2019/IMG_0142.webp",
     "thumb": "/images/2019/IMG_0142-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2902,6 +3989,11 @@
     "id": "2019-img-0126",
     "src": "/images/2019/IMG_0126.webp",
     "thumb": "/images/2019/IMG_0126-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2914,6 +4006,11 @@
     "id": "2019-img-0110",
     "src": "/images/2019/IMG_0110.webp",
     "thumb": "/images/2019/IMG_0110-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2926,6 +4023,11 @@
     "id": "2019-img-0107",
     "src": "/images/2019/IMG_0107.webp",
     "thumb": "/images/2019/IMG_0107-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2938,6 +4040,11 @@
     "id": "2019-img-0090",
     "src": "/images/2019/IMG_0090.webp",
     "thumb": "/images/2019/IMG_0090-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2950,6 +4057,11 @@
     "id": "2019-img-0086",
     "src": "/images/2019/IMG_0086.webp",
     "thumb": "/images/2019/IMG_0086-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2962,6 +4074,11 @@
     "id": "2019-img-0065",
     "src": "/images/2019/IMG_0065.webp",
     "thumb": "/images/2019/IMG_0065-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2974,6 +4091,11 @@
     "id": "2019-img-0063",
     "src": "/images/2019/IMG_0063.webp",
     "thumb": "/images/2019/IMG_0063-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2986,6 +4108,11 @@
     "id": "2019-img-0053",
     "src": "/images/2019/IMG_0053.webp",
     "thumb": "/images/2019/IMG_0053-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -2998,6 +4125,11 @@
     "id": "2019-img-0044",
     "src": "/images/2019/IMG_0044.webp",
     "thumb": "/images/2019/IMG_0044-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3010,6 +4142,11 @@
     "id": "2019-img-0040",
     "src": "/images/2019/IMG_0040.webp",
     "thumb": "/images/2019/IMG_0040-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3022,6 +4159,11 @@
     "id": "2019-img-0029",
     "src": "/images/2019/IMG_0029.webp",
     "thumb": "/images/2019/IMG_0029-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3034,6 +4176,11 @@
     "id": "2019-img-0026",
     "src": "/images/2019/IMG_0026.webp",
     "thumb": "/images/2019/IMG_0026-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3046,6 +4193,11 @@
     "id": "2019-img-9990",
     "src": "/images/2019/IMG_9990.webp",
     "thumb": "/images/2019/IMG_9990-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3058,6 +4210,11 @@
     "id": "2019-img-9989",
     "src": "/images/2019/IMG_9989.webp",
     "thumb": "/images/2019/IMG_9989-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3070,6 +4227,11 @@
     "id": "2019-img-9981",
     "src": "/images/2019/IMG_9981.webp",
     "thumb": "/images/2019/IMG_9981-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3082,6 +4244,11 @@
     "id": "2019-img-9977",
     "src": "/images/2019/IMG_9977.webp",
     "thumb": "/images/2019/IMG_9977-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3094,6 +4261,11 @@
     "id": "2019-img-9968",
     "src": "/images/2019/IMG_9968.webp",
     "thumb": "/images/2019/IMG_9968-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3106,6 +4278,11 @@
     "id": "2019-20190802-img-4351",
     "src": "/images/2019/20190802-IMG_4351.webp",
     "thumb": "/images/2019/20190802-IMG_4351-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3118,6 +4295,11 @@
     "id": "2019-20190721-img-9909",
     "src": "/images/2019/20190721-IMG_9909.webp",
     "thumb": "/images/2019/20190721-IMG_9909-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3130,6 +4312,11 @@
     "id": "2019-20190717-img-9903",
     "src": "/images/2019/20190717-IMG_9903.webp",
     "thumb": "/images/2019/20190717-IMG_9903-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3142,6 +4329,11 @@
     "id": "2019-20190711-img-9892",
     "src": "/images/2019/20190711-IMG_9892.webp",
     "thumb": "/images/2019/20190711-IMG_9892-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3154,6 +4346,11 @@
     "id": "2019-20190701-img-9889",
     "src": "/images/2019/20190701-IMG_9889.webp",
     "thumb": "/images/2019/20190701-IMG_9889-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3166,6 +4363,11 @@
     "id": "2019-20190628-img-9891",
     "src": "/images/2019/20190628-IMG_9891.webp",
     "thumb": "/images/2019/20190628-IMG_9891-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3178,6 +4380,11 @@
     "id": "2019-20190628-img-9896",
     "src": "/images/2019/20190628-IMG_9896.webp",
     "thumb": "/images/2019/20190628-IMG_9896-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3190,6 +4397,11 @@
     "id": "2019-20190628-img-9882",
     "src": "/images/2019/20190628-IMG_9882.webp",
     "thumb": "/images/2019/20190628-IMG_9882-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3202,6 +4414,11 @@
     "id": "2019-20190628-img-9881",
     "src": "/images/2019/20190628-IMG_9881.webp",
     "thumb": "/images/2019/20190628-IMG_9881-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3214,6 +4431,11 @@
     "id": "2019-20190621-img-9862",
     "src": "/images/2019/20190621-IMG_9862.webp",
     "thumb": "/images/2019/20190621-IMG_9862-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3226,6 +4448,11 @@
     "id": "2019-20190612-img-9843",
     "src": "/images/2019/20190612-IMG_9843.webp",
     "thumb": "/images/2019/20190612-IMG_9843-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3238,6 +4465,11 @@
     "id": "2019-20190612-img-9825",
     "src": "/images/2019/20190612-IMG_9825.webp",
     "thumb": "/images/2019/20190612-IMG_9825-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3250,6 +4482,11 @@
     "id": "2019-20190612-img-9819",
     "src": "/images/2019/20190612-IMG_9819.webp",
     "thumb": "/images/2019/20190612-IMG_9819-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3262,6 +4499,11 @@
     "id": "2019-20190612-img-9835",
     "src": "/images/2019/20190612-IMG_9835.webp",
     "thumb": "/images/2019/20190612-IMG_9835-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3274,6 +4516,11 @@
     "id": "2019-20190611-img-9863",
     "src": "/images/2019/20190611-IMG_9863.webp",
     "thumb": "/images/2019/20190611-IMG_9863-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3286,6 +4533,11 @@
     "id": "2019-20190611-img-9878",
     "src": "/images/2019/20190611-IMG_9878.webp",
     "thumb": "/images/2019/20190611-IMG_9878-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3298,6 +4550,11 @@
     "id": "2019-20190611-img-9881",
     "src": "/images/2019/20190611-IMG_9881.webp",
     "thumb": "/images/2019/20190611-IMG_9881-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3310,6 +4567,11 @@
     "id": "2019-20190611-img-9871",
     "src": "/images/2019/20190611-IMG_9871.webp",
     "thumb": "/images/2019/20190611-IMG_9871-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3322,6 +4584,11 @@
     "id": "2019-20190611-img-9860",
     "src": "/images/2019/20190611-IMG_9860.webp",
     "thumb": "/images/2019/20190611-IMG_9860-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3334,6 +4601,11 @@
     "id": "2019-20190611-img-9859",
     "src": "/images/2019/20190611-IMG_9859.webp",
     "thumb": "/images/2019/20190611-IMG_9859-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3346,6 +4618,11 @@
     "id": "2019-20190611-img-9855-2",
     "src": "/images/2019/20190611-IMG_9855-2.webp",
     "thumb": "/images/2019/20190611-IMG_9855-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3358,6 +4635,11 @@
     "id": "2019-20190610-img-9814-2",
     "src": "/images/2019/20190610-IMG_9814-2.webp",
     "thumb": "/images/2019/20190610-IMG_9814-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3370,6 +4652,11 @@
     "id": "2019-20190611-img-9851",
     "src": "/images/2019/20190611-IMG_9851.webp",
     "thumb": "/images/2019/20190611-IMG_9851-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3382,6 +4669,11 @@
     "id": "2019-20190610-img-9809",
     "src": "/images/2019/20190610-IMG_9809.webp",
     "thumb": "/images/2019/20190610-IMG_9809-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3394,6 +4686,11 @@
     "id": "2019-20190606-img-9811",
     "src": "/images/2019/20190606-IMG_9811.webp",
     "thumb": "/images/2019/20190606-IMG_9811-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3406,6 +4703,11 @@
     "id": "2019-20190602-img-0332",
     "src": "/images/2019/20190602-IMG_0332.webp",
     "thumb": "/images/2019/20190602-IMG_0332-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3418,6 +4720,11 @@
     "id": "2019-20190602-img-0325",
     "src": "/images/2019/20190602-IMG_0325.webp",
     "thumb": "/images/2019/20190602-IMG_0325-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3430,6 +4737,11 @@
     "id": "2019-20190602-img-0284",
     "src": "/images/2019/20190602-IMG_0284.webp",
     "thumb": "/images/2019/20190602-IMG_0284-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3442,6 +4754,11 @@
     "id": "2019-20190602-img-0170",
     "src": "/images/2019/20190602-IMG_0170.webp",
     "thumb": "/images/2019/20190602-IMG_0170-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3454,6 +4771,11 @@
     "id": "2019-20190602-img-0260",
     "src": "/images/2019/20190602-IMG_0260.webp",
     "thumb": "/images/2019/20190602-IMG_0260-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3466,6 +4788,11 @@
     "id": "2019-20190529-img-9796",
     "src": "/images/2019/20190529-IMG_9796.webp",
     "thumb": "/images/2019/20190529-IMG_9796-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3478,6 +4805,11 @@
     "id": "2019-20190529-img-9794",
     "src": "/images/2019/20190529-IMG_9794.webp",
     "thumb": "/images/2019/20190529-IMG_9794-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3490,6 +4822,11 @@
     "id": "2019-20190526-img-9786",
     "src": "/images/2019/20190526-IMG_9786.webp",
     "thumb": "/images/2019/20190526-IMG_9786-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3502,6 +4839,11 @@
     "id": "2019-20190510-img-0101",
     "src": "/images/2019/20190510-IMG_0101.webp",
     "thumb": "/images/2019/20190510-IMG_0101-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3514,6 +4856,11 @@
     "id": "2019-20190510-img-0096",
     "src": "/images/2019/20190510-IMG_0096.webp",
     "thumb": "/images/2019/20190510-IMG_0096-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3526,6 +4873,11 @@
     "id": "2019-20190510-img-0087",
     "src": "/images/2019/20190510-IMG_0087.webp",
     "thumb": "/images/2019/20190510-IMG_0087-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3538,6 +4890,11 @@
     "id": "2019-20190510-img-0090",
     "src": "/images/2019/20190510-IMG_0090.webp",
     "thumb": "/images/2019/20190510-IMG_0090-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3550,6 +4907,11 @@
     "id": "2019-20190509-img-0083",
     "src": "/images/2019/20190509-IMG_0083.webp",
     "thumb": "/images/2019/20190509-IMG_0083-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3562,6 +4924,11 @@
     "id": "2019-20190507-img-9736",
     "src": "/images/2019/20190507-IMG_9736.webp",
     "thumb": "/images/2019/20190507-IMG_9736-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3574,6 +4941,11 @@
     "id": "2019-20190503-img-0071",
     "src": "/images/2019/20190503-IMG_0071.webp",
     "thumb": "/images/2019/20190503-IMG_0071-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3586,6 +4958,11 @@
     "id": "2019-20190501-img-9729",
     "src": "/images/2019/20190501-IMG_9729.webp",
     "thumb": "/images/2019/20190501-IMG_9729-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3598,6 +4975,11 @@
     "id": "2019-20190426-img-0057",
     "src": "/images/2019/20190426-IMG_0057.webp",
     "thumb": "/images/2019/20190426-IMG_0057-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3610,6 +4992,11 @@
     "id": "2019-20190426-img-0030",
     "src": "/images/2019/20190426-IMG_0030.webp",
     "thumb": "/images/2019/20190426-IMG_0030-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3622,6 +5009,11 @@
     "id": "2019-20190426-img-0026",
     "src": "/images/2019/20190426-IMG_0026.webp",
     "thumb": "/images/2019/20190426-IMG_0026-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3634,6 +5026,11 @@
     "id": "2019-20190426-img-0025",
     "src": "/images/2019/20190426-IMG_0025.webp",
     "thumb": "/images/2019/20190426-IMG_0025-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3646,6 +5043,11 @@
     "id": "2019-20190426-img-9725",
     "src": "/images/2019/20190426-IMG_9725.webp",
     "thumb": "/images/2019/20190426-IMG_9725-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3658,6 +5060,11 @@
     "id": "2019-20190423-img-9714",
     "src": "/images/2019/20190423-IMG_9714.webp",
     "thumb": "/images/2019/20190423-IMG_9714-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3670,6 +5077,11 @@
     "id": "2019-20190421-img-0009",
     "src": "/images/2019/20190421-IMG_0009.webp",
     "thumb": "/images/2019/20190421-IMG_0009-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3682,6 +5094,11 @@
     "id": "2019-20190416-img-9676",
     "src": "/images/2019/20190416-IMG_9676.webp",
     "thumb": "/images/2019/20190416-IMG_9676-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3694,6 +5111,11 @@
     "id": "2019-img-9673",
     "src": "/images/2019/IMG_9673.webp",
     "thumb": "/images/2019/IMG_9673-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3706,6 +5128,11 @@
     "id": "2019-img-9630",
     "src": "/images/2019/IMG_9630.webp",
     "thumb": "/images/2019/IMG_9630-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3718,6 +5145,11 @@
     "id": "2019-img-9639",
     "src": "/images/2019/IMG_9639.webp",
     "thumb": "/images/2019/IMG_9639-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3730,6 +5162,11 @@
     "id": "2019-img-9644",
     "src": "/images/2019/IMG_9644.webp",
     "thumb": "/images/2019/IMG_9644-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3742,6 +5179,11 @@
     "id": "2019-img-9637",
     "src": "/images/2019/IMG_9637.webp",
     "thumb": "/images/2019/IMG_9637-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3754,6 +5196,11 @@
     "id": "2019-img-9615-2",
     "src": "/images/2019/IMG_9615-2.webp",
     "thumb": "/images/2019/IMG_9615-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3766,6 +5213,11 @@
     "id": "2019-img-9602",
     "src": "/images/2019/IMG_9602.webp",
     "thumb": "/images/2019/IMG_9602-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3778,6 +5230,11 @@
     "id": "2019-img-9583",
     "src": "/images/2019/IMG_9583.webp",
     "thumb": "/images/2019/IMG_9583-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3790,6 +5247,11 @@
     "id": "2019-img-9552",
     "src": "/images/2019/IMG_9552.webp",
     "thumb": "/images/2019/IMG_9552-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3802,6 +5264,11 @@
     "id": "2019-img-9447",
     "src": "/images/2019/IMG_9447.webp",
     "thumb": "/images/2019/IMG_9447-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3814,6 +5281,11 @@
     "id": "2019-img-9356",
     "src": "/images/2019/IMG_9356.webp",
     "thumb": "/images/2019/IMG_9356-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3826,6 +5298,11 @@
     "id": "2019-img-9337",
     "src": "/images/2019/IMG_9337.webp",
     "thumb": "/images/2019/IMG_9337-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3838,6 +5315,11 @@
     "id": "2019-img-9336",
     "src": "/images/2019/IMG_9336.webp",
     "thumb": "/images/2019/IMG_9336-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3850,6 +5332,11 @@
     "id": "2019-img-9277",
     "src": "/images/2019/IMG_9277.webp",
     "thumb": "/images/2019/IMG_9277-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3862,6 +5349,11 @@
     "id": "2019-img-9279",
     "src": "/images/2019/IMG_9279.webp",
     "thumb": "/images/2019/IMG_9279-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3874,6 +5366,11 @@
     "id": "2019-img-9241",
     "src": "/images/2019/IMG_9241.webp",
     "thumb": "/images/2019/IMG_9241-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3886,6 +5383,11 @@
     "id": "2019-img-9239",
     "src": "/images/2019/IMG_9239.webp",
     "thumb": "/images/2019/IMG_9239-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3898,6 +5400,11 @@
     "id": "2019-img-9231",
     "src": "/images/2019/IMG_9231.webp",
     "thumb": "/images/2019/IMG_9231-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3910,6 +5417,11 @@
     "id": "2019-img-9237",
     "src": "/images/2019/IMG_9237.webp",
     "thumb": "/images/2019/IMG_9237-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3922,6 +5434,11 @@
     "id": "2019-img-9225",
     "src": "/images/2019/IMG_9225.webp",
     "thumb": "/images/2019/IMG_9225-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3934,6 +5451,11 @@
     "id": "2019-img-9222",
     "src": "/images/2019/IMG_9222.webp",
     "thumb": "/images/2019/IMG_9222-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3946,6 +5468,11 @@
     "id": "2019-img-9119",
     "src": "/images/2019/IMG_9119.webp",
     "thumb": "/images/2019/IMG_9119-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3958,6 +5485,11 @@
     "id": "2019-img-9083",
     "src": "/images/2019/IMG_9083.webp",
     "thumb": "/images/2019/IMG_9083-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3970,6 +5502,11 @@
     "id": "2019-img-9054",
     "src": "/images/2019/IMG_9054.webp",
     "thumb": "/images/2019/IMG_9054-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3982,6 +5519,11 @@
     "id": "2019-img-8993",
     "src": "/images/2019/IMG_8993.webp",
     "thumb": "/images/2019/IMG_8993-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -3994,6 +5536,11 @@
     "id": "2019-img-8953",
     "src": "/images/2019/IMG_8953.webp",
     "thumb": "/images/2019/IMG_8953-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -4006,6 +5553,11 @@
     "id": "2019-img-8925",
     "src": "/images/2019/IMG_8925.webp",
     "thumb": "/images/2019/IMG_8925-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -4018,6 +5570,11 @@
     "id": "2019-img-8909",
     "src": "/images/2019/IMG_8909.webp",
     "thumb": "/images/2019/IMG_8909-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2019",
     "width": 1500,
     "height": 1000,
@@ -4030,6 +5587,11 @@
     "id": "2018-21a-0630",
     "src": "/images/2018/21A_0630.webp",
     "thumb": "/images/2018/21A_0630-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4042,6 +5604,11 @@
     "id": "2018-18a-0627",
     "src": "/images/2018/18A_0627.webp",
     "thumb": "/images/2018/18A_0627-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4054,6 +5621,11 @@
     "id": "2018-17a-0626",
     "src": "/images/2018/17A_0626.webp",
     "thumb": "/images/2018/17A_0626-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4066,6 +5638,11 @@
     "id": "2018-16a-0625",
     "src": "/images/2018/16A_0625.webp",
     "thumb": "/images/2018/16A_0625-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4078,6 +5655,11 @@
     "id": "2018-11a-0620",
     "src": "/images/2018/11A_0620.webp",
     "thumb": "/images/2018/11A_0620-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4090,6 +5672,11 @@
     "id": "2018-10a-0619",
     "src": "/images/2018/10A_0619.webp",
     "thumb": "/images/2018/10A_0619-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4102,6 +5689,11 @@
     "id": "2018-9a-0618",
     "src": "/images/2018/_9A_0618.webp",
     "thumb": "/images/2018/_9A_0618-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4114,6 +5706,11 @@
     "id": "2018-img-8899",
     "src": "/images/2018/IMG_8899.webp",
     "thumb": "/images/2018/IMG_8899-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4126,6 +5723,11 @@
     "id": "2018-img-8894",
     "src": "/images/2018/IMG_8894.webp",
     "thumb": "/images/2018/IMG_8894-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4138,6 +5740,11 @@
     "id": "2018-img-8868",
     "src": "/images/2018/IMG_8868.webp",
     "thumb": "/images/2018/IMG_8868-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4150,6 +5757,11 @@
     "id": "2018-img-8845",
     "src": "/images/2018/IMG_8845.webp",
     "thumb": "/images/2018/IMG_8845-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4162,6 +5774,11 @@
     "id": "2018-img-8841",
     "src": "/images/2018/IMG_8841.webp",
     "thumb": "/images/2018/IMG_8841-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4174,6 +5791,11 @@
     "id": "2018-img-8844",
     "src": "/images/2018/IMG_8844.webp",
     "thumb": "/images/2018/IMG_8844-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4186,6 +5808,11 @@
     "id": "2018-img-8832-2",
     "src": "/images/2018/IMG_8832-2.webp",
     "thumb": "/images/2018/IMG_8832-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4198,6 +5825,11 @@
     "id": "2018-img-8829",
     "src": "/images/2018/IMG_8829.webp",
     "thumb": "/images/2018/IMG_8829-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4210,6 +5842,11 @@
     "id": "2018-img-8828",
     "src": "/images/2018/IMG_8828.webp",
     "thumb": "/images/2018/IMG_8828-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4222,6 +5859,11 @@
     "id": "2018-img-8819",
     "src": "/images/2018/IMG_8819.webp",
     "thumb": "/images/2018/IMG_8819-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4234,6 +5876,11 @@
     "id": "2018-img-8796",
     "src": "/images/2018/IMG_8796.webp",
     "thumb": "/images/2018/IMG_8796-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4246,6 +5893,11 @@
     "id": "2018-img-8812",
     "src": "/images/2018/IMG_8812.webp",
     "thumb": "/images/2018/IMG_8812-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4258,6 +5910,11 @@
     "id": "2018-img-8802",
     "src": "/images/2018/IMG_8802.webp",
     "thumb": "/images/2018/IMG_8802-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4270,6 +5927,11 @@
     "id": "2018-img-8815",
     "src": "/images/2018/IMG_8815.webp",
     "thumb": "/images/2018/IMG_8815-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4282,6 +5944,11 @@
     "id": "2018-img-8839",
     "src": "/images/2018/IMG_8839.webp",
     "thumb": "/images/2018/IMG_8839-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4294,6 +5961,11 @@
     "id": "2018-img-8818",
     "src": "/images/2018/IMG_8818.webp",
     "thumb": "/images/2018/IMG_8818-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4306,6 +5978,11 @@
     "id": "2018-img-8814",
     "src": "/images/2018/IMG_8814.webp",
     "thumb": "/images/2018/IMG_8814-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4318,6 +5995,11 @@
     "id": "2018-img-8811",
     "src": "/images/2018/IMG_8811.webp",
     "thumb": "/images/2018/IMG_8811-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4330,6 +6012,11 @@
     "id": "2018-img-8795-2",
     "src": "/images/2018/IMG_8795-2.webp",
     "thumb": "/images/2018/IMG_8795-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4342,6 +6029,11 @@
     "id": "2018-img-8797",
     "src": "/images/2018/IMG_8797.webp",
     "thumb": "/images/2018/IMG_8797-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4354,6 +6046,11 @@
     "id": "2018-img-8790",
     "src": "/images/2018/IMG_8790.webp",
     "thumb": "/images/2018/IMG_8790-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4366,6 +6063,11 @@
     "id": "2018-img-8777-2",
     "src": "/images/2018/IMG_8777-2.webp",
     "thumb": "/images/2018/IMG_8777-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4378,6 +6080,11 @@
     "id": "2018-img-8775",
     "src": "/images/2018/IMG_8775.webp",
     "thumb": "/images/2018/IMG_8775-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4390,6 +6097,11 @@
     "id": "2018-img-8701",
     "src": "/images/2018/IMG_8701.webp",
     "thumb": "/images/2018/IMG_8701-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4402,6 +6114,11 @@
     "id": "2018-img-8689",
     "src": "/images/2018/IMG_8689.webp",
     "thumb": "/images/2018/IMG_8689-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4414,6 +6131,11 @@
     "id": "2018-img-8683",
     "src": "/images/2018/IMG_8683.webp",
     "thumb": "/images/2018/IMG_8683-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4426,6 +6148,11 @@
     "id": "2018-img-8662",
     "src": "/images/2018/IMG_8662.webp",
     "thumb": "/images/2018/IMG_8662-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4438,6 +6165,11 @@
     "id": "2018-img-8627-2",
     "src": "/images/2018/IMG_8627-2.webp",
     "thumb": "/images/2018/IMG_8627-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4450,6 +6182,11 @@
     "id": "2018-img-8618",
     "src": "/images/2018/IMG_8618.webp",
     "thumb": "/images/2018/IMG_8618-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4462,6 +6199,11 @@
     "id": "2018-img-8585-2",
     "src": "/images/2018/IMG_8585-2.webp",
     "thumb": "/images/2018/IMG_8585-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4474,6 +6216,11 @@
     "id": "2018-img-8602-2",
     "src": "/images/2018/IMG_8602-2.webp",
     "thumb": "/images/2018/IMG_8602-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4486,6 +6233,11 @@
     "id": "2018-img-8571",
     "src": "/images/2018/IMG_8571.webp",
     "thumb": "/images/2018/IMG_8571-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4498,6 +6250,11 @@
     "id": "2018-img-8563",
     "src": "/images/2018/IMG_8563.webp",
     "thumb": "/images/2018/IMG_8563-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4510,6 +6267,11 @@
     "id": "2018-img-8557",
     "src": "/images/2018/IMG_8557.webp",
     "thumb": "/images/2018/IMG_8557-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4522,6 +6284,11 @@
     "id": "2018-img-8548",
     "src": "/images/2018/IMG_8548.webp",
     "thumb": "/images/2018/IMG_8548-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4534,6 +6301,11 @@
     "id": "2018-img-8528",
     "src": "/images/2018/IMG_8528.webp",
     "thumb": "/images/2018/IMG_8528-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4546,6 +6318,11 @@
     "id": "2018-img-8522",
     "src": "/images/2018/IMG_8522.webp",
     "thumb": "/images/2018/IMG_8522-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4558,6 +6335,11 @@
     "id": "2018-img-8510",
     "src": "/images/2018/IMG_8510.webp",
     "thumb": "/images/2018/IMG_8510-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4570,6 +6352,11 @@
     "id": "2018-img-8509",
     "src": "/images/2018/IMG_8509.webp",
     "thumb": "/images/2018/IMG_8509-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4582,6 +6369,11 @@
     "id": "2018-img-8494",
     "src": "/images/2018/IMG_8494.webp",
     "thumb": "/images/2018/IMG_8494-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4594,6 +6386,11 @@
     "id": "2018-img-8490",
     "src": "/images/2018/IMG_8490.webp",
     "thumb": "/images/2018/IMG_8490-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4606,6 +6403,11 @@
     "id": "2018-img-8482",
     "src": "/images/2018/IMG_8482.webp",
     "thumb": "/images/2018/IMG_8482-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4618,6 +6420,11 @@
     "id": "2018-img-8477-2",
     "src": "/images/2018/IMG_8477-2.webp",
     "thumb": "/images/2018/IMG_8477-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4630,6 +6437,11 @@
     "id": "2018-img-8476",
     "src": "/images/2018/IMG_8476.webp",
     "thumb": "/images/2018/IMG_8476-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4642,6 +6454,11 @@
     "id": "2018-img-8210-2",
     "src": "/images/2018/IMG_8210-2.webp",
     "thumb": "/images/2018/IMG_8210-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4654,6 +6471,11 @@
     "id": "2018-img-8345",
     "src": "/images/2018/IMG_8345.webp",
     "thumb": "/images/2018/IMG_8345-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4666,6 +6488,11 @@
     "id": "2018-img-5070",
     "src": "/images/2018/IMG_5070.webp",
     "thumb": "/images/2018/IMG_5070-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4678,6 +6505,11 @@
     "id": "2018-img-8333",
     "src": "/images/2018/IMG_8333.webp",
     "thumb": "/images/2018/IMG_8333-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4690,6 +6522,11 @@
     "id": "2018-img-8321",
     "src": "/images/2018/IMG_8321.webp",
     "thumb": "/images/2018/IMG_8321-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4702,6 +6539,11 @@
     "id": "2018-img-5078",
     "src": "/images/2018/IMG_5078.webp",
     "thumb": "/images/2018/IMG_5078-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4714,6 +6556,11 @@
     "id": "2018-img-5069",
     "src": "/images/2018/IMG_5069.webp",
     "thumb": "/images/2018/IMG_5069-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4726,6 +6573,11 @@
     "id": "2018-img-4983",
     "src": "/images/2018/IMG_4983.webp",
     "thumb": "/images/2018/IMG_4983-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4738,6 +6590,11 @@
     "id": "2018-img-8415",
     "src": "/images/2018/IMG_8415.webp",
     "thumb": "/images/2018/IMG_8415-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4750,6 +6607,11 @@
     "id": "2018-img-8406",
     "src": "/images/2018/IMG_8406.webp",
     "thumb": "/images/2018/IMG_8406-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4762,6 +6624,11 @@
     "id": "2018-img-8393",
     "src": "/images/2018/IMG_8393.webp",
     "thumb": "/images/2018/IMG_8393-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4774,6 +6641,11 @@
     "id": "2018-img-8389",
     "src": "/images/2018/IMG_8389.webp",
     "thumb": "/images/2018/IMG_8389-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4786,6 +6658,11 @@
     "id": "2018-img-8364",
     "src": "/images/2018/IMG_8364.webp",
     "thumb": "/images/2018/IMG_8364-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4798,6 +6675,11 @@
     "id": "2018-img-8348",
     "src": "/images/2018/IMG_8348.webp",
     "thumb": "/images/2018/IMG_8348-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4810,6 +6692,11 @@
     "id": "2018-2a-0611-copy",
     "src": "/images/2018/_2A_0611-copy.webp",
     "thumb": "/images/2018/_2A_0611-copy-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2018",
     "width": 1500,
     "height": 1000,
@@ -4822,6 +6709,11 @@
     "id": "2017-img-8284",
     "src": "/images/2017/IMG_8284.webp",
     "thumb": "/images/2017/IMG_8284-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4834,6 +6726,11 @@
     "id": "2017-16a-0794",
     "src": "/images/2017/16A_0794.webp",
     "thumb": "/images/2017/16A_0794-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4846,6 +6743,11 @@
     "id": "2017-8a-0786",
     "src": "/images/2017/_8A_0786.webp",
     "thumb": "/images/2017/_8A_0786-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4858,6 +6760,11 @@
     "id": "2017-15a-0793",
     "src": "/images/2017/15A_0793.webp",
     "thumb": "/images/2017/15A_0793-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4870,6 +6777,11 @@
     "id": "2017-img-8277",
     "src": "/images/2017/IMG_8277.webp",
     "thumb": "/images/2017/IMG_8277-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4882,6 +6794,11 @@
     "id": "2017-img-8299",
     "src": "/images/2017/IMG_8299.webp",
     "thumb": "/images/2017/IMG_8299-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4894,6 +6811,11 @@
     "id": "2017-img-8317-2",
     "src": "/images/2017/IMG_8317-2.webp",
     "thumb": "/images/2017/IMG_8317-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4906,6 +6828,11 @@
     "id": "2017-img-4955",
     "src": "/images/2017/IMG_4955.webp",
     "thumb": "/images/2017/IMG_4955-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4918,6 +6845,11 @@
     "id": "2017-img-4975-2",
     "src": "/images/2017/IMG_4975-2.webp",
     "thumb": "/images/2017/IMG_4975-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4930,6 +6862,11 @@
     "id": "2017-img-8236",
     "src": "/images/2017/IMG_8236.webp",
     "thumb": "/images/2017/IMG_8236-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4942,6 +6879,11 @@
     "id": "2017-img-8199",
     "src": "/images/2017/IMG_8199.webp",
     "thumb": "/images/2017/IMG_8199-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4954,6 +6896,11 @@
     "id": "2017-img-8189-2",
     "src": "/images/2017/IMG_8189-2.webp",
     "thumb": "/images/2017/IMG_8189-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4966,6 +6913,11 @@
     "id": "2017-img-8161",
     "src": "/images/2017/IMG_8161.webp",
     "thumb": "/images/2017/IMG_8161-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4978,6 +6930,11 @@
     "id": "2017-img-8165",
     "src": "/images/2017/IMG_8165.webp",
     "thumb": "/images/2017/IMG_8165-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -4990,6 +6947,11 @@
     "id": "2017-img-8170",
     "src": "/images/2017/IMG_8170.webp",
     "thumb": "/images/2017/IMG_8170-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5002,6 +6964,11 @@
     "id": "2017-img-8187",
     "src": "/images/2017/IMG_8187.webp",
     "thumb": "/images/2017/IMG_8187-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5014,6 +6981,11 @@
     "id": "2017-img-8087",
     "src": "/images/2017/IMG_8087.webp",
     "thumb": "/images/2017/IMG_8087-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5026,6 +6998,11 @@
     "id": "2017-img-8083",
     "src": "/images/2017/IMG_8083.webp",
     "thumb": "/images/2017/IMG_8083-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5038,6 +7015,11 @@
     "id": "2017-img-8029",
     "src": "/images/2017/IMG_8029.webp",
     "thumb": "/images/2017/IMG_8029-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5050,6 +7032,11 @@
     "id": "2017-img-8038",
     "src": "/images/2017/IMG_8038.webp",
     "thumb": "/images/2017/IMG_8038-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5062,6 +7049,11 @@
     "id": "2017-img-8082",
     "src": "/images/2017/IMG_8082.webp",
     "thumb": "/images/2017/IMG_8082-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5074,6 +7066,11 @@
     "id": "2017-img-8047",
     "src": "/images/2017/IMG_8047.webp",
     "thumb": "/images/2017/IMG_8047-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2017",
     "width": 1500,
     "height": 1000,
@@ -5086,6 +7083,11 @@
     "id": "2016-img-7723",
     "src": "/images/2016/IMG_7723.webp",
     "thumb": "/images/2016/IMG_7723-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5098,6 +7100,11 @@
     "id": "2016-img-4952",
     "src": "/images/2016/IMG_4952.webp",
     "thumb": "/images/2016/IMG_4952-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5110,6 +7117,11 @@
     "id": "2016-img-4909",
     "src": "/images/2016/IMG_4909.webp",
     "thumb": "/images/2016/IMG_4909-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5122,6 +7134,11 @@
     "id": "2016-img-7806",
     "src": "/images/2016/IMG_7806.webp",
     "thumb": "/images/2016/IMG_7806-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5134,6 +7151,11 @@
     "id": "2016-img-7787",
     "src": "/images/2016/IMG_7787.webp",
     "thumb": "/images/2016/IMG_7787-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5146,6 +7168,11 @@
     "id": "2016-img-4886",
     "src": "/images/2016/IMG_4886.webp",
     "thumb": "/images/2016/IMG_4886-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 994,
@@ -5158,6 +7185,11 @@
     "id": "2016-img-4884-2",
     "src": "/images/2016/IMG_4884-2.webp",
     "thumb": "/images/2016/IMG_4884-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5170,6 +7202,11 @@
     "id": "2016-img-4873",
     "src": "/images/2016/IMG_4873.webp",
     "thumb": "/images/2016/IMG_4873-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5182,6 +7219,11 @@
     "id": "2016-img-7725",
     "src": "/images/2016/IMG_7725.webp",
     "thumb": "/images/2016/IMG_7725-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5194,6 +7236,11 @@
     "id": "2016-img-7719",
     "src": "/images/2016/IMG_7719.webp",
     "thumb": "/images/2016/IMG_7719-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5206,6 +7253,11 @@
     "id": "2016-img-7701",
     "src": "/images/2016/IMG_7701.webp",
     "thumb": "/images/2016/IMG_7701-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5218,6 +7270,11 @@
     "id": "2016-img-7544",
     "src": "/images/2016/IMG_7544.webp",
     "thumb": "/images/2016/IMG_7544-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5230,6 +7287,11 @@
     "id": "2016-img-7453",
     "src": "/images/2016/IMG_7453.webp",
     "thumb": "/images/2016/IMG_7453-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5242,6 +7304,11 @@
     "id": "2016-img-7420",
     "src": "/images/2016/IMG_7420.webp",
     "thumb": "/images/2016/IMG_7420-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5254,6 +7321,11 @@
     "id": "2016-img-7412",
     "src": "/images/2016/IMG_7412.webp",
     "thumb": "/images/2016/IMG_7412-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5266,6 +7338,11 @@
     "id": "2016-img-7399",
     "src": "/images/2016/IMG_7399.webp",
     "thumb": "/images/2016/IMG_7399-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5278,6 +7355,11 @@
     "id": "2016-img-7365",
     "src": "/images/2016/IMG_7365.webp",
     "thumb": "/images/2016/IMG_7365-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5290,6 +7372,11 @@
     "id": "2016-img-7290",
     "src": "/images/2016/IMG_7290.webp",
     "thumb": "/images/2016/IMG_7290-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5302,6 +7389,11 @@
     "id": "2016-img-7087",
     "src": "/images/2016/IMG_7087.webp",
     "thumb": "/images/2016/IMG_7087-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5314,6 +7406,11 @@
     "id": "2016-img-6977",
     "src": "/images/2016/IMG_6977.webp",
     "thumb": "/images/2016/IMG_6977-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5326,6 +7423,11 @@
     "id": "2016-img-6982",
     "src": "/images/2016/IMG_6982.webp",
     "thumb": "/images/2016/IMG_6982-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5338,6 +7440,11 @@
     "id": "2016-img-6961",
     "src": "/images/2016/IMG_6961.webp",
     "thumb": "/images/2016/IMG_6961-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5350,6 +7457,11 @@
     "id": "2016-img-6925",
     "src": "/images/2016/IMG_6925.webp",
     "thumb": "/images/2016/IMG_6925-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5362,6 +7474,11 @@
     "id": "2016-img-6909",
     "src": "/images/2016/IMG_6909.webp",
     "thumb": "/images/2016/IMG_6909-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5374,6 +7491,11 @@
     "id": "2016-img-6677",
     "src": "/images/2016/IMG_6677.webp",
     "thumb": "/images/2016/IMG_6677-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5386,6 +7508,11 @@
     "id": "2016-img-6583",
     "src": "/images/2016/IMG_6583.webp",
     "thumb": "/images/2016/IMG_6583-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5398,6 +7525,11 @@
     "id": "2016-img-6392",
     "src": "/images/2016/IMG_6392.webp",
     "thumb": "/images/2016/IMG_6392-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 989,
@@ -5410,6 +7542,11 @@
     "id": "2016-img-6446",
     "src": "/images/2016/IMG_6446.webp",
     "thumb": "/images/2016/IMG_6446-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5422,6 +7559,11 @@
     "id": "2016-img-6003",
     "src": "/images/2016/IMG_6003.webp",
     "thumb": "/images/2016/IMG_6003-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2016",
     "width": 1500,
     "height": 1000,
@@ -5434,6 +7576,11 @@
     "id": "2015-img-4659",
     "src": "/images/2015/IMG_4659.webp",
     "thumb": "/images/2015/IMG_4659-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1022,
@@ -5446,6 +7593,11 @@
     "id": "2015-img-4689",
     "src": "/images/2015/IMG_4689.webp",
     "thumb": "/images/2015/IMG_4689-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5458,6 +7610,11 @@
     "id": "2015-img-4618",
     "src": "/images/2015/IMG_4618.webp",
     "thumb": "/images/2015/IMG_4618-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5470,6 +7627,11 @@
     "id": "2015-img-3551",
     "src": "/images/2015/IMG_3551.webp",
     "thumb": "/images/2015/IMG_3551-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5482,6 +7644,11 @@
     "id": "2015-img-5814",
     "src": "/images/2015/IMG_5814.webp",
     "thumb": "/images/2015/IMG_5814-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5494,6 +7661,11 @@
     "id": "2015-img-5663",
     "src": "/images/2015/IMG_5663.webp",
     "thumb": "/images/2015/IMG_5663-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5506,6 +7678,11 @@
     "id": "2015-img-5605-2",
     "src": "/images/2015/IMG_5605-2.webp",
     "thumb": "/images/2015/IMG_5605-2-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5518,6 +7695,11 @@
     "id": "2015-img-4290",
     "src": "/images/2015/IMG_4290.webp",
     "thumb": "/images/2015/IMG_4290-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5530,6 +7712,11 @@
     "id": "2015-img-4306",
     "src": "/images/2015/IMG_4306.webp",
     "thumb": "/images/2015/IMG_4306-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5542,6 +7729,11 @@
     "id": "2015-img-3073",
     "src": "/images/2015/IMG_3073.webp",
     "thumb": "/images/2015/IMG_3073-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5554,6 +7746,11 @@
     "id": "2015-img-4224",
     "src": "/images/2015/IMG_4224.webp",
     "thumb": "/images/2015/IMG_4224-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5566,6 +7763,11 @@
     "id": "2015-img-4252",
     "src": "/images/2015/IMG_4252.webp",
     "thumb": "/images/2015/IMG_4252-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5578,6 +7780,11 @@
     "id": "2015-img-1218",
     "src": "/images/2015/IMG_1218.webp",
     "thumb": "/images/2015/IMG_1218-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5590,6 +7797,11 @@
     "id": "2015-img-3055",
     "src": "/images/2015/IMG_3055.webp",
     "thumb": "/images/2015/IMG_3055-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5602,6 +7814,11 @@
     "id": "2015-img-1384",
     "src": "/images/2015/IMG_1384.webp",
     "thumb": "/images/2015/IMG_1384-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5614,6 +7831,11 @@
     "id": "2015-img-1356",
     "src": "/images/2015/IMG_1356.webp",
     "thumb": "/images/2015/IMG_1356-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5626,6 +7848,11 @@
     "id": "2015-img-0404",
     "src": "/images/2015/IMG_0404.webp",
     "thumb": "/images/2015/IMG_0404-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5638,6 +7865,11 @@
     "id": "2015-img-0401",
     "src": "/images/2015/IMG_0401.webp",
     "thumb": "/images/2015/IMG_0401-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5650,6 +7882,11 @@
     "id": "2015-img-4191",
     "src": "/images/2015/IMG_4191.webp",
     "thumb": "/images/2015/IMG_4191-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5662,6 +7899,11 @@
     "id": "2015-img-4217",
     "src": "/images/2015/IMG_4217.webp",
     "thumb": "/images/2015/IMG_4217-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5674,6 +7916,11 @@
     "id": "2015-img-3245",
     "src": "/images/2015/IMG_3245.webp",
     "thumb": "/images/2015/IMG_3245-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5686,6 +7933,11 @@
     "id": "2015-img-3218",
     "src": "/images/2015/IMG_3218.webp",
     "thumb": "/images/2015/IMG_3218-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5698,6 +7950,11 @@
     "id": "2015-img-3201",
     "src": "/images/2015/IMG_3201.webp",
     "thumb": "/images/2015/IMG_3201-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5710,6 +7967,11 @@
     "id": "2015-img-3165",
     "src": "/images/2015/IMG_3165.webp",
     "thumb": "/images/2015/IMG_3165-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5722,6 +7984,11 @@
     "id": "2015-img-3124",
     "src": "/images/2015/IMG_3124.webp",
     "thumb": "/images/2015/IMG_3124-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5734,6 +8001,11 @@
     "id": "2015-img-5967",
     "src": "/images/2015/IMG_5967.webp",
     "thumb": "/images/2015/IMG_5967-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5746,6 +8018,11 @@
     "id": "2015-img-5630",
     "src": "/images/2015/IMG_5630.webp",
     "thumb": "/images/2015/IMG_5630-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5758,6 +8035,11 @@
     "id": "2015-img-5533",
     "src": "/images/2015/IMG_5533.webp",
     "thumb": "/images/2015/IMG_5533-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5770,6 +8052,11 @@
     "id": "2015-img-5522",
     "src": "/images/2015/IMG_5522.webp",
     "thumb": "/images/2015/IMG_5522-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5782,6 +8069,11 @@
     "id": "2015-img-5165",
     "src": "/images/2015/IMG_5165.webp",
     "thumb": "/images/2015/IMG_5165-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5794,6 +8086,11 @@
     "id": "2015-img-5159",
     "src": "/images/2015/IMG_5159.webp",
     "thumb": "/images/2015/IMG_5159-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5806,6 +8103,11 @@
     "id": "2015-img-2588",
     "src": "/images/2015/IMG_2588.webp",
     "thumb": "/images/2015/IMG_2588-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5818,6 +8120,11 @@
     "id": "2015-img-2190",
     "src": "/images/2015/IMG_2190.webp",
     "thumb": "/images/2015/IMG_2190-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1015,
@@ -5830,6 +8137,11 @@
     "id": "2015-img-1730",
     "src": "/images/2015/IMG_1730.webp",
     "thumb": "/images/2015/IMG_1730-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5842,6 +8154,11 @@
     "id": "2015-img-1376",
     "src": "/images/2015/IMG_1376.webp",
     "thumb": "/images/2015/IMG_1376-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1078,
@@ -5854,6 +8171,11 @@
     "id": "2015-img-0327",
     "src": "/images/2015/IMG_0327.webp",
     "thumb": "/images/2015/IMG_0327-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2015",
     "width": 1500,
     "height": 1000,
@@ -5866,6 +8188,11 @@
     "id": "2014-14596682323-a6440b250c-o",
     "src": "/images/2014/14596682323_a6440b250c_o.webp",
     "thumb": "/images/2014/14596682323_a6440b250c_o-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5878,6 +8205,11 @@
     "id": "2014-14574812504-8510c59f7e-o",
     "src": "/images/2014/14574812504_8510c59f7e_o.webp",
     "thumb": "/images/2014/14574812504_8510c59f7e_o-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5890,6 +8222,11 @@
     "id": "2014-img-2776",
     "src": "/images/2014/IMG_2776.webp",
     "thumb": "/images/2014/IMG_2776-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5902,6 +8239,11 @@
     "id": "2014-img-3985",
     "src": "/images/2014/IMG_3985.webp",
     "thumb": "/images/2014/IMG_3985-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5914,6 +8256,11 @@
     "id": "2014-img-4052",
     "src": "/images/2014/IMG_4052.webp",
     "thumb": "/images/2014/IMG_4052-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5926,6 +8273,11 @@
     "id": "2014-img-3242",
     "src": "/images/2014/IMG_3242.webp",
     "thumb": "/images/2014/IMG_3242-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5938,6 +8290,11 @@
     "id": "2014-img-3817",
     "src": "/images/2014/IMG_3817.webp",
     "thumb": "/images/2014/IMG_3817-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5950,6 +8307,11 @@
     "id": "2014-img-3124",
     "src": "/images/2014/IMG_3124.webp",
     "thumb": "/images/2014/IMG_3124-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5962,6 +8324,11 @@
     "id": "2014-img-3301",
     "src": "/images/2014/IMG_3301.webp",
     "thumb": "/images/2014/IMG_3301-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5974,6 +8341,11 @@
     "id": "2014-img-2634",
     "src": "/images/2014/IMG_2634.webp",
     "thumb": "/images/2014/IMG_2634-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5986,6 +8358,11 @@
     "id": "2014-img-2633",
     "src": "/images/2014/IMG_2633.webp",
     "thumb": "/images/2014/IMG_2633-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -5998,6 +8375,11 @@
     "id": "2014-img-2586",
     "src": "/images/2014/IMG_2586.webp",
     "thumb": "/images/2014/IMG_2586-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6010,6 +8392,11 @@
     "id": "2014-img-2493",
     "src": "/images/2014/IMG_2493.webp",
     "thumb": "/images/2014/IMG_2493-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6022,6 +8409,11 @@
     "id": "2014-img-2413",
     "src": "/images/2014/IMG_2413.webp",
     "thumb": "/images/2014/IMG_2413-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6034,6 +8426,11 @@
     "id": "2014-img-3715",
     "src": "/images/2014/IMG_3715.webp",
     "thumb": "/images/2014/IMG_3715-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6046,6 +8443,11 @@
     "id": "2014-img-1680",
     "src": "/images/2014/IMG_1680.webp",
     "thumb": "/images/2014/IMG_1680-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6058,6 +8460,11 @@
     "id": "2014-img-3368",
     "src": "/images/2014/IMG_3368.webp",
     "thumb": "/images/2014/IMG_3368-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6070,6 +8477,11 @@
     "id": "2014-img-2498",
     "src": "/images/2014/IMG_2498.webp",
     "thumb": "/images/2014/IMG_2498-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6082,6 +8494,11 @@
     "id": "2014-img-4111",
     "src": "/images/2014/IMG_4111.webp",
     "thumb": "/images/2014/IMG_4111-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6094,6 +8511,11 @@
     "id": "2014-img-3103",
     "src": "/images/2014/IMG_3103.webp",
     "thumb": "/images/2014/IMG_3103-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6106,6 +8528,11 @@
     "id": "2014-img-3011",
     "src": "/images/2014/IMG_3011.webp",
     "thumb": "/images/2014/IMG_3011-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6118,6 +8545,11 @@
     "id": "2014-img-2991",
     "src": "/images/2014/IMG_2991.webp",
     "thumb": "/images/2014/IMG_2991-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,
@@ -6130,6 +8562,11 @@
     "id": "2014-img-2709",
     "src": "/images/2014/IMG_2709.webp",
     "thumb": "/images/2014/IMG_2709-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
     "alt": "Photograph — 2014",
     "width": 1500,
     "height": 1000,

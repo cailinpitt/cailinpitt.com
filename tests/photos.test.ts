@@ -3,11 +3,23 @@ import {
   assignPhotoId,
   approxDateForYear,
   byNewest,
+  GRID_WIDTHS,
   photoFiles,
+  renditionPath,
   resolveDate,
   slugify,
 } from '../scripts/photo-manifest.mjs'
-import { byNewest as byNewestUi, formatPhotoDate, formatPhotoDateShort, photoNeighbors, photoYearBreaks, type Photo } from '../src/lib/photos'
+import {
+  byNewest as byNewestUi,
+  formatPhotoDate,
+  formatPhotoDateShort,
+  GRID_WIDTHS as GRID_WIDTHS_UI,
+  photoNeighbors,
+  photoYearBreaks,
+  renditionPath as renditionPathUi,
+  thumbSrcset,
+  type Photo,
+} from '../src/lib/photos'
 
 // The feed's two invariants: a photo's id is a URL that must never move, and its
 // place in the feed is decided by year first and date second. Everything here is
@@ -193,5 +205,65 @@ describe('what belongs to a photo', () => {
   it('copes with a photo that has no thumbnail', () => {
     const files = photoFiles({ id: '2014-x', src: '/images/2014/x.webp' })
     expect(files.renditions).toEqual(['/images/2014/x.webp'])
+  })
+
+  it('deletes every grid rendition the entry claims, without repeating the thumb', () => {
+    const files = photoFiles({
+      id: '2026-img-1919',
+      src: '/images/2026/IMG_1919.webp',
+      thumb: '/images/2026/IMG_1919-1000.webp',
+      widths: [400, 800, 1000],
+    })
+    expect(files.renditions).toEqual([
+      '/images/2026/IMG_1919.webp',
+      '/images/2026/IMG_1919-1000.webp',
+      '/images/2026/IMG_1919-400.webp',
+      '/images/2026/IMG_1919-800.webp',
+    ])
+  })
+
+  it('deletes only the widths a photo actually has', () => {
+    // An entry synced before a width was added never had that file; asking R2
+    // to delete it would report a phantom as missing.
+    const files = photoFiles({
+      id: '2019-x',
+      src: '/images/2019/x.webp',
+      thumb: '/images/2019/x-1000.webp',
+      widths: [1000],
+    })
+    expect(files.renditions).toEqual(['/images/2019/x.webp', '/images/2019/x-1000.webp'])
+  })
+})
+
+describe('grid renditions', () => {
+  // The encoder and the browser have to agree on which files exist: a width the
+  // srcset offers but images:sync never wrote is a 404 the browser picks itself.
+  it('offers exactly the widths the sync script encodes', () => {
+    expect(GRID_WIDTHS_UI).toEqual(GRID_WIDTHS)
+  })
+
+  it('derives the same rendition path on both sides', () => {
+    for (const width of GRID_WIDTHS) {
+      expect(renditionPathUi('/images/2026/x.webp', width)).toBe(
+        renditionPath('/images/2026/x.webp', width),
+      )
+    }
+  })
+
+  it("names the thumb's own width, so `thumb` and the srcset agree", () => {
+    expect(renditionPathUi('/images/2026/x.webp', 1000)).toBe('/images/2026/x-1000.webp')
+  })
+
+  it('builds a narrow-first srcset of absolute R2 urls', () => {
+    expect(thumbSrcset({ src: '/images/2026/x.webp', widths: [400, 800, 1000] })).toBe(
+      'https://images.cailinpitt.com/images/2026/x-400.webp 400w, ' +
+        'https://images.cailinpitt.com/images/2026/x-800.webp 800w, ' +
+        'https://images.cailinpitt.com/images/2026/x-1000.webp 1000w',
+    )
+  })
+
+  it('offers no srcset when there is only one rendition to choose from', () => {
+    expect(thumbSrcset({ src: '/images/2019/x.webp', widths: [1000] })).toBeUndefined()
+    expect(thumbSrcset({ src: '/images/2019/x.webp' })).toBeUndefined()
   })
 })

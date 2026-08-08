@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { imageUrl, photoYearBreaks, type Photo, yearAnchor } from '../lib/photos'
+import {
+  FEED_TILE_SIZES,
+  imageUrl,
+  photoYearBreaks,
+  thumbSrcset,
+  type Photo,
+  yearAnchor,
+} from '../lib/photos'
 import { pageSchema } from '../lib/structuredData'
 
 // The feed: every photograph on the site in one square grid, newest first.
@@ -17,12 +24,16 @@ import { pageSchema } from '../lib/structuredData'
  * hundred long — carrying those into the prerendered loader data would double it
  * for nothing.
  */
-type FeedPhoto = Pick<Photo, 'id' | 'src' | 'thumb' | 'alt' | 'year' | 'width' | 'height' | 'tint'>
+type FeedPhoto = Pick<
+  Photo,
+  'id' | 'src' | 'thumb' | 'widths' | 'alt' | 'year' | 'width' | 'height' | 'tint'
+>
 
-const toTile = ({ id, src, thumb, alt, year, width, height, tint }: Photo): FeedPhoto => ({
+const toTile = ({ id, src, thumb, widths, alt, year, width, height, tint }: Photo): FeedPhoto => ({
   id,
   src,
   thumb,
+  widths,
   alt,
   year,
   width,
@@ -172,11 +183,15 @@ export function Component() {
                   a grid of identical gray squares. Inline because it is per-photo
                   data, not a style. */}
               <Link to={`/photos/${photo.id}`} style={photo.tint ? { background: photo.tint } : undefined}>
-                <img
-                  // Tiles are square and ~200px wide at most, so the 1000px grid
-                  // rendition is what should load here; the full size belongs to
-                  // the photo's own page.
+<img
+                  // A tile paints between ~117px (three across a phone) and
+                  // ~306px, so the browser picks from the grid renditions rather
+                  // than always taking the 1000px one. `src` stays the largest
+                  // as the fallback for anything that ignores srcset; the full
+                  // size belongs to the photo's own page.
                   src={imageUrl(photo.thumb ?? photo.src)}
+                  srcSet={thumbSrcset(photo)}
+                  sizes={thumbSrcset(photo) ? FEED_TILE_SIZES : undefined}
                   alt={photo.alt}
                   width={photo.width}
                   height={photo.height}

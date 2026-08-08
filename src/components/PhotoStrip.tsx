@@ -21,7 +21,17 @@ export function PhotoStrip({ photos }: { photos: PhotoPreview[] }) {
             // The photo's own color underneath, as on the feed tiles.
             style={photo.tint ? { background: photo.tint } : undefined}
           >
-            <img src={imageUrl(photo.src)} alt="" loading="lazy" decoding="async" />
+            {/* The strip's tiles cap at 130px (see .photo-previews), so this is
+                the one place on the site that was fetching a 1000px rendition to
+                paint a thumbnail. */}
+            <img
+              src={imageUrl(photo.src)}
+              srcSet={photo.srcset}
+              sizes={photo.srcset ? '130px' : undefined}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
             <span className="photo-preview-label">{photo.label}</span>
           </Link>
         </li>
