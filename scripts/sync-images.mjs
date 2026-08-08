@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Sync everything under public/images/ into the code that references it.
+// Sync everything under images/ into the code that references it.
 //
 //   npm run images:sync            # update the photo manifest
 //   npm run images:sync -- --prune # also drop manifest entries whose file is gone
@@ -9,14 +9,14 @@
 //   npm run images:publish         # sync, then upload to R2
 //
 // What it does:
-//   1. Photo folders — public/images/<year>, a four-digit name and nothing else —
+//   1. Photo folders — images/<year>, a four-digit name and nothing else —
 //      are written into src/lib/photos.json as one flat, newest-first feed: real
 //      width/height read off disk, a permalink id, a date, an average color for
 //      the tile placeholder, and capture metadata (camera, exposure, coarse
 //      location) read from the matching original.
 //      Existing entries keep their id, hand-written alt text, hand-corrected date,
 //      and any metadata already recorded.
-//   2. Blog folders (public/images/<post-slug>) are checked against the markdown:
+//   2. Blog folders (images/<post-slug>) are checked against the markdown:
 //      it reports images referenced but missing on disk, and images on disk that
 //      nothing references. Nothing to register — blog images are referenced by path.
 //
@@ -34,10 +34,10 @@ import { imageSize } from './image-size.mjs'
 import { readPhotoExif } from './exif.mjs'
 import { readTint } from './tint.mjs'
 import { assignPhotoId, byNewest, resolveDate } from './photo-manifest.mjs'
+import { IMAGES_DIR, localImagePath } from './paths.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const IMAGES_DIR = path.join(ROOT, 'public', 'images')
 const ORIGINALS_DIR = path.join(ROOT, 'originals')
 const BLOG_DIR = path.join(ROOT, 'content', 'blog')
 const MANIFEST = path.join(ROOT, 'src', 'lib', 'photos.json')
@@ -92,7 +92,7 @@ async function loadSharp() {
   return sharpModule
 }
 
-// --- renditions (originals/ -> public/images/) --------------------------------
+// --- renditions (originals/ -> images/) --------------------------------
 
 /** True when `out` exists and is at least as new as `src`. */
 async function isCurrent(src, out) {
@@ -103,7 +103,7 @@ async function isCurrent(src, out) {
 
 /**
  * Encode every original under originals/<folder>/ into web-sized WebP in
- * public/images/<folder>/. Originals are never uploaded or committed — these
+ * images/<folder>/. Originals are never uploaded or committed — these
  * renditions are what the site serves.
  */
 async function deriveFolder(sharp, folder, isPhoto) {
@@ -175,7 +175,7 @@ async function deriveAll() {
 /** The grid rendition for an image, when one has been generated next to it. */
 function thumbFor(src) {
   const thumb = src.replace(/\.[^.]+$/, THUMB_SUFFIX)
-  return existsSync(path.join(ROOT, 'public', thumb)) ? thumb : undefined
+  return existsSync(localImagePath(thumb)) ? thumb : undefined
 }
 
 /**
@@ -247,7 +247,7 @@ async function syncPhotos(existing) {
        */
       let tint = prior?.tint
       if (sharp && (!tint || REENCODE || RETINT)) {
-        const from = path.join(ROOT, 'public', thumb ?? src)
+        const from = localImagePath(thumb ?? src)
         tint = await readTint(sharp, from)
         if (tint && !prior?.tint) tally.tinted++
       }
@@ -294,7 +294,7 @@ async function checkBlogImages(folders) {
     const body = await readFile(path.join(BLOG_DIR, file), 'utf8')
     for (const [, src] of body.matchAll(/(?:\]\(|["'(])(\/images\/[^\s)"']+)/g)) {
       referenced.add(src)
-      if (!existsSync(path.join(ROOT, 'public', src))) missing.push({ post: file, src })
+      if (!existsSync(localImagePath(src))) missing.push({ post: file, src })
     }
   }
 
@@ -312,7 +312,7 @@ async function checkBlogImages(folders) {
     for (const m of missing) {
       // Most often the post still points at the original filename/extension.
       const web = m.src.replace(/\.[^.]+$/, '.webp')
-      const hint = web !== m.src && existsSync(path.join(ROOT, 'public', web)) ? ` → use ${web}` : ''
+      const hint = web !== m.src && existsSync(localImagePath(web)) ? ` → use ${web}` : ''
       console.log(`    ${m.src}  (${m.post})${hint}`)
     }
   }

@@ -7,7 +7,7 @@
 // costs 7 bytes in photos.json and turns that into a wave of roughly the right
 // color — the same trick as a blurhash, minus the decoder.
 //
-// It's read from the *rendition* in public/images, not the original: renditions
+// It's read from the *rendition* in images, not the original: renditions
 // are what the browser actually displays (EXIF orientation already baked in),
 // and they exist even in a checkout where originals/ was never pulled down.
 

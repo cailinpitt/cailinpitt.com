@@ -15,10 +15,10 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { S3Client, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { IMAGES_DIR, localImagePath } from './paths.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const PUBLIC = path.join(ROOT, 'public')
 
 // Load credentials from the local .env (gitignored) if present.
 try {
@@ -64,7 +64,7 @@ async function remoteKeys() {
 
 async function uploadOne(src, present) {
   const key = src.replace(/^\//, '') // "/images/2022/x.jpg" -> "images/2022/x.jpg"
-  const file = path.join(PUBLIC, key)
+  const file = localImagePath(src)
   if (!existsSync(file)) return { key, status: 'missing-local' }
   if (!FORCE && present.has(key)) return { key, status: 'skip' }
   const body = await readFile(file)
@@ -93,19 +93,20 @@ async function mapLimit(items, limit, fn) {
   return results
 }
 
-// All files under public/images, as root-relative srcs (/images/<...>).
-async function allImageSrcs(dir = path.join(PUBLIC, 'images')) {
+// All files under images/, as root-relative srcs (/images/<...>) — which are
+// also the R2 keys, with a leading slash.
+async function allImageSrcs(dir = IMAGES_DIR) {
   const out = []
   for (const e of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
     if (e.isDirectory()) out.push(...(await allImageSrcs(p)))
-    else out.push('/' + path.relative(PUBLIC, p).split(path.sep).join('/'))
+    else out.push('/' + path.relative(ROOT, p).split(path.sep).join('/'))
   }
   return out
 }
 
 async function main() {
-  // Every image (blog + galleries) lives under public/images and is served from R2.
+  // Every image (blog + galleries) lives under images/ and is served from R2.
   const srcs = await allImageSrcs()
   const present = FORCE ? new Set() : await remoteKeys()
   const todo = srcs.filter((src) => FORCE || !present.has(src.replace(/^\//, '')))

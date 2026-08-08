@@ -26,12 +26,15 @@ squarespace-export.xml
 squarespace-backup/
 
 # Images — ALL images (blog + galleries) are served from Cloudflare R2, never
-# committed, to keep the repo small. Local copies under public/images are working
-# copies; push them to R2 with `npm run images:upload`.
-/public/images/
+# committed, to keep the repo small. The renditions under images/ are working
+# copies; push them to R2 with `npm run images:upload`. Deliberately NOT under
+# public/, which Vite copies wholesale into dist/ — nothing on the built site
+# requests a /images/... path, so shipping them would upload ~240 MB to GitHub
+# Pages per deploy for nobody. See scripts/paths.mjs.
+/images/
 
 # Camera originals. Purely a local working directory: `npm run images:sync` reads
-# these and writes the web-sized renditions into public/images/. Never committed,
+# these and writes the web-sized renditions into images/. Never committed,
 # never uploaded, never built into the site.
 /originals/
 

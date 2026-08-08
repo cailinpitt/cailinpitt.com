@@ -37,6 +37,7 @@ import sharp from 'sharp'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
+import { localImagePath } from './paths.mjs'
 const DIST = path.join(ROOT, 'dist')
 const FONTS = path.join(ROOT, 'node_modules', '@fontsource')
 const SITE_NAME = 'Cailin Pitt'
@@ -227,7 +228,7 @@ function setImageSrc(node, src) {
  * A photo, pre-cropped to the card and inlined as a data URI.
  *
  * Images live in R2, not the repo, so the build fetches them — but a local checkout
- * usually has working copies under public/images, which are used first. Cropping here
+ * usually has working copies under images, which are used first. Cropping here
  * rather than letting satori do it keeps the SVG (and the memory it costs) small.
  */
 const photoCache = new Map()
@@ -235,7 +236,7 @@ async function loadPhoto(url) {
   if (photoCache.has(url)) return photoCache.get(url)
   const promise = (async () => {
     const local = url.replace(/^https?:\/\/[^/]+/, '')
-    const localFile = path.join(ROOT, 'public', local)
+    const localFile = localImagePath(local)
     let input
     if (local.startsWith('/images/') && existsSync(localFile)) {
       input = localFile

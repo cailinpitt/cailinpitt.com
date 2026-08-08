@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { PostSource } from '../components/PostSource'
 import { Seo } from '../components/Seo'
 import { aboutPage } from '../lib/about'
+import { imageUrl } from '../lib/images'
 import { pageSchema } from '../lib/structuredData'
 
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
@@ -13,6 +14,10 @@ const SOURCE_FILE = '/about.md'
 
 /** Keep root-relative links client-side; matches /now, /uses, and the colophon. */
 const markdownComponents = {
+  // Same rewrite post bodies get: /images/... is an R2 object, not a file in dist.
+  img: ({ node: _node, ...props }: { node?: unknown; src?: string }) => (
+    <img {...props} src={imageUrl(props.src)} />
+  ),
   a: ({
     node: _node,
     href,

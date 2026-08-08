@@ -12,7 +12,7 @@
 // of broken, which is why this is one command and not five:
 //
 //   1. its entry in src/lib/photos.json          (the feed and its page)
-//   2. the renditions in public/images/<year>/   (local working copies)
+//   2. the renditions in images/<year>/   (local working copies)
 //   3. the same renditions in R2                 (what the site actually serves)
 //   4. the original in originals/<year>/         (local camera file)
 //   5. the archived original in the private R2 bucket, if it was sent from the phone
@@ -39,7 +39,7 @@ import { photoFiles } from './photo-manifest.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const PUBLIC = path.join(ROOT, 'public')
+import { localImagePath } from './paths.mjs'
 const ORIGINALS_DIR = path.join(ROOT, 'originals')
 const MANIFEST = path.join(ROOT, 'src', 'lib', 'photos.json')
 
@@ -149,7 +149,7 @@ async function main() {
       photo,
       renditions,
       localFiles: renditions
-        .map((src) => path.join(PUBLIC, src))
+        .map((src) => localImagePath(src))
         .filter((file) => existsSync(file)),
       original: await findOriginal(folder, stem),
       archived: await findArchived(s3, folder, stem),

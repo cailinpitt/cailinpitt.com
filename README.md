@@ -151,9 +151,21 @@ references.
 
 ## Photos
 
-All images (blog + photos) are served from R2 (`images.cailinpitt.com`); `public/images/` and
+All images (blog + photos) are served from R2 (`images.cailinpitt.com`); `images/` and
 `originals/` are both gitignored. Photos are one flat chronological feed at `/photos`, described by
 `src/lib/photos.json`. No gallery registry.
+
+> **`images/` is at the repo root, not under `public/`, and that is load-bearing.** Vite copies the
+> whole of `public/` into `dist/`, but nothing on the built site ever requests a `/images/...` path —
+> `imageUrl()` in `src/lib/images.ts` rewrites every one of them to R2 at render time. Keeping the
+> renditions in `public/` meant uploading ~240 MB to GitHub Pages on every deploy to serve files no
+> page asks for. It is a staging area: `images:sync` writes into it, `images:upload` pushes it to R2,
+> and that is the only route to a browser. Paths come from `scripts/paths.mjs`.
+>
+> The corollary: **any Markdown that can carry an image needs the `img` override in its
+> `markdownComponents`** — posts, `/projects`, and `/about` have it. Miss it and the page asks
+> GitHub Pages for a file that isn't deployed. That was how the about photo ended up as the one
+> image on the site not served from R2; it worked only because `public/images` was being shipped.
 
 ```bash
 # 1. Drop full-size camera files in originals/2026/  (a four-digit folder = "this is a photo")
@@ -163,7 +175,7 @@ npm run images:publish     # = images:sync + images:upload; needs R2 creds in .e
 
 ### What `images:sync` does
 
-- **Compresses.** Each original becomes two WebPs in `public/images/<folder>/`: 2560px full size
+- **Compresses.** Each original becomes two WebPs in `images/<folder>/`: 2560px full size
   and a 1000px `-1000.webp` thumbnail (quality 82, EXIF orientation baked in, metadata stripped).
   Skipped when a rendition is newer than its original.
 - **Rebuilds `src/lib/photos.json`** from disk: `src`, `thumb`, `width`/`height`. Existing entries
@@ -616,7 +628,7 @@ npm run og -- --out .og-preview     # write somewhere safe to look at
 - **Copy comes from the built HTML** (`og:title`, `og:description`), so a card can't drift from its
   page. Page-only details (kicker, date, which photo) come through a `<meta name="og-card">` hint
   emitted by `<Seo card={{…}}>`.
-- **Photographs are fetched from R2** at build time, falling back to `public/images`. A photo that
+- **Photographs are fetched from R2** at build time, falling back to `images/`. A photo that
   can't be fetched falls back to the paper card rather than failing the deploy.
 - **Type is Source Serif 4 + Inter** (+ JetBrains Mono, terminal card only), not the site's own
   fonts, which a Linux runner lacks. They ship as `.woff` in `node_modules`; satori converts glyphs
@@ -740,7 +752,7 @@ Shortcut → POST photos.cailinpitt.com/ingest → R2 (private originals bucket)
 `import.meta.glob` resolve as they do in a build). Everything is in `tests/`, runs in under a
 second, and touches no network, no `dist/`, and no images.
 
-**A test has to pass on a fresh clone.** `public/images/` and `originals/` are gitignored, so CI
+**A test has to pass on a fresh clone.** `images/` and `originals/` are gitignored, so CI
 has no photographs — which is why `npm run images:check` is *not* in the workflow. It would report
 every blog image as missing. Run it locally.
 

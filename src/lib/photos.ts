@@ -6,7 +6,7 @@
 // /photos/<id>.
 //
 // The manifest (src/lib/photos.json) is written by `npm run images:sync` from
-// what's on disk under public/images/<year>/ — see that script for how each
+// what's on disk under images/<year>/ — see that script for how each
 // field is filled in. Two fields are load-bearing enough to say twice:
 //
 //   id     the permalink. Assigned once, when a file is first seen, and then

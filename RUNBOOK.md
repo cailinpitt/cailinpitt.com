@@ -30,7 +30,7 @@ VITE_GUESTBOOK_API=http://localhost:8787 npm run dev
 # 1. write content/blog/<slug>.md  (frontmatter: title, date, path, slug, tags, description, image)
 # 2. inline images
 mkdir -p originals/<slug>/         # drop originals here
-npm run images:publish             # compress → public/images/<slug>/ + upload to R2
+npm run images:publish             # compress → images/<slug>/ + upload to R2
 # reference in markdown as /images/<slug>/<name>.webp
 
 npm run dev                        # 3. preview

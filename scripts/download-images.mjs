@@ -9,7 +9,7 @@
 // For each blog post it:
 //   1. collects Squarespace CDN image URLs from the Markdown body, and (unless --no-crawl)
 //      from the live page at https://cailinpitt.com<path>,
-//   2. downloads each at high resolution into public/images/<slug>/,
+//   2. downloads each at high resolution into images/<slug>/,
 //   3. rewrites the URLs in the Markdown to /images/<slug>/<file>.
 //
 // Originals aren't on disk, so the live CDN is the source of truth. Re-runnable: already
@@ -22,8 +22,8 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
+import { IMAGES_DIR } from './paths.mjs'
 const BLOG_DIR = path.join(ROOT, 'content', 'blog')
-const IMAGES_DIR = path.join(ROOT, 'public', 'images')
 const SITE = 'https://cailinpitt.com'
 
 const CRAWL = !process.argv.includes('--no-crawl')
@@ -272,7 +272,7 @@ async function reportSize() {
   }
   await walk(IMAGES_DIR)
   const mb = (bytes / 1024 / 1024).toFixed(1)
-  console.log(`public/images is now ${mb} MB.`)
+  console.log(`images is now ${mb} MB.`)
   if (bytes > 1024 * 1024 * 1024) {
     console.log(
       '⚠ Over ~1 GB — consider Git LFS or moving photos to Cloudflare R2 (see plan.md).',
