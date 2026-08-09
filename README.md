@@ -25,6 +25,7 @@ file explains how things work.
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
   [/terminal](#terminal)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
+  [home screen](#home-screen--installing) ·
   [header nav](#header-nav) · [theme](#color-theme) · [markdown source](#markdown-source) ·
   [provenance](#provenance)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) ·
@@ -854,6 +855,30 @@ browser chrome reads as an extension of the paper. A media query can't see a man
 from the stylesheet rather than duplicated in JS, which is why it happens after mount — in the
 pre-paint script the CSS isn't loaded and `--bg` reads empty. Cost: an overridden theme keeps the
 media-matched tint for the first few frames.
+
+## Home screen / installing
+
+`public/site.webmanifest` deliberately has **no `start_url`**, and that absence is the feature.
+
+The spec says a manifest without `start_url` falls back to *the document URL of the page that
+linked it*. Since the manifest is linked from `index.html` and therefore sits in the `<head>` of
+every prerendered page, omitting the field means **"Add to Home Screen" launches whatever page you
+were actually on** — `/blog`, `/notes/compose`, `/terminal` — instead of sending everyone to `/`.
+
+With `"start_url": "/"` present, iOS reads it, ignores the address bar, and greys out the URL
+field, so there is no way to pin anything but the homepage. That was the bug. **Do not add it
+back**; JSON has no comments, which is why this paragraph exists.
+
+`"scope": "/"` is the other half and is *not* optional now. `scope` defaults to the directory of
+the start URL, so once the start URL is the document URL, a shortcut added from
+`/blog/2023/3/3/some-post` would get a scope of `/blog/2023/3/3/` — and the first tap on a link to
+anywhere else would fall out of the standalone window into a browser tab. Stating `/` keeps the
+whole site inside the installed app whichever page it was installed from.
+
+One consequence worth knowing: each page pinned this way is still the *same* app identity to the
+browser (same manifest URL), so pinning several pages gives several icons rather than several
+independent apps. That is what you want here — they're bookmarks with icons, not separate
+programs.
 
 ## Publishing a photo from your phone
 

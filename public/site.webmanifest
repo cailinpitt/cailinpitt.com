@@ -8,5 +8,5 @@
   "theme_color": "#b3541e",
   "background_color": "#fbfaf8",
   "display": "standalone",
-  "start_url": "/"
+  "scope": "/"
 }
