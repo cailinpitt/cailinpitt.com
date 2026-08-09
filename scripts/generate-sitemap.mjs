@@ -45,6 +45,11 @@ async function main() {
   for (const file of files) {
     const loc = SITE + toUrlPath(file)
     const html = await readFile(file, 'utf8')
+    // A page that tells crawlers not to index it has no business in the
+    // sitemap, which is a list of pages asking to be crawled. Read off the
+    // emitted tag rather than a second list here, so `<Seo noindex>` is the
+    // only place a page declares it (currently /notes/compose).
+    if (/<meta[^>]+name="robots"[^>]+content="[^"]*noindex/i.test(html)) continue
     const canonical = html.match(/<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i)?.[1]
     // Do not submit historical aliases such as /past-work when the page itself
     // identifies a different canonical URL. Build mtimes are intentionally not

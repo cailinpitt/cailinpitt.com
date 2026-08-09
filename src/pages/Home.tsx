@@ -6,6 +6,7 @@ import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras
 import { ReadingBar } from '../components/ReadingBar'
 import { WatchingBar } from '../components/WatchingBar'
 import { MovingBar } from '../components/MovingBar'
+import { NotesBar } from '../components/NotesBar'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
@@ -103,6 +104,16 @@ export function Component() {
         <MovingBar />
         <p className="more">
           <Link to="/moving">Moving log →</Link>
+        </p>
+      </section>
+
+      <section className="recent-notes" aria-labelledby="notes-heading">
+        <h2 id="notes-heading" className="eyebrow">
+          💬 Latest note
+        </h2>
+        <NotesBar />
+        <p className="more">
+          <Link to="/notes">All notes →</Link>
         </p>
       </section>
 

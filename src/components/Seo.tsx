@@ -46,6 +46,24 @@ interface SeoProps {
    * the source than the page can find it without being told.
    */
   markdownPath?: string
+  /**
+   * An RSS feed this page is the human view of, advertised for autodiscovery.
+   *
+   * index.html already carries the site's own /feed.xml on every page. This is
+   * for a feed belonging to *one* page — /notes, whose feed is served by its
+   * Worker rather than written at build time — which has no business being
+   * advertised from the front page or from every post.
+   */
+  feed?: { href: string; title: string }
+  /**
+   * Keep this page out of search results and out of sitemap.xml.
+   *
+   * For pages that exist but aren't publications: /notes/compose is a writing
+   * tool, not a thing to read. scripts/generate-sitemap.mjs reads the emitted
+   * meta tag rather than being told separately, so a page can't be noindex and
+   * still get submitted.
+   */
+  noindex?: boolean
 }
 
 // Escape `<` so the serialized JSON can't break out of the <script> element.
@@ -75,6 +93,8 @@ export function Seo({
   publicationUri,
   documentUri,
   markdownPath,
+  feed,
+  noindex,
 }: SeoProps) {
   const url = `${SITE_URL}${path}`
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
@@ -92,7 +112,11 @@ export function Seo({
     <Head>
       <title>{fullTitle}</title>
       {description && <meta name="description" content={description} />}
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={url} />
+      {feed && (
+        <link rel="alternate" type="application/rss+xml" href={feed.href} title={feed.title} />
+      )}
       {markdownPath && (
         <link
           rel="alternate"

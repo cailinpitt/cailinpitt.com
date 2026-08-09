@@ -26,6 +26,8 @@ import {
   summary as activitySummary,
   type Activity,
 } from '../lib/moving'
+import { fetchNotes, fetchOlderNotes, notePath, type Note } from '../lib/notes'
+import { NoteText } from '../components/NoteText'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
 import { buildTimeline, type TimelineDay } from '../lib/timeline'
@@ -56,6 +58,16 @@ export async function loader(): Promise<TimelineData | null> {
  * Pull more of a cursor-paged stream until it reaches back past `floor` — the
  * other streams have to cover the whole window the listening days opened up, or
  * the older rows would understate what happened on them.
+ *
+ * **A stream that fails gives back what it already had**, rather than rejecting.
+ * These run as a batch, and one unreachable Worker used to fail the batch and
+ * with it the whole "load older" click — five streams' worth of history thrown
+ * away because the sixth timed out. Swallowing here keeps the failure the size
+ * of the thing that failed, which is the same contract the initial load keeps.
+ *
+ * The cursor is returned unchanged on failure rather than nulled, so the next
+ * click retries that stream instead of writing it off for the session — the
+ * common cause is a blip, not a dead endpoint.
  */
 async function topUp<T>(
   items: T[],
@@ -72,9 +84,13 @@ async function topUp<T>(
     // Once the tail is older than the floor, the window is covered. A null floor
     // means listening is exhausted and everything left should be shown.
     if (floor && oldest && oldest < floor) break
-    const result = await load(next, signal)
-    all = [...all, ...result.items]
-    next = result.nextCursor
+    try {
+      const result = await load(next, signal)
+      all = [...all, ...result.items]
+      next = result.nextCursor
+    } catch {
+      return { items: all, cursor: next }
+    }
   }
   return { items: all, cursor: next }
 }
@@ -89,6 +105,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
   const [books, setBooks] = useState<Book[]>([])
   const [films, setFilms] = useState<Film[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
+  const [notes, setNotes] = useState<Note[]>([])
+  const [noteCursor, setNoteCursor] = useState<string | null>(null)
   const [before, setBefore] = useState<number | null>(null)
   const [articleCursor, setArticleCursor] = useState<string | null>(null)
   const [bookCursor, setBookCursor] = useState<string | null>(null)
@@ -102,7 +120,23 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
   useEffect(() => {
     const controller = new AbortController()
     controllerRef.current = controller
-    Promise.all([
+
+    // allSettled, not all.
+    //
+    // This page is the only one that reads *every* Worker, which makes it the
+    // one place where "a Worker is down" is most likely to be true of something.
+    // With Promise.all, any single unreachable endpoint rejected the whole batch
+    // and the page rendered its error state — five working streams thrown away
+    // because the sixth was unavailable. That is the opposite of the contract
+    // the rest of the site keeps ("a Worker being down costs that section and
+    // nothing else"), and it is a failure mode that grows more likely with every
+    // stream added.
+    //
+    // So each stream is now allowed to fail on its own. A missing stream
+    // contributes no rows and the day is assembled from the rest; the page only
+    // reports an error when *nothing* answered, which is the one case where
+    // there is genuinely nothing to show.
+    Promise.allSettled([
       // The compact projection, not the full bundle: this page shows a count and
       // a top artist per day and renders no individual track, which is ~93% of
       // what the bundle carries.
@@ -110,23 +144,41 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       fetchReading(controller.signal),
       fetchWatching(controller.signal),
       fetchMoving(controller.signal),
-    ])
-      .then(([listening, reading, watching, moving]) => {
-        setDays(listening.days)
-        setBefore(listening.nextBefore)
-        setArticles(reading.articles)
-        setArticleCursor(reading.nextCursor)
-        setBooks([...reading.currentlyReading, ...reading.finishedBooks])
-        setBookCursor(reading.nextBookCursor)
-        setFilms(watching.films)
-        setFilmCursor(watching.nextCursor)
-        setActivities(moving.activities)
-        setActivityCursor(moving.nextCursor)
-        setReady(true)
-      })
-      .catch((err) => {
-        if (err?.name !== 'AbortError') setError(true)
-      })
+      fetchNotes(controller.signal),
+    ]).then(([listening, reading, watching, moving, notes]) => {
+      if (controller.signal.aborted) return
+
+      if (listening.status === 'fulfilled') {
+        setDays(listening.value.days)
+        setBefore(listening.value.nextBefore)
+      }
+      if (reading.status === 'fulfilled') {
+        setArticles(reading.value.articles)
+        setArticleCursor(reading.value.nextCursor)
+        setBooks([...reading.value.currentlyReading, ...reading.value.finishedBooks])
+        setBookCursor(reading.value.nextBookCursor)
+      }
+      if (watching.status === 'fulfilled') {
+        setFilms(watching.value.films)
+        setFilmCursor(watching.value.nextCursor)
+      }
+      if (moving.status === 'fulfilled') {
+        setActivities(moving.value.activities)
+        setActivityCursor(moving.value.nextCursor)
+      }
+      if (notes.status === 'fulfilled') {
+        setNotes(notes.value.notes)
+        setNoteCursor(notes.value.nextCursor)
+      }
+
+      const streams = [listening, reading, watching, moving, notes]
+      // Every stream failing means no network, a total outage, or an ad blocker
+      // eating the requests — the error state is honest there. Anything less and
+      // the page has something to show.
+      setError(streams.every((result) => result.status === 'rejected'))
+      setReady(true)
+    })
+
     return () => controller.abort()
   }, [])
 
@@ -145,7 +197,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       const nextFloor =
         older.nextBefore != null && nextDays.length ? nextDays[nextDays.length - 1].date : null
 
-      const [nextArticles, nextBooks, nextFilms, nextActivities] = await Promise.all([
+      const [nextArticles, nextBooks, nextFilms, nextActivities, nextNotes] = await Promise.all([
         topUp(
           articles,
           articleCursor,
@@ -192,6 +244,18 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
           },
           controller.signal,
         ),
+        topUp(
+          notes,
+          noteCursor,
+          nextFloor,
+          // Local bucketing, matching what buildTimeline does with them.
+          (note) => dayKey(note.createdAt),
+          async (cursor, signal) => {
+            const page = await fetchOlderNotes(cursor, 25, signal)
+            return { items: page.notes, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        ),
       ])
 
       setDays(nextDays)
@@ -204,6 +268,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       setFilmCursor(nextFilms.cursor)
       setActivities(nextActivities.items)
       setActivityCursor(nextActivities.cursor)
+      setNotes(nextNotes.items)
+      setNoteCursor(nextNotes.cursor)
     } catch (err) {
       // Stop offering the button rather than looping on a broken endpoint.
       if ((err as Error)?.name !== 'AbortError') setBefore(null)
@@ -222,11 +288,13 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     filmCursor,
     films,
     loading,
+    noteCursor,
+    notes,
   ])
 
   const timeline = useMemo(
-    () => buildTimeline({ days, articles, books, films, activities, posts, photos, floor }),
-    [activities, articles, books, days, films, floor, photos, posts],
+    () => buildTimeline({ days, articles, books, films, activities, posts, photos, notes, floor }),
+    [activities, articles, books, days, films, floor, notes, photos, posts],
   )
 
   return { timeline, ready, error, loading, hasMore: before != null, loadMore }
@@ -240,13 +308,13 @@ export function Component() {
     <div className="timeline">
       <Seo
         title="Timeline"
-        description="Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, and photographed, day by day."
+        description="Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, noted, and photographed, day by day."
         path="/timeline"
         jsonLd={pageSchema({
           path: '/timeline',
           title: 'Timeline',
           description:
-            'Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, and photographed, day by day.',
+            'Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, noted, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
@@ -254,11 +322,15 @@ export function Component() {
       <p className="lead">
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
         <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
-        <Link to="/moving">moving</Link>, <Link to="/blog">writing</Link>, and{' '}
-        <Link to="/photos">photos</Link>.
+        <Link to="/moving">moving</Link>, <Link to="/blog">writing</Link>,{' '}
+        <Link to="/notes">notes</Link>, and <Link to="/photos">photos</Link>.
       </p>
 
-      {error && !ready ? (
+      {/* `error` now means *every* stream failed, and it is set at the same time
+          as `ready` rather than instead of it — so this tests it on its own.
+          Previously it could only be true while `!ready`, which is no longer a
+          state this component enters. */}
+      {error ? (
         <p className="timeline-error">Could not load the timeline right now. Try again later.</p>
       ) : !ready ? (
         <div className="timeline-skeleton" aria-hidden="true">
@@ -358,6 +430,25 @@ function TimelineRow({ day }: { day: TimelineDay }) {
             </span>
             <span>
               <span className="timeline-label">Published</span> <Link to={post.path}>{post.title}</Link>
+            </span>
+          </li>
+        ))}
+
+        {/* Notes carry their own text rather than a link to it, unlike every
+            other stream here. A note *is* 480 characters — linking to it would
+            be a link to something shorter than the link's own row. */}
+        {day.notes.map((note) => (
+          <li className="timeline-event" key={note.id}>
+            <span className="timeline-icon" aria-hidden="true">
+              💬
+            </span>
+            <span>
+              <span className="timeline-note">
+                <NoteText text={note.text} />
+              </span>
+              <span className="timeline-detail">
+                <a href={notePath(note.id)}>{formatTime(note.createdAt)}</a>
+              </span>
             </span>
           </li>
         ))}

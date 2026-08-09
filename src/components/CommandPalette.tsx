@@ -32,6 +32,22 @@ export interface Entry {
   to: string
   /** Extra words that should match but don't belong in the label. */
   keywords?: string
+  /**
+   * Keep this entry out of the palette entirely — both the resting list and the
+   * search results.
+   *
+   * It still has to be *in* `PAGES`, because the test below holds that list
+   * against the router in both directions and a route missing from it fails the
+   * build. This flag is how a route satisfies that check without being offered
+   * to a visitor: /notes/compose is a writing tool, and the palette's resting
+   * state renders every listed page, so without this it is the first thing
+   * anyone sees on pressing ⌘K.
+   *
+   * Not a security boundary — the route is in the bundle and the page is a real
+   * file. The Worker's token is what protects publishing; this only keeps a
+   * compose box out of a stranger's face.
+   */
+  unlisted?: boolean
 }
 
 /**
@@ -49,6 +65,10 @@ export const PAGES: Entry[] = [
   { id: 'page:/about', label: 'About', kind: 'Page', to: '/about', keywords: 'me bio who cailin' },
   { id: 'page:/now', label: 'Now', kind: 'Page', to: '/now', keywords: 'currently up to today latest' },
   { id: 'page:/blog', label: 'Blog', kind: 'Page', to: '/blog', keywords: 'writing posts essays' },
+  { id: 'page:/notes', label: 'Notes', kind: 'Page', to: '/notes', keywords: 'microblog short thoughts tweets statuses' },
+  // Present so the route-coverage test passes, `unlisted` so the palette never
+  // shows it. Reached by typing the URL.
+  { id: 'page:/notes/compose', label: 'New note', kind: 'Page', to: '/notes/compose', keywords: 'compose write post publish microblog new', unlisted: true },
   { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography feed gallery' },
   { id: 'page:/photos/map', label: 'Photo map', kind: 'Page', to: '/photos/map', keywords: 'where places locations' },
   { id: 'page:/projects', label: 'Projects', kind: 'Page', to: '/projects', keywords: 'software code apps' },
@@ -71,6 +91,14 @@ export const PAGES: Entry[] = [
   { id: 'page:/colophon', label: 'Colophon', kind: 'Page', to: '/colophon', keywords: 'about built stack how' },
   { id: 'page:/privacy', label: 'Privacy', kind: 'Page', to: '/privacy', keywords: 'cookies tracking data' },
 ]
+
+/**
+ * The pages the palette will actually offer. Everything downstream — the
+ * resting list, the search index, the haystacks — is built from this rather than
+ * from `PAGES`, so an unlisted entry cannot leak into results by being forgotten
+ * at one of the three call sites.
+ */
+export const LISTED_PAGES: Entry[] = PAGES.filter((entry) => !entry.unlisted)
 
 const yearFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'UTC' })
 
@@ -117,7 +145,7 @@ function buildEntries(): Entry[] {
     }
   }
 
-  return [...PAGES, ...postEntries, ...yearEntries, ...tagEntries.values()]
+  return [...LISTED_PAGES, ...postEntries, ...yearEntries, ...tagEntries.values()]
 }
 
 const ENTRIES = buildEntries()
@@ -148,7 +176,7 @@ function search(query: string, limit = 12): Entry[] {
   if (!terms.length) {
     // The resting state is the thing to make useful: everywhere you can go, then
     // the newest few posts.
-    return [...PAGES, ...ENTRIES.filter((entry) => entry.kind === 'Post').slice(0, 4)]
+    return [...LISTED_PAGES, ...ENTRIES.filter((entry) => entry.kind === 'Post').slice(0, 4)]
   }
   const scored: { entry: Entry; score: number }[] = []
   for (const entry of ENTRIES) {

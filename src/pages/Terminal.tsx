@@ -140,6 +140,7 @@ export function Component() {
       fetchWatching: async () => (await import('../lib/watching')).fetchWatchingNow(),
       fetchMoving: async () => (await import('../lib/moving')).fetchMovingNow(),
       fetchGuestbook: async () => (await import('../lib/guestbook')).fetchGuestbook(),
+      fetchNotes: async () => (await import('../lib/notes')).fetchNotes(),
     }),
     [navigate],
   )

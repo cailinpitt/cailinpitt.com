@@ -9,6 +9,7 @@ import type { Article, ReadingNow } from './reading'
 import { formatWatchedDate, stars, type WatchingNow } from './watching'
 import { kindIcon, longDate, summary, type ActivityNow } from './moving'
 import type { EntryPage } from './guestbook'
+import type { NotePage } from './notes'
 
 // ---- output --------------------------------------------------------------
 
@@ -167,6 +168,9 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
       { name: 'moving', kind: 'page', to: '/moving', meta: 'exercise', keywords: 'bike cycling ebike lifting gym exercise' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
+      // No `source:` — a note is a row in D1, not a file, so there is nothing
+      // for `cat` to fetch. `notes` is the command that reads them.
+      { name: 'notes', kind: 'page', to: '/notes', meta: 'short thoughts', keywords: 'microblog tweets statuses' },
       // The two pages written as a single Markdown file publish their source the
       // way a post does, so `cat` reads them too.
       { name: 'projects', kind: 'page', to: '/projects', source: '/projects.md', meta: 'things I have built', keywords: 'software code apps' },
@@ -232,6 +236,7 @@ export const COMMANDS: CommandSpec[] = [
   { name: 'reading', summary: 'The shelf in full' },
   { name: 'watching', summary: 'The last film logged' },
   { name: 'moving', summary: 'The last ride or lift logged' },
+  { name: 'notes', args: '[n]', summary: 'The most recent notes' },
   { name: 'guestbook', args: '[n]', summary: 'The most recent entries' },
   { name: 'sign', summary: 'Sign the guestbook' },
   { name: 'whoami', summary: 'Who I am, today' },
@@ -268,6 +273,7 @@ export interface Shell {
   fetchWatching(): Promise<WatchingNow>
   fetchMoving(): Promise<ActivityNow>
   fetchGuestbook(): Promise<EntryPage>
+  fetchNotes(): Promise<NotePage>
 }
 
 export interface ShellState {
@@ -625,6 +631,34 @@ export async function run(
         return { lines: [...lines, blank(), link('The whole log → /moving', '/moving')] }
       } catch {
         return { lines: [err('moving: the moving Worker did not answer')] }
+      }
+    }
+
+    case 'notes': {
+      const limit = Math.min(Math.max(Number(args[0]) || 5, 1), 25)
+      try {
+        const page = await shell.fetchNotes()
+        const notes = page.notes.slice(0, limit)
+        if (!notes.length) return { lines: [muted('No notes yet.')] }
+        const lines: Line[] = []
+        for (const note of notes) {
+          // Newlines collapse to spaces: a note is short enough to read as one
+          // paragraph here, and the shell's line model is one string per row.
+          lines.push(line(note.text.replace(/\s+/g, ' ')))
+          lines.push(
+            muted(`  ${formatRelative(note.createdAt)}${note.editedAt ? ' · edited' : ''}`),
+          )
+          lines.push(blank())
+        }
+        return {
+          lines: [
+            ...lines,
+            muted(`${formatNumber(page.total)} notes in total`),
+            link('All of them → /notes', '/notes'),
+          ],
+        }
+      } catch {
+        return { lines: [err('notes: the notes Worker did not answer')] }
       }
     }
 

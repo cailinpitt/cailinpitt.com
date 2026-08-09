@@ -25,6 +25,12 @@ export const routes: RouteRecord[] = [
     children: withErrorBoundary([
       { index: true, lazy: () => import('./pages/Home') },
       { path: 'blog', lazy: () => import('./pages/BlogIndex') },
+      // The microblog. One page for the whole feed — a note is addressed as
+      // `/notes#<id>`, not a route, because notes live in D1 and are never
+      // prerendered (see worker-notes/src/index.ts). `notes/compose` is a static
+      // segment, so it outranks nothing and collides with nothing.
+      { path: 'notes', lazy: () => import('./pages/Notes') },
+      { path: 'notes/compose', lazy: () => import('./pages/NotesCompose') },
       { path: 'blog/tag/:tag', lazy: () => import('./pages/BlogTag') },
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },

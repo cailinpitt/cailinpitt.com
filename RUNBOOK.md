@@ -22,6 +22,7 @@ VITE_LISTENING_API=http://localhost:8787 npm run dev
 VITE_READING_API=http://localhost:8787 npm run dev
 VITE_WATCHING_API=http://localhost:8787 npm run dev
 VITE_GUESTBOOK_API=http://localhost:8787 npm run dev
+VITE_NOTES_API=http://localhost:8787 npm run dev
 ```
 
 ## Publish a blog post
@@ -114,6 +115,7 @@ cd worker-watching  && npm run deploy   # watching.cailinpitt.com
 cd worker-moving    && npm run deploy   # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy   # guestbook.cailinpitt.com
 cd worker-photos    && npm run deploy   # photos.cailinpitt.com
+cd worker-notes     && npm run deploy   # notes.cailinpitt.com
 ```
 
 Workers are **not** part of the site pipeline — a push to `main` never touches them.
@@ -477,6 +479,52 @@ refresh token then has to be re-seeded from `STRAVA_REFRESH_TOKEN`.
 curl moving.cailinpitt.com             # terminal view; ?T for no color
 ```
 
+## Notes (the microblog)
+
+Publishing is a page, not a command: **<https://cailinpitt.com/notes/compose>** on a computer, or
+the iOS Shortcut on a phone (recipe in [`worker-notes/README.md`](worker-notes/README.md)). Both
+need the `PUBLISH_TOKEN`; the compose page asks once per device and remembers it.
+
+From a terminal:
+
+```bash
+TOKEN=…   # the Worker's PUBLISH_TOKEN
+
+# publish
+curl -X POST https://notes.cailinpitt.com/notes \
+  -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"text":"trains are good, actually"}'
+
+# edit (stamps edited_at; the site shows an "edited" marker)
+curl -X PATCH https://notes.cailinpitt.com/notes/<id> \
+  -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' \
+  -d '{"text":"the corrected thought"}'
+
+# delete — immediate and permanent
+curl -X DELETE https://notes.cailinpitt.com/notes/<id> -H "authorization: Bearer $TOKEN"
+
+# read
+curl notes.cailinpitt.com                  # terminal view
+curl notes.cailinpitt.com?T                # …without color
+curl notes.cailinpitt.com/notes.json
+curl notes.cailinpitt.com/feed.xml         # RSS (separate from the site's /feed.xml)
+```
+
+First-time setup:
+
+```bash
+cd worker-notes
+npm install
+wrangler d1 create cailinpitt-notes        # paste the id into wrangler.jsonc
+npm run schema:remote
+wrangler secret put PUBLISH_TOKEN          # openssl rand -hex 32
+npm run deploy
+```
+
+Rotating `PUBLISH_TOKEN` signs out every device — that is how to revoke a lost phone.
+
 ## Guestbook — moderation
 
 ```bash
@@ -507,6 +555,7 @@ Needs `GUESTBOOK_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 | `GUESTBOOK_ADMIN_TOKEN`, `GUESTBOOK_IP_SALT` | `guestbook:list` / `rm` |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook form |
 | `WORKER_PHOTOS_INGEST_TOKEN`, `WORKER_PHOTOS_GITHUB_TOKEN` | phone uploads |
+| `NOTES_PUBLISH_TOKEN` | notes — the Worker's `PUBLISH_TOKEN`, kept here as the copy of record |
 
 Overrides for pointing a script at a non-default Worker: `READING_API`, `WATCHING_API`,
 `MOVING_API`, `GUESTBOOK_API`, or `--api <url>` on `reading:sync` / `watching:sync` /

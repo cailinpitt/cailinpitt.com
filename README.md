@@ -2,7 +2,7 @@
 
 Personal site: blog, photography, projects. React + Vite prerendered to static HTML with
 [`vite-react-ssg`](https://github.com/Daydreamer-riri/vite-react-ssg), deployed to GitHub Pages.
-Five Cloudflare Workers back the live-data pages.
+Six Cloudflare Workers back the live-data pages.
 
 ```bash
 npm install
@@ -19,7 +19,7 @@ file explains how things work.
 ## Contents
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
-- Pages: [/now](#now) · [/uses](#uses) · [/listening](#listening) · [/reading](#reading) ·
+- Pages: [/now](#now) · [/uses](#uses) · [/notes](#notes) · [/listening](#listening) · [/reading](#reading) ·
   [/watching](#watching) · [/moving](#moving) · [/guestbook](#guestbook) · [/timeline](#timeline) ·
   [/photos](#photos-page) ·
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
@@ -569,8 +569,8 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 ## Timeline
 
-`/timeline` is one row per day merging seven streams: scrobbles, saved articles, books
-started/finished, films watched, rides and lifts, published posts, photos taken. Nothing new is
+`/timeline` is one row per day merging eight streams: scrobbles, saved articles, books
+started/finished, films watched, rides and lifts, published posts, notes, photos taken. Nothing new is
 stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching.json`, and
 `/moving.json` bundles the other pages read, and merges them against build-time posts and photos
 (`src/lib/timeline.ts`).
@@ -591,9 +591,100 @@ stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching
   timeline reaches further back for watching than the 50-entry feed alone would allow.
 - **Activities sit on their stored local date**, the one the Worker took from the API, so like
   films they need no bucketing.
+- **One stream failing costs that stream and nothing else.** This is the only page that reads
+  every Worker, which makes it the likeliest place for something to be unreachable — and it used
+  to load all of them with `Promise.all`, so a single dead endpoint rejected the batch and the page
+  rendered its error state with five working streams in hand. It is `Promise.allSettled` now: a
+  missing stream contributes no rows, the day is assembled from the rest, and the error state
+  appears only when *nothing* answered. `topUp()` swallows for the same reason, returning what it
+  already had rather than failing a "load older" click for every stream, and it hands the cursor
+  back unchanged so the next click retries instead of writing that stream off for the session.
+  The bug that surfaced this was adding notes: an undeployed Worker took the whole page down.
+- **Notes carry their own text** rather than a link to it, unlike every other stream here — a note
+  is at most 480 characters, so linking to it would be a link to something shorter than the link's
+  own row.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles
   into US Central days while articles bucket in the viewer's zone, so the two disagree at the
   margins far from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
+
+## Notes
+
+`/notes` is the microblog: short thoughts, published from a phone or from a compose page, live
+seconds after they are typed. Owned by [`worker-notes/`](worker-notes/README.md).
+
+**The distinction from `/blog` is the whole design.** A post is an essay — it earns a title, tags,
+a reading time, related posts, a provenance line, and a Markdown source. A note is a sentence.
+Applying any of that to a sentence would be more furniture than furnishing, so the page has none
+of it: one narrow column, a hairline between notes, and a timestamp that is also the permalink.
+If a note ever deserves to be a real page, it wasn't a note — it was a post, and `content/blog/`
+is where it goes.
+
+- **Notes live in D1, not in git.** This is the one kind of content on the site with no file
+  behind it. The trade is stated at length in
+  [`worker-notes/README.md`](worker-notes/README.md#the-one-decision-worth-understanding): a note
+  that had to wait for a green CI run before appearing would not get written, so notes are fetched
+  at runtime like `/listening` and `/reading` rather than prerendered like everything else.
+- **A note's permalink is `/notes#<id>`**, an anchor on the feed. GitHub Pages has no router that
+  could resolve `/notes/<id>`, and the `404.html` redirect hack was rejected for the blog years ago
+  (see [`plan.md`](plan.md)). `notePath()` is pinned by a test, because the day it starts returning
+  a path is the day every permalink 404s on a hard load. Arriving on one scrolls to the note and
+  marks it with an accent rail — otherwise you land in the middle of a list of similar-looking
+  paragraphs with no idea which one you were sent to.
+- **480 characters, counted in code points**, so an emoji is one character and not two. The number
+  lives in `worker-notes/src/validate.ts` and is mirrored in `src/lib/notes.ts` for the compose
+  counter, which has to be right on the first keystroke. `tests/notes.test.ts` pins the two
+  together and pins both against the comment in `schema.sql`.
+- **Notes are plain text, not Markdown.** The only formatting a short thought needs is a working
+  link, and `segments()` parses bare URLs into a data structure `NoteText.tsx` maps over — so no
+  HTML string exists anywhere in the pipeline and there is no `dangerouslySetInnerHTML`. A note
+  cannot contribute markup to the page whatever was typed into it. Getting the URL boundary right
+  is fiddlier than it looks: `(https://example.com)` should not link the bracket, and
+  `…/wiki/Tag_(2018_film)` should keep it. `trimTrailing()` counts brackets to tell those apart,
+  and a test asserts the segments always rejoin to exactly the input.
+- **Editing and deleting are first-class**, because publishing from a phone means publishing
+  typos. An edit stamps `edited_at` and the page says "edited" — a permalink that quietly changes
+  what it says is the thing worth avoiding, not the edit.
+- **Its RSS is served by the Worker**, at `notes.cailinpitt.com/feed.xml`, and is deliberately
+  separate from the site's `/feed.xml`: someone who subscribed for essays did not sign up for every
+  passing thought. `scripts/generate-rss.mjs` could not build it anyway — it works by lifting
+  prerendered HTML, and notes have none. `/notes` advertises both feeds in its `<head>`.
+- **Terminal view:** `curl notes.cailinpitt.com`; `?T` disables color. `notes [n]` works in
+  [/terminal](#terminal) too.
+- Also appears on the homepage (newest note) and as an eighth stream on
+  [/timeline](#timeline).
+- API base: `VITE_NOTES_API` (default `https://notes.cailinpitt.com`).
+- Setup, the API, and the iOS Shortcut recipe: [`worker-notes/README.md`](worker-notes/README.md)
+
+### Publishing a note
+
+**From a phone** — a four-action Shortcut posting to `/notes`, on the share sheet and the Home
+Screen. The recipe is in the Worker's README. It sends a form field rather than JSON because
+Shortcuts builds one in a tap and the other by hand; the Worker accepts either, plus a raw body.
+
+**From a computer** — `/notes/compose`, a page on the site. Textarea, live counter, ⌘↵ to publish,
+and the ten most recent notes underneath with Edit and Delete. The `PUBLISH_TOKEN` is pasted once
+per device and kept in `localStorage`.
+
+> **That token is in `localStorage` on a public page, and that is a deliberate trade.** A CLI would
+> be safer by construction and useless for the actual problem — not having the repo to hand is the
+> reason this feature exists. The site ships no third-party JavaScript and has no user-generated
+> HTML, so the realistic threat is a borrowed laptop rather than an injection; "Forget the token on
+> this device" and rotating the Worker secret are the answers to it. The page is `noindex`, absent from
+> `sitemap.xml`, and `unlisted` in ⌘K, which is tidiness rather than security — **the Worker is
+> what enforces the token**, never the UI.
+
+`<Seo noindex>` is what keeps it out of the first two: `scripts/generate-sitemap.mjs` reads the
+emitted `<meta name="robots">` rather than keeping a second list, so a page cannot be `noindex` and
+still get submitted.
+
+The palette needs its own flag, because the two lists answer different questions. **A route missing
+from `PAGES` fails `tests/command-palette.test.ts`** — the list is held against the router in both
+directions, so "just leave it out" isn't available. But the palette's resting state renders every
+listed page, which would put a compose box in front of every visitor who pressed ⌘K. So the entry
+carries `unlisted: true`, and everything downstream — the resting list, the search index, the
+haystacks — is built from `LISTED_PAGES` rather than `PAGES`, so it can't leak back in by being
+forgotten at one of the three call sites. Two tests pin it: the entry is in `PAGES` and is not in
+`LISTED_PAGES`.
 
 ## Blog index
 
@@ -834,7 +925,7 @@ already written this way and is unchanged.
 Push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. Repo settings
 need **Settings → Pages → Source = GitHub Actions**; the custom domain comes from `public/CNAME`.
 
-The six Workers deploy **separately** — a push to `main` never touches them:
+The seven Workers deploy **separately** — a push to `main` never touches them:
 
 ```sh
 cd worker-listening && npm run deploy  # listening.cailinpitt.com
@@ -843,6 +934,7 @@ cd worker-watching && npm run deploy   # watching.cailinpitt.com
 cd worker-moving && npm run deploy     # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
 cd worker-photos && npm run deploy     # photos.cailinpitt.com
+cd worker-notes && npm run deploy      # notes.cailinpitt.com
 ```
 
 `.github/workflows/ingest-photos.yml` commits photos sent from the phone and pushes to `main`,

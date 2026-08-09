@@ -4564,3 +4564,291 @@ a.guestbook-name:hover {
 .period-tops .move.reentry {
   color: var(--muted);
 }
+
+/* ---- Notes (the microblog) --------------------------------------------- */
+/*
+ * Deliberately not styled like the blog.
+ *
+ * A post gets a title, a reading time, tags, related posts, and a provenance
+ * line, because a post is a thing you sit down with. A note is a sentence, and
+ * every one of those affordances applied to a sentence would be more furniture
+ * than furnishing. So: a narrower column than the blog's, no cards, no borders
+ * around anything, and a hairline between notes as the only separator. The
+ * timestamp is the sole chrome, and it is set small, muted, and after the text —
+ * you read the thought first and find out when it was written second, which is
+ * the order that matters for something posted an hour ago.
+ */
+
+.notes {
+  /* Narrower than --measure. Short paragraphs want a short line; at the blog's
+     40rem a two-line note reads as a fragment of something wider. */
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.notes-header {
+  margin-bottom: 2.5rem;
+}
+.notes-header h1 {
+  margin-bottom: 0.35rem;
+}
+.notes-lead {
+  color: var(--muted);
+  font-size: var(--step--1);
+  margin: 0;
+}
+.notes-subscribe {
+  margin: 0.6rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.notes-empty {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.note {
+  padding: 1.6rem 0;
+  border-top: 1px solid var(--rule);
+  /* The permalink target is focused programmatically; it is not a control, so
+     it should not paint a focus ring when jumped to. The highlight below is
+     what marks it instead. */
+  outline: none;
+}
+.note:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* The note a permalink pointed at. A tinted rail rather than a background
+   wash — it survives both themes without touching the text's contrast, and it
+   reads as "this one" rather than as an error state. */
+.note.is-target {
+  border-left: 3px solid var(--accent);
+  margin-left: -1rem;
+  padding-left: calc(1rem - 3px);
+}
+
+.note-body p {
+  margin: 0 0 0.75rem;
+  /* Slightly tighter than body prose: these are short blocks, and the blog's
+     leading makes a two-line note look airier than it is. */
+  line-height: 1.55;
+}
+.note-body p:last-child {
+  margin-bottom: 0;
+}
+/* Long URLs are common in notes and there is no layout to protect them. */
+.note-body a {
+  overflow-wrap: anywhere;
+}
+
+.note-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0.7rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.note-permalink {
+  color: var(--muted);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+.note-permalink:hover,
+.note-permalink:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.note-edited {
+  font-style: italic;
+}
+/* The clock time sits at the far end, since it is the least important thing on
+   the row — the relative stamp already answered "when". */
+.note-clock {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.notes-more {
+  margin-top: 2rem;
+  text-align: center;
+}
+.notes-more button {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.5rem 1.1rem;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.notes-more button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.notes-more button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- the homepage strip ---- */
+
+.note-bar {
+  margin-top: 1.5rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  max-width: 34rem;
+}
+.note-bar .note-body p {
+  margin: 0 0 0.6rem;
+  font-size: var(--step--1);
+}
+.note-bar .note-body p:last-child {
+  margin-bottom: 0;
+}
+.note-bar .note-meta {
+  margin-top: 0.5rem;
+}
+
+/* ---- the compose page ---- */
+
+.compose-form,
+.compose-token {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.compose-token label {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.compose-token input {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  padding: 0.55rem 0.7rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.compose-box {
+  width: 100%;
+  font-family: var(--font-serif);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  padding: 0.9rem 1rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  resize: vertical;
+}
+.compose-box:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.compose-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.compose-count {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* The count changes color before it changes meaning, so running out of room is
+   visible a sentence early rather than at the moment Publish stops working. */
+.compose-count.is-low {
+  color: var(--fg);
+}
+.compose-count.is-over {
+  color: var(--accent);
+  font-weight: 600;
+}
+.compose-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.compose-actions button,
+.compose-token button,
+.compose-row-actions button,
+.compose-signout button {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.45rem 0.9rem;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.compose-actions button[type='submit'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.compose-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.compose-token button {
+  align-self: flex-start;
+}
+.compose-error {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--accent);
+}
+.compose-done {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.compose-recent {
+  margin-top: 3rem;
+}
+.compose-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+.compose-row-actions button {
+  padding: 0.25rem 0.6rem;
+}
+.compose-row-actions button.is-danger:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.compose-signout {
+  margin-top: 2.5rem;
+}
+.compose-signout button {
+  color: var(--muted);
+}
+
+/* ---- notes on /timeline ---- */
+
+/* The note's own text inline in a timeline row. Every other stream there is a
+   link to something; this one is the thing. */
+.timeline-note p {
+  margin: 0 0 0.4rem;
+}
+.timeline-note p:last-child {
+  margin-bottom: 0;
+}

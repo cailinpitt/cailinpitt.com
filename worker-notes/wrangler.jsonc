@@ -1,0 +1,48 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-notes",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+
+  // API on a subdomain of the (Cloudflare-managed) zone, same as the other
+  // workers. Auto-provisions the DNS record + cert.
+  "routes": [{ "pattern": "notes.cailinpitt.com", "custom_domain": true }],
+
+  // No cron. Nothing here is pulled from anywhere — a note exists because it was
+  // typed, and every read is derived from D1 on demand behind the edge cache.
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // Fixed offset (seconds) used for the dates in the curl view. -18000 = UTC-5
+    // (US Central, DST). Matches the other workers — see the listening README on
+    // the DST caveat.
+    "TZ_OFFSET_SECONDS": "-18000",
+    // Comma-separated origins echoed back for CORS. The first entry is the
+    // fallback sent to non-matching origins; any http://localhost or 127.0.0.1
+    // port is additionally allowed in code, so local dev needs no entry here.
+    //
+    // Unlike the guestbook's, this list is cosmetic rather than load-bearing: the
+    // write endpoints do *not* reject an unknown origin, because the primary
+    // client is an iOS Shortcut and a share sheet sends no Origin at all. The
+    // PUBLISH_TOKEN is the security boundary here.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com"
+  },
+
+  // Bindings. Fill in the id after creating the database (see README):
+  //   wrangler d1 create cailinpitt-notes
+  //
+  // No KV and no R2. A microblog is a few hundred short rows; one indexed query
+  // behind a 30-second edge cache is cheaper than any precomputed blob, and
+  // there is nothing to mirror.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-notes",
+      "database_id": "d0e07563-e1f2-469a-b254-a062af62572b"
+    }
+  ]
+
+  // Secrets (not stored here):
+  //   wrangler secret put PUBLISH_TOKEN
+}

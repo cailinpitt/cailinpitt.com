@@ -109,6 +109,7 @@ function fakeShell(overrides: Partial<Shell> = {}) {
     fetchWatching: async () => ({ lastFilm: film, updatedAt: 0 }),
     fetchMoving: async () => ({ lastActivity: ride, updatedAt: 0 }),
     fetchGuestbook: async () => ({ entries: [], nextCursor: null, total: 0 }),
+    fetchNotes: async () => ({ notes: [], nextCursor: null, total: 0 }),
     ...overrides,
   }
   return { shell, navigated }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { RouteRecord } from 'vite-react-ssg'
 import { routes } from '../src/App'
-import { PAGES } from '../src/components/CommandPalette'
+import { LISTED_PAGES, PAGES } from '../src/components/CommandPalette'
 
 // The palette's page list is hand-written (see the comment on PAGES), and a page
 // missing from it is invisible from ⌘K while looking perfectly fine everywhere
@@ -34,6 +34,22 @@ describe('the command palette page list', () => {
     const known = new Set(staticRoutes)
     const dangling = PAGES.map((entry) => entry.to).filter((to) => !known.has(to))
     expect(dangling, 'these PAGES entries have no route in src/App.tsx').toEqual([])
+  })
+
+  it('keeps the compose page out of the palette', () => {
+    // The palette's resting state renders every listed page, so an entry without
+    // `unlisted` is shown to every visitor the moment they press ⌘K — which for
+    // a compose box is not what anyone wants. It still has to be in PAGES to
+    // satisfy the route-coverage test above; this is what keeps both true.
+    expect(PAGES.map((entry) => entry.to)).toContain('/notes/compose')
+    expect(LISTED_PAGES.map((entry) => entry.to)).not.toContain('/notes/compose')
+  })
+
+  it('lists every page that is not explicitly unlisted', () => {
+    // Guards the filter itself: a typo in the predicate that dropped everything
+    // would pass the test above while quietly emptying the palette.
+    expect(LISTED_PAGES.length).toBe(PAGES.filter((entry) => !entry.unlisted).length)
+    expect(LISTED_PAGES.length).toBe(PAGES.length - 1)
   })
 
   it('gives every entry a distinct id', () => {

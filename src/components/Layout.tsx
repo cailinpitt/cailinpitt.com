@@ -68,6 +68,13 @@ export function Layout() {
             <li>
               <NavLink to="/blog">Blog</NavLink>
             </li>
+            {/* Next to Blog rather than inside Logs: the Logs group is the
+                Worker-backed activity feeds, which are records of what happened.
+                Notes are writing, and they belong beside the other writing even
+                though they happen to be Worker-backed too. */}
+            <li>
+              <NavLink to="/notes">Notes</NavLink>
+            </li>
             <li>
               <NavLink to="/timeline">Timeline</NavLink>
             </li>

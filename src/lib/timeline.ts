@@ -1,9 +1,9 @@
-// Merging the site's seven activity streams into one day-per-row timeline (/timeline).
+// Merging the site's eight activity streams into one day-per-row timeline (/timeline).
 //
-// The streams live in four places and none of them knows about the others:
+// The streams live in five places and none of them knows about the others:
 // scrobbles come from the listening Worker, articles and books from the reading
 // Worker, films from the watching Worker, rides and lifts from the moving
-// Worker, and posts and photos are static
+// Worker, notes from the notes Worker, and posts and photos are static
 // content compiled into the build. So the merge happens here, in the browser,
 // keyed on a YYYY-MM-DD day.
 //
@@ -36,6 +36,7 @@ import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
 import type { Film } from './watching'
 import type { Activity } from './moving'
+import type { Note } from './notes'
 import type { CompactDay } from './listening'
 
 export interface TimelineDay {
@@ -50,6 +51,7 @@ export interface TimelineDay {
   activities: Activity[]
   posts: PostSummary[]
   photos: Photo[]
+  notes: Note[]
 }
 
 /**
@@ -70,6 +72,7 @@ export interface TimelineSources {
   activities: Activity[]
   posts: PostSummary[]
   photos: Photo[]
+  notes: Note[]
   /**
    * Oldest day to include, YYYY-MM-DD. Days older than this are dropped, because
    * the streams that reach past it are only partly loaded and a row built from
@@ -91,6 +94,7 @@ export function buildTimeline({
   activities,
   posts,
   photos,
+  notes,
   floor,
 }: TimelineSources): TimelineDay[] {
   const byDate = new Map<string, TimelineDay>()
@@ -110,6 +114,7 @@ export function buildTimeline({
         activities: [],
         posts: [],
         photos: [],
+        notes: [],
       }
       byDate.set(date, entry)
     }
@@ -140,6 +145,12 @@ export function buildTimeline({
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
   for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
+  // Notes are instants, so they bucket in the viewer's own zone the way articles
+  // do — the same inherited-bucketing property described above, and the same
+  // consequence: a note written just before midnight in Central can land on the
+  // previous day for a reader in Tokyo.
+  for (const note of notes) dayFor(dayKey(note.createdAt))?.notes.push(note)
+
   return [...byDate.values()]
     .filter(
       (day) =>
@@ -150,7 +161,8 @@ export function buildTimeline({
         day.films.length > 0 ||
         day.activities.length > 0 ||
         day.posts.length > 0 ||
-        day.photos.length > 0,
+        day.photos.length > 0 ||
+        day.notes.length > 0,
     )
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
