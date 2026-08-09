@@ -103,9 +103,20 @@ curl notes.cailinpitt.com?T        # …without color
 
 **The edge TTL is 30 seconds, deliberately shorter than the settled-data endpoints elsewhere on
 the site**, because the whole feature is that a note appears immediately. Writes additionally
-purge the four unparameterized cache keys, so the note is usually there before the TTL matters.
-Deep pages are addressed by cursor and can't be affected by a note added at the top, so they
-aren't purged.
+purge every unparameterized cache key (`CACHED_READS` in `src/index.ts`), so the note is usually
+there before the TTL matters. Deep pages are addressed by cursor and can't be affected by a note
+added at the top, so they aren't purged.
+
+> **The purge origin comes from the request, never from a constant.** Reads are cached under this
+> Worker's own hostname (`https://notes.cailinpitt.com/...`), because `cached()` keys entries by
+> the request URL. The first version of `purge()` built its keys from `SITE`
+> (`https://cailinpitt.com`), so the keys never matched, every purge deleted nothing, and every
+> reader waited out the full TTL — a bug that is completely invisible from the outside, since a
+> purge that finds no key and a purge that works look identical. Deriving the origin from the
+> incoming request is what keeps the two sides in agreement, and it stays correct on a preview
+> deployment or a `workers.dev` URL. The variant string is part of the key too, so `CACHED_READS`
+> has to name exactly the variants the routes pass to `cached()` — including `/` **and** `/notes`,
+> which are two keys for the one terminal view.
 
 ## Why RSS is served here rather than written at build time
 

@@ -155,6 +155,29 @@ async function cached(
 }
 
 /**
+ * Every cached read, as `[path, variant]`.
+ *
+ * One list, used by `purge()`. The variants have to be exactly the strings the
+ * routes below pass to `cached()`, since the variant is part of the key — a
+ * typo here purges nothing and looks like nothing at all, which is how the
+ * original version of this went unnoticed.
+ *
+ * Only unparameterized paths appear. A deep page of older notes is addressed by
+ * cursor and cannot be affected by a note added at the top, and `/limits.json`
+ * is constant.
+ */
+const CACHED_READS: [path: string, variant: string][] = [
+  ['/notes.json', 'json'],
+  ['/now.json', 'now'],
+  ['/feed.xml', 'feed'],
+  // The terminal view answers on two paths and caches under each separately,
+  // since the path is part of the key. Purging only one leaves `curl` on the
+  // other showing a feed without the new note in it.
+  ['/', 'text'],
+  ['/notes', 'text'],
+]
+
+/**
  * Drop the cached reads after a write.
  *
  * Without this, publishing from the compose page and then opening /notes on a
@@ -164,17 +187,25 @@ async function cached(
  * locally, so this is for every *other* view: the feed on another device, the
  * homepage strip, the RSS reader that polls a second later.
  *
- * Only the unparameterized keys are purged. A deep page of older notes is
- * addressed by cursor and cannot be affected by a note added at the top.
+ * **`origin` must be the origin the read was cached under**, i.e. this Worker's
+ * own hostname, and it is taken from the incoming request rather than written
+ * down. It used to be built from `SITE` — `https://cailinpitt.com` — while
+ * `cached()` keys entries by the request URL, `https://notes.cailinpitt.com`.
+ * The two never matched, so every purge deleted nothing and every reader waited
+ * out the full TTL. Deriving it from the request is what makes the two sides
+ * agree by construction: there is no second copy of the hostname to get wrong,
+ * and it keeps working on a preview deployment or a `workers.dev` URL, where a
+ * hardcoded origin would silently be the wrong one again.
  */
-function purge(ctx: ExecutionContext): void {
-  const keys = [
-    cacheKey(new URL(`${SITE}/notes.json`), 'json'),
-    cacheKey(new URL(`${SITE}/now.json`), 'now'),
-    cacheKey(new URL(`${SITE}/feed.xml`), 'feed'),
-    cacheKey(new URL(`${SITE}/`), 'text'),
-  ]
-  ctx.waitUntil(Promise.all(keys.map((key) => caches.default.delete(key))))
+function purge(ctx: ExecutionContext, request: Request): void {
+  const { origin } = new URL(request.url)
+  ctx.waitUntil(
+    Promise.all(
+      CACHED_READS.map(([path, variant]) =>
+        caches.default.delete(cacheKey(new URL(`${origin}${path}`), variant)),
+      ),
+    ),
+  )
 }
 
 // ---- auth ----------------------------------------------------------------
@@ -249,7 +280,7 @@ async function publish(
   if (!checked.ok) return jsonNoStore({ error: checked.error }, 400, cors)
 
   const note = await insertNote(env.DB, checked.value)
-  purge(ctx)
+  purge(ctx, request)
   log({ level: 'info', published: { id: note.id, length: [...note.text].length } })
 
   // The created row goes back so the client can show it immediately rather than
@@ -274,7 +305,7 @@ async function edit(
 
   const note = await updateNote(env.DB, id, checked.value)
   if (!note) return jsonNoStore({ id, error: 'no such note' }, 404, cors)
-  purge(ctx)
+  purge(ctx, request)
   log({ level: 'info', edited: { id } })
 
   return jsonNoStore({ ok: true, note, url: `${SITE_NOTES}#${note.id}` }, 200, cors)
@@ -291,7 +322,7 @@ async function remove(
     return jsonNoStore({ error: 'unauthorized' }, 401, cors)
   }
   const removed = await deleteNote(env.DB, id)
-  if (removed) purge(ctx)
+  if (removed) purge(ctx, request)
   log({ level: 'info', deleted: { id, removed } })
 
   return removed
