@@ -3,7 +3,7 @@ title: "Transient"
 date: 2015-06-22
 path: /blog/2015/6/22/transient
 slug: transient
-tags: ["Transient","Pictures","Thoughts"]
+tags: ["Photography","Thoughts"]
 description: "adjective lasting only for a short time; impermanent."
 ---
 ![](/images/transient/image-asset.webp)

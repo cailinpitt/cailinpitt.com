@@ -3,7 +3,7 @@ title: "Ebikes completely changed how I get around"
 date: 2021-08-08
 path: /blog/2021/8/8/ebikes-completely-changed-how-i-get-around
 slug: ebikes-completely-changed-how-i-get-around
-tags: ["Bicycling", "Ebikes", "Transportation"]
+tags: ["Bicycling", "Ebikes", "Transportation", "Atlanta", "Cincinnati", "Climate"]
 description: "How ebikes changed my relationship with bicycling, transportation, and getting around without a car."
 ---
 ## Background

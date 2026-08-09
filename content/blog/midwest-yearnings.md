@@ -3,7 +3,7 @@ title: "Midwest Yearnings"
 date: 2020-04-08
 path: /blog/2020/4/8/midwest-yearnings
 slug: midwest-yearnings
-tags: ["Cities", "Midwest", "Transportation"]
+tags: ["Cities", "Midwest", "Transportation", "Ohio", "Cincinnati", "Race", "Thoughts"]
 description: "A New Yorker’s evolving relationship with Midwestern cities, public transit, and urban life."
 ---
 ![](/images/midwest-yearnings/IMG_6049-1.webp)

@@ -3,7 +3,7 @@ title: "What Would Jesus Do?"
 date: 2017-01-29
 path: /blog/2017/1/29/what-would-jesus-do
 slug: what-would-jesus-do
-tags: ["Christianity", "Faith", "Politics"]
+tags: ["Christianity", "Faith", "Politics", "Thoughts"]
 description: "A personal struggle with Christianity, American politics, and a church increasingly disconnected from the world."
 ---
 I've been struggling with my faith as a Christian for the past year or so. I'm not looking for a pity party, I just want to share how I'm feeling. I've been feeling overwhelmingly unsatisfied with the Christian church and how it has related to current events. Specifically, I feel that as a Christian, the Christian church is generally out of touch with the world. As I get older, I feel myself becoming more and more isolated with fellow Christians and finding it harder to connect. For example, based on my personal experiences, most days it feels like Christians my age are more interested in things like finding someone to settle down and build a life with, and I have a hard time relating to that.
@@ -15,3 +15,9 @@ I don't understand how a majority of Christians could vote for someone like this
 I refuse to believe that the God I know would support the terrible things occurring in the world right now. Just this past week, Trump signed an Executive Order banning citizens of seven predominantly Muslim countries from entering the US. This is horrific on just about every level, but no one seems to be talking about it. Nothing was said at church. Most of my Christian friends are completely silent. How can you profess to follow Christ but support someone like Trump, who has who promised to do all of these terrible things? How can you be silent when refugees are being persecuted for their religious beliefs and their country of origin? I've been sickened as I've watched people I used to respect, people who I would have considered to be "champions of the faith" support Trump. Every Sunday as I sit in church, I can't help but wonder how many of the people around me voted for Trump.
 
 My Mom has reminded me this at least two million times while I was growing up, but my faith isn't supposed to be based on what others do, say, or think. However, it is incredibly frustrating to see professed followers of Jesus supporting someone who represents the exact opposite of everything Jesus stood for. In fact, it's disgusting and shakes me to the core. I refuse to normalize Trump's presidency and the current events that are unfolding. I'm far from perfect and far from having my faith figured out, but instead of ignoring current events and blindly devoting myself to praying that a heart as egregious as Trump's would change, I'm going to focus on living by and doing what Jesus considered to be the greatest commandment:
+
+> 'Teacher, which is the greatest commandment in the Law?'
+>
+> Jesus replied: "'Love the Lord your God with all your heart and with all your soul and with all your mind.' This is the first and greatest commandment. And the second is like it: 'Love your neighbor as yourself.' All the Law and the Prophets hang on these two commandments."
+>
+> — Matthew 22:36-40 NIV

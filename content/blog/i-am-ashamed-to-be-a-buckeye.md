@@ -3,7 +3,7 @@ title: "I Am Ashamed To Be A Buckeye"
 date: 2016-04-07
 path: /blog/2016/4/7/i-am-ashamed-to-be-a-buckeye
 slug: i-am-ashamed-to-be-a-buckeye
-tags: ["Activism", "Ohio State"]
+tags: ["Activism", "Ohio State", "Race", "Politics"]
 description: "A response to Ohio State’s treatment of student activists during the 2016 Reclaim OSU sit-in."
 ---
 I am ashamed to be a Buckeye.

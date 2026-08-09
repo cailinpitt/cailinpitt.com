@@ -3,7 +3,7 @@ title: "Fail fast. Fail often. Fail forward."
 date: 2015-07-07
 path: /blog/2015/7/7/fail-fast-fail-often-fail-forward
 slug: fail-fast-fail-often-fail-forward
-tags: ["GE Aviation","Work","agile","Thoughts"]
+tags: ["GE Aerospace","Work","Thoughts","Software"]
 description: "Lessons about experimentation, failure, and agile work from an internship at GE Aviation."
 ---
 Fail fast. Fail often. Fail forward.

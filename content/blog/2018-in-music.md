@@ -3,7 +3,7 @@ title: "2018 in Music"
 date: 2018-12-06
 path: /blog/2018/12/6/2018-in-music
 slug: 2018-in-music
-tags: ["Music", "Year in Review"]
+tags: ["Music", "Year in Review", "Songwriting"]
 description: "A reflection on the people who listened to the music I wrote and recorded in 2018."
 ---
 ![](/images/2018-in-music/MySpotifyWrapped2018.webp)

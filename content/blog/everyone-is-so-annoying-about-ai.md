@@ -3,7 +3,7 @@ title: Everyone is so annoying about AI
 date: 2026-08-01
 path: /blog/2026/8/01/everyone-is-so-annoying-about-ai
 slug: everyone-is-so-annoying-about-ai
-tags: ["AI"]
+tags: ["AI","Software","Work","Thoughts"]
 description: "Pleaseeeee shut up. I have a headache"
 ---
 

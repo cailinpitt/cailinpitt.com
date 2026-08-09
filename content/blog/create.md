@@ -3,7 +3,7 @@ title: "Create"
 date: 2015-08-20
 path: /blog/2015/8/20/create
 slug: create
-tags: ["Create","Thoughts"]
+tags: ["Thoughts","Music","Photography","Software","Songwriting"]
 description: "A reflection on creativity, photography, music, and the human need to make things."
 ---
 I think we were designed to create.

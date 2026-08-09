@@ -3,7 +3,7 @@ title: "I love electric scooters"
 date: 2026-08-08
 path: /blog/2026/8/08/i-love-electric-scooters
 slug: i-love-electric-scooters
-tags: ["Transportation", "Scooters"]
+tags: ["Transportation", "Scooters", "Climate"]
 description: "A reflection on electric scooters."
 ---
 I've been riding a lot of Lime and Divvy e-scooters this year, and I've been having a lot of fun with them. I love biking and frequently use e-Divvys for transportation, but there's also just something exciting about letting a scooter zip me around while I expend zero energy. I decided I enjoyed e-scooters enough that it made sense for me to buy my own, and I recently purchased a [Segway Max G2](https://store.segway.com/ninebot-kickscooter-max-g2). I love this thing and I'm glad I have my own electric scooter now.

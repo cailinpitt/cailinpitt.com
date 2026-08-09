@@ -54,6 +54,12 @@ I was in shock. Based on thorough scientific research (AKA scrolling through Twi
 
 ## Super Bowl Halftime Performance
 
+| Performer | Population |
+| --- | --- |
+| Beyoncé | 99% |
+| Bruno Mars | 1% |
+| Coldplay | 0% |
+
 <figcaption>Who really performed at the Super Bowl according to the Internet</figcaption>
 
 Disheartened and full of sorrow, I left the Super Bowl party I was attending in order to write this post.

@@ -3,7 +3,7 @@ title: "untitled"
 date: 2016-07-08
 path: /blog/2016/7/8/untitled
 slug: untitled
-tags: ["Police Violence", "Race", "Thoughts"]
+tags: ["Police Violence", "Race", "Thoughts", "Identity"]
 description: "A reflection on the killings of Alton Sterling and Philando Castile and the fear that followed."
 ---
 I think writing is the only way I can cohesively express my thoughts from this past week.

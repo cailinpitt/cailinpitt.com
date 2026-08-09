@@ -3,7 +3,7 @@ title: "Seasons"
 date: 2015-05-23
 path: /blog/2015/5/23/seasons
 slug: seasons
-tags: ["Seasons","Life","Hardships","Thoughts"]
+tags: ["Life","Thoughts"]
 description: "A reflection on life’s changing seasons and learning to accept difficult periods as temporary."
 ---
 <figure><img src="/images/seasons/image-asset.webp" alt=" Cincinnati, 5/23 "><figcaption>Cincinnati, 5/23</figcaption></figure>

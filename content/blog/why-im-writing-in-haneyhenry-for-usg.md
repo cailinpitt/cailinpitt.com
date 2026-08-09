@@ -3,7 +3,7 @@ title: "Why I'm Writing in Haney/Henry for USG"
 date: 2016-02-24
 path: /blog/2016/2/24/why-im-writing-in-haneyhenry-for-usg
 slug: why-im-writing-in-haneyhenry-for-usg
-tags: ["Ohio State", "Student Government"]
+tags: ["Ohio State", "Student Government", "Activism", "Race", "Politics"]
 description: "Why I supported a write-in campaign for Ohio State’s Undergraduate Student Government."
 ---
 If you follow me on Twitter, you know that recently I began tweeting about my experiences (and lackthereof) with Undergraduate Student Government over the four short years that I have attended The Ohio State University.
