@@ -370,7 +370,14 @@ h3 {
 
 /* Home / landing */
 .intro {
-  margin-bottom: 3rem;
+  margin-bottom: 4rem;
+}
+/* Every homepage section below the intro (notes, projects, writing, photos)
+   shares one spacing rule, so a section can never go missing a margin the way
+   .recent-notes silently did when each block set its own. Margins collapse
+   with .intro's, so the gap above the first section doesn't double up. */
+.home-section {
+  margin-top: 4rem;
 }
 .intro h1 {
   font-size: var(--step-2);
@@ -429,22 +436,23 @@ h3 {
   display: block;
 }
 
-.recent-projects > .eyebrow,
-.recent > .eyebrow,
-.recent-photos > .eyebrow,
+.home-section > .eyebrow,
 .intro > .eyebrow {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--rule);
   margin-bottom: 0.25rem;
 }
 /* The "Last played" header sits below the shuffle button, so it also needs
-   space above it (the section headers get their spacing from section margins). */
+   space above it (the section headers get their spacing from section margins).
+   Slightly more than the 3rem between the other status widgets below it, since
+   it's also the first one and follows the shuffle button rather than a bar. */
 .intro > .eyebrow {
   margin-top: 2.5rem;
 }
-.recent-projects .more,
-.recent .more,
-.recent-photos .more,
+.intro > .eyebrow ~ .eyebrow {
+  margin-top: 3rem;
+}
+.home-section .more,
 .intro .more {
   font-family: var(--font-sans);
   font-size: var(--step--1);
@@ -465,23 +473,16 @@ h3 {
   color: var(--accent);
   border-bottom-color: var(--accent);
 }
-.recent-projects .more a,
-.recent .more a,
-.recent-photos .more a,
+.home-section .more a,
 .intro .more a {
   text-decoration: none;
 }
-.recent-projects .more a:hover,
-.recent .more a:hover,
-.recent-photos .more a:hover,
+.home-section .more a:hover,
 .intro .more a:hover {
   text-decoration: underline;
 }
 
 /* Current projects — compact summaries that match the editorial list rhythm. */
-.recent-projects {
-  margin-bottom: 3rem;
-}
 .project-previews {
   list-style: none;
   padding: 0;
@@ -511,9 +512,6 @@ h3 {
 }
 
 /* Recent photos — compact previews linking into the feed */
-.recent-photos {
-  margin-top: 3rem;
-}
 .photo-previews {
   list-style: none;
   padding: 0;

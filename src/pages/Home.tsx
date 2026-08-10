@@ -88,6 +88,12 @@ export function Component() {
           <Link to="/listening">Listening log →</Link>
         </p>
 
+        <h2 className="eyebrow">💬 Latest note</h2>
+        <NotesBar />
+        <p className="more">
+          <Link to="/notes">All notes →</Link>
+        </p>
+
         <h2 className="eyebrow">📖 Reading</h2>
         <ReadingBar />
         <p className="more">
@@ -107,17 +113,7 @@ export function Component() {
         </p>
       </section>
 
-      <section className="recent-notes" aria-labelledby="notes-heading">
-        <h2 id="notes-heading" className="eyebrow">
-          💬 Latest note
-        </h2>
-        <NotesBar />
-        <p className="more">
-          <Link to="/notes">All notes →</Link>
-        </p>
-      </section>
-
-      <section className="recent-projects" aria-labelledby="projects-heading">
+      <section className="home-section recent-projects" aria-labelledby="projects-heading">
         <h2 id="projects-heading" className="eyebrow">
           🧑‍💻 Current projects
         </h2>
@@ -137,7 +133,7 @@ export function Component() {
       </section>
 
       {recent.length > 0 && (
-        <section className="recent" aria-labelledby="recent-heading">
+        <section className="home-section recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="eyebrow">
             ✍️ Recent writing
           </h2>
@@ -156,7 +152,7 @@ export function Component() {
       )}
 
       {recentPhotos.length > 0 && (
-        <section className="recent-photos" aria-labelledby="photos-heading">
+        <section className="home-section recent-photos" aria-labelledby="photos-heading">
           <h2 id="photos-heading" className="eyebrow">
             📸 Recent photos
           </h2>
