@@ -4566,21 +4566,10 @@ a.guestbook-name:hover {
 /* ---- Notes (the microblog) --------------------------------------------- */
 /*
  * Deliberately not styled like the blog.
- *
- * A post gets a title, a reading time, tags, related posts, and a provenance
- * line, because a post is a thing you sit down with. A note is a sentence, and
- * every one of those affordances applied to a sentence would be more furniture
- * than furnishing. So: a narrower column than the blog's, no cards, no borders
- * around anything, and a hairline between notes as the only separator. The
- * timestamp is the sole chrome, and it is set small, muted, and after the text —
- * you read the thought first and find out when it was written second, which is
- * the order that matters for something posted an hour ago.
  */
 
 .notes {
-  /* Narrower than --measure. Short paragraphs want a short line; at the blog's
-     40rem a two-line note reads as a fragment of something wider. */
-  max-width: 34rem;
+  max-width: 36rem;
   margin: 0 auto;
 }
 .notes-header {
@@ -4603,6 +4592,20 @@ a.guestbook-name:hover {
   color: var(--muted);
   font-size: var(--step--1);
 }
+/* Stands in for .notes-header on the permalink view, which shows one note and
+   a way back rather than the title and the RSS line. */
+.notes-back {
+  margin: 0 0 2.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.notes-back a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.notes-back a:hover {
+  color: var(--accent);
+}
 
 .note-list {
   list-style: none;
@@ -4610,7 +4613,10 @@ a.guestbook-name:hover {
   padding: 0;
 }
 .note {
-  padding: 1.6rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.5rem 0;
   border-top: 1px solid var(--rule);
   /* The permalink target is focused programmatically; it is not a control, so
      it should not paint a focus ring when jumped to. The highlight below is
@@ -4622,13 +4628,34 @@ a.guestbook-name:hover {
   padding-top: 0;
 }
 
-/* The note a permalink pointed at. A tinted rail rather than a background
-   wash — it survives both themes without touching the text's contrast, and it
-   reads as "this one" rather than as an error state. */
-.note.is-target {
-  border-left: 3px solid var(--accent);
-  margin-left: -1rem;
-  padding-left: calc(1rem - 3px);
+.note-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--surface);
+}
+
+/* min-width: 0 lets the flex child shrink below its content's natural width —
+   without it a long unbroken URL in .note-body would push the column wider
+   than the avatar leaves room for instead of wrapping. */
+.note-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The permalink view: one note, alone on the page. A tinted card rather than
+   a bare row — with nothing beside it to compare against, a note that looked
+   just like a list row would read as a page that failed to load its list.
+   Its own border-top is dropped in favor of .notes-back's margin, so a straight
+   hairline doesn't cut across the card's rounded top corner. */
+.note.is-solo {
+  background: var(--surface);
+  border-top-color: transparent;
+  border-radius: 12px;
+  margin-inline: -1rem;
+  padding-inline: 1rem;
 }
 
 .note-body p {
@@ -4667,11 +4694,36 @@ a.guestbook-name:hover {
 .note-edited {
   font-style: italic;
 }
-/* The clock time sits at the far end, since it is the least important thing on
-   the row — the relative stamp already answered "when". */
+/* The clock time sits toward the far end, since it is the least important
+   thing on the row — the relative stamp already answered "when". The share
+   button trails it, so the two small, low-priority controls share the same
+   corner instead of the share button floating alone. */
 .note-clock {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+}
+
+.note-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.note-share:hover {
+  color: var(--accent);
+}
+.note-share svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+.note-share-label {
+  font-size: 0.9em;
 }
 
 .notes-more {
