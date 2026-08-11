@@ -434,24 +434,28 @@ function TimelineRow({ day }: { day: TimelineDay }) {
           </li>
         ))}
 
-        {/* Notes carry their own text rather than a link to it, unlike every
-            other stream here. A note *is* 480 characters — linking to it would
-            be a link to something shorter than the link's own row. */}
-        {day.notes.map((note) => (
-          <li className="timeline-event" key={note.id}>
+        {day.notes.length > 0 && (
+          <li className="timeline-event">
             <span className="timeline-icon" aria-hidden="true">
               💬
             </span>
             <span>
-              <span className="timeline-note">
-                <NoteText text={note.text} />
+              <span className="timeline-label">
+                {day.notes.length} {day.notes.length === 1 ? 'note' : 'notes'}
               </span>
-              <span className="timeline-detail">
-                <a href={notePath(note.id)}>{formatTime(note.createdAt)}</a>
-              </span>
+              <ul className="timeline-sublist">
+                {day.notes.map((note) => (
+                  <li key={note.id}>
+                    <a className="timeline-note" href={notePath(note.id)}>
+                      <NoteText text={note.text} />
+                    </a>
+                    <span className="timeline-detail">{formatTime(note.createdAt)}</span>
+                  </li>
+                ))}
+              </ul>
             </span>
           </li>
-        ))}
+        )}
 
         {day.photos.length > 0 && (
           <li className="timeline-event">
