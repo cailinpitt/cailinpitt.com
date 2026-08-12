@@ -29,6 +29,7 @@ import {
 } from '../lib/moving'
 import { fetchNotes, fetchOlderNotes, notePath, type Note } from '../lib/notes'
 import { resolveContext, type ContextSources } from '../lib/notesContext'
+import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
@@ -409,10 +410,10 @@ export function Component() {
         })}
       />
       <h1>Timeline</h1>
-      <p className="lead">
+      <p>
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
         <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
-        <Link to="/moving">moving</Link>, <Link to="/blog">writing</Link>,{' '}
+        <Link to="/moving">moving</Link>, <Link to="/blog">blog</Link>,{' '}
         <Link to="/notes">notes</Link>, and <Link to="/photos">photos</Link>.
       </p>
 
@@ -570,6 +571,7 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
                       <a className="timeline-note" href={notePath(note.id)}>
                         <NoteText text={note.text} />
                       </a>
+                      <LinkCard note={note} />
                       {noteContext && (
                         <p className="note-context">
                           <span aria-hidden="true">{noteContext.icon}</span> re:{' '}

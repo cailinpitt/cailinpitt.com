@@ -2590,6 +2590,37 @@ a.film-link:hover .film-title {
   gap: 0.25rem;
 }
 
+/* A note's link card, compacted for the timeline's dense day rows — a
+   thumbnail beside the text rather than the full-width image .link-card
+   uses on /notes, where a note is the whole point of the page rather than
+   one line among a day's worth of streams. */
+.timeline-sublist .link-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 22rem;
+}
+.timeline-sublist .link-card-image {
+  width: 4rem;
+  height: 4rem;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+}
+.timeline-sublist .link-card-body {
+  padding: 0.4rem 0.7rem 0.4rem 0;
+  gap: 0.1rem;
+}
+.timeline-sublist .link-card-title {
+  font-size: var(--step--2, 0.8rem);
+}
+.timeline-sublist .link-card-subtitle {
+  font-size: var(--step--2, 0.8rem);
+  -webkit-line-clamp: 1;
+}
+.timeline-sublist .link-card-host {
+  display: none;
+}
+
 .article-favicon {
   width: 14px;
   height: 14px;
