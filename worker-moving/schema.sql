@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS stats (
   lifts       INTEGER NOT NULL DEFAULT 0,
   distance_mi REAL    NOT NULL DEFAULT 0,
   moving_time INTEGER NOT NULL DEFAULT 0,
-  -- {"2026": {"activities": 120, "rides": 80, "lifts": 40, "distanceMi": 412.3}, …}
+  -- {"2026": {"activities": 120, "rides": 80, "lifts": 40, "distanceMi": 412.3, "bikeMiles": 380.1}, …}
   by_year     TEXT    NOT NULL DEFAULT '{}',
   updated_at  INTEGER NOT NULL DEFAULT 0
 );

@@ -147,7 +147,8 @@ export function renderText(
     ),
     c.dim(
       `${options.year}: ${num(counts.activitiesThisYear)} activities · ` +
-        `${num(Math.round(counts.distanceMiThisYear))} mi`,
+        `${num(Math.round(counts.bikeMilesThisYear))} bike mi · ` +
+        `${num(counts.ridesThisYear)} rides · ${num(counts.liftsThisYear)} lifts`,
     ),
     '',
   )

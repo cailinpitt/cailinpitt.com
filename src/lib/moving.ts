@@ -86,6 +86,8 @@ export interface MovingBundle extends ActivityPage {
     ridesThisYear: number
     liftsThisYear: number
     distanceMiThisYear: number
+    /** Ride + e-bike distance only, for the year — narrower than distanceMiThisYear. */
+    bikeMilesThisYear: number
   }
 }
 

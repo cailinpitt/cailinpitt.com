@@ -260,7 +260,9 @@ async function recomputeStats(db: D1Database): Promise<void> {
                 COUNT(*) AS activities,
                 COALESCE(SUM(kind IN ('ride', 'ebike')), 0) AS rides,
                 COALESCE(SUM(kind = 'lift'), 0) AS lifts,
-                COALESCE(SUM(distance_mi), 0) AS distance_mi
+                COALESCE(SUM(distance_mi), 0) AS distance_mi,
+                COALESCE(SUM(CASE WHEN kind IN ('ride', 'ebike') THEN distance_mi ELSE 0 END), 0)
+                  AS bike_miles
          FROM activities GROUP BY year`,
       )
       .all<{
@@ -269,6 +271,7 @@ async function recomputeStats(db: D1Database): Promise<void> {
         rides: number
         lifts: number
         distance_mi: number
+        bike_miles: number
       }>(),
   ])
 
@@ -280,6 +283,7 @@ async function recomputeStats(db: D1Database): Promise<void> {
       rides: row.rides,
       lifts: row.lifts,
       distanceMi: Math.round(row.distance_mi * 10) / 10,
+      bikeMiles: Math.round(row.bike_miles * 10) / 10,
     }
   }
 

@@ -68,6 +68,8 @@ export function Component() {
             </dl>
           </section>
 
+          <MovingYear counts={bundle.counts} />
+
           <MovingLog
             initial={bundle.activities}
             initialCursor={bundle.nextCursor}
@@ -76,6 +78,31 @@ export function Component() {
         </>
       )}
     </div>
+  )
+}
+
+// ---- this year --------------------------------------------------------------
+
+/**
+ * Renders nothing when the field is absent, the same rule /listening's "this
+ * year" section follows: an older Worker or a cron that hasn't recomputed the
+ * yearly totals yet shouldn't show a broken tile.
+ */
+function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
+  if (counts.bikeMilesThisYear == null) return null
+  const year = new Date().getFullYear()
+
+  return (
+    <section className="moving-year" aria-labelledby="moving-year-heading">
+      <h2 id="moving-year-heading" className="eyebrow">
+        {year} so far
+      </h2>
+      <dl className="stat-tiles is-compact">
+        <StatTile label="Bike miles" value={Math.round(counts.bikeMilesThisYear)} />
+        <StatTile label="Rides" value={counts.ridesThisYear} />
+        <StatTile label="Lifts" value={counts.liftsThisYear} />
+      </dl>
+    </section>
   )
 }
 

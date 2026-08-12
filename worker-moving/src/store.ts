@@ -69,6 +69,8 @@ export interface MovingBundle {
     ridesThisYear: number
     liftsThisYear: number
     distanceMiThisYear: number
+    /** Ride + e-bike distance only, for the year — narrower than distanceMiThisYear. */
+    bikeMilesThisYear: number
   }
 }
 
@@ -181,9 +183,10 @@ interface YearTotals {
   rides: number
   lifts: number
   distanceMi: number
+  bikeMiles: number
 }
 
-const EMPTY_YEAR: YearTotals = { activities: 0, rides: 0, lifts: 0, distanceMi: 0 }
+const EMPTY_YEAR: YearTotals = { activities: 0, rides: 0, lifts: 0, distanceMi: 0, bikeMiles: 0 }
 
 function yearFrom(byYear: string | undefined, year: number): YearTotals {
   if (!byYear) return EMPTY_YEAR
@@ -229,6 +232,7 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
       ridesThisYear: thisYear.rides,
       liftsThisYear: thisYear.lifts,
       distanceMiThisYear: thisYear.distanceMi,
+      bikeMilesThisYear: thisYear.bikeMiles,
     },
   }
 }
