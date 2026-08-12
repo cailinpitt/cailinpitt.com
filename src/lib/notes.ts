@@ -51,6 +51,21 @@ export interface Note {
   contextType: ContextType | null
   /** The referenced thing's own id (a photo id, an activity id, a post path). */
   contextRef: string | null
+  /** The link a card is attached to, if any. */
+  linkUrl: string | null
+  /** Whether linkUrl's own text was deleted from `text` when it was set. */
+  linkHidden: boolean
+  /** Filled in asynchronously, shortly after publish/edit — null until it's done. */
+  linkTitle: string | null
+  linkDescription: string | null
+  /** Whether a re-hosted copy of the link's image exists yet (see linkCardImageUrl). */
+  linkImageReady: boolean
+}
+
+/** The link fields a publish/edit can send, mirroring LinkFields in worker-notes/src/validate.ts. */
+export interface NoteLink {
+  url: string
+  hidden: boolean
 }
 
 export interface NotePage {
@@ -103,6 +118,20 @@ export async function fetchNotesNow(signal?: AbortSignal): Promise<NotesNow> {
   return res.json() as Promise<NotesNow>
 }
 
+/** Every note tagged `#tag`, newest first — the feed for /notes/tag/:tag. */
+export async function fetchNotesByTag(
+  tag: string,
+  cursor?: string | null,
+  limit = 25,
+  signal?: AbortSignal,
+): Promise<NotePage> {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (cursor) params.set('before', cursor)
+  const res = await fetch(`${API_BASE}/notes/tag/${encodeURIComponent(tag)}.json?${params}`, { signal })
+  if (!res.ok) throw new Error(`Notes API ${res.status}`)
+  return res.json() as Promise<NotePage>
+}
+
 /**
  * One note, resolved directly by id — a call to the permalink route
  * (`?format=json` is how it asks for JSON rather than the HTML or redirect a
@@ -135,8 +164,18 @@ async function write(
   token: string,
   text?: string,
   context?: NoteContext | null,
+  link?: NoteLink | null,
 ): Promise<{ note?: Note }> {
-  const body = text === undefined ? undefined : { text, contextType: context?.type, contextRef: context?.ref }
+  const body =
+    text === undefined
+      ? undefined
+      : {
+          text,
+          contextType: context?.type,
+          contextRef: context?.ref,
+          linkUrl: link?.url,
+          linkHidden: link?.hidden,
+        }
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
@@ -165,8 +204,9 @@ export async function publishNote(
   text: string,
   token: string,
   context?: NoteContext | null,
+  link?: NoteLink | null,
 ): Promise<Note> {
-  const { note } = await write('/notes', 'POST', token, text, context)
+  const { note } = await write('/notes', 'POST', token, text, context, link)
   if (!note) throw new NoteError('The note was not returned.', 500)
   return note
 }
@@ -176,14 +216,45 @@ export async function editNote(
   text: string,
   token: string,
   context?: NoteContext | null,
+  link?: NoteLink | null,
 ): Promise<Note> {
-  const { note } = await write(`/notes/${id}`, 'PATCH', token, text, context)
+  const { note } = await write(`/notes/${id}`, 'PATCH', token, text, context, link)
   if (!note) throw new NoteError('The note was not returned.', 500)
   return note
 }
 
 export async function removeNote(id: string, token: string): Promise<void> {
   await write(`/notes/${id}`, 'DELETE', token)
+}
+
+export interface LinkPreview {
+  title: string | null
+  description: string | null
+  /** The source's own image URL — this is a live, unstored preview; nothing is re-hosted until publish. */
+  image: string | null
+}
+
+/**
+ * A live, on-demand scrape of `url` — what /notes/compose calls (debounced)
+ * as soon as a link is detected, so a card shows up while composing rather
+ * than only after publishing. `null` on any failure: this is preview UX, not
+ * something worth surfacing as an error while someone is mid-thought.
+ */
+export async function fetchLinkPreview(
+  url: string,
+  token: string,
+  signal?: AbortSignal,
+): Promise<LinkPreview | null> {
+  try {
+    const res = await fetch(`${API_BASE}/notes/link-preview?url=${encodeURIComponent(url)}`, {
+      headers: { authorization: `Bearer ${token}` },
+      signal,
+    })
+    if (!res.ok) return null
+    return (await res.json()) as LinkPreview
+  } catch {
+    return null
+  }
 }
 
 // ---- the publish token ---------------------------------------------------
@@ -222,9 +293,13 @@ export function forgetToken(): void {
 /** Code-point length — `'👋'.length` is 2, this counts it as 1. Matches the Worker. */
 export const glyphs = (s: string): number => [...s].length
 
+/** Where a link's re-hosted card image lives, once linkImageReady is true. No extension — see worker-notes/src/index.ts's storeLinkImage. */
+export const linkCardImageUrl = (id: string): string => `https://images.cailinpitt.com/og/links/${id}`
+
 export type Segment =
   | { kind: 'text'; value: string }
   | { kind: 'link'; value: string; href: string }
+  | { kind: 'hashtag'; value: string; tag: string }
 
 /**
  * Bare URLs in a note. Deliberately narrow: an explicit http(s) scheme, or a
@@ -268,35 +343,63 @@ function trimTrailing(url: string): string {
 }
 
 /**
- * A note split into plain text and links, ready to render as React elements.
+ * `#word` tokens. Must start right after a non-word/non-`#` boundary, so a
+ * URL's own fragment (`…#section`) and a stray `##` don't turn into tags —
+ * the overlap check in segments() below is belt-and-suspenders for the same
+ * thing, since a URL match can itself contain a `#`.
+ */
+const HASHTAG_RE = /(?<![\w#])#(\w[\w-]{0,49})/g
+
+interface Span {
+  start: number
+  end: number
+  segment: Segment
+}
+
+/**
+ * A note split into plain text, links, and hashtags, ready to render as React
+ * elements.
  *
  * This is why notes can be plain text rather than Markdown: the only formatting
- * a 480-character thought actually needs is a clickable link, and doing that as
- * a data structure the page maps over means there is no HTML string anywhere in
- * the pipeline — no `dangerouslySetInnerHTML`, nothing to sanitize, and no way
- * for a note to contribute markup to the page.
+ * a 480-character thought actually needs is a clickable link (or tag), and doing
+ * that as a data structure the page maps over means there is no HTML string
+ * anywhere in the pipeline — no `dangerouslySetInnerHTML`, nothing to sanitize,
+ * and no way for a note to contribute markup to the page.
  *
  * Pure and covered by tests/notes.test.ts.
  */
 export function segments(text: string): Segment[] {
-  const out: Segment[] = []
-  let last = 0
+  const spans: Span[] = []
 
   for (const match of text.matchAll(URL_RE)) {
     const start = match.index ?? 0
     // A match that is nothing but punctuation once trimmed isn't a link at all;
     // fall back to the raw match so no text is lost.
     const value = trimTrailing(match[0]) || match[0]
-
-    if (start > last) out.push({ kind: 'text', value: text.slice(last, start) })
-    out.push({
-      kind: 'link',
-      value,
-      href: value.startsWith('www.') ? `https://${value}` : value,
+    spans.push({
+      start,
+      end: start + value.length,
+      segment: { kind: 'link', value, href: value.startsWith('www.') ? `https://${value}` : value },
     })
-    last = start + value.length
   }
 
+  for (const match of text.matchAll(HASHTAG_RE)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    // A `#` that's part of a URL (a fragment) belongs to the link, not to this.
+    if (spans.some((span) => start < span.end && end > span.start)) continue
+    spans.push({ start, end, segment: { kind: 'hashtag', value: match[0], tag: match[1].toLowerCase() } })
+  }
+
+  spans.sort((a, b) => a.start - b.start)
+
+  const out: Segment[] = []
+  let last = 0
+  for (const span of spans) {
+    if (span.start > last) out.push({ kind: 'text', value: text.slice(last, span.start) })
+    out.push(span.segment)
+    last = span.end
+  }
   if (last < text.length) out.push({ kind: 'text', value: text.slice(last) })
   return out
 }

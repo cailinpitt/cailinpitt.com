@@ -31,6 +31,10 @@ export const routes: RouteRecord[] = [
       // segment, so it outranks nothing and collides with nothing.
       { path: 'notes', lazy: () => import('./pages/Notes') },
       { path: 'notes/compose', lazy: () => import('./pages/NotesCompose') },
+      // Every note tagged #foo, newest first — client-fetched like the feed
+      // itself (notes are D1-backed and live, not build-time content, so
+      // unlike blog/tag/:tag below there's no getStaticPaths/loader here).
+      { path: 'notes/tag/:tag', lazy: () => import('./pages/NotesTag') },
       { path: 'blog/tag/:tag', lazy: () => import('./pages/BlogTag') },
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },

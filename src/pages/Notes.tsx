@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
 import { formatRelative, formatTime } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
@@ -146,7 +147,7 @@ function ShareButton({ id, text }: { id: string; text: string }) {
 
 // ---- one note's markup, shared by the feed and the permalink view ---------
 
-function NoteRow({ note }: { note: Note }) {
+export function NoteRow({ note }: { note: Note }) {
   // /notes never loads photos, activities, or the post list just to label a
   // reference — see the header of notesContext.ts — so this falls back to a
   // generic label ("a photo", "a workout") rather than fetching anything.
@@ -159,6 +160,7 @@ function NoteRow({ note }: { note: Note }) {
         <div className="note-body">
           <NoteText text={note.text} />
         </div>
+        <LinkCard note={note} />
         {context && (
           <p className="note-context">
             <span aria-hidden="true">{context.icon}</span> re:{' '}

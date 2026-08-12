@@ -38,13 +38,16 @@ import {
   getNote,
   insertNote,
   listNotes,
+  listNotesByTag,
+  setLinkCard,
   updateNote,
   MAX_PAGE_SIZE,
   PAGE_SIZE,
   type Note,
 } from './store'
+import { scrapeLink } from './linkcard'
 import { renderNoteText, renderText, TEXT_ROWS } from './text'
-import { MAX_LENGTH, validate } from './validate'
+import { clean, MAX_LENGTH, validate, type LinkFields } from './validate'
 
 /**
  * Edge-cache lifetime for the read endpoints.
@@ -296,16 +299,32 @@ const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fiel
  * is hardest to debug should have the easiest path. Neither of those sends a
  * context reference, which is fine — it is optional on every note.
  */
-async function readPayload(
-  request: Request,
-): Promise<{ text: unknown; contextType?: unknown; contextRef?: unknown }> {
+async function readPayload(request: Request): Promise<{
+  text: unknown
+  contextType?: unknown
+  contextRef?: unknown
+  linkUrl?: unknown
+  linkHidden?: unknown
+}> {
   const contentType = (request.headers.get('content-type') ?? '').toLowerCase()
 
   if (contentType.includes('application/json')) {
     const payload = (await request.json().catch(() => null)) as
-      | { text?: unknown; contextType?: unknown; contextRef?: unknown }
+      | {
+          text?: unknown
+          contextType?: unknown
+          contextRef?: unknown
+          linkUrl?: unknown
+          linkHidden?: unknown
+        }
       | null
-    return { text: payload?.text, contextType: payload?.contextType, contextRef: payload?.contextRef }
+    return {
+      text: payload?.text,
+      contextType: payload?.contextType,
+      contextRef: payload?.contextRef,
+      linkUrl: payload?.linkUrl,
+      linkHidden: payload?.linkHidden,
+    }
   }
   if (
     contentType.includes('form-data') ||
@@ -316,6 +335,19 @@ async function readPayload(
   }
   // Anything else: the body itself is the note. `curl -d 'a thought'` lands here.
   return { text: await request.text().catch(() => '') }
+}
+
+/**
+ * Delete a hidden link's own text from a note, once validate() has already
+ * confirmed the link is really in there. Only the first occurrence — a URL
+ * pasted twice on purpose is content, not a formatting artifact to eat twice.
+ * Re-cleaned afterward so the deletion can't leave a stray blank paragraph.
+ */
+function stripLink(text: string, link: LinkFields): string {
+  if (!link.hidden || !link.url) return text
+  const at = text.indexOf(link.url)
+  if (at === -1) return text
+  return clean(text.slice(0, at) + text.slice(at + link.url.length))
 }
 
 async function publish(
@@ -331,9 +363,11 @@ async function publish(
   const checked = validate(await readPayload(request))
   if (!checked.ok) return jsonNoStore({ error: checked.error }, 400, cors)
 
-  const note = await insertNote(env.DB, checked.value, checked.context)
+  const text = stripLink(checked.value, checked.link)
+  const note = await insertNote(env.DB, text, checked.context, checked.link)
   purge(ctx, request)
   ctx.waitUntil(dispatchOgCard(env, note.id))
+  if (checked.link.url) ctx.waitUntil(buildLinkCard(env, ctx, request, note.id, checked.link.url))
   log({ level: 'info', published: { id: note.id, length: [...note.text].length } })
 
   // The created row goes back so the client can show it immediately rather than
@@ -356,11 +390,13 @@ async function edit(
   const checked = validate(await readPayload(request))
   if (!checked.ok) return jsonNoStore({ error: checked.error }, 400, cors)
 
-  const note = await updateNote(env.DB, id, checked.value, checked.context)
+  const text = stripLink(checked.value, checked.link)
+  const note = await updateNote(env.DB, id, text, checked.context, checked.link)
   if (!note) return jsonNoStore({ id, error: 'no such note' }, 404, cors)
   purge(ctx, request)
   purgeNote(ctx, id)
   ctx.waitUntil(dispatchOgCard(env, id))
+  if (checked.link.url) ctx.waitUntil(buildLinkCard(env, ctx, request, id, checked.link.url))
   log({ level: 'info', edited: { id } })
 
   return jsonNoStore({ ok: true, note, url: `${SITE}/notes/${note.id}` }, 200, cors)
@@ -409,6 +445,118 @@ async function dispatchOgCard(env: Env, id: string): Promise<void> {
     })
   } catch {
     /* see comment above — nothing to do here */
+  }
+}
+
+/** Above the size a link's own image is worth re-hosting as-is; past this, skip the image and keep the text. */
+const MAX_LINK_IMAGE_BYTES = 6_000_000
+
+/**
+ * Fetch a link's image and write it to R2 under this note's id, unresized —
+ * there's no sharp in a Worker, so unlike the site's own OG cards this
+ * stores whatever the source serves, capped by size rather than normalized.
+ * `LinkCard.tsx` on the client handles the varying aspect ratios with
+ * `object-fit: cover`. Returns whether it worked.
+ */
+async function storeLinkImage(env: Env, id: string, imageUrl: string): Promise<boolean> {
+  const res = await fetch(imageUrl, {
+    signal: AbortSignal.timeout(8000),
+    headers: { 'user-agent': 'cailinpitt.com-link-card/1.0 (+https://cailinpitt.com)' },
+  })
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!res.ok || !res.body || !contentType.startsWith('image/')) return false
+
+  const reader = res.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    total += value.length
+    if (total > MAX_LINK_IMAGE_BYTES) {
+      reader.cancel().catch(() => {})
+      return false
+    }
+  }
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.length
+  }
+
+  await env.IMAGES.put(`og/links/${id}`, bytes, { httpMetadata: { contentType } })
+  return true
+}
+
+/**
+ * Scrapes a link, re-hosts its image, and persists the result — the
+ * background half of a note's link card, kicked off from `ctx.waitUntil` in
+ * publish/edit above. Runs entirely inside this Worker (see linkcard.ts's
+ * header for why that's possible here but not for the site's own rendered
+ * cards), so this typically finishes in a couple of seconds rather than the
+ * ~1–2 minutes a GitHub Actions run would take.
+ *
+ * Re-scrapes rather than trusting whatever `/notes/link-preview` last
+ * returned to the compose page: this is what actually gets persisted and
+ * shown to every reader, so the Worker stays the one source of truth for it,
+ * the same way it already is for everything else a note stores.
+ *
+ * Best-effort like dispatchOgCard: a failure here is not a failed publish,
+ * the note is already live, and it just goes out without a card this time.
+ */
+async function buildLinkCard(
+  env: Env,
+  ctx: ExecutionContext,
+  request: Request,
+  id: string,
+  url: string,
+): Promise<void> {
+  try {
+    const preview = await scrapeLink(url)
+    const imageReady = preview.image ? await storeLinkImage(env, id, preview.image) : false
+    await setLinkCard(env.DB, id, {
+      title: preview.title,
+      description: preview.description,
+      imageReady,
+    })
+    // Both, not just purgeNote: the card needs to show up in the feed
+    // (/notes.json) the moment it's ready, not only on the permalink.
+    purge(ctx, request)
+    purgeNote(ctx, id)
+    log({ level: 'info', linkCard: { id } })
+  } catch (err) {
+    log({ level: 'error', linkCard: { id, error: String(err) } })
+  }
+}
+
+/**
+ * `GET /notes/link-preview?url=<url>` — a live, unstored scrape for the
+ * compose page to show a card *while typing*, before anything is published.
+ * Gated by PUBLISH_TOKEN like every other write: the compose page is the
+ * only realistic caller, and without the gate this would be an open
+ * fetch-anything-and-return-it proxy. The image here is the source's own
+ * URL, not re-hosted — re-hosting a link that's never actually published
+ * would just be an orphaned R2 object; see buildLinkCard for the persisted,
+ * re-hosted version that runs after a real publish.
+ */
+async function linkPreviewRoute(
+  request: Request,
+  cors: Record<string, string>,
+  env: Env,
+): Promise<Response> {
+  if (!authorized(request, env.PUBLISH_TOKEN)) {
+    return jsonNoStore({ error: 'unauthorized' }, 401, cors)
+  }
+  const url = new URL(request.url).searchParams.get('url')
+  if (!url) return jsonNoStore({ error: 'A link needs a link.' }, 400, cors)
+
+  try {
+    const preview = await scrapeLink(url)
+    return jsonNoStore(preview, 200, cors)
+  } catch (err) {
+    return jsonNoStore({ error: String(err) }, 502, cors)
   }
 }
 
@@ -526,6 +674,7 @@ export default {
 
     const url = new URL(request.url)
     const single = url.pathname.match(/^\/notes\/([a-f0-9]{4,32})$/)
+    const tagMatch = url.pathname.match(/^\/notes\/tag\/([A-Za-z0-9_][A-Za-z0-9_-]{0,49})\.json$/)
     try {
       // ---- cailinpitt.com/notes/* — the permalink -----------------------
       //
@@ -556,12 +705,36 @@ export default {
         return await remove(request, env, ctx, cors, single[1])
       }
 
+      // Not edge-cached, unlike everything below: this is a live scrape of
+      // whatever URL was asked for, called from the compose page while
+      // typing (see linkPreviewRoute's own comment).
+      if (url.pathname === '/notes/link-preview' && request.method === 'GET') {
+        return await linkPreviewRoute(request, cors, env)
+      }
+
       // ---- reads (public, edge-cached) ----
 
       if (url.pathname === '/notes.json') {
         return await cached(url, 'json', ctx, cors, async () =>
           json(
             await listNotes(env.DB, {
+              before: url.searchParams.get('before'),
+              limit: Number(url.searchParams.get('limit')) || PAGE_SIZE,
+            }),
+            EDGE_TTL,
+          ),
+        )
+      }
+
+      // A note's hashtags aren't a separate column — see hashtags.ts — so
+      // this is its own query rather than a filter over /notes.json, and it
+      // isn't in CACHED_READS/purge() for the same reason a deep page of
+      // /notes.json isn't: parameterized by tag, low traffic, the edge TTL
+      // alone is enough to keep it from ever being far behind.
+      if (tagMatch) {
+        return await cached(url, `tag:${tagMatch[1]}`, ctx, cors, async () =>
+          json(
+            await listNotesByTag(env.DB, tagMatch[1].toLowerCase(), {
               before: url.searchParams.get('before'),
               limit: Number(url.searchParams.get('limit')) || PAGE_SIZE,
             }),

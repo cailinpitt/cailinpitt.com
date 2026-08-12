@@ -7,8 +7,9 @@
 
 // ContextType/NoteContext live in validate.ts, not here — see the comment
 // there on why the import runs in this direction.
-import type { ContextType, NoteContext } from './validate'
-export type { ContextType, NoteContext }
+import type { ContextType, NoteContext, LinkFields } from './validate'
+import { hashtagsIn } from './hashtags'
+export type { ContextType, NoteContext, LinkFields }
 
 export interface Note {
   id: string
@@ -21,6 +22,15 @@ export interface Note {
   contextType: ContextType | null
   /** The referenced thing's own id (a photo id, an activity id, a post path). */
   contextRef: string | null
+  /** The link a card is attached to, if any. */
+  linkUrl: string | null
+  /** Whether linkUrl's own text was deleted from `text` when it was set. */
+  linkHidden: boolean
+  /** Filled in asynchronously — null until the link-card job completes. */
+  linkTitle: string | null
+  linkDescription: string | null
+  /** Whether `og/links/<id>.jpg` exists in R2 yet. */
+  linkImageReady: boolean
 }
 
 export interface NotePage {
@@ -58,6 +68,11 @@ interface Row {
   edited_at: number | null
   context_type: string | null
   context_ref: string | null
+  link_url: string | null
+  link_hidden: number
+  link_title: string | null
+  link_description: string | null
+  link_image_ready: number
 }
 
 const toNote = (row: Row): Note => ({
@@ -67,10 +82,16 @@ const toNote = (row: Row): Note => ({
   editedAt: row.edited_at,
   contextType: (row.context_type as ContextType | null) ?? null,
   contextRef: row.context_ref,
+  linkUrl: row.link_url,
+  linkHidden: row.link_hidden === 1,
+  linkTitle: row.link_title,
+  linkDescription: row.link_description,
+  linkImageReady: row.link_image_ready === 1,
 })
 
 /** The column list every SELECT below shares, so a field added here can't be forgotten in one of them. */
-const COLUMNS = 'id, text, created_at, edited_at, context_type, context_ref'
+const COLUMNS =
+  'id, text, created_at, edited_at, context_type, context_ref, link_url, link_hidden, link_title, link_description, link_image_ready'
 
 /**
  * The pagination cursor: `<created_at>_<id>`.
@@ -124,6 +145,58 @@ export async function listNotes(
   }
 }
 
+/**
+ * A LIKE prefilter cuts the row count down cheaply before the real check —
+ * hashtagsIn() (hashtags.ts), the same rule the client's segments() uses to
+ * decide what actually renders as a clickable tag. Without the second pass,
+ * searching "tag" would also return a note whose only hashtag is "tagging":
+ * SQL LIKE has no word-boundary concept, so `%#tag%` matches both.
+ *
+ * Bounded at MAX_TAG_SCAN rather than the whole table: this site is "a few
+ * hundred short rows" per the header comment above, so a scan this wide is
+ * still cheap, and a hashtag from years back doesn't quietly stop being
+ * reachable as the table grows past what a single page could hold anyway.
+ */
+const MAX_TAG_SCAN = 2000
+
+export async function listNotesByTag(
+  db: D1Database,
+  tag: string,
+  opts: { before?: string | null; limit?: number } = {},
+): Promise<NotePage> {
+  const limit = Math.min(Math.max(1, opts.limit || PAGE_SIZE), MAX_PAGE_SIZE)
+  const cursor = decodeCursor(opts.before)
+
+  const query = cursor
+    ? db
+        .prepare(
+          `SELECT ${COLUMNS} FROM notes
+           WHERE text LIKE '%#' || ?1 || '%'
+             AND (created_at < ?2 OR (created_at = ?2 AND id < ?3))
+           ORDER BY created_at DESC, id DESC LIMIT ?4`,
+        )
+        .bind(tag, cursor.uts, cursor.id, MAX_TAG_SCAN)
+    : db
+        .prepare(
+          `SELECT ${COLUMNS} FROM notes
+           WHERE text LIKE '%#' || ?1 || '%'
+           ORDER BY created_at DESC, id DESC LIMIT ?2`,
+        )
+        .bind(tag, MAX_TAG_SCAN)
+
+  const { results } = await query.all<Row>()
+  const matches = (results ?? []).map(toNote).filter((note) => hashtagsIn(note.text).has(tag))
+  const notes = matches.slice(0, limit)
+
+  return {
+    notes,
+    nextCursor: matches.length > limit && notes.length ? encodeCursor(notes[notes.length - 1]) : null,
+    // The exact total would mean scanning past MAX_TAG_SCAN too — not worth
+    // it for a filtered view nothing currently reads `total` from.
+    total: matches.length,
+  }
+}
+
 export async function getNote(db: D1Database, id: string): Promise<Note | null> {
   const row = await db
     .prepare(`SELECT ${COLUMNS} FROM notes WHERE id = ?`)
@@ -141,6 +214,7 @@ export async function insertNote(
   db: D1Database,
   text: string,
   context: NoteContext | null = null,
+  link: LinkFields | null = null,
 ): Promise<Note> {
   const note: Note = {
     id: newId(),
@@ -149,12 +223,26 @@ export async function insertNote(
     editedAt: null,
     contextType: context?.type ?? null,
     contextRef: context?.ref ?? null,
+    linkUrl: link?.url ?? null,
+    linkHidden: link?.hidden ?? false,
+    linkTitle: null,
+    linkDescription: null,
+    linkImageReady: false,
   }
   await db
     .prepare(
-      'INSERT INTO notes (id, text, created_at, edited_at, context_type, context_ref) VALUES (?, ?, ?, NULL, ?, ?)',
+      `INSERT INTO notes (id, text, created_at, edited_at, context_type, context_ref, link_url, link_hidden)
+       VALUES (?, ?, ?, NULL, ?, ?, ?, ?)`,
     )
-    .bind(note.id, note.text, note.createdAt, note.contextType, note.contextRef)
+    .bind(
+      note.id,
+      note.text,
+      note.createdAt,
+      note.contextType,
+      note.contextRef,
+      note.linkUrl,
+      note.linkHidden ? 1 : 0,
+    )
     .run()
   return note
 }
@@ -171,11 +259,49 @@ export async function updateNote(
   id: string,
   text: string,
   context: NoteContext | null = null,
+  link: LinkFields | null = null,
 ): Promise<Note | null> {
   const editedAt = Math.floor(Date.now() / 1000)
+  // link_title/link_description/link_image_ready are reset here rather than
+  // preserved, even when link_url is unchanged: an edit re-dispatches the
+  // link-card job unconditionally (same as the per-note OG card does for
+  // every edit), and a stale title left in place until that job finishes
+  // would show text that no longer matches what was just typed.
   const { meta } = await db
-    .prepare('UPDATE notes SET text = ?, edited_at = ?, context_type = ?, context_ref = ? WHERE id = ?')
-    .bind(text, editedAt, context?.type ?? null, context?.ref ?? null, id)
+    .prepare(
+      `UPDATE notes SET
+         text = ?, edited_at = ?, context_type = ?, context_ref = ?,
+         link_url = ?, link_hidden = ?, link_title = NULL, link_description = NULL, link_image_ready = 0
+       WHERE id = ?`,
+    )
+    .bind(
+      text,
+      editedAt,
+      context?.type ?? null,
+      context?.ref ?? null,
+      link?.url ?? null,
+      link?.hidden ? 1 : 0,
+      id,
+    )
+    .run()
+  if (!meta.changes) return null
+  return getNote(db, id)
+}
+
+/**
+ * Fill in a link card's fetched title/description/image once buildLinkCard()
+ * in index.ts finishes scraping it. Doesn't touch `edited_at` — this isn't
+ * an edit to what the note says, only to the card attached alongside it.
+ * Returns null when there is no such note.
+ */
+export async function setLinkCard(
+  db: D1Database,
+  id: string,
+  card: { title: string | null; description: string | null; imageReady: boolean },
+): Promise<Note | null> {
+  const { meta } = await db
+    .prepare('UPDATE notes SET link_title = ?, link_description = ?, link_image_ready = ? WHERE id = ?')
+    .bind(card.title, card.description, card.imageReady ? 1 : 0, id)
     .run()
   if (!meta.changes) return null
   return getNote(db, id)

@@ -46,14 +46,29 @@
   // Bindings. Fill in the id after creating the database (see README):
   //   wrangler d1 create cailinpitt-notes
   //
-  // No KV and no R2. A microblog is a few hundred short rows; one indexed query
-  // behind a 30-second edge cache is cheaper than any precomputed blob, and
-  // there is nothing to mirror.
+  // No KV. A microblog is a few hundred short rows; one indexed query behind a
+  // 30-second edge cache is cheaper than any precomputed blob, and there is
+  // nothing to mirror.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "cailinpitt-notes",
       "database_id": "d0e07563-e1f2-469a-b254-a062af62572b"
+    }
+  ],
+
+  // The same public bucket images.cailinpitt.com already serves (see
+  // scripts/upload-r2.mjs and the per-note OG card key og/notes/<id>.jpg) — a
+  // direct binding, same as worker-photos' ORIGINALS binding, so a note's link
+  // card can be fetched and written to R2 without ever leaving this Worker.
+  // Unlike ORIGINALS, this bucket is meant to be public — no EXIF, nothing
+  // private lands here, just a re-hosted copy of an image a linked page
+  // already serves publicly itself.
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "cailinpitt-photos",
+      "preview_bucket_name": "cailinpitt-photos"
     }
   ]
 

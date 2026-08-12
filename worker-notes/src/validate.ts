@@ -37,8 +37,14 @@ export interface NoteContext {
  */
 export const MAX_LENGTH = 480
 
+/** The link a card should be built for, and whether its text was stripped from the note. */
+export interface LinkFields {
+  url: string | null
+  hidden: boolean
+}
+
 export type Validation =
-  | { ok: true; value: string; context: NoteContext | null }
+  | { ok: true; value: string; context: NoteContext | null; link: LinkFields }
   | { ok: false; error: string }
 
 /** Code-point length. `'👋'.length` is 2; this counts it as 1. */
@@ -104,6 +110,41 @@ function validateContext(
   return { ok: true, value: { type: rawType as ContextType, ref: rawRef as string } }
 }
 
+/**
+ * Same narrow shape as URL_RE in src/lib/notes.ts: an explicit http(s)
+ * scheme or a `www.` host, nothing looser — a link card is only ever built
+ * for something the note's own autolinker would also have turned blue.
+ */
+const LINK_URL_RE = /^(https?:\/\/[^\s<>]+|www\.[^\s<>]+)$/i
+
+/**
+ * `linkUrl` and `linkHidden` are optional and independent of `contextType`/
+ * `contextRef` — unlike those two, `linkHidden` alone (no `linkUrl`) is
+ * refused rather than treated as "no link," since there is nothing to hide.
+ *
+ * Deliberately *not* checked here: whether `rawUrl` is still present in
+ * `text`. index.ts's stripLink() deletes it the first time a link is
+ * hidden, so on every edit after that the text legitimately no longer
+ * contains it — requiring it here would make re-saving an already-hidden
+ * link's note fail validation. stripLink() itself is a no-op when the
+ * substring isn't found, so there's nothing to enforce either way.
+ */
+function validateLink(
+  rawUrl: unknown,
+  rawHidden: unknown,
+): { ok: true; value: LinkFields } | { ok: false; error: string } {
+  const hidden = rawHidden === true
+
+  if (rawUrl === undefined || rawUrl === null || rawUrl === '') {
+    if (hidden) return { ok: false, error: 'A hidden link needs a link.' }
+    return { ok: true, value: { url: null, hidden: false } }
+  }
+  if (typeof rawUrl !== 'string' || !LINK_URL_RE.test(rawUrl)) {
+    return { ok: false, error: 'That does not look like a link.' }
+  }
+  return { ok: true, value: { url: rawUrl, hidden } }
+}
+
 export function validate(payload: unknown): Validation {
   const body = (payload ?? {}) as Record<string, unknown>
   const text = clean(body.text)
@@ -119,5 +160,8 @@ export function validate(payload: unknown): Validation {
   const context = validateContext(body.contextType, body.contextRef)
   if (!context.ok) return context
 
-  return { ok: true, value: text, context: context.value }
+  const link = validateLink(body.linkUrl, body.linkHidden)
+  if (!link.ok) return link
+
+  return { ok: true, value: text, context: context.value, link: link.value }
 }

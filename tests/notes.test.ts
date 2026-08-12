@@ -41,7 +41,12 @@ describe('the character limit', () => {
 describe('validate', () => {
   it('accepts an ordinary note', () => {
     const result = validate({ text: 'trains are good, actually' })
-    expect(result).toEqual({ ok: true, value: 'trains are good, actually', context: null })
+    expect(result).toEqual({
+      ok: true,
+      value: 'trains are good, actually',
+      context: null,
+      link: { url: null, hidden: false },
+    })
   })
 
   it('refuses an empty note', () => {
@@ -64,7 +69,12 @@ describe('validate', () => {
 
   it('accepts a note with no context, same as before context existed', () => {
     const result = validate({ text: 'no reference here' })
-    expect(result).toEqual({ ok: true, value: 'no reference here', context: null })
+    expect(result).toEqual({
+      ok: true,
+      value: 'no reference here',
+      context: null,
+      link: { url: null, hidden: false },
+    })
   })
 
   it('accepts a note with a well-formed context', () => {
@@ -73,6 +83,7 @@ describe('validate', () => {
       ok: true,
       value: 'about that ride',
       context: { type: 'activity', ref: '12345' },
+      link: { url: null, hidden: false },
     })
   })
 
@@ -87,6 +98,48 @@ describe('validate', () => {
   it('refuses a ref with no context type to go with it', () => {
     // Half a reference is a client bug, not something to guess at.
     expect(validate({ text: 'hm', contextRef: 'abc123' }).ok).toBe(false)
+  })
+
+  it('accepts a well-formed link', () => {
+    const result = validate({ text: 'see https://example.com', linkUrl: 'https://example.com' })
+    expect(result).toEqual({
+      ok: true,
+      value: 'see https://example.com',
+      context: null,
+      link: { url: 'https://example.com', hidden: false },
+    })
+  })
+
+  it('accepts a hidden link whose text still contains it', () => {
+    const result = validate({
+      text: 'see https://example.com',
+      linkUrl: 'https://example.com',
+      linkHidden: true,
+    })
+    expect(result).toEqual({
+      ok: true,
+      value: 'see https://example.com',
+      context: null,
+      link: { url: 'https://example.com', hidden: true },
+    })
+  })
+
+  it('accepts a hidden link even once the text no longer contains it', () => {
+    // Re-saving a note whose link was already hidden on a previous edit: the
+    // text was stripped then, so requiring the url to still be present here
+    // would make every subsequent save of that note fail. See the comment on
+    // validateLink in validate.ts.
+    expect(validate({ text: 'just the caption now', linkUrl: 'https://example.com', linkHidden: true }).ok).toBe(
+      true,
+    )
+  })
+
+  it('refuses something that is not a link', () => {
+    expect(validate({ text: 'hm', linkUrl: 'not a url' }).ok).toBe(false)
+  })
+
+  it('refuses a hidden flag with no link to hide', () => {
+    expect(validate({ text: 'hm', linkHidden: true }).ok).toBe(false)
   })
 })
 
@@ -169,10 +222,43 @@ describe('segments', () => {
       'a https://b.example c',
       '(https://c.example), and www.d.example!',
       'https://e.example/x?y=1&z=2#frag done',
+      'a #tag and https://f.example#frag together',
+      '## not a tag',
       '',
     ]) {
       expect(segments(text).map((s) => s.value).join('')).toBe(text)
     }
+  })
+
+  it('links a hashtag', () => {
+    expect(segments('a #running day')).toEqual([
+      { kind: 'text', value: 'a ' },
+      { kind: 'hashtag', value: '#running', tag: 'running' },
+      { kind: 'text', value: ' day' },
+    ])
+  })
+
+  it('lowercases the tag for grouping but keeps what was typed as the display value', () => {
+    expect(segments('#RunClub')).toEqual([{ kind: 'hashtag', value: '#RunClub', tag: 'runclub' }])
+  })
+
+  it('stops a hashtag at punctuation', () => {
+    expect(segments('#running, today')).toEqual([
+      { kind: 'hashtag', value: '#running', tag: 'running' },
+      { kind: 'text', value: ', today' },
+    ])
+  })
+
+  it('does not turn a url fragment into a hashtag', () => {
+    // The `#section` here belongs to the link, same as a URL's own query string.
+    expect(segments('see https://example.com#section')).toEqual([
+      { kind: 'text', value: 'see ' },
+      { kind: 'link', value: 'https://example.com#section', href: 'https://example.com#section' },
+    ])
+  })
+
+  it('does not link a bare ## or a hashtag with nothing after it', () => {
+    expect(segments('## nope')).toEqual([{ kind: 'text', value: '## nope' }])
   })
 })
 

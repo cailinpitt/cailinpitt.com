@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
+import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
 import { formatRelative } from '../lib/datetime'
 import { fetchMoving, longDate, summary as activitySummary, type Activity } from '../lib/moving'
 import {
   editNote,
+  fetchLinkPreview,
   fetchNotes,
   forgetToken,
   glyphs,
@@ -15,10 +17,13 @@ import {
   publishNote,
   removeNote,
   saveToken,
+  segments,
   NoteError,
   type ContextType,
+  type LinkPreview,
   type Note,
   type NoteContext,
+  type NoteLink,
 } from '../lib/notes'
 import { resolveContext } from '../lib/notesContext'
 import { byNewest, formatPhotoDateShort, type Photo } from '../lib/photos'
@@ -59,6 +64,27 @@ const RECENT = 10
 /** Under this many characters left, the counter starts saying so. */
 const WARN_AT = 60
 
+/**
+ * The live, compose-time card — same classes as LinkCard.tsx so it looks
+ * identical to what publishing will eventually persist, but built from a raw
+ * `fetchLinkPreview` result rather than a Note (no id yet, nothing to
+ * re-host until this is actually published). A `<div>`, not an `<a>`, since
+ * clicking through mid-draft would lose whatever's been typed.
+ */
+function ComposeLinkPreview({ preview, loading }: { preview: LinkPreview | null; loading: boolean }) {
+  if (loading) return <p className="compose-link-loading">Loading preview…</p>
+  if (!preview || (!preview.title && !preview.image)) return null
+  return (
+    <div className="link-card">
+      {preview.image && <img className="link-card-image" src={preview.image} alt="" loading="lazy" />}
+      <span className="link-card-body">
+        {preview.title && <span className="link-card-title">{preview.title}</span>}
+        {preview.description && <span className="link-card-subtitle">{preview.description}</span>}
+      </span>
+    </div>
+  )
+}
+
 export function Component() {
   const posts = useLoaderData() as PostSummary[] | null
   const [token, setToken] = useState('')
@@ -87,6 +113,43 @@ export function Component() {
   const [photosLoading, setPhotosLoading] = useState(false)
   const [activities, setActivities] = useState<Activity[] | null>(null)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
+
+  // The link card. `attachCard`/`hideLink` are the two checkboxes; `preview`
+  // is the live, unstored scrape shown while composing (see
+  // fetchLinkPreview's own comment) — display only, never sent on submit.
+  // `seededUrl` covers editing a note whose link was already hidden: its
+  // text no longer contains the URL to re-detect, so the url has to come
+  // from the note itself rather than from scanning the textarea.
+  const [attachCard, setAttachCard] = useState(true)
+  const [hideLink, setHideLink] = useState(false)
+  const [seededUrl, setSeededUrl] = useState<string | null>(null)
+  const [preview, setPreview] = useState<LinkPreview | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  const detectedUrl = useMemo(() => {
+    const link = segments(text).find((s) => s.kind === 'link')
+    return link && link.kind === 'link' ? link.href : null
+  }, [text])
+  const activeUrl = detectedUrl ?? seededUrl
+
+  useEffect(() => {
+    if (!attachCard || !activeUrl) {
+      setPreview(null)
+      setPreviewLoading(false)
+      return
+    }
+    setPreviewLoading(true)
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      fetchLinkPreview(activeUrl, token, controller.signal)
+        .then((result) => setPreview(result))
+        .finally(() => setPreviewLoading(false))
+    }, 500)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [attachCard, activeUrl, token])
 
   const ensureContextList = useCallback(
     (type: ContextType) => {
@@ -142,6 +205,7 @@ export function Component() {
   const empty = !text.trim()
 
   const context: NoteContext | null = contextType && contextRef ? { type: contextType, ref: contextRef } : null
+  const link: NoteLink | null = attachCard && activeUrl ? { url: activeUrl, hidden: hideLink } : null
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -150,12 +214,15 @@ export function Component() {
     setError(null)
     try {
       const note = editing
-        ? await editNote(editing, text, token, context)
-        : await publishNote(text, token, context)
+        ? await editNote(editing, text, token, context, link)
+        : await publishNote(text, token, context, link)
       setText('')
       setEditing(null)
       setContextType('')
       setContextRef('')
+      setAttachCard(true)
+      setHideLink(false)
+      setSeededUrl(null)
       setPublished(note)
       // Prepend locally as well as refetching: the read endpoint sits behind a
       // 30-second edge cache which the Worker purges on write, but the purge is
@@ -182,6 +249,12 @@ export function Component() {
     setContextType(note.contextType ?? '')
     setContextRef(note.contextRef ?? '')
     if (note.contextType) ensureContextList(note.contextType)
+    // Seeded rather than re-detected: a note whose link was already hidden
+    // has no URL left in its own text to scan for (see stripLink() in
+    // worker-notes/src/index.ts).
+    setAttachCard(!!note.linkUrl)
+    setHideLink(note.linkHidden)
+    setSeededUrl(note.linkHidden ? note.linkUrl : null)
     setPublished(null)
     setError(null)
     boxRef.current?.focus()
@@ -192,6 +265,9 @@ export function Component() {
     setText('')
     setContextType('')
     setContextRef('')
+    setAttachCard(true)
+    setHideLink(false)
+    setSeededUrl(null)
   }
 
   const onDelete = async (note: Note) => {
@@ -348,6 +424,30 @@ export function Component() {
                   ))}
               </div>
 
+              {activeUrl && (
+                <div className="compose-link">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={attachCard}
+                      onChange={(event) => setAttachCard(event.target.checked)}
+                    />
+                    Attach a link card
+                  </label>
+                  {attachCard && (
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={hideLink}
+                        onChange={(event) => setHideLink(event.target.checked)}
+                      />
+                      Hide the link text
+                    </label>
+                  )}
+                  {attachCard && <ComposeLinkPreview preview={preview} loading={previewLoading} />}
+                </div>
+              )}
+
               <div className="compose-bar">
                 {/* role="status" so the count is announced as it changes rather
                     than only being visible. */}
@@ -394,6 +494,7 @@ export function Component() {
                       <div className="note-body">
                         <NoteText text={note.text} />
                       </div>
+                      <LinkCard note={note} />
                       {noteContext && (
                         <p className="note-context">
                           <span aria-hidden="true">{noteContext.icon}</span> re: {noteContext.text}
