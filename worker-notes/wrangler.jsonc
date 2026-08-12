@@ -37,7 +37,10 @@
     // write endpoints do *not* reject an unknown origin, because the primary
     // client is an iOS Shortcut and a share sheet sends no Origin at all. The
     // PUBLISH_TOKEN is the security boundary here.
-    "ALLOWED_ORIGIN": "https://cailinpitt.com"
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Where to fire the repository_dispatch that renders a note's OG card
+    // (.github/workflows/note-og.yml) — same var name and value worker-photos uses.
+    "GITHUB_REPO": "cailinpitt/cailinpitt.com"
   },
 
   // Bindings. Fill in the id after creating the database (see README):
@@ -56,4 +59,5 @@
 
   // Secrets (not stored here):
   //   wrangler secret put PUBLISH_TOKEN
+  //   wrangler secret put GITHUB_TOKEN   # fine-grained PAT, Contents: read+write on this repo
 }

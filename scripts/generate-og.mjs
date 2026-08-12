@@ -31,15 +31,13 @@ import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import satori from 'satori'
-import { Resvg } from '@resvg/resvg-js'
 import sharp from 'sharp'
+import { W, H, loadFonts, el, row, col, text, fitSize, clampText, renderCard } from './og-shared.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 import { localImagePath } from './paths.mjs'
 const DIST = path.join(ROOT, 'dist')
-const FONTS = path.join(ROOT, 'node_modules', '@fontsource')
 const SITE_NAME = 'Cailin Pitt'
 const SITE_HOST = 'cailinpitt.com'
 
@@ -48,11 +46,6 @@ const only = args.includes('--only') ? args[args.indexOf('--only') + 1] : null
 const outDir = args.includes('--out')
   ? path.resolve(ROOT, args[args.indexOf('--out') + 1])
   : path.join(DIST, 'og')
-
-// Card geometry. 1200x630 is the size every network crops from; anything important
-// stays clear of the outer ~40px, which Twitter/X shaves off in the timeline preview.
-const W = 1200
-const H = 630
 
 // Straight from src/styles/global.css — the light theme, since a card has no theme
 // of its own and paper reads better than ink in a feed.
@@ -73,71 +66,7 @@ const D = {
   accent: '#e3925b',
 }
 
-// The site's own faces are Iowan Old Style (macOS-only) and system-ui, neither of
-// which a Linux build runner has. Source Serif 4 and Inter are the closest open
-// stand-ins and ship as .woff in node_modules, so nothing binary lives in the repo.
-// satori converts glyphs to paths, so resvg never needs the fonts itself.
-const fontFile = (pkg, file) => readFile(path.join(FONTS, pkg, 'files', file))
-const fonts = [
-  { name: 'Serif', weight: 400, style: 'normal', data: await fontFile('source-serif-4', 'source-serif-4-latin-400-normal.woff') },
-  { name: 'Serif', weight: 600, style: 'normal', data: await fontFile('source-serif-4', 'source-serif-4-latin-600-normal.woff') },
-  { name: 'Sans', weight: 400, style: 'normal', data: await fontFile('inter', 'inter-latin-400-normal.woff') },
-  { name: 'Sans', weight: 500, style: 'normal', data: await fontFile('inter', 'inter-latin-500-normal.woff') },
-  // Only the terminal card uses this; a card of a shell in a proportional face
-  // isn't a card of a shell.
-  { name: 'Mono', weight: 400, style: 'normal', data: await fontFile('jetbrains-mono', 'jetbrains-mono-latin-400-normal.woff') },
-  { name: 'Mono', weight: 600, style: 'normal', data: await fontFile('jetbrains-mono', 'jetbrains-mono-latin-600-normal.woff') },
-]
-
-// satori takes React-shaped nodes; these build them without needing JSX in a .mjs.
-// Every node is explicitly display:flex, which is all satori's layout engine supports.
-const el = (type, style, ...children) => ({
-  type,
-  props: { style, children: children.length > 1 ? children : children[0] },
-})
-const row = (style, ...kids) => el('div', { display: 'flex', ...style }, ...kids)
-const col = (style, ...kids) => el('div', { display: 'flex', flexDirection: 'column', ...style }, ...kids)
-const text = (style, s) => el('div', { display: 'flex', ...style }, s)
-
-// Rough per-character advance widths, in ems, for the auto-fit below. satori gives
-// no way to measure text, so the fit is estimated: these are close enough for the
-// serif at display sizes, and the layouts leave slack for where they are not.
-const NARROW = new Set([...'ijltfrI().,;:\'"!|-'])
-const WIDE = new Set([...'mwMW@'])
-const charWidth = (ch) => (NARROW.has(ch) ? 0.31 : WIDE.has(ch) ? 0.86 : ch === ch.toUpperCase() && /\p{L}/u.test(ch) ? 0.64 : 0.5)
-const wordWidth = (word) => [...word].reduce((sum, ch) => sum + charWidth(ch), 0)
-
-/** Estimated line count for `s` set at `size` px in a `boxWidth` px column. */
-function lineCount(s, size, boxWidth) {
-  const space = 0.26 * size
-  let lines = 1
-  let x = 0
-  for (const word of s.split(/\s+/)) {
-    const w = wordWidth(word) * size
-    if (x > 0 && x + space + w > boxWidth) {
-      lines += 1
-      x = w
-    } else {
-      x += (x > 0 ? space : 0) + w
-    }
-  }
-  return lines
-}
-
-/** Largest size in [min, max] at which `s` wraps to at most `maxLines`. */
-function fitSize(s, boxWidth, maxLines, max, min) {
-  for (let size = max; size > min; size -= 2) {
-    if (lineCount(s, size, boxWidth) <= maxLines) return size
-  }
-  return min
-}
-
-/** Trim to a whole word within `n` characters, so a long dek can't push the layout. */
-function clampText(s, n) {
-  if (!s || s.length <= n) return s
-  const cut = s.slice(0, n)
-  return cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:.\s]+$/, '') + '…'
-}
+const fonts = await loadFonts()
 
 const KICKER = { fontFamily: 'Sans', fontSize: 19, fontWeight: 500, letterSpacing: 2.6, textTransform: 'uppercase' }
 const META = { fontFamily: 'Sans', fontSize: 21, letterSpacing: 0.2 }
@@ -349,11 +278,7 @@ async function render(spec) {
       console.warn(`  ! photo unavailable (${spec.photo}): ${err.message} — using the paper card`)
     }
   }
-  const svg = await satori(node ?? paperCard(spec), { width: W, height: H, fonts })
-  const png = new Resvg(svg, { fitTo: { mode: 'width', value: W } }).render().asPng()
-  // JPEG, not the PNG resvg hands back: a hundred photo cards at ~400 KB each is
-  // most of a deploy. Chroma subsampling stays off so the type keeps its edges.
-  return sharp(png).jpeg({ quality: 84, chromaSubsampling: '4:4:4', mozjpeg: true }).toBuffer()
+  return renderCard(node ?? paperCard(spec), fonts)
 }
 
 async function main() {

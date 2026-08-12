@@ -3,5 +3,6 @@
 interface Env {
 	TZ_OFFSET_SECONDS: "-18000";
 	ALLOWED_ORIGIN: "https://cailinpitt.com";
+	GITHUB_REPO: "cailinpitt/cailinpitt.com";
 	DB: D1Database;
 }

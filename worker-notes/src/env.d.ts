@@ -16,4 +16,13 @@ interface Env {
    * signs those devices out, which is the intended way to revoke a lost phone.
    */
   PUBLISH_TOKEN: string
+
+  /**
+   * Fine-grained PAT with Contents: read+write on this repo — fires the
+   * repository_dispatch that renders a note's OG card. Optional: a missing
+   * token just means notes go out without a card.
+   *
+   * Set with: wrangler secret put GITHUB_TOKEN
+   */
+  GITHUB_TOKEN?: string
 }

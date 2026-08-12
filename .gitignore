@@ -7,6 +7,9 @@ node_modules/
 dist/
 *.local
 
+# Local preview output from generate-og.mjs/generate-note-og.mjs --out
+.og-preview/
+
 # Cloudflare Worker build/runtime artifacts + local secrets, for every worker-*/
 worker-*/.wrangler/
 worker-*/.dev.vars

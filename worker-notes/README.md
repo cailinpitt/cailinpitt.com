@@ -139,10 +139,19 @@ For a path that *is* an id, four audiences:
 
 | | |
 |---|---|
-| `?format=json` | `{ note }`, the same shape a Worker read returns. This is what `fetchNote()` in `src/lib/notes.ts` calls — a same-origin fetch from the SPA, resolving a permalink by id directly instead of paging through `/notes.json` for it |
+| `?format=json` | `{ note }`, the same shape a Worker read returns. This is what `fetchNote()` in `src/lib/notes.ts` calls — always against the real `cailinpitt.com` origin, not a relative path, so it works from `localhost` in dev too. Resolves a permalink by id directly instead of paging through `/notes.json` for it |
 | curl/wget/etc. | The plain-text single-note view (`renderNoteText` in `src/text.ts`) |
-| a link-unfurl bot (`BOT_AGENT`) | Static HTML with real `<meta property="og:...">` tags — `noteHtml()` in `src/index.ts` — so a link shared to Slack/Discord/iMessage/etc. unfurls the note's own text rather than the feed's generic card. No `og:image`: the site's cards are rendered at build time with `satori`/`sharp` (`scripts/generate-og.mjs`), neither of which runs in a Worker |
+| a link-unfurl bot (`BOT_AGENT`) | Static HTML with real `<meta property="og:...">` tags — `noteHtml()` in `src/index.ts` — so a link shared to Slack/Discord/iMessage/etc. unfurls the note's own text *and* a card image. `og:image` points at a URL rendered asynchronously (see below); referenced unconditionally, so if the render hasn't finished yet the image 404s and the platform just shows no thumbnail |
 | anyone else, i.e. a real browser | `302` to `/notes#<id>`, where the note lives inside the interactive feed. User-Agent dependent, so this one response is never cached |
+
+**The card image is generated the same way the rest of the site's are — `satori`/`resvg`/`sharp`,
+which need Node and can't run in a Worker — just asynchronously instead of at build time.**
+`publish()`/`edit()` fire a `repository_dispatch` (`dispatchOgCard`, same pattern as
+`worker-photos`'s `dispatchBuild`), `.github/workflows/note-og.yml` runs
+`scripts/generate-note-og.mjs` (a minimal card — no kicker, no spine, just the note's own text and
+a small byline, matching the redesigned single-note page), and uploads it to R2 at
+`og/notes/<id>.jpg`. The image typically lags the note's own text by 30-90 seconds; a failed
+dispatch just costs that one note's card, same non-blocking trade `dispatchBuild` makes.
 
 The JSON and text/HTML variants are cached the same way as everything else here (`caches.default`,
 30-second TTL), keyed per id since they can't sit in the blanket `CACHED_READS` list — `purgeNote()`

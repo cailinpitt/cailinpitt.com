@@ -333,6 +333,7 @@ async function publish(
 
   const note = await insertNote(env.DB, checked.value, checked.context)
   purge(ctx, request)
+  ctx.waitUntil(dispatchOgCard(env, note.id))
   log({ level: 'info', published: { id: note.id, length: [...note.text].length } })
 
   // The created row goes back so the client can show it immediately rather than
@@ -359,6 +360,7 @@ async function edit(
   if (!note) return jsonNoStore({ id, error: 'no such note' }, 404, cors)
   purge(ctx, request)
   purgeNote(ctx, id)
+  ctx.waitUntil(dispatchOgCard(env, id))
   log({ level: 'info', edited: { id } })
 
   return jsonNoStore({ ok: true, note, url: `${SITE}/notes/${note.id}` }, 200, cors)
@@ -386,22 +388,48 @@ async function remove(
     : jsonNoStore({ id, error: 'no such note' }, 404, cors)
 }
 
+/**
+ * Ask GitHub to render this note's OG card (.github/workflows/note-og.yml).
+ * Rendering needs satori/resvg/sharp, none of which run in a Worker — see
+ * scripts/generate-note-og.mjs. A failure here is not a failed publish: the
+ * note is already live, and just goes out without a card image this time.
+ */
+async function dispatchOgCard(env: Env, id: string): Promise<void> {
+  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) return
+  try {
+    await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/dispatches`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.GITHUB_TOKEN}`,
+        accept: 'application/vnd.github+json',
+        'content-type': 'application/json',
+        'user-agent': 'cailinpitt-notes-worker',
+      },
+      body: JSON.stringify({ event_type: 'note-published', client_payload: { id } }),
+    })
+  } catch {
+    /* see comment above — nothing to do here */
+  }
+}
+
 // ---- the permalink ---------------------------------------------------------
 
 /**
  * A note as a static page: real `<meta property="og:...">` tags, so a link
  * shared to Slack/Discord/iMessage/etc. unfurls the note's own text instead
- * of the generic feed card. No `og:image` — the site's OG cards are rendered
- * at build time (scripts/generate-og.mjs, using satori/sharp), neither of
- * which can run in a Worker, and a per-note image isn't worth reimplementing
- * that pipeline for. This page is for bots; a real browser never sees it —
- * see permalink() below.
+ * of the generic feed card. `og:image` points at a card rendered
+ * asynchronously by .github/workflows/note-og.yml (dispatchOgCard above) —
+ * referenced unconditionally, since the R2 key is deterministic from the id.
+ * If the workflow hasn't finished yet, that URL 404s and the crawler just
+ * renders without a thumbnail. This page is for bots; a real browser never
+ * sees it — see permalink() below.
  */
 function noteHtml(note: Note): string {
   const heading = noteTitle(note.text)
   const description = note.text.replace(/\s+/g, ' ').trim()
   const permalink = `${SITE}/notes/${note.id}`
   const feedLink = `${SITE_NOTES}#${note.id}`
+  const image = `https://images.cailinpitt.com/og/notes/${note.id}.jpg`
 
   return [
     '<!doctype html>',
@@ -417,7 +445,10 @@ function noteHtml(note: Note): string {
     `<meta property="og:title" content="${escapeXml(heading)}">`,
     `<meta property="og:description" content="${escapeXml(description)}">`,
     `<meta property="og:url" content="${escapeXml(permalink)}">`,
-    '<meta name="twitter:card" content="summary">',
+    `<meta property="og:image" content="${escapeXml(image)}">`,
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    '<meta name="twitter:card" content="summary_large_image">',
     '</head>',
     '<body>',
     `<p>${escapeXml(note.text).replace(/\n/g, '<br>')}</p>`,
