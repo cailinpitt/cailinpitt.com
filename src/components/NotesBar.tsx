@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { LinkCard } from './LinkCard'
 import { NoteText } from './NoteText'
 import { formatRelative } from '../lib/datetime'
 import { fetchNotesNow, notePath, type Note } from '../lib/notes'
@@ -43,6 +44,7 @@ export function NotesBar() {
       <div className="note-body">
         <NoteText text={note.text} />
       </div>
+      <LinkCard note={note} />
       {context && (
         <p className="note-context">
           <span aria-hidden="true">{context.icon}</span> re:{' '}
