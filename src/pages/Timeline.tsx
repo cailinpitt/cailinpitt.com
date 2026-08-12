@@ -5,6 +5,7 @@ import { dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '
 import { imageUrl } from '../lib/images'
 import { fetchOlderCompactDays, fetchTimelineDays, type CompactDay } from '../lib/listening'
 import {
+  faviconUrl,
   fetchOlderArticles,
   fetchOlderBooks,
   fetchReading,
@@ -146,31 +147,103 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       fetchWatching(controller.signal),
       fetchMoving(controller.signal),
       fetchNotes(controller.signal),
-    ]).then(([listening, reading, watching, moving, notes]) => {
+    ]).then(async ([listening, reading, watching, moving, notes]) => {
       if (controller.signal.aborted) return
 
+      // Listening sets the window (see the module comment on buildTimeline):
+      // its first page is a fixed 14 days, deeper than any other stream's
+      // default first page. Without topping the rest up to match, a day near
+      // the bottom of that window would show scrobbles but silently drop
+      // articles/books/films/activities/notes that exist but hadn't been
+      // paged in yet — the same gap "Load older days" closes via topUp(),
+      // just not yet visible for a page nobody has paged past.
+      let initialFloor: string | null = null
       if (listening.status === 'fulfilled') {
         setDays(listening.value.days)
         setBefore(listening.value.nextBefore)
+        initialFloor =
+          listening.value.nextBefore != null && listening.value.days.length
+            ? listening.value.days[listening.value.days.length - 1].date
+            : null
       }
+
       if (reading.status === 'fulfilled') {
-        setArticles(reading.value.articles)
-        setArticleCursor(reading.value.nextCursor)
-        setBooks([...reading.value.currentlyReading, ...reading.value.finishedBooks])
-        setBookCursor(reading.value.nextBookCursor)
+        const [toppedArticles, toppedBooks] = await Promise.all([
+          topUp(
+            reading.value.articles,
+            reading.value.nextCursor,
+            initialFloor,
+            (article) => dayKey(article.readAt),
+            async (cursor, signal) => {
+              const page = await fetchOlderArticles(cursor, 20, signal)
+              return { items: page.articles, nextCursor: page.nextCursor }
+            },
+            controller.signal,
+          ),
+          topUp(
+            [...reading.value.currentlyReading, ...reading.value.finishedBooks],
+            reading.value.nextBookCursor,
+            initialFloor,
+            bookDate,
+            async (cursor, signal) => {
+              const page = await fetchOlderBooks(cursor, 24, signal)
+              return { items: page.books, nextCursor: page.nextCursor }
+            },
+            controller.signal,
+          ),
+        ])
+        setArticles(toppedArticles.items)
+        setArticleCursor(toppedArticles.cursor)
+        setBooks(toppedBooks.items)
+        setBookCursor(toppedBooks.cursor)
       }
       if (watching.status === 'fulfilled') {
-        setFilms(watching.value.films)
-        setFilmCursor(watching.value.nextCursor)
+        const toppedFilms = await topUp(
+          watching.value.films,
+          watching.value.nextCursor,
+          initialFloor,
+          filmDate,
+          async (cursor, signal) => {
+            const page = await fetchOlderFilms(cursor, 24, signal)
+            return { items: page.films, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        )
+        setFilms(toppedFilms.items)
+        setFilmCursor(toppedFilms.cursor)
       }
       if (moving.status === 'fulfilled') {
-        setActivities(moving.value.activities)
-        setActivityCursor(moving.value.nextCursor)
+        const toppedActivities = await topUp(
+          moving.value.activities,
+          moving.value.nextCursor,
+          initialFloor,
+          activityDate,
+          async (cursor, signal) => {
+            const page = await fetchOlderActivities(cursor, 30, signal)
+            return { items: page.activities, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        )
+        setActivities(toppedActivities.items)
+        setActivityCursor(toppedActivities.cursor)
       }
       if (notes.status === 'fulfilled') {
-        setNotes(notes.value.notes)
-        setNoteCursor(notes.value.nextCursor)
+        const toppedNotes = await topUp(
+          notes.value.notes,
+          notes.value.nextCursor,
+          initialFloor,
+          (note) => dayKey(note.createdAt),
+          async (cursor, signal) => {
+            const page = await fetchOlderNotes(cursor, 25, signal)
+            return { items: page.notes, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        )
+        setNotes(toppedNotes.items)
+        setNoteCursor(toppedNotes.cursor)
       }
+
+      if (controller.signal.aborted) return
 
       const streams = [listening, reading, watching, moving, notes]
       // Every stream failing means no network, a total outage, or an ad blocker
@@ -416,16 +489,32 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
                 {day.articles.length} {day.articles.length === 1 ? 'article' : 'articles'} saved
               </span>
               <ul className="timeline-sublist">
-                {day.articles.map((article) => (
-                  <li key={article.id}>
-                    <a href={article.url} target="_blank" rel="noopener noreferrer">
-                      {article.title ?? article.url}
-                    </a>
-                    <span className="timeline-detail">
-                      {article.site && ` — ${article.site}`} · {formatTime(article.readAt)}
-                    </span>
-                  </li>
-                ))}
+                {day.articles.map((article) => {
+                  const favicon = faviconUrl(article.url)
+                  return (
+                    <li key={article.id}>
+                      {favicon && (
+                        <img
+                          className="article-favicon"
+                          src={favicon}
+                          alt=""
+                          width={16}
+                          height={16}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )}
+                      <a href={article.url} target="_blank" rel="noopener noreferrer">
+                        {article.title ?? article.url}
+                      </a>
+                      <span className="timeline-detail">
+                        {article.site && ` — ${article.site}`} · {formatTime(article.readAt)}
+                      </span>
+                    </li>
+                  )
+                })}
               </ul>
             </span>
           </li>

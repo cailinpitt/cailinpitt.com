@@ -123,6 +123,16 @@ export const readingImage = (src: string | null): string | null => imageUrl(src 
 export const hardcoverUrl = (book: Book): string | null =>
   book.slug ? `https://hardcover.app/books/${book.slug}` : null
 
+/** Google's favicon service, keyed by hostname. Null on an unparseable URL. */
+export function faviconUrl(url: string): string | null {
+  try {
+    const { hostname } = new URL(url)
+    return `https://www.google.com/s2/favicons?sz=32&domain=${hostname}`
+  } catch {
+    return null
+  }
+}
+
 /**
  * "★★★★☆" from a 0–5 rating. Hardcover allows half stars; they round up here
  * rather than introducing a third glyph, and the accessible label carries the
