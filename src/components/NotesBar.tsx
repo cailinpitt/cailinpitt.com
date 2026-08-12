@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { NoteText } from './NoteText'
 import { formatRelative } from '../lib/datetime'
 import { fetchNotesNow, notePath, type Note } from '../lib/notes'
+import { resolveContext } from '../lib/notesContext'
 
 /**
  * The newest note, for the homepage — the counterpart to NowPlayingBar and
@@ -32,11 +34,21 @@ export function NotesBar() {
 
   if (!note) return null
 
+  // The homepage doesn't load photos/activities/posts either, so this is the
+  // same generic-label fallback /notes uses — see notesContext.ts.
+  const context = resolveContext(note.contextType, note.contextRef)
+
   return (
     <div className="note-bar">
       <div className="note-body">
         <NoteText text={note.text} />
       </div>
+      {context && (
+        <p className="note-context">
+          <span aria-hidden="true">{context.icon}</span> re:{' '}
+          {context.href ? <Link to={context.href}>{context.text}</Link> : context.text}
+        </p>
+      )}
       <p className="note-meta">
         <a className="note-permalink" href={notePath(note.id)}>
           {formatRelative(note.createdAt)}

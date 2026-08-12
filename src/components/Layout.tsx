@@ -5,8 +5,16 @@ import { NavMenu } from './NavMenu'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Layout() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
   const photosActive = pathname === '/photos' || pathname.startsWith('/photos/')
+
+  // A single note (/notes#<id>) gets no header or footer — just the note
+  // itself and a way back, the same "nothing to distract from the one thing
+  // you were sent to read" idea the permalink's whole existence is about. The
+  // rest of /notes (the feed) keeps the full chrome. This is a hash check
+  // rather than a route of its own because a note has no route of its own —
+  // see the note on notePath() in src/lib/notes.ts.
+  const minimal = pathname === '/notes' && hash.length > 1
 
   // The palette's trigger belongs in the nav and its dialog does not, so the open
   // state is held here rather than inside either half.
@@ -19,97 +27,103 @@ export function Layout() {
       {/* Reset scroll to top on navigation (and restore it on back/forward). React
           Router's data router doesn't do this automatically. */}
       <ScrollRestoration />
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <header className="site-header">
-        {/* Two rows, deliberately. The utility buttons used to be the last two
-            items of nav-links, which meant they wrapped along with the page
-            links — so every page added shoved them further, and they ended up
-            stranded on a row of their own. Keeping them on the title row
-            instead means the link list is the only thing that grows, and it is
-            the one part designed to wrap. */}
-        <nav className="site-nav" aria-label="Primary">
-          <div className="site-nav-top">
-            <Link to="/" className="site-title">
-              Cailin Pitt
-            </Link>
-            <div className="site-nav-controls">
-              <CommandPaletteTrigger onClick={openPalette} />
-              <ThemeToggle />
-            </div>
-          </div>
-          <ul className="nav-links">
-            <NavMenu
-              label="Me"
-              items={[
-                { to: '/about', label: 'About' },
-                { to: '/now', label: 'Now' },
-                { to: '/uses', label: 'Uses' },
-              ]}
-            />
-            <NavMenu
-              label="Logs"
-              items={[
-                { to: '/listening', label: 'Listening' },
-                { to: '/reading', label: 'Reading' },
-                { to: '/watching', label: 'Watching' },
-                { to: '/moving', label: 'Moving' },
-              ]}
-            />
-            <li>
-              <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
-                Photos
+      {!minimal && (
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+      )}
+      {!minimal && (
+        <header className="site-header">
+          {/* Two rows, deliberately. The utility buttons used to be the last two
+              items of nav-links, which meant they wrapped along with the page
+              links — so every page added shoved them further, and they ended up
+              stranded on a row of their own. Keeping them on the title row
+              instead means the link list is the only thing that grows, and it is
+              the one part designed to wrap. */}
+          <nav className="site-nav" aria-label="Primary">
+            <div className="site-nav-top">
+              <Link to="/" className="site-title">
+                Cailin Pitt
               </Link>
-            </li>
-            <li>
-              <NavLink to="/projects">Projects</NavLink>
-            </li>
-            <li>
-              <NavLink to="/blog">Blog</NavLink>
-            </li>
-            {/* Next to Blog rather than inside Logs: the Logs group is the
-                Worker-backed activity feeds, which are records of what happened.
-                Notes are writing, and they belong beside the other writing even
-                though they happen to be Worker-backed too. */}
-            <li>
-              <NavLink to="/notes">Notes</NavLink>
-            </li>
-            <li>
-              <NavLink to="/timeline">Timeline</NavLink>
-            </li>
-            <li>
-              <NavLink to="/guestbook">Guestbook</NavLink>
-            </li>
-            <li>
-              <NavLink to="/terminal">Terminal</NavLink>
-            </li>
-          </ul>
-        </nav>
-      </header>
+              <div className="site-nav-controls">
+                <CommandPaletteTrigger onClick={openPalette} />
+                <ThemeToggle />
+              </div>
+            </div>
+            <ul className="nav-links">
+              <NavMenu
+                label="Me"
+                items={[
+                  { to: '/about', label: 'About' },
+                  { to: '/now', label: 'Now' },
+                  { to: '/uses', label: 'Uses' },
+                ]}
+              />
+              <NavMenu
+                label="Logs"
+                items={[
+                  { to: '/listening', label: 'Listening' },
+                  { to: '/reading', label: 'Reading' },
+                  { to: '/watching', label: 'Watching' },
+                  { to: '/moving', label: 'Moving' },
+                ]}
+              />
+              <li>
+                <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
+                  Photos
+                </Link>
+              </li>
+              <li>
+                <NavLink to="/projects">Projects</NavLink>
+              </li>
+              <li>
+                <NavLink to="/blog">Blog</NavLink>
+              </li>
+              {/* Next to Blog rather than inside Logs: the Logs group is the
+                  Worker-backed activity feeds, which are records of what happened.
+                  Notes are writing, and they belong beside the other writing even
+                  though they happen to be Worker-backed too. */}
+              <li>
+                <NavLink to="/notes">Notes</NavLink>
+              </li>
+              <li>
+                <NavLink to="/timeline">Timeline</NavLink>
+              </li>
+              <li>
+                <NavLink to="/guestbook">Guestbook</NavLink>
+              </li>
+              <li>
+                <NavLink to="/terminal">Terminal</NavLink>
+              </li>
+            </ul>
+          </nav>
+        </header>
+      )}
 
       <CommandPalette open={paletteOpen} onOpen={openPalette} onClose={closePalette} />
 
-      <main id="main" className="site-main">
+      <main id="main" className={minimal ? 'site-main is-minimal' : 'site-main'}>
         <Outlet />
       </main>
 
-      <footer className="site-footer">
-        <p>
-          © {new Date().getFullYear()} Cailin Pitt · <Link to="/colophon">Colophon</Link> ·{' '}
-          <Link to="/privacy">Privacy</Link>
-        </p>
-        <ul className="social-links">
-          <li>
-            <a href="https://github.com/CailinPitt" rel="me">
-              GitHub
-            </a>
-          </li>
-          <li>
-            <a href="https://iheartrss.com/">I &hearts; RSS</a>
-          </li>
-        </ul>
-      </footer>
+      {!minimal && (
+        <footer className="site-footer">
+          <p>
+            © {new Date().getFullYear()} Cailin Pitt · <Link to="/colophon">Colophon</Link> ·{' '}
+            <Link to="/privacy">Privacy</Link>
+          </p>
+          <ul className="social-links">
+            <li>
+              <a href="https://github.com/CailinPitt" rel="me">
+                GitHub
+              </a>
+            </li>
+            <li>
+              <a href="https://iheartrss.com/">I &hearts; RSS</a>
+            </li>
+          </ul>
+        </footer>
+      )}
     </>
   )
 }

@@ -34,6 +34,21 @@
   --rule: #e5dfd5;
   --accent: #b34a26;
   --accent-fg: #ffffff;
+
+  /* /timeline's per-stream accents — tints of --accent toward --fg rather than
+     seven new hues, so a busy day is easier to scan without breaking the
+     single-accent rule the rest of the site keeps. Derived from --accent/--fg,
+     which already redefine themselves for dark mode below, so these need no
+     dark-mode block of their own — they recompute along with the tokens they
+     mix. Notes gets the full accent as the newest, most active stream; the
+     others step down from there. */
+  --stream-notes: var(--accent);
+  --stream-writing: color-mix(in srgb, var(--accent) 85%, var(--fg) 15%);
+  --stream-moving: color-mix(in srgb, var(--accent) 70%, var(--fg) 30%);
+  --stream-listening: color-mix(in srgb, var(--accent) 55%, var(--fg) 45%);
+  --stream-watching: color-mix(in srgb, var(--accent) 40%, var(--fg) 60%);
+  --stream-reading: color-mix(in srgb, var(--accent) 25%, var(--fg) 75%);
+  --stream-photos: color-mix(in srgb, var(--accent) 10%, var(--fg) 90%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -336,6 +351,17 @@ img {
 
 .site-main {
   padding-block: 2.5rem 5rem;
+}
+/* The single-note permalink view (Layout.tsx's `minimal`, no header/footer) —
+   a note centered in the viewport rather than sitting where a header used to
+   be, so the page reads as "this is the whole thing" rather than a page with
+   its top cut off. */
+.site-main.is-minimal {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-block: 3rem;
 }
 
 .site-footer {
@@ -2450,6 +2476,16 @@ a.film-link:hover .film-title {
   color: var(--muted);
 }
 
+/* Same calendar date in years already loaded — see onThisDay() in
+   lib/timeline.ts. Sits above the main list, reusing .timeline-days/.timeline-day
+   for its rows so it inherits the same look rather than a second style. */
+.timeline-otd {
+  margin-top: 2.5rem;
+}
+.timeline-otd .timeline-days {
+  margin-top: 1rem;
+}
+
 .timeline-days {
   list-style: none;
   margin: 2.5rem 0 0;
@@ -2495,6 +2531,32 @@ a.film-link:hover .film-title {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   line-height: 1.5;
+  /* A subtle per-stream cue on a busy day — see the --stream-* tokens near the
+     top of this file. Transparent by default so a stream this page doesn't
+     tag yet degrades to the plain row rather than an empty gap. */
+  border-left: 2px solid transparent;
+  padding-left: 0.6rem;
+}
+.timeline-event[data-stream='listening'] {
+  border-left-color: var(--stream-listening);
+}
+.timeline-event[data-stream='reading'] {
+  border-left-color: var(--stream-reading);
+}
+.timeline-event[data-stream='watching'] {
+  border-left-color: var(--stream-watching);
+}
+.timeline-event[data-stream='moving'] {
+  border-left-color: var(--stream-moving);
+}
+.timeline-event[data-stream='writing'] {
+  border-left-color: var(--stream-writing);
+}
+.timeline-event[data-stream='notes'] {
+  border-left-color: var(--stream-notes);
+}
+.timeline-event[data-stream='photos'] {
+  border-left-color: var(--stream-photos);
 }
 .timeline-icon {
   font-size: 0.9em;
@@ -3456,6 +3518,9 @@ a.guestbook-name:hover {
 }
 .moving section {
   margin-top: 3rem;
+}
+.moving-year .eyebrow {
+  margin-bottom: 0.75rem;
 }
 .moving-error,
 .moving-empty {
@@ -4592,9 +4657,65 @@ a.guestbook-name:hover {
   color: var(--muted);
   font-size: var(--step--1);
 }
-/* Stands in for .notes-header on the permalink view, which shows one note and
-   a way back rather than the title and the RSS line. */
+
+/* The live filter above the feed — same shape as .post-filter on /blog, over
+   whatever's already been paged into memory (see filterNotes() in Notes.tsx). */
+.notes-filter {
+  margin-bottom: 2rem;
+}
+.notes-filter input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.4;
+}
+.notes-filter input::placeholder {
+  color: var(--muted);
+}
+.notes-filter input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.notes-count {
+  margin: 0.5rem 0 0;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A note's optional "re: …" reference — see notesContext.ts. Sits between the
+   body and the meta line, quieter than both: it's context for the note, not
+   the note itself. */
+.note-context {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.note-context a {
+  color: var(--muted);
+  text-decoration-color: var(--rule);
+}
+.note-context a:hover {
+  color: var(--accent);
+}
+/* Stands in for both .notes-header and the site header on the permalink view
+   (Layout.tsx omits its own header/footer there — see the `minimal` check),
+   so this is the only way back to anything: home on one side, the feed on
+   the other. */
 .notes-back {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   margin: 0 0 2.5rem;
   font-family: var(--font-sans);
   font-size: var(--step--1);
@@ -4604,6 +4725,19 @@ a.guestbook-name:hover {
   color: var(--muted);
 }
 .notes-back a:hover {
+  color: var(--accent);
+}
+/* The one identity mark left once the site header is gone — same treatment
+   as .site-title, so it still reads as "you're on Cailin's site" and not as
+   just another utility link next to "All notes". Selector matches
+   `.notes-back a`'s specificity so this doesn't need to fight it for color. */
+.notes-back a.notes-back-home {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: var(--step-0);
+  color: var(--fg);
+}
+.notes-back a.notes-back-home:hover {
   color: var(--accent);
 }
 
@@ -4807,6 +4941,31 @@ a.guestbook-name:hover {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* The optional "attach to" picker — see NotesCompose.tsx. Two selects side by
+   side (type, then the thing itself) rather than a single control, since the
+   second one's contents depend on the first. */
+.compose-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.compose-context select {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  padding: 0.4rem 0.6rem;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.compose-context-loading {
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
 .compose-bar {
   display: flex;
   align-items: center;

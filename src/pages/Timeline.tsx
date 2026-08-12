@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { dayKey, formatDayLabel, formatNumber, formatTime } from '../lib/datetime'
+import { dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
 import { fetchOlderCompactDays, fetchTimelineDays, type CompactDay } from '../lib/listening'
 import {
@@ -27,10 +27,11 @@ import {
   type Activity,
 } from '../lib/moving'
 import { fetchNotes, fetchOlderNotes, notePath, type Note } from '../lib/notes'
+import { resolveContext, type ContextSources } from '../lib/notesContext'
 import { NoteText } from '../components/NoteText'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
-import { buildTimeline, type TimelineDay } from '../lib/timeline'
+import { buildTimeline, onThisDay, type TimelineDay } from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
 
 interface TimelineData {
@@ -304,6 +305,22 @@ export function Component() {
   const { posts, photos } = useLoaderData() as TimelineData
   const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos)
 
+  // Every activity already folded into a loaded day — not a separate fetch,
+  // just what's already on the page, for resolveContext() to search when a
+  // note references one (see notesContext.ts).
+  const activities = useMemo(() => timeline.flatMap((day) => day.activities), [timeline])
+  const contextSources: ContextSources = { posts, photos, activities }
+
+  // Same calendar date in years already loaded, minus today itself — today's
+  // row is already the top of the list below, not something "on this day"
+  // needs to repeat. See onThisDay() in lib/timeline.ts for why this doesn't
+  // reach past what's already on the page.
+  const monthDay = keyForOffset(0).slice(5)
+  const otd = useMemo(
+    () => onThisDay(timeline, monthDay).filter((day) => day.date !== keyForOffset(0)),
+    [timeline, monthDay],
+  )
+
   return (
     <div className="timeline">
       <Seo
@@ -340,9 +357,22 @@ export function Component() {
         </div>
       ) : (
         <>
+          {otd.length > 0 && (
+            <section className="timeline-otd" aria-labelledby="timeline-otd-heading">
+              <h2 id="timeline-otd-heading" className="eyebrow">
+                On this day
+              </h2>
+              <ol className="timeline-days">
+                {otd.map((day) => (
+                  <TimelineRow key={day.date} day={day} context={contextSources} />
+                ))}
+              </ol>
+            </section>
+          )}
+
           <ol className="timeline-days">
             {timeline.map((day) => (
-              <TimelineRow key={day.date} day={day} />
+              <TimelineRow key={day.date} day={day} context={contextSources} />
             ))}
           </ol>
           {hasMore && (
@@ -356,7 +386,7 @@ export function Component() {
   )
 }
 
-function TimelineRow({ day }: { day: TimelineDay }) {
+function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSources }) {
   return (
     <li className="timeline-day">
       <h2 className="timeline-date">
@@ -365,7 +395,7 @@ function TimelineRow({ day }: { day: TimelineDay }) {
       </h2>
       <ul className="timeline-events">
         {day.scrobbles > 0 && (
-          <li className="timeline-event">
+          <li className="timeline-event" data-stream="listening">
             <span className="timeline-icon" aria-hidden="true">
               🎧
             </span>
@@ -377,7 +407,7 @@ function TimelineRow({ day }: { day: TimelineDay }) {
         )}
 
         {day.articles.length > 0 && (
-          <li className="timeline-event">
+          <li className="timeline-event" data-stream="reading">
             <span className="timeline-icon" aria-hidden="true">
               🔗
             </span>
@@ -413,7 +443,7 @@ function TimelineRow({ day }: { day: TimelineDay }) {
         ))}
 
         {day.activities.map((activity) => (
-          <li className="timeline-event" key={activity.id}>
+          <li className="timeline-event" data-stream="moving" key={activity.id}>
             <span className="timeline-icon" aria-hidden="true">
               {kindIcon(activity.kind)}
             </span>
@@ -424,7 +454,7 @@ function TimelineRow({ day }: { day: TimelineDay }) {
         ))}
 
         {day.posts.map((post) => (
-          <li className="timeline-event" key={post.path}>
+          <li className="timeline-event" data-stream="writing" key={post.path}>
             <span className="timeline-icon" aria-hidden="true">
               ✍️
             </span>
@@ -435,7 +465,7 @@ function TimelineRow({ day }: { day: TimelineDay }) {
         ))}
 
         {day.notes.length > 0 && (
-          <li className="timeline-event">
+          <li className="timeline-event" data-stream="notes">
             <span className="timeline-icon" aria-hidden="true">
               💬
             </span>
@@ -444,21 +474,34 @@ function TimelineRow({ day }: { day: TimelineDay }) {
                 {day.notes.length} {day.notes.length === 1 ? 'note' : 'notes'}
               </span>
               <ul className="timeline-sublist">
-                {day.notes.map((note) => (
-                  <li key={note.id}>
-                    <a className="timeline-note" href={notePath(note.id)}>
-                      <NoteText text={note.text} />
-                    </a>
-                    <span className="timeline-detail">{formatTime(note.createdAt)}</span>
-                  </li>
-                ))}
+                {day.notes.map((note) => {
+                  const noteContext = resolveContext(note.contextType, note.contextRef, context)
+                  return (
+                    <li key={note.id}>
+                      <a className="timeline-note" href={notePath(note.id)}>
+                        <NoteText text={note.text} />
+                      </a>
+                      {noteContext && (
+                        <p className="note-context">
+                          <span aria-hidden="true">{noteContext.icon}</span> re:{' '}
+                          {noteContext.href ? (
+                            <Link to={noteContext.href}>{noteContext.text}</Link>
+                          ) : (
+                            noteContext.text
+                          )}
+                        </p>
+                      )}
+                      <span className="timeline-detail">{formatTime(note.createdAt)}</span>
+                    </li>
+                  )
+                })}
               </ul>
             </span>
           </li>
         )}
 
         {day.photos.length > 0 && (
-          <li className="timeline-event">
+          <li className="timeline-event" data-stream="photos">
             <span className="timeline-icon" aria-hidden="true">
               📸
             </span>
@@ -500,7 +543,7 @@ function FilmEvent({ film }: { film: Film }) {
   const detail = [stars(film.rating), film.rewatch ? 'rewatch' : null].filter(Boolean).join(' · ')
 
   return (
-    <li className="timeline-event">
+    <li className="timeline-event" data-stream="watching">
       <span className="timeline-icon" aria-hidden="true">
         🎬
       </span>
@@ -522,7 +565,7 @@ function FilmEvent({ film }: { film: Film }) {
 function BookEvent({ book, verb }: { book: Book; verb: 'Finished' | 'Started' }) {
   const href = hardcoverUrl(book)
   return (
-    <li className="timeline-event">
+    <li className="timeline-event" data-stream="reading">
       <span className="timeline-icon" aria-hidden="true">
         📚
       </span>

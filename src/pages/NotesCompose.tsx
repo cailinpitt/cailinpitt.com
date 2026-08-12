@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { NoteText } from '../components/NoteText'
 import { formatRelative } from '../lib/datetime'
+import { fetchMoving, longDate, summary as activitySummary, type Activity } from '../lib/moving'
 import {
   editNote,
   fetchNotes,
@@ -14,8 +16,22 @@ import {
   removeNote,
   saveToken,
   NoteError,
+  type ContextType,
   type Note,
+  type NoteContext,
 } from '../lib/notes'
+import { resolveContext } from '../lib/notesContext'
+import { byNewest, formatPhotoDateShort, type Photo } from '../lib/photos'
+import type { PostSummary } from '../lib/posts'
+
+export async function loader(): Promise<PostSummary[] | null> {
+  if (!import.meta.env.SSR) {
+    if (!import.meta.env.DEV) return null
+    return (await import('../lib/content.client')).loadPostSummaries()
+  }
+  const { loadPostSummaries } = await import('../lib/content.server')
+  return loadPostSummaries()
+}
 
 // Writing a note from a computer.
 //
@@ -44,6 +60,7 @@ const RECENT = 10
 const WARN_AT = 60
 
 export function Component() {
+  const posts = useLoaderData() as PostSummary[] | null
   const [token, setToken] = useState('')
   const [tokenLoaded, setTokenLoaded] = useState(false)
   const [text, setText] = useState('')
@@ -55,6 +72,47 @@ export function Component() {
   const boxRef = useRef<HTMLTextAreaElement>(null)
   const textId = useId()
   const tokenId = useId()
+  const contextTypeId = useId()
+  const contextRefId = useId()
+
+  // The optional "attach this note to something" picker. Posts come free from
+  // the loader above (build-time data, already in the bundle); photos and
+  // activities are loaded only once their type is actually picked — a 182KB
+  // manifest and a Worker call respectively, neither worth paying for on every
+  // visit to this page. See notesContext.ts for how the reference renders once
+  // published.
+  const [contextType, setContextType] = useState<ContextType | ''>('')
+  const [contextRef, setContextRef] = useState('')
+  const [photos, setPhotos] = useState<Photo[] | null>(null)
+  const [photosLoading, setPhotosLoading] = useState(false)
+  const [activities, setActivities] = useState<Activity[] | null>(null)
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
+
+  const ensureContextList = useCallback(
+    (type: ContextType) => {
+      if (type === 'photo' && photos === null && !photosLoading) {
+        setPhotosLoading(true)
+        import('../lib/photos.json')
+          .then((mod) => setPhotos([...(mod.default as Photo[])].sort(byNewest)))
+          .catch(() => setPhotos([]))
+          .finally(() => setPhotosLoading(false))
+      }
+      if (type === 'activity' && activities === null && !activitiesLoading) {
+        setActivitiesLoading(true)
+        fetchMoving()
+          .then((bundle) => setActivities(bundle.activities))
+          .catch(() => setActivities([]))
+          .finally(() => setActivitiesLoading(false))
+      }
+    },
+    [photos, photosLoading, activities, activitiesLoading],
+  )
+
+  const onContextTypeChange = (value: ContextType | '') => {
+    setContextType(value)
+    setContextRef('')
+    if (value) ensureContextList(value)
+  }
 
   // localStorage is not available while prerendering, so the token is read after
   // mount. `tokenLoaded` keeps the page from flashing the "paste your token"
@@ -83,6 +141,8 @@ export function Component() {
   const over = left < 0
   const empty = !text.trim()
 
+  const context: NoteContext | null = contextType && contextRef ? { type: contextType, ref: contextRef } : null
+
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (busy || empty || over || !token) return
@@ -90,10 +150,12 @@ export function Component() {
     setError(null)
     try {
       const note = editing
-        ? await editNote(editing, text, token)
-        : await publishNote(text, token)
+        ? await editNote(editing, text, token, context)
+        : await publishNote(text, token, context)
       setText('')
       setEditing(null)
+      setContextType('')
+      setContextRef('')
       setPublished(note)
       // Prepend locally as well as refetching: the read endpoint sits behind a
       // 30-second edge cache which the Worker purges on write, but the purge is
@@ -117,6 +179,9 @@ export function Component() {
   const startEdit = (note: Note) => {
     setEditing(note.id)
     setText(note.text)
+    setContextType(note.contextType ?? '')
+    setContextRef(note.contextRef ?? '')
+    if (note.contextType) ensureContextList(note.contextType)
     setPublished(null)
     setError(null)
     boxRef.current?.focus()
@@ -125,6 +190,8 @@ export function Component() {
   const cancelEdit = () => {
     setEditing(null)
     setText('')
+    setContextType('')
+    setContextRef('')
   }
 
   const onDelete = async (note: Note) => {
@@ -211,6 +278,76 @@ export function Component() {
                 spellCheck
               />
 
+              <div className="compose-context">
+                <label className="visually-hidden" htmlFor={contextTypeId}>
+                  Attach to
+                </label>
+                <select
+                  id={contextTypeId}
+                  value={contextType}
+                  onChange={(event) => onContextTypeChange(event.target.value as ContextType | '')}
+                >
+                  <option value="">No reference</option>
+                  <option value="post">A post</option>
+                  <option value="photo">A photo</option>
+                  <option value="activity">An activity</option>
+                </select>
+
+                {contextType === 'post' && (
+                  <select
+                    id={contextRefId}
+                    aria-label="Choose a post"
+                    value={contextRef}
+                    onChange={(event) => setContextRef(event.target.value)}
+                  >
+                    <option value="">Choose a post…</option>
+                    {(posts ?? []).map((post) => (
+                      <option key={post.path} value={post.path}>
+                        {post.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {contextType === 'photo' &&
+                  (photosLoading ? (
+                    <span className="compose-context-loading">Loading photos…</span>
+                  ) : (
+                    <select
+                      id={contextRefId}
+                      aria-label="Choose a photo"
+                      value={contextRef}
+                      onChange={(event) => setContextRef(event.target.value)}
+                    >
+                      <option value="">Choose a photo…</option>
+                      {(photos ?? []).map((photo) => (
+                        <option key={photo.id} value={photo.id}>
+                          {formatPhotoDateShort(photo)} — {photo.alt || photo.id}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+
+                {contextType === 'activity' &&
+                  (activitiesLoading ? (
+                    <span className="compose-context-loading">Loading activities…</span>
+                  ) : (
+                    <select
+                      id={contextRefId}
+                      aria-label="Choose an activity"
+                      value={contextRef}
+                      onChange={(event) => setContextRef(event.target.value)}
+                    >
+                      <option value="">Choose an activity…</option>
+                      {(activities ?? []).map((activity) => (
+                        <option key={activity.id} value={activity.id}>
+                          {longDate(activity.startDate)} — {activitySummary(activity)}
+                        </option>
+                      ))}
+                    </select>
+                  ))}
+              </div>
+
               <div className="compose-bar">
                 {/* role="status" so the count is announced as it changes rather
                     than only being visible. */}
@@ -246,11 +383,22 @@ export function Component() {
                   Recent
                 </h2>
                 <ol className="note-list">
-                  {recent.map((note) => (
+                  {recent.map((note) => {
+                    const noteContext = resolveContext(note.contextType, note.contextRef, {
+                      posts: posts ?? undefined,
+                      photos: photos ?? undefined,
+                      activities: activities ?? undefined,
+                    })
+                    return (
                     <li key={note.id} className="note">
                       <div className="note-body">
                         <NoteText text={note.text} />
                       </div>
+                      {noteContext && (
+                        <p className="note-context">
+                          <span aria-hidden="true">{noteContext.icon}</span> re: {noteContext.text}
+                        </p>
+                      )}
                       <p className="note-meta">
                         <a className="note-permalink" href={notePath(note.id)}>
                           {formatRelative(note.createdAt)}
@@ -271,7 +419,8 @@ export function Component() {
                         </span>
                       </p>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ol>
               </section>
             )}

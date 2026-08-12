@@ -7,7 +7,8 @@ the compose page.
 ```
 phone Shortcut ─┐
                 ├─→ POST /notes ─→ D1 ─→ /notes.json ─→ the /notes page
-/notes/compose ─┘                   └─→ /feed.xml    ─→ RSS readers
+/notes/compose ─┘                   ├─→ /feed.xml    ─→ RSS readers
+                                     └─→ cailinpitt.com/notes/<id> ─→ a shared link
 ```
 
 ## The one decision worth understanding
@@ -27,8 +28,8 @@ The costs are real and are accepted:
 
 | | |
 |---|---|
-| **No page per note** | A note is addressed as `/notes#<id>`, an anchor on the feed. GitHub Pages has no router that could resolve `/notes/<id>` into anything, and the site [rejected the `404.html` redirect hack](../plan.md) years ago for good reasons |
-| **Invisible to crawlers** | A search engine sees the feed's shell. `/feed.xml` below is what keeps notes syndicable |
+| **No page built for a note at deploy time** | GitHub Pages has no router that could resolve `/notes/<id>` into anything, and the site [rejected the `404.html` redirect hack](../plan.md) years ago for good reasons. Instead this Worker renders one on request — see [Permalink](#permalink--cailinpittcomnotesid) below — which costs a Worker route on the apex zone rather than a build step, and keeps the "live the moment it's published" property intact |
+| **Invisible to crawlers that don't run JS** | The permalink's HTML carries real `<meta property="og:...">` tags for a link-unfurl bot, but a general crawler indexing the page gets redirected into the SPA like any other browser. `/feed.xml` below is what keeps notes syndicable either way |
 | **A Worker outage empties the page** | Same contract as `/listening` and `/reading` — the prerendered shell stays, the content doesn't arrive |
 
 If a note ever deserves to be a real page, it wasn't a note. It was a post, and `content/blog/`
@@ -70,6 +71,12 @@ Point the site at it with `VITE_NOTES_API=http://localhost:8787` in the repo roo
 `text` is read from JSON, a form field, or the raw body — whichever the caller found easiest. The
 form and raw shapes exist for Shortcuts, whose *Get Contents of URL* action makes JSON awkward to
 build by hand; the same accommodation `worker-photos` makes, for the same reason.
+
+A JSON body may also carry `contextType` (`"photo"` | `"activity"` | `"post"`) and `contextRef`
+(that thing's own id — a photo id, an activity id, or a post's path), an optional reference to one
+other piece of content on the site. Both or neither: one without the other is refused rather than
+guessed at (`validateContext` in `src/validate.ts`). The Shortcut and raw-body paths never send
+these, which is fine — every note's reference is optional.
 
 ```sh
 TOKEN=…
@@ -118,6 +125,33 @@ added at the top, so they aren't purged.
 > has to name exactly the variants the routes pass to `cached()` — including `/` **and** `/notes`,
 > which are two keys for the one terminal view.
 
+## Permalink — `cailinpitt.com/notes/<id>`
+
+A second route on this same Worker (`wrangler.jsonc`) puts it in front of one path on the apex
+zone: `cailinpitt.com` is GitHub Pages behind Cloudflare, and `{ "pattern": "cailinpitt.com/notes/*",
+"zone_name": "cailinpitt.com" }` intercepts only `/notes/*` there, leaving the rest of the zone
+(including `/notes` itself, and `/notes/compose`) served by GitHub Pages untouched. Inside the
+Worker, a path under `/notes/*` that isn't a 4–32 hex-char id is passed straight through with
+`return fetch(request)` — a same-zone `fetch()` bypasses Cloudflare's routing layer and goes
+directly to the configured origin, so this can't loop back into the route that dispatched here.
+
+For a path that *is* an id, four audiences:
+
+| | |
+|---|---|
+| `?format=json` | `{ note }`, the same shape a Worker read returns. This is what `fetchNote()` in `src/lib/notes.ts` calls — a same-origin fetch from the SPA, resolving a permalink by id directly instead of paging through `/notes.json` for it |
+| curl/wget/etc. | The plain-text single-note view (`renderNoteText` in `src/text.ts`) |
+| a link-unfurl bot (`BOT_AGENT`) | Static HTML with real `<meta property="og:...">` tags — `noteHtml()` in `src/index.ts` — so a link shared to Slack/Discord/iMessage/etc. unfurls the note's own text rather than the feed's generic card. No `og:image`: the site's cards are rendered at build time with `satori`/`sharp` (`scripts/generate-og.mjs`), neither of which runs in a Worker |
+| anyone else, i.e. a real browser | `302` to `/notes#<id>`, where the note lives inside the interactive feed. User-Agent dependent, so this one response is never cached |
+
+The JSON and text/HTML variants are cached the same way as everything else here (`caches.default`,
+30-second TTL), keyed per id since they can't sit in the blanket `CACHED_READS` list — `purgeNote()`
+drops a note's three cached variants explicitly on edit and delete, in addition to the usual
+`purge()`. Its cache keys are hardcoded to `SITE` rather than taken from the request, unlike
+`purge()`: the permalink is only ever served on the apex zone, never on this Worker's own `notes.…`
+hostname, and a write typically *arrives* on `notes.…` — using the request's origin here would
+purge a key that was never written.
+
 ## Why RSS is served here rather than written at build time
 
 `scripts/generate-rss.mjs` builds the site's own `/feed.xml` by lifting the prerendered HTML of
@@ -151,16 +185,22 @@ Text action.
 
 ```sql
 CREATE TABLE notes (
-  id         TEXT    PRIMARY KEY,  -- 6 random bytes as hex; this is the permalink
-  text       TEXT    NOT NULL,     -- plain text, <= 480 code points
-  created_at INTEGER NOT NULL,     -- unix seconds (UTC)
-  edited_at  INTEGER               -- unix seconds, or NULL
+  id           TEXT    PRIMARY KEY,  -- 6 random bytes as hex; this is the permalink
+  text         TEXT    NOT NULL,     -- plain text, <= 480 code points
+  created_at   INTEGER NOT NULL,     -- unix seconds (UTC)
+  edited_at    INTEGER,              -- unix seconds, or NULL
+  context_type TEXT,                 -- 'photo' | 'activity' | 'post', or NULL
+  context_ref  TEXT                  -- that thing's own id/path, or NULL
 );
 ```
 
 Ids are random rather than sequential for the same reason the guestbook's are: an incrementing id
 would publish how many notes have ever been written, including the ones deleted a minute after
 posting.
+
+`context_type`/`context_ref` were added by `schema-v2.sql` (`ALTER TABLE`, run once against an
+existing database — see the comment in that file); a fresh `schema.sql` includes them from the
+start. Both are nullable and always travel together — see `validateContext()` in `src/validate.ts`.
 
 The pagination cursor is `<created_at>_<id>`, not a bare timestamp. Two notes in the same second
 is one Shortcut firing twice on a flaky connection — a thing that actually happens — and a

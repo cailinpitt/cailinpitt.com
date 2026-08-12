@@ -11,6 +11,20 @@
 // eighteen visible characters. The one place it would matter is the RSS feed,
 // which escapes on the way out (see feed.ts).
 
+// Defined here rather than in store.ts and imported the other way around:
+// store.ts uses D1's ambient Cloudflare Workers types, which aren't available
+// to the site's own `tsc` — and tests/notes.test.ts imports this file (see the
+// header above) to cover the parts worth testing from the site's suite. A type
+// import from store.ts would drag D1Database into the site's type-check along
+// with it.
+export type ContextType = 'photo' | 'activity' | 'post'
+
+/** The two context fields together, or absent for an ordinary note. */
+export interface NoteContext {
+  type: ContextType
+  ref: string
+}
+
 /**
  * The cap, in Unicode code points — so an emoji counts as one character, not
  * two, which is the count the compose box shows and the only one a person would
@@ -24,7 +38,7 @@
 export const MAX_LENGTH = 480
 
 export type Validation =
-  | { ok: true; value: string }
+  | { ok: true; value: string; context: NoteContext | null }
   | { ok: false; error: string }
 
 /** Code-point length. `'👋'.length` is 2; this counts it as 1. */
@@ -61,6 +75,35 @@ export function clean(raw: unknown): string {
     .trim()
 }
 
+/** The only things a note is allowed to reference. */
+const CONTEXT_TYPES = new Set<ContextType>(['photo', 'activity', 'post'])
+
+/** A photo/activity id or a post path — generous, but not unbounded. */
+const MAX_CONTEXT_REF = 200
+
+/**
+ * `contextType` and `contextRef` travel together: both present, or both
+ * absent. One without the other is a client bug (a picker that set the type
+ * but not the ref, or vice versa) rather than something to guess at, so it is
+ * refused rather than silently dropped.
+ */
+function validateContext(
+  rawType: unknown,
+  rawRef: unknown,
+): { ok: true; value: NoteContext | null } | { ok: false; error: string } {
+  const hasType = typeof rawType === 'string' && rawType.length > 0
+  const hasRef = typeof rawRef === 'string' && rawRef.length > 0
+
+  if (!hasType && !hasRef) return { ok: true, value: null }
+  if (!hasType || !CONTEXT_TYPES.has(rawType as ContextType)) {
+    return { ok: false, error: 'That reference type is not one this site knows about.' }
+  }
+  if (!hasRef || (rawRef as string).length > MAX_CONTEXT_REF) {
+    return { ok: false, error: 'A reference needs something to point at.' }
+  }
+  return { ok: true, value: { type: rawType as ContextType, ref: rawRef as string } }
+}
+
 export function validate(payload: unknown): Validation {
   const body = (payload ?? {}) as Record<string, unknown>
   const text = clean(body.text)
@@ -72,5 +115,9 @@ export function validate(payload: unknown): Validation {
       error: `That is ${glyphs(text)} characters — the limit is ${MAX_LENGTH}.`,
     }
   }
-  return { ok: true, value: text }
+
+  const context = validateContext(body.contextType, body.contextRef)
+  if (!context.ok) return context
+
+  return { ok: true, value: text, context: context.value }
 }

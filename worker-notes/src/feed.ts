@@ -24,7 +24,7 @@ export const FEED_ITEMS = 50
  * parses markup, so it is the one place escaping matters — the site renders
  * notes as React text nodes and the curl view writes plain bytes.
  */
-const xml = (s: string): string =>
+export const xml = (s: string): string =>
   s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -41,7 +41,7 @@ const rfc822 = (uts: number): string => new Date(uts * 1000).toUTCString()
  * show a title list get something meaningful, and readers that show the body get
  * the note itself either way.
  */
-function title(text: string): string {
+export function title(text: string): string {
   const firstLine = text.split('\n').find((line) => line.trim()) ?? text
   const clean = firstLine.trim()
   return clean.length <= 80 ? clean : `${clean.slice(0, 79)}…`
@@ -70,10 +70,9 @@ export function renderFeed(page: NotePage, site: string, feedUrl: string): strin
 
   const items = notes
     .map((note: Note) => {
-      // Every note's link is the feed page anchored to that note. Notes have no
-      // page of their own — see the permalink note in the README — so this is
-      // the real address of the thing, not a stand-in for one.
-      const link = `${self}#${note.id}`
+      // Every note's link is its own permalink, served by this Worker at
+      // cailinpitt.com/notes/<id> — see the permalink route in index.ts.
+      const link = `${site}/notes/${note.id}`
       return [
         '    <item>',
         `      <title>${xml(title(note.text))}</title>`,

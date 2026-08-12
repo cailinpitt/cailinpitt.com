@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { NoteText } from '../components/NoteText'
 import { formatRelative, formatTime } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
 import {
+  fetchNote,
   fetchNotes,
   fetchOlderNotes,
   notePath,
+  noteUrl,
   NOTES_FEED_URL,
   type Note,
 } from '../lib/notes'
+import { resolveContext } from '../lib/notesContext'
 import { pageSchema } from '../lib/structuredData'
 
 const AVATAR = imageUrl('/images/about/cailin.webp')
@@ -33,19 +36,20 @@ const AVATAR = imageUrl('/images/about/cailin.webp')
 // Notes live in D1 and are published from a phone; the whole point is that one
 // is live seconds after it is typed, without a build. So this page is a static
 // shell and the notes arrive over fetch, the same arrangement /listening and
-// /reading use. The cost is that a note has no prerendered page of its own and
-// isn't visible to a crawler — the Worker's RSS feed is what keeps it
-// syndicable. See the header of worker-notes/src/index.ts.
+// /reading use. The feed itself still has no prerendered page of its own — but
+// a single note now does, at cailinpitt.com/notes/<id>, served at the edge by
+// worker-notes rather than built at deploy time. See the header of
+// worker-notes/src/index.ts for why that's a Worker route and not a build step.
 //
-// ## Why a permalink pages through the feed instead of fetching by id
+// ## Why landing on /notes#<id> still fetches by id rather than paging
 //
-// The Worker's only read endpoint is `/notes.json`, paged newest-first — there
-// is no `GET /notes/:id`. So landing on `/notes#<id>` walks that same paging
-// cursor, checking each page for the id, until it turns up or the feed runs
-// out. A recent note resolves in one request; a very old one costs a request
-// per page between here and there. That's the accepted trade for not standing
-// up a second endpoint behind a feature reached by clicking a timestamp, not
-// by search traffic.
+// `/notes#<id>` (this hash, not the permalink above) is the SPA's own internal
+// address for a note — notePath() in lib/notes.ts. It used to resolve by
+// paging through `/notes.json` looking for a match, back when that was the
+// only read endpoint. Now that the permalink route exists, `fetchNote(id)`
+// asks for that one note directly (a same-origin call to the permalink's own
+// `?format=json` view) — one indexed lookup regardless of how old the note is,
+// where the old approach cost a request per page between here and there.
 
 /** Notes per page. Matches PAGE_SIZE on the Worker. */
 const PAGE = 25
@@ -106,7 +110,7 @@ function ShareButton({ id, text }: { id: string; text: string }) {
   }, [state])
 
   const share = async () => {
-    const url = `${window.location.origin}${notePath(id)}`
+    const url = noteUrl(id)
     if (navigator.share) {
       try {
         await navigator.share({ url, text })
@@ -143,6 +147,11 @@ function ShareButton({ id, text }: { id: string; text: string }) {
 // ---- one note's markup, shared by the feed and the permalink view ---------
 
 function NoteRow({ note }: { note: Note }) {
+  // /notes never loads photos, activities, or the post list just to label a
+  // reference — see the header of notesContext.ts — so this falls back to a
+  // generic label ("a photo", "a workout") rather than fetching anything.
+  const context = resolveContext(note.contextType, note.contextRef)
+
   return (
     <>
       <img className="note-avatar" src={AVATAR} alt="" loading="lazy" decoding="async" />
@@ -150,6 +159,12 @@ function NoteRow({ note }: { note: Note }) {
         <div className="note-body">
           <NoteText text={note.text} />
         </div>
+        {context && (
+          <p className="note-context">
+            <span aria-hidden="true">{context.icon}</span> re:{' '}
+            {context.href ? <Link to={context.href}>{context.text}</Link> : context.text}
+          </p>
+        )}
         <p className="note-meta">
           <Link className="note-permalink" to={notePath(note.id)}>
             <time dateTime={isoOf(note.createdAt)} title={isoOf(note.createdAt)}>
@@ -211,8 +226,38 @@ function useNotes() {
   return { notes, cursor, ready, error, loading, loadMore }
 }
 
+/** What a query is matched against: the note's own text, lowercased. */
+const haystack = (note: Note): string => note.text.toLowerCase()
+
+/**
+ * Every whitespace-separated term has to appear somewhere, in any order — same
+ * rule the blog index's filter uses, and for the same reason: substring rather
+ * than prefix matching, so a query narrows without anyone having to think
+ * about word order.
+ *
+ * This only searches notes already paged into memory client-side — there is no
+ * server-side search endpoint, deliberately: a note is short enough that
+ * "search" here means "filter what's on screen," and standing up a Worker
+ * endpoint for it would be D1 load spent on a feature reached by typing a
+ * word, not by search traffic.
+ */
+function filterNotes(notes: Note[], index: Map<string, string>, query: string): Note[] {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+  if (!terms.length) return notes
+  return notes.filter((note) => {
+    const text = index.get(note.id) ?? ''
+    return terms.every((term) => text.includes(term))
+  })
+}
+
 function NotesFeed() {
   const { notes, cursor, ready, error, loading, loadMore } = useNotes()
+  const [query, setQuery] = useState('')
+  const inputId = useId()
+
+  const index = useMemo(() => new Map(notes.map((note) => [note.id, haystack(note)])), [notes])
+  const matches = useMemo(() => filterNotes(notes, index, query), [notes, index, query])
+  const filtering = query.trim().length > 0
 
   return (
     <>
@@ -229,13 +274,44 @@ function NotesFeed() {
       {ready && !notes.length && !error && <p className="notes-empty">Nothing here yet.</p>}
 
       {notes.length > 0 && (
-        <ol className="note-list">
-          {notes.map((note) => (
-            <li key={note.id} className="note">
-              <NoteRow note={note} />
-            </li>
-          ))}
-        </ol>
+        <>
+          <div className="notes-filter">
+            <label className="visually-hidden" htmlFor={inputId}>
+              Filter notes
+            </label>
+            <input
+              id={inputId}
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Filter notes…"
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {/* Announced on change, same as the blog filter's count. */}
+            <p className="notes-count" role="status">
+              {filtering ? `${matches.length} of ${notes.length} notes` : `${notes.length} notes`}
+            </p>
+          </div>
+
+          {matches.length === 0 ? (
+            <p className="notes-empty">
+              Nothing matches “{query.trim()}”.{' '}
+              <button type="button" onClick={() => setQuery('')}>
+                Clear the filter
+              </button>
+              .
+            </p>
+          ) : (
+            <ol className="note-list">
+              {matches.map((note) => (
+                <li key={note.id} className="note">
+                  <NoteRow note={note} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
       )}
 
       {cursor && (
@@ -252,41 +328,22 @@ function NotesFeed() {
 // ---- a single note, addressed by permalink ---------------------------------
 
 function useSingleNote(id: string): { note: Note | null | undefined; error: boolean } {
-  // undefined: still resolving. null: paged through the whole feed and never found it.
+  // undefined: still resolving. null: the Worker has no such note (deleted, or never existed).
   const [note, setNote] = useState<Note | null | undefined>(undefined)
   const [error, setError] = useState(false)
 
   useEffect(() => {
     setNote(undefined)
     setError(false)
-    let cancelled = false
     const controller = new AbortController()
 
-    async function resolve() {
-      try {
-        let page = await fetchNotes(controller.signal)
-        for (;;) {
-          const found = page.notes.find((candidate) => candidate.id === id)
-          if (found) {
-            if (!cancelled) setNote(found)
-            return
-          }
-          if (!page.nextCursor) {
-            if (!cancelled) setNote(null)
-            return
-          }
-          page = await fetchOlderNotes(page.nextCursor, PAGE, controller.signal)
-        }
-      } catch (err) {
-        if ((err as { name?: string })?.name !== 'AbortError' && !cancelled) setError(true)
-      }
-    }
+    fetchNote(id, controller.signal)
+      .then((found) => setNote(found))
+      .catch((err) => {
+        if ((err as { name?: string })?.name !== 'AbortError') setError(true)
+      })
 
-    resolve()
-    return () => {
-      cancelled = true
-      controller.abort()
-    }
+    return () => controller.abort()
   }, [id])
 
   return { note, error }
@@ -360,8 +417,14 @@ export function Component() {
 
       <section className="notes">
         {id ? (
+          // Stands in for the site header, which Layout.tsx omits on this
+          // route — see the comment on `minimal` there. Without it there is
+          // otherwise no way off this page but the browser's back button.
           <p className="notes-back">
-            <Link to="/notes">← All notes</Link>
+            <Link to="/" className="notes-back-home">
+              Cailin Pitt
+            </Link>
+            <Link to="/notes">All notes</Link>
           </p>
         ) : (
           <header className="notes-header">

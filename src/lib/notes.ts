@@ -11,6 +11,13 @@
 
 const API_BASE = import.meta.env.VITE_NOTES_API ?? 'https://notes.cailinpitt.com'
 
+/**
+ * The apex site's own origin — where the permalink route lives
+ * (cailinpitt.com/notes/<id>, not notes.cailinpitt.com/...; see the header of
+ * worker-notes/src/index.ts). Same pattern as SITE_URL in Seo.tsx/structuredData.ts.
+ */
+const SITE_URL = 'https://cailinpitt.com'
+
 /** The feed's own RSS, served by the Worker rather than written at build time. */
 export const NOTES_FEED_URL = `${API_BASE}/feed.xml`
 
@@ -24,6 +31,15 @@ export const NOTES_FEED_URL = `${API_BASE}/feed.xml`
  */
 export const MAX_LENGTH = 480
 
+/** What a note can reference: another content type's own id space. */
+export type ContextType = 'photo' | 'activity' | 'post'
+
+/** The two context fields together, for publishing/editing with a reference. */
+export interface NoteContext {
+  type: ContextType
+  ref: string
+}
+
 export interface Note {
   id: string
   text: string
@@ -31,6 +47,10 @@ export interface Note {
   createdAt: number
   /** Unix seconds of the last edit, or null if it has never been edited. */
   editedAt: number | null
+  /** What this note is about, if anything. Always paired with contextRef. */
+  contextType: ContextType | null
+  /** The referenced thing's own id (a photo id, an activity id, a post path). */
+  contextRef: string | null
 }
 
 export interface NotePage {
@@ -83,6 +103,30 @@ export async function fetchNotesNow(signal?: AbortSignal): Promise<NotesNow> {
   return res.json() as Promise<NotesNow>
 }
 
+/**
+ * One note, resolved directly by id — a call to the permalink route
+ * (`?format=json` is how it asks for JSON rather than the HTML or redirect a
+ * browser or a bot would get; see worker-notes/src/index.ts). `null` means
+ * the id doesn't exist (or was deleted), not a network failure — a failure
+ * still throws.
+ *
+ * Always the real cailinpitt.com origin, never a relative path: the
+ * permalink route only exists on the apex zone, which is only the *page's*
+ * own origin when the page is actually being served from cailinpitt.com. In
+ * dev (localhost:5173) or on a preview deploy, a relative fetch would resolve
+ * against the wrong origin and 404 there instead. The Worker's CORS already
+ * allows any localhost/127.0.0.1 origin (see corsHeaders() in
+ * worker-notes/src/index.ts), so this works cross-origin in dev without
+ * needing a local Worker running.
+ */
+export async function fetchNote(id: string, signal?: AbortSignal): Promise<Note | null> {
+  const res = await fetch(`${SITE_URL}/notes/${id}?format=json`, { signal })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`Notes API ${res.status}`)
+  const { note } = (await res.json()) as { note: Note }
+  return note
+}
+
 // ---- writes --------------------------------------------------------------
 
 async function write(
@@ -90,14 +134,16 @@ async function write(
   method: 'POST' | 'PATCH' | 'DELETE',
   token: string,
   text?: string,
+  context?: NoteContext | null,
 ): Promise<{ note?: Note }> {
+  const body = text === undefined ? undefined : { text, contextType: context?.type, contextRef: context?.ref }
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: {
       authorization: `Bearer ${token}`,
-      ...(text === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     },
-    ...(text === undefined ? {} : { body: JSON.stringify({ text }) }),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
   const data = (await res.json().catch(() => null)) as
     | { ok?: boolean; note?: Note; error?: string }
@@ -115,14 +161,23 @@ async function write(
   return data ?? {}
 }
 
-export async function publishNote(text: string, token: string): Promise<Note> {
-  const { note } = await write('/notes', 'POST', token, text)
+export async function publishNote(
+  text: string,
+  token: string,
+  context?: NoteContext | null,
+): Promise<Note> {
+  const { note } = await write('/notes', 'POST', token, text, context)
   if (!note) throw new NoteError('The note was not returned.', 500)
   return note
 }
 
-export async function editNote(id: string, text: string, token: string): Promise<Note> {
-  const { note } = await write(`/notes/${id}`, 'PATCH', token, text)
+export async function editNote(
+  id: string,
+  text: string,
+  token: string,
+  context?: NoteContext | null,
+): Promise<Note> {
+  const { note } = await write(`/notes/${id}`, 'PATCH', token, text, context)
   if (!note) throw new NoteError('The note was not returned.', 500)
   return note
 }
@@ -255,10 +310,25 @@ export const paragraphs = (text: string): string[] =>
   text.split(/\n{2,}/).filter((para) => para.trim().length > 0)
 
 /**
- * The absolute permalink for a note.
- *
- * An anchor on the feed rather than a page of its own — notes are not
- * prerendered, and GitHub Pages has no router to resolve `/notes/<id>` into
- * anything. See the note on this trade in worker-notes/src/index.ts.
+ * Where a note lives inside the SPA: an anchor on the feed rather than a
+ * route, so following one is an instant client-side jump rather than a round
+ * trip through the Worker. Not the address to *share* — see noteUrl below.
  */
 export const notePath = (id: string): string => `/notes#${id}`
+
+/**
+ * The real, externally-shareable permalink — served by worker-notes at the
+ * edge (see the header of worker-notes/src/index.ts) rather than baked in at
+ * build time, so a note is addressable the moment it's published. This is
+ * what unfurls properly when shared: a bot gets a page with the note's own
+ * meta tags, a browser is bounced to notePath(id) above.
+ *
+ * `origin` defaults to the page's own, same as the inline
+ * `window.location.origin` this replaces in ShareButton — parameterized so
+ * this stays callable (and testable) outside a browser, the same guard
+ * loadToken/saveToken use for localStorage.
+ */
+export function noteUrl(id: string, origin?: string): string {
+  const base = origin ?? (typeof window === 'undefined' ? '' : window.location.origin)
+  return `${base}/notes/${id}`
+}

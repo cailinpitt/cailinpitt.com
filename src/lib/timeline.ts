@@ -166,3 +166,22 @@ export function buildTimeline({
     )
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
+
+/**
+ * Days that fall on the same month and day as `monthDay` (a `"MM-DD"` slice of
+ * a `YYYY-MM-DD` key, e.g. from `keyForOffset(0)` in datetime.ts) — the same
+ * calendar date in whatever years are already in `days`.
+ *
+ * Pure and unbounded by design: it only ever looks at days already loaded into
+ * the page, the same set `buildTimeline` produced. It does not page anything
+ * in on its own — /listening's equivalent feature (`fetchOnThisDay` in
+ * lib/listening.ts) can afford a dedicated Worker endpoint because scrobbles
+ * are the one stream with real depth; asking every other stream's Worker the
+ * same question would be six new endpoints for a feature that's a bonus
+ * section, not the point of the page. So this is honest about its limit: a
+ * fresh visit with little history loaded will often turn up nothing, and
+ * "Load older days" is what deepens it.
+ */
+export function onThisDay(days: TimelineDay[], monthDay: string): TimelineDay[] {
+  return days.filter((day) => day.date.slice(5) === monthDay)
+}

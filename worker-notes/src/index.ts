@@ -8,7 +8,8 @@
 //
 //   phone Shortcut ─┐
 //                   ├─→ POST /notes ─→ D1 ─→ GET /notes.json ─→ /notes page
-//   compose page  ──┘                    └─→ GET /feed.xml
+//   compose page  ──┘                    ├─→ GET /feed.xml
+//                                         └─→ GET cailinpitt.com/notes/<id>
 //
 // ## Why nothing is prerendered
 //
@@ -18,10 +19,12 @@
 // Notes deliberately do not do that. A thought worth 480 characters is worth
 // publishing in the two seconds it takes to type it, and a note that had to wait
 // for a green CI run would simply not get written. The cost is real and is
-// accepted: a note has no prerendered page, so it is addressed as an anchor on
-// the feed (`/notes#<id>`) rather than a URL of its own, and search engines see
-// the feed's shell rather than its contents. The RSS feed below is what keeps
-// the notes syndicable anyway.
+// accepted: a note has no page built for it at deploy time — instead this
+// Worker renders one on demand at cailinpitt.com/notes/<id> (see permalink()
+// below), on a route layered in front of the static site rather than baked
+// into it, so a note is addressable the moment it exists rather than after
+// the next deploy. The RSS feed below is what keeps notes syndicable to a
+// reader that never visits the permalink at all.
 //
 // ## Editing and deleting are first-class
 //
@@ -29,9 +32,10 @@
 // stamps `edited_at` and the site says so — a permalink that quietly changes
 // what it said is the thing worth avoiding, not the edit itself.
 
-import { renderFeed, FEED_ITEMS } from './feed'
+import { renderFeed, FEED_ITEMS, title as noteTitle, xml as escapeXml } from './feed'
 import {
   deleteNote,
+  getNote,
   insertNote,
   listNotes,
   updateNote,
@@ -39,7 +43,7 @@ import {
   PAGE_SIZE,
   type Note,
 } from './store'
-import { renderText, TEXT_ROWS } from './text'
+import { renderNoteText, renderText, TEXT_ROWS } from './text'
 import { MAX_LENGTH, validate } from './validate'
 
 /**
@@ -208,6 +212,38 @@ function purge(ctx: ExecutionContext, request: Request): void {
   )
 }
 
+/**
+ * Drop one note's cached permalink variants after an edit or delete.
+ *
+ * These are addressed by id, so they can't sit in `CACHED_READS` (same reason
+ * a deep page of `/notes.json` doesn't) — without this, an edited note's
+ * permalink would keep showing the old text to a bot or a `curl` for up to
+ * `EDGE_TTL` seconds after the edit.
+ *
+ * Unlike `purge()`, the origin here is hardcoded to `SITE` rather than taken
+ * from the request: the permalink is only ever served on the apex zone
+ * (`cailinpitt.com/notes/<id>`), never on this Worker's own `notes.…`
+ * hostname, and a write typically *arrives* on the `notes.…` hostname — using
+ * the request's origin here would purge a cache entry that was never made.
+ */
+function purgeNote(ctx: ExecutionContext, id: string): void {
+  const bare = new URL(`${SITE}/notes/${id}`)
+  // The JSON variant is only ever requested with ?format=json — unlike the
+  // `?T` no-color option on the text views, that query string isn't an edge
+  // case, it's the only way to reach this variant at all, so purging the bare
+  // URL here would delete a cache entry that was never written under it.
+  const jsonUrl = new URL(bare)
+  jsonUrl.searchParams.set('format', 'json')
+
+  ctx.waitUntil(
+    Promise.all([
+      caches.default.delete(cacheKey(jsonUrl, 'note-json')),
+      caches.default.delete(cacheKey(bare, 'note-text')),
+      caches.default.delete(cacheKey(bare, 'note-html')),
+    ]),
+  )
+}
+
 // ---- auth ----------------------------------------------------------------
 
 /**
@@ -235,35 +271,51 @@ function wantsText(request: Request, url: URL): boolean {
   return CLI_AGENT.test(request.headers.get('user-agent') ?? '')
 }
 
+/**
+ * Link-unfurl bots — the audience the permalink's static HTML exists for.
+ * Most name themselves with "bot"/"crawler"/"spider"; the few that don't
+ * (facebookexternalhit, WhatsApp, Pinterest's and Embedly's fetchers) are
+ * listed by name. Best-effort by nature — a false negative just means that
+ * client gets the 302 to the SPA instead of a page with meta tags in it.
+ */
+const BOT_AGENT =
+  /bot|crawler|spider|facebookexternalhit|whatsapp|pinterest|embedly|quora link preview/i
+
 const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fields))
 
 // ---- the write path ------------------------------------------------------
 
 /**
- * Read `text` from whichever shape the client found easiest to send.
+ * Read `text` (and, for JSON senders, an optional context reference) from
+ * whichever shape the client found easiest to send.
  *
- * JSON is what the compose page posts. The form and plain-text shapes exist for
- * Shortcuts, whose "Get Contents of URL" action makes JSON awkward to build by
- * hand but form fields trivial — the same accommodation worker-photos makes, and
- * for the same reason: the client that is hardest to debug should have the
- * easiest path.
+ * JSON is what the compose page posts, context included. The form and
+ * plain-text shapes exist for Shortcuts, whose "Get Contents of URL" action
+ * makes JSON awkward to build by hand but form fields trivial — the same
+ * accommodation worker-photos makes, and for the same reason: the client that
+ * is hardest to debug should have the easiest path. Neither of those sends a
+ * context reference, which is fine — it is optional on every note.
  */
-async function readText(request: Request): Promise<unknown> {
+async function readPayload(
+  request: Request,
+): Promise<{ text: unknown; contextType?: unknown; contextRef?: unknown }> {
   const contentType = (request.headers.get('content-type') ?? '').toLowerCase()
 
   if (contentType.includes('application/json')) {
-    const payload = (await request.json().catch(() => null)) as { text?: unknown } | null
-    return payload?.text
+    const payload = (await request.json().catch(() => null)) as
+      | { text?: unknown; contextType?: unknown; contextRef?: unknown }
+      | null
+    return { text: payload?.text, contextType: payload?.contextType, contextRef: payload?.contextRef }
   }
   if (
     contentType.includes('form-data') ||
     contentType.includes('application/x-www-form-urlencoded')
   ) {
     const form = await request.formData().catch(() => null)
-    return form?.get('text') ?? undefined
+    return { text: form?.get('text') ?? undefined }
   }
   // Anything else: the body itself is the note. `curl -d 'a thought'` lands here.
-  return await request.text().catch(() => '')
+  return { text: await request.text().catch(() => '') }
 }
 
 async function publish(
@@ -276,17 +328,17 @@ async function publish(
     return jsonNoStore({ error: 'unauthorized' }, 401, cors)
   }
 
-  const checked = validate({ text: await readText(request) })
+  const checked = validate(await readPayload(request))
   if (!checked.ok) return jsonNoStore({ error: checked.error }, 400, cors)
 
-  const note = await insertNote(env.DB, checked.value)
+  const note = await insertNote(env.DB, checked.value, checked.context)
   purge(ctx, request)
   log({ level: 'info', published: { id: note.id, length: [...note.text].length } })
 
   // The created row goes back so the client can show it immediately rather than
   // re-reading through a cache it just invalidated, and so a Shortcut can put
   // the permalink in its notification.
-  return jsonNoStore({ ok: true, note, url: `${SITE_NOTES}#${note.id}` }, 201, cors)
+  return jsonNoStore({ ok: true, note, url: `${SITE}/notes/${note.id}` }, 201, cors)
 }
 
 async function edit(
@@ -300,15 +352,16 @@ async function edit(
     return jsonNoStore({ error: 'unauthorized' }, 401, cors)
   }
 
-  const checked = validate({ text: await readText(request) })
+  const checked = validate(await readPayload(request))
   if (!checked.ok) return jsonNoStore({ error: checked.error }, 400, cors)
 
-  const note = await updateNote(env.DB, id, checked.value)
+  const note = await updateNote(env.DB, id, checked.value, checked.context)
   if (!note) return jsonNoStore({ id, error: 'no such note' }, 404, cors)
   purge(ctx, request)
+  purgeNote(ctx, id)
   log({ level: 'info', edited: { id } })
 
-  return jsonNoStore({ ok: true, note, url: `${SITE_NOTES}#${note.id}` }, 200, cors)
+  return jsonNoStore({ ok: true, note, url: `${SITE}/notes/${note.id}` }, 200, cors)
 }
 
 async function remove(
@@ -322,12 +375,115 @@ async function remove(
     return jsonNoStore({ error: 'unauthorized' }, 401, cors)
   }
   const removed = await deleteNote(env.DB, id)
-  if (removed) purge(ctx, request)
+  if (removed) {
+    purge(ctx, request)
+    purgeNote(ctx, id)
+  }
   log({ level: 'info', deleted: { id, removed } })
 
   return removed
     ? jsonNoStore({ id, deleted: true }, 200, cors)
     : jsonNoStore({ id, error: 'no such note' }, 404, cors)
+}
+
+// ---- the permalink ---------------------------------------------------------
+
+/**
+ * A note as a static page: real `<meta property="og:...">` tags, so a link
+ * shared to Slack/Discord/iMessage/etc. unfurls the note's own text instead
+ * of the generic feed card. No `og:image` — the site's OG cards are rendered
+ * at build time (scripts/generate-og.mjs, using satori/sharp), neither of
+ * which can run in a Worker, and a per-note image isn't worth reimplementing
+ * that pipeline for. This page is for bots; a real browser never sees it —
+ * see permalink() below.
+ */
+function noteHtml(note: Note): string {
+  const heading = noteTitle(note.text)
+  const description = note.text.replace(/\s+/g, ' ').trim()
+  const permalink = `${SITE}/notes/${note.id}`
+  const feedLink = `${SITE_NOTES}#${note.id}`
+
+  return [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${escapeXml(heading)} — Cailin Pitt</title>`,
+    `<meta name="description" content="${escapeXml(description)}">`,
+    `<link rel="canonical" href="${escapeXml(permalink)}">`,
+    '<meta property="og:type" content="article">',
+    '<meta property="og:site_name" content="Cailin Pitt">',
+    `<meta property="og:title" content="${escapeXml(heading)}">`,
+    `<meta property="og:description" content="${escapeXml(description)}">`,
+    `<meta property="og:url" content="${escapeXml(permalink)}">`,
+    '<meta name="twitter:card" content="summary">',
+    '</head>',
+    '<body>',
+    `<p>${escapeXml(note.text).replace(/\n/g, '<br>')}</p>`,
+    `<p><a href="${escapeXml(feedLink)}">See it on cailinpitt.com/notes</a></p>`,
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n')
+}
+
+/**
+ * `cailinpitt.com/notes/<id>` — the permalink, rendered at the edge rather
+ * than at deploy time so a note is addressable the moment it is published
+ * (see the header of this file). Four audiences:
+ *
+ *   - `?format=json`: the site's own /notes page, resolving a permalink by id
+ *     directly instead of paging through the whole feed looking for it.
+ *   - curl/wget/etc: the same plain-text view the feed gets, for one note.
+ *   - a link-unfurl bot (BOT_AGENT): noteHtml() above.
+ *   - anyone else, i.e. a real browser: redirected to /notes#<id>, where the
+ *     note lives inside the interactive feed. User-Agent dependent, so this
+ *     one response can never be cached.
+ */
+async function permalink(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  cors: Record<string, string>,
+  id: string,
+  url: URL,
+): Promise<Response> {
+  if (url.searchParams.get('format') === 'json') {
+    return await cached(url, 'note-json', ctx, cors, async () => {
+      const note = await getNote(env.DB, id)
+      return note ? json({ note }, EDGE_TTL) : jsonNoStore({ id, error: 'no such note' }, 404, cors)
+    })
+  }
+
+  if (wantsText(request, url)) {
+    return await cached(url, 'note-text', ctx, cors, async () => {
+      const note = await getNote(env.DB, id)
+      if (!note) return new Response('Not found', { status: 404, headers: cors })
+      return cachedResponse(
+        renderNoteText(note, {
+          color: !url.searchParams.has('T'),
+          offset: Number(env.TZ_OFFSET_SECONDS) || 0,
+          site: SITE,
+        }),
+        'text/plain; charset=utf-8',
+        EDGE_TTL,
+      )
+    })
+  }
+
+  if (BOT_AGENT.test(request.headers.get('user-agent') ?? '')) {
+    return await cached(url, 'note-html', ctx, cors, async () => {
+      const note = await getNote(env.DB, id)
+      if (!note) return new Response('Not found', { status: 404, headers: cors })
+      return cachedResponse(noteHtml(note), 'text/html; charset=utf-8', EDGE_TTL)
+    })
+  }
+
+  return new Response(null, {
+    status: 302,
+    headers: { location: `${SITE_NOTES}#${id}`, 'cache-control': 'no-store', ...cors },
+  })
 }
 
 // ---- worker --------------------------------------------------------------
@@ -338,14 +494,30 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
 
     const url = new URL(request.url)
+    const single = url.pathname.match(/^\/notes\/([a-f0-9]{4,32})$/)
     try {
+      // ---- cailinpitt.com/notes/* — the permalink -----------------------
+      //
+      // This Worker's route on the apex zone only ever sees paths already
+      // scoped to /notes/* (see wrangler.jsonc), everything else on
+      // cailinpitt.com is GitHub Pages. A path that isn't a note id — most
+      // often /notes/compose, a real prerendered page — is passed straight
+      // through: a same-zone fetch() bypasses Cloudflare's routing layer and
+      // goes directly to the zone's configured origin, so this can't loop
+      // back into the route that dispatched here.
+      if (url.hostname === 'cailinpitt.com') {
+        if (single && request.method === 'GET') {
+          return await permalink(request, env, ctx, cors, single[1], url)
+        }
+        return fetch(request)
+      }
+
       // ---- writes (PUBLISH_TOKEN only, never cached) ----
 
       if (url.pathname === '/notes' && request.method === 'POST') {
         return await publish(request, env, ctx, cors)
       }
 
-      const single = url.pathname.match(/^\/notes\/([a-f0-9]{4,32})$/)
       if (single && request.method === 'PATCH') {
         return await edit(request, env, ctx, cors, single[1])
       }

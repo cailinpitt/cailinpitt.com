@@ -130,3 +130,31 @@ export function renderText(
 /** One note as a line of text, for `notes` in the site's /terminal. */
 export const oneLine = (note: Note, width = WIDTH): string =>
   wrap(note.text, width).join(' ').trim()
+
+/**
+ * A single note, for `curl cailinpitt.com/notes/<id>` — the permalink's text
+ * view. Same masthead and layout as the feed's renderText, just one entry
+ * instead of a page of them, and a permalink line instead of a "read them at"
+ * pointer back to the feed.
+ */
+export function renderNoteText(
+  note: Note,
+  opts: { color: boolean; offset: number; site: string },
+): string {
+  const c = ink(opts.color)
+  const lines: string[] = []
+
+  lines.push(c.bold('  cailinpitt.com notes'))
+  lines.push(c.faint('  ' + '─'.repeat(WIDTH - 4)))
+  lines.push('')
+
+  const edited = note.editedAt ? c.faint('  (edited)') : ''
+  lines.push(`  ${c.dim(stamp(note.createdAt, opts.offset))}${edited}`)
+  for (const line of wrap(note.text, WIDTH - 6)) lines.push(line ? `    ${line}` : '')
+  lines.push('')
+
+  lines.push(c.dim('  ') + c.accent(`${opts.site}/notes/${note.id}`))
+  lines.push('')
+
+  return lines.join('\n') + '\n'
+}

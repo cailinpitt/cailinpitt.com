@@ -9,13 +9,19 @@
 -- would publish how many notes have ever been written, including the ones
 -- deleted a minute after posting.
 CREATE TABLE IF NOT EXISTS notes (
-  id         TEXT    PRIMARY KEY,
-  text       TEXT    NOT NULL,     -- plain text, <= 480 code points (validate.ts)
-  created_at INTEGER NOT NULL,     -- unix seconds (UTC)
+  id           TEXT    PRIMARY KEY,
+  text         TEXT    NOT NULL,     -- plain text, <= 480 code points (validate.ts)
+  created_at   INTEGER NOT NULL,     -- unix seconds (UTC)
   -- Unix seconds of the last edit, NULL if never edited. Not a bookkeeping
   -- column: the site renders an "edited" marker from it, because a permalink
   -- that silently changes what it says is the thing worth avoiding.
-  edited_at  INTEGER
+  edited_at    INTEGER,
+  -- Optional reference to one other thing on the site: 'photo' | 'activity' |
+  -- 'post', or NULL for an ordinary note. See schema-v2.sql for the migration
+  -- that added these to an existing database, and validate.ts for the rule
+  -- that the two travel together — one set, or both NULL, never one alone.
+  context_type TEXT,
+  context_ref  TEXT
 );
 
 -- The whole read path: newest first, with (created_at, id) as the pagination

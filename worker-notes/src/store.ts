@@ -5,6 +5,11 @@
 // rows and a `SELECT … ORDER BY created_at DESC LIMIT 25` over an index is
 // cheaper than anything that would have to be kept in step with it.
 
+// ContextType/NoteContext live in validate.ts, not here — see the comment
+// there on why the import runs in this direction.
+import type { ContextType, NoteContext } from './validate'
+export type { ContextType, NoteContext }
+
 export interface Note {
   id: string
   text: string
@@ -12,6 +17,10 @@ export interface Note {
   createdAt: number
   /** Unix seconds of the last edit, or null if it has never been edited. */
   editedAt: number | null
+  /** What this note is about, if anything. Always paired with contextRef. */
+  contextType: ContextType | null
+  /** The referenced thing's own id (a photo id, an activity id, a post path). */
+  contextRef: string | null
 }
 
 export interface NotePage {
@@ -47,6 +56,8 @@ interface Row {
   text: string
   created_at: number
   edited_at: number | null
+  context_type: string | null
+  context_ref: string | null
 }
 
 const toNote = (row: Row): Note => ({
@@ -54,7 +65,12 @@ const toNote = (row: Row): Note => ({
   text: row.text,
   createdAt: row.created_at,
   editedAt: row.edited_at,
+  contextType: (row.context_type as ContextType | null) ?? null,
+  contextRef: row.context_ref,
 })
+
+/** The column list every SELECT below shares, so a field added here can't be forgotten in one of them. */
+const COLUMNS = 'id, text, created_at, edited_at, context_type, context_ref'
 
 /**
  * The pagination cursor: `<created_at>_<id>`.
@@ -85,14 +101,14 @@ export async function listNotes(
   const query = cursor
     ? db
         .prepare(
-          `SELECT id, text, created_at, edited_at FROM notes
+          `SELECT ${COLUMNS} FROM notes
            WHERE created_at < ?1 OR (created_at = ?1 AND id < ?2)
            ORDER BY created_at DESC, id DESC LIMIT ?3`,
         )
         .bind(cursor.uts, cursor.id, limit + 1)
     : db
         .prepare(
-          `SELECT id, text, created_at, edited_at FROM notes
+          `SELECT ${COLUMNS} FROM notes
            ORDER BY created_at DESC, id DESC LIMIT ?1`,
         )
         .bind(limit + 1)
@@ -110,7 +126,7 @@ export async function listNotes(
 
 export async function getNote(db: D1Database, id: string): Promise<Note | null> {
   const row = await db
-    .prepare('SELECT id, text, created_at, edited_at FROM notes WHERE id = ?')
+    .prepare(`SELECT ${COLUMNS} FROM notes WHERE id = ?`)
     .bind(id)
     .first<Row>()
   return row ? toNote(row) : null
@@ -121,11 +137,24 @@ export async function countNotes(db: D1Database): Promise<number> {
   return row?.n ?? 0
 }
 
-export async function insertNote(db: D1Database, text: string): Promise<Note> {
-  const note: Note = { id: newId(), text, createdAt: Math.floor(Date.now() / 1000), editedAt: null }
+export async function insertNote(
+  db: D1Database,
+  text: string,
+  context: NoteContext | null = null,
+): Promise<Note> {
+  const note: Note = {
+    id: newId(),
+    text,
+    createdAt: Math.floor(Date.now() / 1000),
+    editedAt: null,
+    contextType: context?.type ?? null,
+    contextRef: context?.ref ?? null,
+  }
   await db
-    .prepare('INSERT INTO notes (id, text, created_at, edited_at) VALUES (?, ?, ?, NULL)')
-    .bind(note.id, note.text, note.createdAt)
+    .prepare(
+      'INSERT INTO notes (id, text, created_at, edited_at, context_type, context_ref) VALUES (?, ?, ?, NULL, ?, ?)',
+    )
+    .bind(note.id, note.text, note.createdAt, note.contextType, note.contextRef)
     .run()
   return note
 }
@@ -137,11 +166,16 @@ export async function insertNote(db: D1Database, text: string): Promise<Note> {
  * marker from it, because silently changing what a published thing says is the
  * one thing a permalink shouldn't do. Returns null when there is no such note.
  */
-export async function updateNote(db: D1Database, id: string, text: string): Promise<Note | null> {
+export async function updateNote(
+  db: D1Database,
+  id: string,
+  text: string,
+  context: NoteContext | null = null,
+): Promise<Note | null> {
   const editedAt = Math.floor(Date.now() / 1000)
   const { meta } = await db
-    .prepare('UPDATE notes SET text = ?, edited_at = ? WHERE id = ?')
-    .bind(text, editedAt, id)
+    .prepare('UPDATE notes SET text = ?, edited_at = ?, context_type = ?, context_ref = ? WHERE id = ?')
+    .bind(text, editedAt, context?.type ?? null, context?.ref ?? null, id)
     .run()
   if (!meta.changes) return null
   return getNote(db, id)

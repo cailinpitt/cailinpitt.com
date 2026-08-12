@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { glyphs, MAX_LENGTH, notePath, paragraphs, segments } from '../src/lib/notes'
+import { glyphs, MAX_LENGTH, notePath, noteUrl, paragraphs, segments } from '../src/lib/notes'
 import { clean, validate, MAX_LENGTH as WORKER_MAX } from '../worker-notes/src/validate'
 
 // The pure halves of the microblog, on both sides of the wire.
@@ -41,7 +41,7 @@ describe('the character limit', () => {
 describe('validate', () => {
   it('accepts an ordinary note', () => {
     const result = validate({ text: 'trains are good, actually' })
-    expect(result).toEqual({ ok: true, value: 'trains are good, actually' })
+    expect(result).toEqual({ ok: true, value: 'trains are good, actually', context: null })
   })
 
   it('refuses an empty note', () => {
@@ -60,6 +60,33 @@ describe('validate', () => {
     // anything here used .length.
     expect(validate({ text: '👋'.repeat(MAX_LENGTH) }).ok).toBe(true)
     expect(validate({ text: '👋'.repeat(MAX_LENGTH + 1) }).ok).toBe(false)
+  })
+
+  it('accepts a note with no context, same as before context existed', () => {
+    const result = validate({ text: 'no reference here' })
+    expect(result).toEqual({ ok: true, value: 'no reference here', context: null })
+  })
+
+  it('accepts a note with a well-formed context', () => {
+    const result = validate({ text: 'about that ride', contextType: 'activity', contextRef: '12345' })
+    expect(result).toEqual({
+      ok: true,
+      value: 'about that ride',
+      context: { type: 'activity', ref: '12345' },
+    })
+  })
+
+  it('refuses a context type it does not recognize', () => {
+    expect(validate({ text: 'hm', contextType: 'tweet', contextRef: '1' }).ok).toBe(false)
+  })
+
+  it('refuses a context type with no ref to go with it', () => {
+    expect(validate({ text: 'hm', contextType: 'photo' }).ok).toBe(false)
+  })
+
+  it('refuses a ref with no context type to go with it', () => {
+    // Half a reference is a client bug, not something to guess at.
+    expect(validate({ text: 'hm', contextRef: 'abc123' }).ok).toBe(false)
   })
 })
 
@@ -161,10 +188,22 @@ describe('paragraphs', () => {
 
 describe('notePath', () => {
   it('is an anchor on the feed, not a route', () => {
-    // Notes are never prerendered, and GitHub Pages has no router to resolve a
-    // /notes/<id> URL into anything. If this ever starts returning a path, the
-    // permalink 404s on a hard load — which is exactly the failure the site's
-    // whole URL design exists to avoid.
+    // notePath is for the SPA's own internal navigation, which stays a
+    // client-side jump rather than a round trip through the Worker. The real,
+    // externally-shareable address is noteUrl, below — the two are deliberately
+    // different, not a leftover of one replacing the other.
     expect(notePath('a3f91c2b40d1')).toBe('/notes#a3f91c2b40d1')
+  })
+})
+
+describe('noteUrl', () => {
+  it('points at the real permalink, not the feed anchor', () => {
+    // worker-notes serves this path directly (see the header of
+    // worker-notes/src/index.ts) — unlike notePath, this is meant to be shared
+    // outside the SPA, where a bot needs a URL to fetch rather than a hash to
+    // scroll to.
+    expect(noteUrl('a3f91c2b40d1', 'https://cailinpitt.com')).toBe(
+      'https://cailinpitt.com/notes/a3f91c2b40d1',
+    )
   })
 })

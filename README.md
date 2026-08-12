@@ -603,10 +603,23 @@ stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching
   The bug that surfaced this was adding notes: an undeployed Worker took the whole page down.
 - **Notes carry their own text** rather than a link to it, unlike every other stream here — a note
   is at most 480 characters, so linking to it would be a link to something shorter than the link's
-  own row.
+  own row. A note's optional "re: …" reference (see [Notes](#notes)) shows here too, resolved
+  against whatever this page already has loaded — photos, posts, and every activity already folded
+  into a loaded day — never a fetch made just to label one.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles
   into US Central days while articles bucket in the viewer's zone, so the two disagree at the
   margins far from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
+- **Each stream gets a quiet left-border accent** (`data-stream` on `.timeline-event`, `--stream-*`
+  tokens in `global.css`) so a busy day is easier to scan. All seven are tints of the one `--accent`
+  color mixed toward `--fg`, not new hues — the site keeps a single restrained accent everywhere
+  else, and this doesn't break that.
+- **"On this day"** surfaces days already loaded that share today's month and day across past
+  years, above the main list (`onThisDay()` in `src/lib/timeline.ts`). It never fetches anything of
+  its own — it's a filter over whatever "load older days" has already pulled in, so a fresh visit
+  with little history loaded will often turn up nothing. That's a deliberate trade against standing
+  up a "how far back does this note/photo/activity go" endpoint on every other Worker just for a
+  bonus section — `/listening`'s own On this day (`worker-listening`'s `/on-this-day.json`) can
+  afford a real query because scrobbles are the one stream with the depth to make it worth one.
 
 ## Notes
 
@@ -625,12 +638,24 @@ is where it goes.
   [`worker-notes/README.md`](worker-notes/README.md#the-one-decision-worth-understanding): a note
   that had to wait for a green CI run before appearing would not get written, so notes are fetched
   at runtime like `/listening` and `/reading` rather than prerendered like everything else.
-- **A note's permalink is `/notes#<id>`**, an anchor on the feed. GitHub Pages has no router that
-  could resolve `/notes/<id>`, and the `404.html` redirect hack was rejected for the blog years ago
-  (see [`plan.md`](plan.md)). `notePath()` is pinned by a test, because the day it starts returning
-  a path is the day every permalink 404s on a hard load. Arriving on one scrolls to the note and
-  marks it with an accent rail — otherwise you land in the middle of a list of similar-looking
-  paragraphs with no idea which one you were sent to.
+- **A note's real, shareable permalink is `cailinpitt.com/notes/<id>`**, rendered by the Worker on
+  request rather than built at deploy time — a route layered in front of GitHub Pages on the apex
+  zone, not the `404.html` redirect hack rejected for the blog years ago (see
+  [`plan.md`](plan.md)). A bot gets HTML with the note's own `<meta property="og:...">` tags, so a
+  shared link actually unfurls the note's text; a real browser is redirected into the feed. Inside
+  the feed, `/notes#<id>` — `notePath()`, pinned by a test — is still the address used for internal
+  navigation, an anchor rather than a route, so following one is an instant client-side jump rather
+  than a round trip through the Worker. Arriving at either lands you on the note itself, focused and
+  distinguished from the rest of the list. Full detail:
+  [`worker-notes/README.md`](worker-notes/README.md#permalink--cailinpittcomnotesid).
+- **A note can optionally reference one other thing on the site** — a photo, a moving activity, or
+  a blog post, picked from `/notes/compose` — and shows as a quiet "re: …" line under the note's
+  text, linked where the referenced thing has a permalink of its own. Resolved from whatever the
+  current page already has loaded (photos/posts/activities), never a fetch made just to label a
+  reference — see `src/lib/notesContext.ts`.
+- **A live filter narrows the feed** to notes already loaded on the page — same substring-match
+  shape as the `/blog` filter below, and for the same reason there's no server-side search: a note
+  is short enough that "search" here just means "filter what's on screen."
 - **480 characters, counted in code points**, so an emoji is one character and not two. The number
   lives in `worker-notes/src/validate.ts` and is mirrored in `src/lib/notes.ts` for the compose
   counter, which has to be right on the first keystroke. `tests/notes.test.ts` pins the two

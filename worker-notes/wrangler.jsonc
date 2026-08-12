@@ -4,9 +4,20 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-08-01",
 
-  // API on a subdomain of the (Cloudflare-managed) zone, same as the other
-  // workers. Auto-provisions the DNS record + cert.
-  "routes": [{ "pattern": "notes.cailinpitt.com", "custom_domain": true }],
+  // The API lives on a subdomain of the (Cloudflare-managed) zone, same as the
+  // other workers — auto-provisions the DNS record + cert. The second route adds
+  // this Worker in front of one path on the apex zone itself: cailinpitt.com is
+  // GitHub Pages behind Cloudflare, and this intercepts only /notes/* to serve
+  // real permalinks (cailinpitt.com/notes/<id>) at the edge. Everything under
+  // /notes/* that isn't a note id (chiefly /notes/compose, a real prerendered
+  // page) is passed straight through to GitHub Pages by the Worker itself — see
+  // the hostname check at the top of index.ts's fetch handler. No DNS change is
+  // needed for this one: the apex zone already resolves to GitHub Pages via the
+  // existing CNAME, and a Workers route on an existing zone doesn't touch that.
+  "routes": [
+    { "pattern": "notes.cailinpitt.com", "custom_domain": true },
+    { "pattern": "cailinpitt.com/notes/*", "zone_name": "cailinpitt.com" }
+  ],
 
   // No cron. Nothing here is pulled from anywhere — a note exists because it was
   // typed, and every read is derived from D1 on demand behind the edge cache.
