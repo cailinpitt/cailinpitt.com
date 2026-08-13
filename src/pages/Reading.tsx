@@ -58,7 +58,7 @@ export function Component() {
       />
 
       <h1>Reading</h1>
-      <p className="lead">
+      <p>
         Books come from{' '}
         <a href="https://hardcover.app" target="_blank" rel="noopener noreferrer">
           Hardcover

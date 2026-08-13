@@ -112,7 +112,7 @@ export function Component() {
       <section className="listening">
         <header className="listening-header">
           <h1>Listening</h1>
-          <p className="lead">
+          <p>
             {bundle
               ? `${formatNumber(bundle.totalScrobbles)} scrobbles and counting, tracked via Last.fm.`
               : 'What I have on, tracked via Last.fm.'}

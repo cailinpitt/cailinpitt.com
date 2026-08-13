@@ -58,7 +58,7 @@ export function Component() {
       <article className="post">
         <header className="post-header">
           <h1>{aboutPage.title}</h1>
-          {aboutPage.lead && <p className="lead">{aboutPage.lead}</p>}
+          {aboutPage.lead && <p>{aboutPage.lead}</p>}
         </header>
 
         <div className="post-source-bar">

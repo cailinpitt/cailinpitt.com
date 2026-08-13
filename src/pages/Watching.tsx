@@ -43,7 +43,7 @@ export function Component() {
       />
 
       <h1>Watching</h1>
-      <p className="lead">
+      <p>
         Films I have watched, logged on Letterboxd. Ratings are out of five, halves
         included.
       </p>

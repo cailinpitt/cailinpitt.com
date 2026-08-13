@@ -95,7 +95,7 @@ export function Component() {
       />
 
       <h1>Guestbook</h1>
-      <p className="lead">
+      <p>
         👋 Say hello!
       </p>
       <CurlHint command="curl guestbook.cailinpitt.com" />

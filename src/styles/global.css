@@ -147,12 +147,6 @@ img {
   color: var(--muted);
   margin: 0;
 }
-.lead {
-  font-size: var(--step-1);
-  line-height: 1.45;
-  color: var(--muted);
-}
-
 /* Reading progress — a hairline across the top of the window on blog posts.
    Full-bleed rather than inside the measure: it's a window-edge indicator, not
    part of the column. The fill is a scaleX transform on a full-width element so
@@ -1261,10 +1255,6 @@ h3 {
 .listening-header h1 {
   font-size: var(--step-3);
   margin: 0 0 0.4rem;
-}
-.listening-header .lead {
-  margin: 0;
-  max-width: var(--measure);
 }
 /* Section headers for the activity pages. One rule for all four so
    /listening, /reading, /watching, and /moving can't drift apart. */
@@ -2469,9 +2459,6 @@ a.film-link:hover .film-title {
   font-size: var(--step-3);
   margin-bottom: 0.5rem;
 }
-.timeline .lead {
-  margin-top: 0;
-}
 .timeline-error {
   color: var(--muted);
 }
@@ -2689,9 +2676,6 @@ a.film-link:hover .film-title {
   width: 1em;
   height: 1em;
   flex: none;
-}
-.photo-map .lead {
-  max-width: var(--measure);
 }
 .map-canvas {
   width: min(var(--measure-wide), 92vw);

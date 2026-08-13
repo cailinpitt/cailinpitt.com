@@ -47,7 +47,7 @@ export function Component() {
       />
 
       <h1>Moving</h1>
-      <p className="lead">Workouts, logged as they happen.</p>
+      <p>Workouts, logged as they happen.</p>
       <CurlHint command="curl moving.cailinpitt.com" />
 
       {error && !bundle ? (

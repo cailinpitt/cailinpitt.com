@@ -139,7 +139,7 @@ export function Component() {
         <Link to="/photos">← All photos</Link>
       </p>
       <h1>Photo map</h1>
-      <p className="lead">
+      <p>
         {photos.length} photo{photos.length === 1 ? '' : 's'} across {pins.length} place
         {pins.length === 1 ? '' : 's'}. Positions are rounded to about a mile, so a pin
         marks a neighborhood rather than a spot.

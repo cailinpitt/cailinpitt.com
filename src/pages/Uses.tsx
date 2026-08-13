@@ -82,7 +82,7 @@ export function Component() {
       <article className="post">
         <header className="post-header">
           <h1>{usesPage.title}</h1>
-          {usesPage.lead && <p className="lead">{usesPage.lead}</p>}
+          {usesPage.lead && <p>{usesPage.lead}</p>}
           {updated && (
             <p className="post-meta">
               <time dateTime={updated} className="post-date">

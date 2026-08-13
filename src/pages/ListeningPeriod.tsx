@@ -84,7 +84,7 @@ export function Component() {
     return (
       <section className="listening period-page">
         <h1>Not a period</h1>
-        <p className="lead">
+        <p>
           Try <Link to="/listening">the listening page</Link>.
         </p>
       </section>

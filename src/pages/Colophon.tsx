@@ -197,7 +197,7 @@ export function Component() {
       <article className="post">
         <header className="post-header">
           <h1>{colophonPage.title}</h1>
-          {colophonPage.lead && <p className="lead">{colophonPage.lead}</p>}
+          {colophonPage.lead && <p>{colophonPage.lead}</p>}
         </header>
 
         <div className="post-source-bar">
