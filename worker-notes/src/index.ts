@@ -37,6 +37,7 @@ import {
   deleteNote,
   getNote,
   insertNote,
+  listAllHashtags,
   listNotes,
   listNotesByTag,
   setLinkCard,
@@ -176,6 +177,7 @@ async function cached(
 const CACHED_READS: [path: string, variant: string][] = [
   ['/notes.json', 'json'],
   ['/now.json', 'now'],
+  ['/notes/hashtags.json', 'hashtags'],
   ['/feed.xml', 'feed'],
   // The terminal view answers on two paths and caches under each separately,
   // since the path is part of the key. Purging only one leaves `curl` on the
@@ -723,6 +725,16 @@ export default {
             }),
             EDGE_TTL,
           ),
+        )
+      }
+
+      // Every hashtag ever used, for "browse by tag" on /notes — unlike the
+      // per-tag route below, this *is* in CACHED_READS/purge() (unparameterized,
+      // one well-known path) so a new note's tags show up in the cloud the
+      // moment the purge lands, same as the note itself does in /notes.json.
+      if (url.pathname === '/notes/hashtags.json') {
+        return await cached(url, 'hashtags', ctx, cors, async () =>
+          json(await listAllHashtags(env.DB), EDGE_TTL),
         )
       }
 

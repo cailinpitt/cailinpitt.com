@@ -118,6 +118,18 @@ export async function fetchNotesNow(signal?: AbortSignal): Promise<NotesNow> {
   return res.json() as Promise<NotesNow>
 }
 
+export interface HashtagSummary {
+  tag: string
+  count: number
+}
+
+/** Every hashtag ever used, most-used first — the "browse by tag" cloud on /notes. */
+export async function fetchNoteHashtags(signal?: AbortSignal): Promise<HashtagSummary[]> {
+  const res = await fetch(`${API_BASE}/notes/hashtags.json`, { signal })
+  if (!res.ok) throw new Error(`Notes API ${res.status}`)
+  return res.json() as Promise<HashtagSummary[]>
+}
+
 /** Every note tagged `#tag`, newest first — the feed for /notes/tag/:tag. */
 export async function fetchNotesByTag(
   tag: string,

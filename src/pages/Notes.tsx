@@ -7,11 +7,13 @@ import { formatRelative, formatTime } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
 import {
   fetchNote,
+  fetchNoteHashtags,
   fetchNotes,
   fetchOlderNotes,
   notePath,
   noteUrl,
   NOTES_FEED_URL,
+  type HashtagSummary,
   type Note,
 } from '../lib/notes'
 import { resolveContext } from '../lib/notesContext'
@@ -252,10 +254,31 @@ function filterNotes(notes: Note[], index: Map<string, string>, query: string): 
   })
 }
 
+/**
+ * Every hashtag ever used, for the "browse by tag" cloud at the foot of the
+ * feed — same shape as /blog's own tag cloud (collectTags in lib/tags.ts),
+ * just fetched from the Worker instead of computed from build-time posts.
+ * A failure here costs only the cloud, not the feed above it.
+ */
+function useHashtags(): HashtagSummary[] {
+  const [tags, setTags] = useState<HashtagSummary[]>([])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchNoteHashtags(controller.signal)
+      .then(setTags)
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
+
+  return tags
+}
+
 function NotesFeed() {
   const { notes, cursor, ready, error, loading, loadMore } = useNotes()
   const [query, setQuery] = useState('')
   const inputId = useId()
+  const tags = useHashtags()
 
   const index = useMemo(() => new Map(notes.map((note) => [note.id, haystack(note)])), [notes])
   const matches = useMemo(() => filterNotes(notes, index, query), [notes, index, query])
@@ -322,6 +345,26 @@ function NotesFeed() {
             {loading ? 'Loading…' : 'Older notes'}
           </button>
         </p>
+      )}
+
+      {/* Below the feed rather than above it, same call /blog makes: the
+          notes are what someone came for, not the tags. */}
+      {tags.length > 0 && (
+        <section className="tag-index" aria-labelledby="tags-heading">
+          <h2 id="tags-heading" className="eyebrow">
+            🏷️ Browse by tag
+          </h2>
+          <ul className="tag-list is-cloud">
+            {tags.map((t) => (
+              <li key={t.tag}>
+                <Link to={`/notes/tag/${t.tag}`}>
+                  #{t.tag}
+                  <span className="tag-count-badge">{t.count}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </>
   )

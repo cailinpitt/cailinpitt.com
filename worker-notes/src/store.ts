@@ -197,6 +197,34 @@ export async function listNotesByTag(
   }
 }
 
+export interface HashtagSummary {
+  tag: string
+  count: number
+}
+
+/**
+ * Every hashtag ever used, most-used first and then alphabetical — the list
+ * behind "browse by tag" on /notes. A full-table scan of just the `text`
+ * column, not the LIKE-prefiltered approach listNotesByTag uses: there's no
+ * single tag to filter toward here, and this site is "a few hundred short
+ * rows" (see the header comment above), so reading every row's text once is
+ * still cheap. Cached at the edge and purged on every write, same as
+ * /notes.json, rather than kept as a running count column — one query stays
+ * correct by construction; a counter would need to be decremented on every
+ * delete and edit that removes a tag, which is exactly the kind of thing
+ * that quietly drifts.
+ */
+export async function listAllHashtags(db: D1Database): Promise<HashtagSummary[]> {
+  const { results } = await db.prepare('SELECT text FROM notes').all<{ text: string }>()
+  const counts = new Map<string, number>()
+  for (const { text } of results ?? []) {
+    for (const tag of hashtagsIn(text)) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  }
+  return [...counts.entries()]
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+}
+
 export async function getNote(db: D1Database, id: string): Promise<Note | null> {
   const row = await db
     .prepare(`SELECT ${COLUMNS} FROM notes WHERE id = ?`)
