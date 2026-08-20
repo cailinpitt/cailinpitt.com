@@ -1,9 +1,5 @@
-// Client for the watching API (the Cloudflare Worker in /worker-watching).
-// Like /reading and /listening, the page is prerendered as a static shell and
-// fetches this in the browser.
-//
-// These interfaces mirror the Worker's by hand — the two aren't a shared
-// package, so a change on one side has to be made on the other.
+// Client for the watching API (Cloudflare Worker in /worker-watching), fetched in the browser
+// like /reading and /listening. Interfaces mirror the Worker's by hand — not a shared package.
 
 import { imageUrl } from './images'
 
@@ -70,40 +66,25 @@ export async function fetchOlderFilms(
   return res.json() as Promise<FilmPage>
 }
 
-// ---- presentation helpers ------------------------------------------------
-
 /** Posters are R2 paths; everything else passes through. */
 export const watchingImage = (src: string | null): string | null =>
   imageUrl(src ?? undefined) ?? null
 
-/**
- * The film's public page — deliberately not the diary entry.
- *
- * The feed's own permalink is `letterboxd.com/<member>/film/<slug>/`, which
- * would put the account on every card and lead anyone who clicks straight to
- * the profile. `/film/<slug>/` is the same film for everyone.
- */
+// The film's public page, deliberately not the diary entry — the feed's own permalink
+// (`letterboxd.com/<member>/film/<slug>/`) would put the account on every card.
 export const letterboxdUrl = (film: Film): string | null =>
   film.slug ? `https://letterboxd.com/film/${film.slug}/` : null
 
-/**
- * "★★★½" from a 0–5 rating.
- *
- * Half stars are rendered rather than rounded up, unlike the book shelf: on
- * Letterboxd the half *is* the scale — a 3½ and a 4 mean different things, and
- * flattening them would throw away most of what a rating says.
- */
+// Half stars are rendered, not rounded up (unlike the book shelf) — on Letterboxd the half
+// *is* the scale, and flattening it would throw away most of what a rating says.
 export function stars(rating: number | null): string | null {
   if (rating == null || rating <= 0) return null
   const full = Math.floor(rating)
   return '★'.repeat(full) + (rating - full >= 0.5 ? '½' : '')
 }
 
-/**
- * Split films into year sections, newest first. The API already returns them in
- * watched-date order, so this only has to walk the list once and start a new
- * group when the year changes.
- */
+// The API already returns films in watched-date order, so this just walks once and starts a
+// new group on year change.
 export function filmsByYear(films: Film[]): { year: string; films: Film[] }[] {
   const years: { year: string; films: Film[] }[] = []
   for (const film of films) {

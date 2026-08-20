@@ -1,9 +1,7 @@
-// Terminal rendering of the notes feed, for `curl notes.cailinpitt.com`.
-//
-// Same conventions as the listening, reading, watching, moving, and guestbook
-// workers' text views (72 columns, ANSI on by default, `?T` to turn it off), and
-// deliberately a separate copy — the workers are separate packages with no
-// shared module.
+// Terminal rendering of the notes feed, for `curl notes.cailinpitt.com`. Same
+// conventions as the other workers' text views (72 columns, ANSI on by
+// default, `?T` to turn it off), deliberately a separate copy since the
+// workers are separate packages with no shared module.
 
 import type { Note, NotePage } from './store'
 
@@ -33,14 +31,9 @@ function ink(color: boolean) {
   }
 }
 
-/**
- * Text safe to print into someone's terminal.
- *
- * Notes are written by one authenticated person rather than by strangers, so
- * this is far less load-bearing than the guestbook's equivalent — but a note
- * pasted from somewhere else can still carry an escape sequence by accident, and
- * a raw byte stream is how that would end up repainting a reader's scrollback.
- */
+// Less load-bearing than the guestbook's equivalent (one authenticated writer,
+// not strangers), but a note pasted from elsewhere can still carry an escape
+// sequence that would repaint a reader's scrollback.
 const safe = (s: string): string => s.replace(/\p{Cc}|\p{Cf}/gu, (c) => (c === '\n' ? c : ' '))
 
 const num = (n: number) => n.toLocaleString('en-US')
@@ -57,10 +50,8 @@ function stamp(uts: number, offset: number): string {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} · ${hour12}:${minutes}${suffix}`
 }
 
-/**
- * Wrap to the column width at word boundaries, with a hard split for any single
- * "word" longer than the line — a long URL would otherwise blow out the layout.
- */
+// Wraps at word boundaries, with a hard split for any single "word" longer
+// than the line — a long URL would otherwise blow out the layout.
 function wrap(text: string, width: number): string[] {
   const out: string[] = []
   for (const paragraph of safe(text).split('\n')) {
@@ -131,12 +122,8 @@ export function renderText(
 export const oneLine = (note: Note, width = WIDTH): string =>
   wrap(note.text, width).join(' ').trim()
 
-/**
- * A single note, for `curl cailinpitt.com/notes/<id>` — the permalink's text
- * view. Same masthead and layout as the feed's renderText, just one entry
- * instead of a page of them, and a permalink line instead of a "read them at"
- * pointer back to the feed.
- */
+// For `curl cailinpitt.com/notes/<id>` — same masthead/layout as renderText,
+// one entry instead of a page, and a permalink line instead of "read them at".
 export function renderNoteText(
   note: Note,
   opts: { color: boolean; offset: number; site: string },

@@ -4,15 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseFrontmatter } from '../src/lib/frontmatter'
 
-// Integrity of the posts actually on disk.
-//
-// Nothing here checks prose — it checks the handful of frontmatter facts the
-// build trusts without verifying. Two posts sharing a `path` would silently
-// prerender over each other; a `path` whose date disagrees with `date:` puts a
-// post at a URL that contradicts itself; a mistyped tags array arrives as a
-// string and renders as one long nonsense tag. All of that is invisible in a
-// green build, and all of it is caught here in milliseconds with no images, no
-// network, and no dist/ — which is what makes it safe to run in CI.
+// Checks the frontmatter facts the build trusts without verifying (unique path, path/date agreement, tags shape) — not prose.
 
 const BLOG = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'content', 'blog')
 
@@ -58,14 +50,12 @@ describe.each(posts)('$file', ({ file, data }) => {
   })
 
   it('is named after its slug', () => {
-    // toPost() falls back to the filename for a missing path or slug, so the two
-    // agreeing is what keeps that fallback from landing somewhere surprising.
+    // toPost() falls back to the filename for a missing path or slug.
     expect(file.replace(/\.md$/, '')).toBe(data.slug)
   })
 
   it('has tags that parsed as a list', () => {
-    // A bracket typo makes `tags` a string, and every character of it becomes a
-    // tag page. Absent is fine; a string is not.
+    // A bracket typo makes `tags` a string, turning every char into a tag page.
     if (data.tags !== undefined) expect(Array.isArray(data.tags)).toBe(true)
   })
 

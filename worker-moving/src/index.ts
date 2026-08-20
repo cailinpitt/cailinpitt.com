@@ -10,26 +10,14 @@ import { renderText } from './text'
 
 const EDGE_TTL = 300
 
-/**
- * Browser freshness and origin protection, as two separate numbers.
- *
- * They used to be one, which tied "how fresh the page looks" to "how much D1
- * work a traffic spike can cause". Only `s-maxage` does the second job — it
- * collapses a colo's visitors into one origin build per window — so it keeps
- * the old value, while `max-age` drops to something a person would accept
- * waiting. With the cron pulling Strava every 30 minutes, a ride was otherwise
- * invisible for the whole TTL after it landed.
- *
- * `stale-while-revalidate` lets the refresh happen behind an instant response
- * rather than in front of one.
- */
+// Split from one TTL into two: max-age is what a person will wait for a fresh
+// page, s-maxage bounds D1 load per colo per window. With the cron pulling
+// every 30 min, a shared TTL made a ride invisible for the whole window after
+// it landed. stale-while-revalidate serves instantly while refreshing behind it.
 const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
 
-/**
- * Time windows are read by the listening Worker's cron when it builds a period,
- * and past activities never change — so they cache far longer than the feed,
- * and there is no reason for a browser to hold them any less long.
- */
+// Read by the listening Worker's cron when it builds a period. Past activities
+// never change, so this caches far longer than the feed.
 const WINDOW_EDGE_TTL = 3600
 const WINDOW_TTL = { browser: WINDOW_EDGE_TTL, edge: WINDOW_EDGE_TTL }
 
@@ -164,9 +152,8 @@ export default {
         if (!authorized(request, env.ADMIN_TOKEN)) {
           return new Response('Unauthorized', { status: 401, headers: cors })
         }
-        // Reported to the caller, not just the log: this route is
-        // authenticated, and the common failures (schema not applied, a stale
-        // refresh token) are ones you want to see immediately.
+        // Reported to the caller, not just the log — this route is authenticated
+        // and failures (schema not applied, stale refresh token) are worth seeing now.
         let body: string
         let status = 200
         try {
@@ -204,9 +191,8 @@ export default {
         return cached(url, 'now', ctx, cors, async () => json(await buildNow(env.DB), LIVE_TTL))
       }
 
-      // Bare time windows, for the listening crossover. Deliberately not part of
-      // /moving.json: it is a different question asked at a different cadence,
-      // and the bundle has no business carrying a year of them.
+      // Bare time windows for the listening crossover — not part of /moving.json
+      // since it's a different question at a different cadence.
       if (url.pathname === '/windows.json') {
         const from = Number(url.searchParams.get('from')) || 0
         const to = Number(url.searchParams.get('to')) || Math.floor(Date.now() / 1000)

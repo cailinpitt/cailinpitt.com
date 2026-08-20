@@ -3,15 +3,8 @@ import { Link } from 'react-router-dom'
 import { formatTime } from '../lib/datetime'
 import { fetchReadingNow, formatBookDate, readingImage, type ReadingNow } from '../lib/reading'
 
-/**
- * Compact currently-reading strip for the homepage, the counterpart to
- * NowPlayingBar. Client-fetched from the lightweight /now.json endpoint; renders
- * nothing until it has data, so the prerendered shell and any API hiccup just
- * leave the homepage clean.
- *
- * No polling, unlike the listening bar: books sync once a day, so there is
- * nothing to refresh while someone sits on the page.
- */
+// Currently-reading strip, counterpart to NowPlayingBar. No polling, unlike
+// that bar: books sync once a day, so there's nothing to refresh mid-visit.
 export function ReadingBar() {
   const [now, setNow] = useState<ReadingNow | null>(null)
 
@@ -65,10 +58,7 @@ export function ReadingBar() {
         </div>
       )}
 
-      {/* Only present on a day something was actually saved — the endpoint
-          returns null otherwise rather than surfacing a stale link. This one
-          points at the article itself; the "Reading log →" link below covers
-          getting to the rest. */}
+      {/* Endpoint returns null when nothing was saved today, rather than a stale link. */}
       {article && (
         <div className="now-bar">
           <a

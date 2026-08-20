@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LIMITS, validate } from '../worker-guestbook/src/validate'
 
-// The only code on the site that decides what a stranger is allowed to store.
-// It lives in a separate package (worker-guestbook/) with no test setup of its
-// own, and it is pure, so it is tested from here.
+// Decides what a stranger may store; lives in worker-guestbook/ which has no test setup of its own.
 
 const ok = (over: Record<string, unknown> = {}) => ({ name: 'Ada', message: 'Hello!', ...over })
 

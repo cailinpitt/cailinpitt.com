@@ -1,5 +1,4 @@
-// The film card for /watching. Kept out of the page file so the card and the
-// pagination around it stay readable side by side, matching ReadingBits.
+// The film card for /watching, kept out of the page file to match ReadingBits.
 
 import { Art } from './ListeningBits'
 import {
@@ -17,8 +16,7 @@ export function FilmCard({ film }: { film: Film }) {
 
   const inner = (
     <>
-      {/* alt="" because the title sits right beside it — announcing the poster
-          too would just make a screen reader say the film twice. */}
+      {/* alt="" — the title beside it means a screen reader would otherwise say the film twice. */}
       <Art src={watchingImage(film.poster)} alt="" className="film-poster" />
       <span className="film-meta">
         <span className="film-title">

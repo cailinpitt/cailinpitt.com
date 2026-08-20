@@ -1,11 +1,9 @@
 import { useEffect, useState, type ReactElement } from 'react'
 
-// Manual color-theme control: a header button cycles System → Light → Dark.
-// The choice is stored in localStorage and applied as `data-theme` on <html>; the
-// CSS variables key off `:root[data-theme=...]`. System stores nothing and sets no
-// attribute, so those visitors follow their OS `prefers-color-scheme` — and can get
-// back to it, which a two-state toggle can't offer. A tiny inline script in
-// index.html applies a stored choice before first paint (avoids FOUC).
+// Theme cycles System → Light → Dark, stored in localStorage and applied as
+// `data-theme` on <html> (CSS keys off `:root[data-theme=...]`); System stores
+// nothing so those visitors follow OS `prefers-color-scheme`. An inline script
+// in index.html applies the stored choice before first paint to avoid FOUC.
 export type Theme = 'system' | 'light' | 'dark'
 
 const ORDER: Theme[] = ['system', 'light', 'dark']
@@ -27,20 +25,10 @@ export function storedTheme(): Theme {
 const systemColors = new WeakMap<HTMLMetaElement, string>()
 
 /**
- * Keep the browser chrome tint in step with the theme actually in effect.
- *
- * index.html ships two media-scoped <meta name="theme-color"> tags. That's the
- * right answer for System, and the only one that works with JS off — but a media
- * query can't see the manual override, so a visitor forcing Dark on a light OS
- * would get a paper-colored toolbar above a dark page. Writing the resolved
- * background into *both* tags makes whichever one matches carry the right color;
- * returning to System restores what the markup said.
- *
- * The value is read from the stylesheet rather than repeated here, so the two
- * can't drift. That's also why this runs after mount instead of in the pre-paint
- * script in index.html, where the CSS hasn't loaded and --bg reads empty: the
- * cost is that an overridden theme keeps the media-matched tint for the first
- * frames, which tints browser chrome and nothing on the page.
+ * index.html's two media-scoped theme-color tags can't see a manual override
+ * (Dark forced on a light OS would leave a paper-colored toolbar), so write the
+ * resolved --bg into both here. Runs post-mount, not in the pre-paint script,
+ * since --bg reads empty before the stylesheet loads.
  */
 function syncThemeColor(theme: Theme) {
   const tags = document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
@@ -117,8 +105,8 @@ export function ThemeToggle() {
     applyTheme(next)
   }
 
-  // Say where you are as well as where you're going: with three states the icon
-  // alone can't convey which one is currently in effect.
+  // State the current theme, not just the next one: the icon alone can't say
+  // which of three states is active.
   const label = `Theme: ${theme}. Switch to ${next}.`
   return (
     <button type="button" className="theme-toggle" onClick={cycle} aria-label={label} title={label}>

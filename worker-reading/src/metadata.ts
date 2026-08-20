@@ -1,11 +1,9 @@
 // Pull an article's social-card metadata (title, image, description, site) out
-// of its HTML, using HTMLRewriter — native to Workers, streaming, and no parser
-// dependency to keep current.
+// of its HTML with HTMLRewriter (native to Workers, streaming, no dependency).
 //
-// Everything here is best-effort. A page with no OpenGraph tags, a 403 from an
-// aggressive bot filter, or a slow origin must still leave the caller able to
-// log the article; the fallbacks (hostname for `site`, <title> for `title`) are
-// what make the entry readable when that happens.
+// Best-effort throughout: a page with no OpenGraph tags, a bot-filter 403, or a
+// slow origin must still leave the article loggable, via fallbacks (hostname
+// for `site`, <title> for `title`).
 
 /** Give up rather than hold the request open on a slow origin. */
 const TIMEOUT_MS = 8_000
@@ -41,13 +39,9 @@ const NAMED_ENTITIES: Record<string, string> = {
   rdquo: '”',
 }
 
-/**
- * HTMLRewriter's `getAttribute()` returns the raw source text, so entities in a
- * `<meta content="…">` survive verbatim — an Instagram title arrives full of
- * `&amp;` and `&quot;` and would render that way on the page. There is no
- * DOMParser in Workers, so decode the cases that actually show up: numeric
- * references and the handful of named ones common in titles and descriptions.
- */
+// HTMLRewriter's getAttribute() returns raw source text, so entities in
+// `content="…"` survive verbatim (e.g. Instagram titles full of `&amp;`). No
+// DOMParser in Workers, so decode numeric refs plus the common named ones.
 function decodeEntities(value: string): string {
   return value.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, body: string) => {
     if (body[0] === '#') {
@@ -77,9 +71,8 @@ export async function fetchMetadata(url: string): Promise<PageMetadata> {
   try {
     const res = await fetch(url, {
       headers: {
-        // Plenty of publishers serve a stub or a 403 to unfamiliar agents. This
-        // identifies the site honestly while still looking like a real browser
-        // to the naive user-agent checks that would otherwise return nothing.
+        // Identifies honestly but still looks like a browser to naive
+        // user-agent checks — plenty of publishers 403 unfamiliar agents.
         'user-agent':
           'Mozilla/5.0 (compatible; cailinpitt.com-reading/1.0; +https://cailinpitt.com)',
         accept: 'text/html,application/xhtml+xml',
@@ -132,11 +125,9 @@ export async function fetchMetadata(url: string): Promise<PageMetadata> {
   }
 }
 
-/**
- * HTMLRewriter only runs its handlers as the body is consumed, so the stream has
- * to be read — but only up to MAX_BYTES, since a hostile or merely enormous page
- * shouldn't be read in full for four meta tags.
- */
+// Handlers only fire as the body is consumed, so the stream has to be read —
+// but capped at MAX_BYTES, since a huge page isn't worth reading in full for
+// four meta tags.
 async function drain(body: ReadableStream): Promise<void> {
   const reader = body.getReader()
   let read = 0

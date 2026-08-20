@@ -1,8 +1,7 @@
 import type { PostSummary } from './posts'
 
-// Tags come from post frontmatter as free text ("Year in Review", "agile"), so
-// everything here keys off a slugified form: it's what goes in the URL, and it
-// keeps a casing difference between two posts from splitting one tag in two.
+// Tags come from post frontmatter as free text ("Year in Review", "agile"), so everything
+// here keys off a slugified form — the URL, and what stops a casing difference splitting one tag in two.
 
 /** URL-safe form of a tag, e.g. "Year in Review" → "year-in-review". */
 export function tagSlug(tag: string): string {
@@ -20,11 +19,8 @@ export interface TagSummary {
   count: number
 }
 
-/**
- * Every tag used across `posts`, most-used first and then alphabetical. The
- * label shown is the spelling from the first post in the list that uses it —
- * posts arrive newest-first, so the most recent spelling wins.
- */
+// Most-used first, then alphabetical. Label is the spelling from the first post using it —
+// posts arrive newest-first, so the most recent spelling wins.
 export function collectTags(posts: PostSummary[]): TagSummary[] {
   const byTag = new Map<string, TagSummary>()
   for (const post of posts) {
@@ -44,14 +40,8 @@ export function postsWithTag<T extends PostSummary>(posts: T[], slug: string): T
   return posts.filter((post) => post.tags.some((tag) => tagSlug(tag) === slug))
 }
 
-/**
- * The posts most like `post`, ranked by how many tags they share with it.
- *
- * Ties break toward the newer post, which `posts` already orders — so among the
- * many posts sharing exactly one tag, the recent ones surface. A post with no
- * tags gets nothing back rather than an arbitrary three: "related" has to mean
- * something, and chronological neighbors are already offered above this.
- */
+// Ranked by shared tag count; ties break toward the newer post via `posts`'s own order. A
+// post with no tags gets nothing back rather than an arbitrary three.
 export function relatedPosts<T extends PostSummary>(posts: T[], post: PostSummary, limit = 3): T[] {
   const own = new Set(post.tags.map(tagSlug).filter(Boolean))
   if (!own.size) return []

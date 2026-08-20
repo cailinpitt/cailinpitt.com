@@ -1,6 +1,6 @@
-// The sections of a period view. Each one renders nothing when its data is
-// absent, so a blob computed by an older Worker — or all-time, which genuinely
-// has no obsession or curios — degrades to fewer sections instead of blank space.
+// Sections of a period view; each renders nothing when its data is absent, so
+// an older blob (or all-time, which has no obsession/curios) degrades to
+// fewer sections instead of blank space.
 
 import { Link } from 'react-router-dom'
 import { Art } from './ListeningBits'
@@ -60,14 +60,8 @@ export function Headline({ stats }: { stats: PeriodStats }) {
   )
 }
 
-/**
- * Rank movement against the previous period.
- *
- * "New" means first ever heard, which is a different question from "wasn't on
- * last period's chart" — an artist can have years of plays and still be absent
- * from a top 25. Conflating them labelled long-standing artists new, and
- * contradicted the Discovery section, which has always meant first-ever play.
- */
+// "New" means first-ever heard, not "wasn't on last chart" — conflating them
+// mislabeled long-standing artists as new and contradicted Discovery's meaning.
 function Movement({
   rank,
   prevRank,
@@ -194,14 +188,8 @@ function TopTrackList({ tracks }: { tracks: RankedTrack[] }) {
   )
 }
 
-// ---- when the listening happened -----------------------------------------
-
-/**
- * The "when" section: hour of day, day of week, and the two crossed.
- *
- * All three come from the same 168-cell grid the Worker ships, so they can never
- * disagree with each other.
- */
+// Hour, day, and their cross all come from the same 168-cell grid the Worker
+// ships, so they can never disagree with each other.
 export function WhenSection({ stats }: { stats: PeriodStats }) {
   if (!stats.scrobbles) return null
   const maxHour = Math.max(...stats.clock, 1)
@@ -299,8 +287,6 @@ export function WhenSection({ stats }: { stats: PeriodStats }) {
   )
 }
 
-// ---- trend ---------------------------------------------------------------
-
 export function TrendSection({ series, label }: { series: SeriesPoint[]; label: string }) {
   if (!series.length) return null
   const max = Math.max(...series.map((p) => p.count), 1)
@@ -324,13 +310,8 @@ export function TrendSection({ series, label }: { series: SeriesPoint[]; label: 
   )
 }
 
-// ---- genres --------------------------------------------------------------
-
-/**
- * Colors for the genre stack. Deliberately a fixed cycle keyed by rank rather
- * than by name: a genre keeps its color down the page, and no genre needs an
- * entry in a palette that would go stale the moment the taxonomy changes.
- */
+// Fixed cycle keyed by rank, not name: a genre keeps its color down the page
+// without a palette entry that would go stale as the taxonomy changes.
 const GENRE_HUES = [18, 200, 280, 140, 45, 330]
 
 const genreColor = (i: number, alpha = 1) =>
@@ -400,8 +381,8 @@ function GenreTrend({ stats, top }: { stats: PeriodStats; top: PeriodStats['genr
           return (
             <div className="genre-stack-col" key={point.key} title={point.label}>
               <div className="genre-stack-bars">
-                {/* Renormalize to the bucket's classified plays so every column
-                    is full height and the comparison is share, not volume. */}
+                {/* Renormalized to the bucket's classified plays so every
+                    column is full height — comparison is share, not volume. */}
                 {entries.map((e) => (
                   <span
                     key={e.name}
@@ -422,8 +403,6 @@ function GenreTrend({ stats, top }: { stats: PeriodStats; top: PeriodStats['genr
     </figure>
   )
 }
-
-// ---- origin and era ------------------------------------------------------
 
 /** ISO 3166-1 alpha-2 → display name. Only what turns up in a music library. */
 const COUNTRY_NAMES: Record<string, string> = {
@@ -517,8 +496,6 @@ export function OriginSection({ stats }: { stats: PeriodStats }) {
   )
 }
 
-// ---- listening time ------------------------------------------------------
-
 /** 9420 → "2h 37m". Hours and minutes only; seconds are noise at these totals. */
 export function formatDuration(seconds: number): string {
   if (seconds < 60) return `${Math.round(seconds)}s`
@@ -571,8 +548,8 @@ export function TimeSection({ stats }: { stats: PeriodStats }) {
             Longest track played: {t.longest.track} by {t.longest.artist} ({mmss(t.longest.seconds)}).{' '}
           </>
         )}
-        {/* Extrapolated, and says so — with partial coverage the alternative is
-            silently under-reporting by however much is missing. */}
+        {/* Extrapolated, and says so — the alternative is silently
+            under-reporting by whatever's missing. */}
         {t.coverage < 99
           ? `Estimated from the ${t.coverage}% of plays with a known length.`
           : 'Measured from track lengths.'}
@@ -580,8 +557,6 @@ export function TimeSection({ stats }: { stats: PeriodStats }) {
     </section>
   )
 }
-
-// ---- listened while moving -----------------------------------------------
 
 /** Activity kinds, in the words the moving page uses. */
 const KIND_LABELS: Record<string, string> = {
@@ -597,13 +572,9 @@ const KIND_LABELS: Record<string, string> = {
 
 const kindLabel = (kind: string) => KIND_LABELS[kind] ?? kind
 
-/**
- * The crossover: scrobbles whose timestamp falls inside a logged activity.
- *
- * Absent on blobs built before this existed, and empty whenever the moving
- * Worker had nothing to say — including when it couldn't be reached. Both read
- * the same way here, which is the point: there is simply nothing to show.
- */
+// Scrobbles whose timestamp falls inside a logged activity. Absent on old
+// blobs and empty when the moving Worker has nothing (including unreachable)
+// read the same here — there's simply nothing to show.
 export function MovingSection({ stats }: { stats: PeriodStats }) {
   const m = stats.moving
   if (!m?.plays) return null
@@ -659,8 +630,6 @@ export function MovingSection({ stats }: { stats: PeriodStats }) {
     </section>
   )
 }
-
-// ---- discovery -----------------------------------------------------------
 
 export function DiscoverySection({ stats }: { stats: PeriodStats }) {
   const d = stats.discovery
@@ -740,8 +709,6 @@ function formatGap(days: number): string {
 const kindWord = (kind: PeriodStats['kind']) =>
   kind === 'w' ? 'week' : kind === 'm' ? 'month' : kind === 'y' ? 'year' : 'period'
 
-// ---- habits --------------------------------------------------------------
-
 export function HabitsSection({ stats }: { stats: PeriodStats }) {
   if (!stats.scrobbles) return null
   const { sessions, streaks, loyalty } = stats
@@ -819,8 +786,6 @@ export function HabitsSection({ stats }: { stats: PeriodStats }) {
   )
 }
 
-// ---- milestones and curios -----------------------------------------------
-
 export function MilestonesSection({ stats }: { stats: PeriodStats }) {
   const { milestones, curios } = stats
   const hasCurios = curios.remix + curios.live + curios.acoustic + curios.collab > 0
@@ -836,7 +801,7 @@ export function MilestonesSection({ stats }: { stats: PeriodStats }) {
           {milestones.map((m) => (
             <li key={m.n}>
               {/* Scrobble 1 is a milestone in the data, but "Scrobble 1 was…"
-                  reads like a stub. It gets the sentence it deserves. */}
+                  reads like a stub — it gets its own sentence. */}
               {m.n === 1 ? (
                 <>
                   The <strong>very first scrobble</strong>, on{' '}
@@ -868,7 +833,6 @@ export function MilestonesSection({ stats }: { stats: PeriodStats }) {
   )
 }
 
-/** Bookends: the first and last thing played in the period. */
 export function BookendsSection({ stats }: { stats: PeriodStats }) {
   if (!stats.first || !stats.last) return null
   return (

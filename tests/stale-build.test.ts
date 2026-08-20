@@ -8,8 +8,7 @@ import {
 
 describe('isStaleChunkError', () => {
   it('recognizes the dynamic-import failure each browser reports differently', () => {
-    // The whole recovery hangs off these strings, and all three browsers word
-    // it their own way. Getting one wrong means that browser never recovers.
+    // Recovery hangs off these exact strings; each browser words it differently.
     const messages = [
       'Failed to fetch dynamically imported module: https://cailinpitt.com/assets/BlogPost-BAKMy2uN.js',
       'error loading dynamically imported module: /assets/Home-CcO99A_p.js',
@@ -22,8 +21,7 @@ describe('isStaleChunkError', () => {
   })
 
   it('leaves a real bug alone, so a crash cannot masquerade as a stale deploy', () => {
-    // If this were loose, a page that throws on every render would reload
-    // forever and the actual error would never be seen.
+    // If this were loose, a page that throws on every render would reload forever.
     expect(isStaleChunkError(new TypeError("Cannot read properties of undefined (reading 'map')"))).toBe(
       false,
     )
@@ -45,14 +43,12 @@ describe('shouldReload', () => {
   })
 
   it('refuses a second reload of the same url right away', () => {
-    // This is the loop guard. Without it, an error that merely *looks* like a
-    // missing chunk refreshes the tab indefinitely.
+    // The loop guard: without it, an error that merely looks like a missing chunk reloads forever.
     expect(shouldReload({ href: '/blog', at: now }, '/blog', now + 500)).toBe(false)
   })
 
   it('allows the same url again once the window has passed', () => {
-    // A successful reload leaves the marker behind; a deploy an hour later
-    // should still be recoverable on that same page.
+    // A successful reload leaves the marker; a deploy an hour later must still be recoverable.
     expect(shouldReload({ href: '/blog', at: now }, '/blog', now + 60_000)).toBe(true)
   })
 })
@@ -91,8 +87,7 @@ describe('reload marker storage', () => {
   })
 
   it('reports a failed write, which is what stops an unstorable loop', () => {
-    // No marker can be saved, so every failure would look like the first one.
-    // The caller reads `false` as "don't reload".
+    // No marker can be saved; the caller reads `false` as "don't reload".
     const throwing = {
       setItem: () => {
         throw new Error('QuotaExceededError')

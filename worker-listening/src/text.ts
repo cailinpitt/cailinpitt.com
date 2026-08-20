@@ -43,19 +43,14 @@ function ink(color: boolean): Ink {
   }
 }
 
-// ---- text helpers --------------------------------------------------------
-
 /** Truncate to n columns with an ellipsis. */
 function clip(s: string, n: number): string {
   const clean = s.replace(/\s+/g, ' ').trim()
   return clean.length <= n ? clean : clean.slice(0, Math.max(0, n - 1)) + '…'
 }
 
-/**
- * clip() padded to exactly n, for columns that have something to their right.
- * Never use this on the last field of a line: the padding sits inside the color
- * wrap, so it survives any later trimEnd() as invisible trailing whitespace.
- */
+// clip() padded to n. Never use on the last field of a line — the padding sits
+// inside the color wrap and survives trimEnd() as invisible trailing whitespace.
 const fit = (s: string, n: number): string => clip(s, n).padEnd(n)
 
 const num = (n: number) => n.toLocaleString('en-US')
@@ -108,8 +103,6 @@ function relative(uts: number, now: number): string {
   const days = Math.floor(hours / 24)
   return days < 30 ? `${days}d ago` : `${Math.floor(days / 30)}mo ago`
 }
-
-// ---- sections ------------------------------------------------------------
 
 function header(c: Ink): string[] {
   const title = 'cailinpitt.com/listening'
@@ -175,14 +168,8 @@ function statsLine(w: StatWindow, label: string, c: Ink): string[] {
   return ['', `  ${c.bold(label)}  ${c.dim(parts.join(' · '))}`]
 }
 
-/**
- * Last 30 local days as a sparkline.
- *
- * The heatmap only recomputes every 6 h, so its entry for today is usually stale
- * or missing — which would draw the most-looked-at cell as an empty day.
- * recentDays covers the last ~10 days on the 15-minute cadence, so take whichever
- * source reports more for a given day.
- */
+// The heatmap only recomputes every 6h, so today's cell is often stale/missing;
+// recentDays covers ~10 days on a 15-min cadence, so take whichever is higher.
 function recentSpark(b: Bundle, c: Ink, offset: number, now: number): string[] {
   const fresh = new Map(b.recentDays.map((d) => [d.date, d.count]))
   const days: number[] = []
@@ -234,8 +221,6 @@ function footer(b: Bundle, c: Ink): string[] {
   ]
 }
 
-// ---- year in review ------------------------------------------------------
-
 const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
 /** Twelve months as a labelled bar row — the shape of the year at a glance. */
@@ -249,15 +234,10 @@ function monthBars(months: number[], c: Ink): string[] {
   return ['', `  ${c.accentDim('by month')}`, ...rows]
 }
 
-/**
- * A year for the terminal, rendered from the same period blob the web page uses.
- *
- * Previously this took a `YearReview` computed from D1 on request. That was a
- * ~18,700-row aggregation on the read path — the one thing the period
- * architecture exists to prevent — and it meant `curl` saw a different, poorer
- * year than the site. One shape now feeds both, so genres and listening time
- * come along for free and the two can't drift.
- */
+// Renders from the same period blob the web page uses. Used to compute a
+// separate `YearReview` from D1 on request (~18,700 rows on the read path,
+// exactly what the period architecture exists to prevent) — now one shape
+// feeds both, so they can't drift.
 export function renderYear(y: PeriodStats, color: boolean): string {
   const c = ink(color)
   const title = `cailinpitt.com/listening · ${y.key}${y.complete ? '' : ' (in progress)'}`
@@ -349,8 +329,6 @@ function hourLabel(hour: number): string {
   if (hour === 12) return 'noon'
   return hour < 12 ? `${hour}am` : `${hour - 12}pm`
 }
-
-// ---- entry point ---------------------------------------------------------
 
 export interface TextOptions {
   color: boolean

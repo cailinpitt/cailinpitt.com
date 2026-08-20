@@ -81,8 +81,6 @@ export function Component() {
   )
 }
 
-// ---- the log -------------------------------------------------------------
-
 function FilmLog({
   initial,
   initialCursor,
@@ -162,8 +160,6 @@ function FilmLog({
     </section>
   )
 }
-
-// ---- loading state -------------------------------------------------------
 
 function WatchingSkeleton() {
   return (

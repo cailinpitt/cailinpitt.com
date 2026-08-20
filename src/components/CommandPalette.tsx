@@ -1,5 +1,4 @@
-// Aliased: React's KeyboardEvent would otherwise shadow the DOM one this file
-// also uses, for the document-level listener.
+// Aliased to avoid shadowing the DOM KeyboardEvent used by the document-level listener.
 import {
   useCallback,
   useEffect,
@@ -13,13 +12,9 @@ import { photoYears, posts } from 'virtual:site-index'
 import { yearAnchor } from '../lib/photos'
 import { tagSlug } from '../lib/tags'
 
-// Jump-to-anywhere search over everything the site is made of: pages, posts,
-// photo years, and tags. The whole index is compiled in (see the site-index plugin
-// in vite.config.ts), so opening the palette costs no request and matching is a
-// scan over a few hundred short strings — fast enough that debouncing would only
-// add latency.
-//
-// Rendered by Layout: the trigger sits in the header nav, the dialog beside it.
+// Jump-to-anywhere search over pages, posts, photo years, and tags. Index is
+// compiled in (site-index plugin, vite.config.ts), so search is a synchronous
+// scan over a few hundred strings — no debounce needed. Rendered by Layout.
 
 type Kind = 'Page' | 'Post' | 'Photos' | 'Tag'
 
@@ -33,32 +28,18 @@ export interface Entry {
   /** Extra words that should match but don't belong in the label. */
   keywords?: string
   /**
-   * Keep this entry out of the palette entirely — both the resting list and the
-   * search results.
-   *
-   * It still has to be *in* `PAGES`, because the test below holds that list
-   * against the router in both directions and a route missing from it fails the
-   * build. This flag is how a route satisfies that check without being offered
-   * to a visitor: /notes/compose is a writing tool, and the palette's resting
-   * state renders every listed page, so without this it is the first thing
-   * anyone sees on pressing ⌘K.
-   *
-   * Not a security boundary — the route is in the bundle and the page is a real
-   * file. The Worker's token is what protects publishing; this only keeps a
-   * compose box out of a stranger's face.
+   * Keeps an entry out of the palette (resting list and search) while it still
+   * satisfies the PAGES/router coverage test. Not a security boundary — just
+   * keeps e.g. /notes/compose out of a visitor's face.
    */
   unlisted?: boolean
 }
 
 /**
- * The site's own pages, by hand — a route knows its path but not what to call it
- * or what someone might type looking for it, and "listening" being findable as
- * "scrobbles" is the whole point of the list. Posts, photo years, and tags are
- * derived below, so only a genuinely new *page* needs a line here.
- *
- * Exported for tests/command-palette.test.ts, which holds this against the
- * router: a page added to App.tsx and forgotten here is unreachable from ⌘K, and
- * nothing about the palette would look broken.
+ * The site's pages, hand-labeled with what someone might search for (e.g.
+ * "listening" findable as "scrobbles"). Posts, photo years, and tags are
+ * derived below. Checked against the router by tests/command-palette.test.ts,
+ * so a page added to App.tsx and forgotten here is unreachable from ⌘K.
  */
 export const PAGES: Entry[] = [
   { id: 'page:/', label: 'Home', kind: 'Page', to: '/', keywords: 'index start' },
@@ -66,8 +47,8 @@ export const PAGES: Entry[] = [
   { id: 'page:/now', label: 'Now', kind: 'Page', to: '/now', keywords: 'currently up to today latest' },
   { id: 'page:/blog', label: 'Blog', kind: 'Page', to: '/blog', keywords: 'writing posts essays' },
   { id: 'page:/notes', label: 'Notes', kind: 'Page', to: '/notes', keywords: 'microblog short thoughts tweets statuses' },
-  // Present so the route-coverage test passes, `unlisted` so the palette never
-  // shows it. Reached by typing the URL.
+  // Present for the route-coverage test; unlisted keeps it out of the palette
+  // (reached only by typing the URL).
   { id: 'page:/notes/compose', label: 'New note', kind: 'Page', to: '/notes/compose', keywords: 'compose write post publish microblog new', unlisted: true },
   { id: 'page:/photos', label: 'Photos', kind: 'Page', to: '/photos', keywords: 'photography feed gallery' },
   { id: 'page:/photos/map', label: 'Photo map', kind: 'Page', to: '/photos/map', keywords: 'where places locations' },
@@ -92,12 +73,7 @@ export const PAGES: Entry[] = [
   { id: 'page:/privacy', label: 'Privacy', kind: 'Page', to: '/privacy', keywords: 'cookies tracking data' },
 ]
 
-/**
- * The pages the palette will actually offer. Everything downstream — the
- * resting list, the search index, the haystacks — is built from this rather than
- * from `PAGES`, so an unlisted entry cannot leak into results by being forgotten
- * at one of the three call sites.
- */
+/** Pages the palette actually offers. Everything downstream builds from this rather than `PAGES`, so an unlisted entry can't leak in. */
 export const LISTED_PAGES: Entry[] = PAGES.filter((entry) => !entry.unlisted)
 
 const yearFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', timeZone: 'UTC' })
@@ -127,9 +103,8 @@ function buildEntries(): Entry[] {
     keywords: 'photos photography year',
   }))
 
-  // One entry per distinct tag, labeled with the most recent spelling — posts
-  // arrive newest first, so the first one to claim a slug wins, which is the
-  // same rule collectTags() uses for the cloud at the foot of /blog.
+  // One entry per tag, newest spelling wins (posts arrive newest-first) — same
+  // rule collectTags() uses for the /blog tag cloud.
   const tagEntries = new Map<string, Entry>()
   for (const post of posts) {
     for (const tag of post.tags) {
@@ -150,8 +125,7 @@ function buildEntries(): Entry[] {
 
 const ENTRIES = buildEntries()
 
-// Precomputed once: matching runs on every keystroke and shouldn't be lowercasing
-// the same few hundred strings each time.
+// Precomputed once — matching runs on every keystroke.
 const HAYSTACKS = new Map(
   ENTRIES.map((entry) => [entry.id, `${entry.label} ${entry.sub ?? ''} ${entry.keywords ?? ''}`.toLowerCase()]),
 )
@@ -159,11 +133,7 @@ const HAYSTACKS = new Map(
 /** Ranking weight per kind, so an exact-ish tie puts navigation above archive. */
 const KIND_RANK: Record<Kind, number> = { Page: 3, Photos: 2, Tag: 1, Post: 0 }
 
-/**
- * How well one term matches: a label prefix beats a word start beats a substring
- * anywhere. Returns 0 when the term is absent, which fails the whole entry —
- * every term has to hit, so typing more always narrows.
- */
+/** Term match strength: label-prefix > word-start > substring; 0 fails the whole entry (every term must hit). */
 function scoreTerm(entry: Entry, haystack: string, term: string): number {
   const label = entry.label.toLowerCase()
   if (label.startsWith(term)) return 12
@@ -196,7 +166,6 @@ function search(query: string, limit = 12): Entry[] {
   return scored.sort((a, b) => b.score - a.score).slice(0, limit).map((hit) => hit.entry)
 }
 
-/** Whether a keystroke landed somewhere the visitor is actually typing. */
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   if (!el) return false
@@ -244,8 +213,7 @@ export function CommandPalette({
 
   const results = useMemo(() => search(query), [query])
 
-  // Back to the top on every keystroke: the results are re-ranked, so holding on
-  // to row 4 would keep a selection that no longer means what it did.
+  // Reset selection on every keystroke since results are re-ranked.
   useEffect(() => setActive(0), [query])
 
   // ⌘K / Ctrl-K anywhere, and "/" when the visitor isn't already typing into
@@ -316,9 +284,8 @@ export function CommandPalette({
         if (event.target === dialogRef.current) onClose()
       }}
     >
-      {/* Mounted only while open: the dialog is in the prerendered HTML of every
-          page, and an always-present listbox of 60 links is not something a
-          screen reader should have to walk past to reach the article. */}
+      {/* Mounted only while open — an always-present 60-link listbox shouldn't
+          stand between a screen reader and the article. */}
       {open && (
         <div className="palette-inner">
           <input

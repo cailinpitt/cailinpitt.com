@@ -1,10 +1,7 @@
-// Daily Hardcover → D1 sync.
-//
-// Hardcover is the source of truth and rows there can be edited or deleted, so
-// this is a full *replace*, not an append: fetch the whole library, then DELETE
-// + re-insert inside one atomic D1 batch. At a few hundred books that is both
-// cheaper and more correct than diffing, and it is why there is no separate
-// backfill script — the first run imports the entire history.
+// Daily Hardcover → D1 sync. Hardcover rows can be edited or deleted, so this
+// is a full replace, not an append: fetch the whole library, DELETE + re-insert
+// in one atomic batch. Cheaper and more correct than diffing at this size, and
+// why there's no separate backfill script — the first run imports everything.
 
 import { fetchLibrary, fetchUserId, type BookRow } from './hardcover'
 import { mirrorImage } from './images'
@@ -22,12 +19,9 @@ export interface SyncResult {
   coversRemaining: number
 }
 
-/**
- * Covers still needing a mirror are carried over to the next run rather than
- * done all at once: on the Workers free plan an invocation gets 50 subrequests
- * (R2/KV/D1 binding calls included) and each mirror costs 2. `MIRROR_BUDGET` is
- * a var so it can be raised on Workers Paid — see wrangler.jsonc.
- */
+// Unmirrored covers carry over to the next run: free-plan Workers get 50
+// subrequests per invocation and each mirror costs 2. Raise on Workers Paid
+// via the MIRROR_BUDGET var — see wrangler.jsonc.
 function mirrorBudget(env: Env): number {
   const configured = Number(env.MIRROR_BUDGET)
   return Number.isFinite(configured) && configured > 0 ? configured : 15
@@ -75,11 +69,8 @@ export async function syncBooks(env: Env): Promise<SyncResult> {
   }
 }
 
-/**
- * Totals for the `stats` table, derived from rows already in memory — so
- * maintaining them costs zero D1 reads, unlike the COUNT(*) subqueries they
- * replaced. See the comment on the table in schema.sql.
- */
+// Totals for `stats`, derived from rows already in memory — zero extra D1
+// reads, unlike the COUNT(*) subqueries they replace.
 function summarize(rows: BookRow[]): { booksRead: number; byYear: string } {
   let booksRead = 0
   const byYear: Record<string, { books: number; pages: number }> = {}

@@ -1,13 +1,8 @@
 // Article storage: canonicalize a url, enrich it with the page's social card,
-// and add / annotate / remove the row.
+// and add/annotate/remove the row. Reached from POST|PATCH|DELETE /ingest.
 //
-// Reached from `POST|PATCH|DELETE /ingest` — the share-sheet Shortcuts and the
-// bookmarklets.
-//
-// Everything is keyed by a hash of the *canonical* url, which is what makes the
-// three operations composable: saving the same link twice is a no-op, and you
-// can annotate or remove an article later by handing back the url you shared —
-// tracking parameters and all — without having to know its id.
+// Everything is keyed by a hash of the *canonical* url, so saving the same
+// link twice is a no-op and you can annotate/remove by url alone, no id needed.
 
 import { sha256Hex } from './hash'
 import { mirrorImage } from './images'
@@ -44,8 +39,6 @@ export interface IngestResult {
   /** True when a note was written, whether the article was new or not. */
   noted?: boolean
 }
-
-// ---- url handling --------------------------------------------------------
 
 /**
  * Normalize a url so the same article always hashes to the same id: drop the
@@ -94,8 +87,6 @@ const cleanNote = (note: string | null | undefined): string | null => {
   return text.length <= MAX_NOTE ? text : `${text.slice(0, MAX_NOTE - 1).trimEnd()}…`
 }
 
-// ---- create --------------------------------------------------------------
-
 /**
  * Store one article. Idempotent: the id is a hash of the canonical url, so
  * saving a link twice keeps the date it was *first* read rather than bumping it.
@@ -110,11 +101,8 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
   // image mirror, and on the free plan subrequests are the scarce resource.
   const existing = await env.DB.prepare('SELECT id FROM articles WHERE id = ?1').bind(id).first()
   if (existing) {
-    // Saving an article you already saved is a no-op — except for the note. A
-    // note is something you deliberately typed, so dropping it on the floor
-    // because the link was already logged loses real input. This is exactly the
-    // "saved it earlier, came back to say why" case, and it must not require
-    // knowing that a PATCH exists.
+    // Re-saving is a no-op except for the note — a deliberately typed note
+    // shouldn't be dropped just because the link was already logged.
     const note = cleanNote(input.note)
     if (note) {
       await env.DB.prepare('UPDATE articles SET note = ?2 WHERE id = ?1').bind(id, note).run()
@@ -126,9 +114,8 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
   const meta = await fetchMetadata(url)
   const image = await mirrorImage(env, meta.image)
 
-  // Keep the precomputed article count in step. Incrementing rather than
-  // re-counting is the whole point of the stats table — a COUNT(*) here would
-  // grow with the archive. The daily sync reconciles it, so drift can't persist.
+  // Increment rather than COUNT(*), which would grow with the archive; the
+  // daily sync reconciles any drift.
   await env.DB.batch([
     env.DB.prepare(
       `INSERT OR IGNORE INTO articles (id, url, title, site, excerpt, image, note, read_at)
@@ -148,8 +135,6 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
 
   return { id, url, stored: true }
 }
-
-// ---- annotate ------------------------------------------------------------
 
 /**
  * Set or extend an article's note after the fact — the "I saved this on my phone
@@ -183,21 +168,10 @@ export async function annotateArticle(
   return { id, note: row?.note ?? null }
 }
 
-// ---- remove --------------------------------------------------------------
-
-/**
- * Delete an article and its row from the count.
- *
- * The count is recomputed rather than decremented: deleting is a rare manual
- * correction, so one COUNT(*) is affordable here and is always right, even if a
- * previous increment went astray.
- *
- * The mirrored social image is deliberately left in R2. Keys are content-
- * addressed, so re-saving the same article reuses the object rather than
- * re-fetching it, and `scripts/prune-r2.mjs` never touches this prefix — the
- * cost is a few KB, and the alternative risks deleting an image another row
- * still points at.
- */
+// Count is recomputed (not decremented) since deletes are rare and manual, so
+// a COUNT(*) here is cheap and self-correcting. The mirrored R2 image is left
+// in place — content-addressed keys mean re-saving reuses it, and deleting
+// risks orphaning an image another row still points at.
 export async function deleteArticle(env: Env, id: string): Promise<boolean> {
   const [removed] = await env.DB.batch([
     env.DB.prepare('DELETE FROM articles WHERE id = ?1').bind(id),

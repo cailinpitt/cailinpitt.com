@@ -120,8 +120,6 @@ export async function fetchRecentTracks(opts: FetchRecentOptions): Promise<Recen
   }
 }
 
-// ---- enrichment ----------------------------------------------------------
-
 export interface RawTag {
   name: string
   count: number
@@ -136,13 +134,8 @@ async function call<T>(params: Record<string, string>, apiKey: string): Promise<
   return (await res.json()) as T
 }
 
-/**
- * An artist's genre tags.
- *
- * Returns [] rather than throwing when Last.fm simply has nothing for an artist
- * — a real outcome for obscure names, and one the caller records so it isn't
- * retried every tick forever. Error 6 is "not found", which is not a failure.
- */
+// Returns [] rather than throwing on error 6 ("not found") — a real outcome for
+// obscure artists, which the caller records so it isn't retried every tick.
 export async function fetchArtistTags(
   apiKey: string,
   artist: string,
@@ -163,10 +156,8 @@ export async function fetchArtistTags(
   }
 }
 
-/**
- * An artist's MusicBrainz id, so the origin lookup can be exact instead of a
- * fuzzy name search. Frequently absent, which is why the caller falls back.
- */
+// MBID lets the origin lookup be exact instead of a fuzzy name search. Often
+// absent, which is why the caller falls back.
 export async function fetchArtistInfo(
   apiKey: string,
   artist: string,
@@ -191,12 +182,8 @@ export interface AlbumInfo {
   found: boolean
 }
 
-/**
- * One album's tags and the durations of every track on it.
- *
- * This is the reason durations are affordable: 8,854 album calls cover all
- * 18,114 distinct tracks, where track.getInfo would need one call each.
- */
+// This is what makes durations affordable: 8,854 album calls cover all 18,114
+// distinct tracks, vs. one track.getInfo call each.
 export async function fetchAlbumInfo(
   apiKey: string,
   artist: string,

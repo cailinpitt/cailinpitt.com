@@ -48,13 +48,8 @@ export interface DayLog {
   count: number
   tracks: Scrobble[]
 }
-/**
- * A day with its track list folded away — what /timeline reads.
- *
- * The page shows a count and the day's most-played artist and renders no
- * individual track, but the full log is ~93% of the bundle it used to pull.
- * The Worker does the fold, so the two pages can't disagree about a day.
- */
+// A day with its track list folded away — what /timeline reads, since the full log was
+// ~93% of the bundle it used to pull. The Worker does the fold so the pages can't disagree.
 export interface CompactDay {
   date: string
   count: number
@@ -75,11 +70,7 @@ export interface Bundle {
   heatmap: Heatmap
   recentDays: DayLog[]
   nextBefore: number | null
-  /**
-   * Five-field projection of the current year, carried by the bundle rather than
-   * fetched separately — see the note on Bundle in the Worker's stats.ts.
-   * Optional: a Worker deployed before this existed simply omits it.
-   */
+  /** Current-year projection carried by the bundle (see Bundle in the Worker's stats.ts). Optional: older Workers omit it. */
   year?: {
     key: string
     scrobbles: number
@@ -110,26 +101,14 @@ export async function fetchOnThisDay(signal?: AbortSignal): Promise<OnThisDay> {
   return res.json() as Promise<OnThisDay>
 }
 
-// ---- period stats (week / month / year / all time) ------------------------
-//
-// One blob per period, precomputed by the Worker's cron. The page never asks the
-// API to aggregate anything — a period that hasn't been computed yet 404s and the
-// UI says so, rather than triggering a scan of the archive.
+// Period stats (week/month/year/all time): one blob per period, precomputed by the Worker's
+// cron. A period that hasn't been computed yet 404s rather than triggering a scan.
 
 export type PeriodKind = 'w' | 'm' | 'y' | 'all'
 
-/**
- * The card every /listening sub-page shares.
- *
- * Period pages number in the hundreds — 284 weeks, 66 months, and growing by 52
- * a year — and generating a card apiece added ~6 minutes to every build to
- * produce images for URLs nobody shares. They point at the section's card
- * instead, which makes generate-og.mjs skip them entirely. Same trade the ~500
- * photo permalinks already make.
- *
- * The wrapped pages are the exception and keep their own cards: there are six,
- * and a year in review is the one page here anyone would share.
- */
+// The card every /listening sub-page shares — per-period cards added ~6min to every build
+// for images nobody shares (hundreds of weeks/months). Wrapped pages are the exception and
+// keep their own cards; there are only six and people do share those.
 export const LISTENING_OG_CARD = '/og/listening.jpg'
 
 export interface RankedArtist {
@@ -228,21 +207,14 @@ export interface PeriodStats {
     longestTitle: { track: string; artist: string } | null
   }
 
-  /**
-   * Genres (Tier B). Shares are of *classified* plays, not of all plays, so they
-   * sum to 100 regardless of how much of the archive has been enriched;
-   * `genreCoverage` is what says how much that is.
-   */
+  /** Genres (Tier B). Shares are of *classified* plays, not all plays, so they sum to 100 regardless of enrichment progress — see `genreCoverage`. */
   genres: { name: string; count: number; share: number }[]
   newGenres: string[]
   genreDiversity: number
   genreSeries: { key: string; label: string; genres: Record<string, number> }[]
   genreCoverage: number
 
-  /**
-   * Artist origin and era (Tier D). Country shares are of plays with a *known*
-   * country, like genres; `coverage` says how many that is.
-   */
+  /** Artist origin and era (Tier D). Country shares are of plays with a *known* country, like genres — see `coverage`. */
   origins: {
     countries: { code: string; count: number; share: number }[]
     decades: { decade: number; count: number; share: number }[]
@@ -308,23 +280,15 @@ export class PeriodNotReady extends Error {
   }
 }
 
-/**
- * Completed periods are baked into the site build as static assets (see
- * scripts/bake-listening.mjs), which do not consume Worker requests at all.
- * Try the local copy first and fall back to the API, so a missing bake is a
- * slower path rather than a broken page.
- */
+// Completed periods are baked into the build as static assets (scripts/bake-listening.mjs),
+// costing no Worker request. Try the local copy first, fall back to the API on a miss.
 async function fetchPeriodBlob(kind: PeriodKind, key: string, signal?: AbortSignal) {
-  // Only *completed* periods are ever baked, so trying the local path for the
-  // current week/month/year is a guaranteed 404 before the real request — on the
-  // period pages most likely to be visited. All-time is never complete either.
+  // Only completed periods are baked, so skip the local path for the live (current) period.
   const isLive = kind === 'all' || key === currentKey(kind)
   if (!isLive) {
     const local = await fetch(`/listening-data/${kind}/${key}.json`, { signal }).catch(() => null)
-    // `ok` is not enough. A dev server — and any host with an SPA fallback —
-    // answers an unknown path with index.html and a 200, which would sail
-    // through here and then blow up in res.json(). Only a JSON content-type
-    // means the bake actually produced this file.
+    // `ok` isn't enough: an SPA fallback (dev server included) answers a 200 with index.html
+    // for unknown paths, so require JSON content-type to confirm the bake actually produced this.
     if (local?.ok && local.headers.get('content-type')?.includes('json')) return local
   }
   return fetch(`${API_BASE}/p/${kind}/${key}.json`, { signal })
@@ -351,12 +315,7 @@ export async function fetchPeriodIndex(signal?: AbortSignal): Promise<PeriodInde
 export interface NowState {
   nowPlaying: NowPlaying | null
   lastPlayed: Scrobble | null
-  /**
-   * All-time scrobbles, straight from Last.fm's own total — no COUNT(*) behind
-   * it, which is why the cheapest endpoint can afford to carry it. Optional
-   * because a Worker deployed before it was added simply omits the field, and a
-   * missing counter should read as absent rather than as zero.
-   */
+  /** All-time scrobbles from Last.fm's own total, no COUNT(*) — cheap enough for this endpoint. Optional so older Workers can omit it rather than read as zero. */
   totalScrobbles?: number
   updatedAt: number
 }
@@ -386,13 +345,8 @@ export async function fetchBundle(signal?: AbortSignal): Promise<Bundle> {
   return res.json() as Promise<Bundle>
 }
 
-/**
- * What was playing between two instants — the soundtrack to an activity.
- *
- * Fetched on demand rather than precomputed: nothing is spent unless a visitor
- * expands an activity, and the Worker answers from an index range of a couple of
- * dozen rows. A finished window is immutable, so it caches at the edge for a day.
- */
+// Fetched on demand, not precomputed — nothing is spent unless a visitor expands an activity.
+// A finished window is immutable, so it caches at the edge for a day.
 export async function fetchDuring(
   from: number,
   to: number,
@@ -404,14 +358,8 @@ export async function fetchDuring(
   return data.tracks ?? []
 }
 
-/**
- * How many tracks fall inside each window, in one request.
- *
- * Used by /moving to decide which activities are worth offering an expander on.
- * Asking per activity would be thirty requests a page; this is one, and the
- * window list is stable enough to cache well. Returns [] on failure, so a
- * hiccup hides the expanders rather than breaking the page.
- */
+// Used by /moving to decide which activities get an expander — one request instead of one
+// per activity. Returns [] on failure, so a hiccup hides expanders rather than breaking the page.
 export async function fetchDuringCounts(
   windows: { from: number; to: number }[],
   signal?: AbortSignal,
@@ -458,9 +406,8 @@ export async function fetchOlderCompactDays(
   return res.json() as Promise<{ days: CompactDay[]; nextBefore: number | null }>
 }
 
-// ---- music service search links ------------------------------------------
-// Search links (not exact-track deep links) so every song resolves with no API
-// keys or per-track lookups — the service opens a prefilled search.
+// Search links, not exact-track deep links, so every song resolves with no API keys or
+// per-track lookups.
 
 export const spotifySearchUrl = (query: string) =>
   `https://open.spotify.com/search/${encodeURIComponent(query)}`
@@ -471,9 +418,7 @@ export const appleMusicSearchUrl = (query: string) =>
 export const trackQuery = (artist: string, track: string) => `${artist} ${track}`
 export const albumQuery = (artist: string, album: string) => `${artist} ${album}`
 
-// ---- formatting ----------------------------------------------------------
-//
-// Shared with /reading, so it lives in datetime.ts. Re-exported here because
-// this module is where the listening page has always imported it from.
+// Shared with /reading, so it lives in datetime.ts; re-exported since this is where the
+// listening page has always imported it from.
 
 export { formatDayLabel, formatNumber, formatRelative, formatTime } from './datetime'

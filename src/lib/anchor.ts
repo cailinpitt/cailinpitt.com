@@ -1,18 +1,6 @@
-/**
- * Jump to an element and stay there while the page finishes loading.
- *
- * A plain `href="#id"` is enough on a page whose layout is final, and this one
- * isn't: a post's images are markdown `<img>` tags with no width or height, so
- * each reserves no space until it paints. Click a link to the foot of the page
- * before the cover image arrives and the browser scrolls correctly — then the
- * image lands, everything below it drops by its height, and the target is a
- * screen or two below the reader. It reads as "the button didn't work", and
- * clicking again works because by then the image is cached.
- *
- * So: scroll, then scroll again once the images that were still in flight have
- * settled. The second pass is skipped the moment the reader takes over — being
- * yanked somewhere a second later is worse than the problem.
- */
+// Post images have no width/height, so they reserve no space until they paint — a scroll
+// to an anchor can land short as images below load in and push the target down. Re-scroll
+// once in-flight images settle; skip the correction if the reader has taken over by then.
 
 /** How long to keep watching before deciding the page is as settled as it gets. */
 const SETTLE_TIMEOUT_MS = 5000

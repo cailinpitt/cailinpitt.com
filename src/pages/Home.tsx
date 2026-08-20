@@ -12,7 +12,6 @@ import { formatDate, type PostSummary } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
 import { homeSchema } from '../lib/structuredData'
 
-/** How many photographs the strip shows. */
 const RECENT_PHOTOS = 4
 
 interface HomeData {

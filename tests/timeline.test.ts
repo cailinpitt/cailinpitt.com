@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { onThisDay, type TimelineDay } from '../src/lib/timeline'
 
-// onThisDay is pure and only ever looks at days already loaded into the page
-// (see the comment on it in lib/timeline.ts) — this pins that it filters on
-// month+day alone, ignoring the year, and touches nothing else about a day.
+// Pins that onThisDay filters on month+day alone, ignoring the year (see lib/timeline.ts).
 
 const day = (date: string): TimelineDay => ({
   date,

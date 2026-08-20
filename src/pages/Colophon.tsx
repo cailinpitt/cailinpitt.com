@@ -19,13 +19,10 @@ import { pageSchema } from '../lib/structuredData'
 const SOURCE_FILE = '/colophon.md'
 
 // The prose lives in content/colophon.md; everything here is the numbers it
-// quotes and the tiles above it, which are live and can't be written down.
+// quotes plus the tiles above it, which are live and can't be written down.
 
-/**
- * Counted at build time from the same content the pages are rendered from.
- * `posts` and `words` feed the tiles; the rest are quoted by the prose in
- * content/colophon.md as {{placeholders}}.
- */
+/** Counted at build time; `posts`/`words` feed the tiles, the rest are quoted
+ * by the prose in content/colophon.md as {{placeholders}}. */
 interface ColophonData {
   posts: number
   words: number
@@ -49,17 +46,13 @@ export async function loader(): Promise<ColophonData | null> {
   return { ...summarize(posts, photos), ...(await provenance()) }
 }
 
-/**
- * Imported here rather than at the top of the file so it lands in its own chunk:
- * the production client returns above without ever loading it, and the history
- * of every post has no business in this page's bundle.
- */
+// Imported here, not at the top, so it lands in its own chunk — the
+// production client returns above without ever loading it.
 async function provenance() {
   const { history, repo } = await import('virtual:post-history')
   return { history: history['/colophon'] ?? null, repo }
 }
 
-/** The counters, which are also what the prose quotes as {{placeholders}}. */
 type ColophonCounts = Omit<ColophonData, 'history' | 'repo'>
 
 function summarize(
@@ -75,15 +68,9 @@ function summarize(
   }
 }
 
-/**
- * The five counters the site itself doesn't know.
- *
- * Everything else on this page is compiled in, but scrobbles, books, and films
- * live in the Workers' databases — so they're fetched here the way /listening,
- * /reading, and /watching fetch theirs, and each tile simply doesn't render
- * until its number lands. A Worker being down costs this page its tiles and
- * nothing else.
- */
+// The five counters the site itself doesn't know: scrobbles, books, and films
+// live in the Workers' databases, so each tile simply doesn't render until its
+// number lands. A Worker being down costs this page its tiles and nothing else.
 function LiveTiles() {
   const [scrobbles, setScrobbles] = useState<number | null>(null)
   const [reading, setReading] = useState<{ books: number; articles: number } | null>(null)
@@ -135,12 +122,8 @@ function LiveTiles() {
   )
 }
 
-/**
- * Keep root-relative links in the Markdown client-side. The body is mostly
- * pointers to other pages on this site, and a full reload on each one would be a
- * step back from the hand-written JSX this replaced. External links, anchors,
- * and mailto: fall through to a plain <a>.
- */
+// Keep root-relative links client-side (a full reload per link would be a
+// step back from the hand-written JSX this replaced); external/anchor/mailto fall through.
 const markdownComponents = {
   a: ({
     node: _node,
@@ -201,9 +184,8 @@ export function Component() {
         </header>
 
         <div className="post-source-bar">
-          {/* The unfilled body, which is what content/colophon.md and the
-              published .md both contain — the counts are substituted when the
-              page renders, so {{photos}} is what was actually written. */}
+          {/* Unfilled body — matches what content/colophon.md and the published
+              .md contain, before counts are substituted in. */}
           <PostSource
             body={colophonPage.body}
             file={SOURCE_FILE}

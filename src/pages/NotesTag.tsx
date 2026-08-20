@@ -4,10 +4,9 @@ import { Seo } from '../components/Seo'
 import { fetchNotesByTag, type Note } from '../lib/notes'
 import { NoteRow } from './Notes'
 
-// Every note tagged #<tag>, newest first. Unlike BlogTag.tsx this has no
-// getStaticPaths/loader — notes live in D1 and are published from a phone,
-// so a tag page is client-fetched the same way the feed itself is (see the
-// header of Notes.tsx), not prerendered from build-time content.
+// Every note tagged #<tag>, newest first. Client-fetched like the feed itself
+// (see Notes.tsx) rather than prerendered — notes live in D1, not build-time
+// content, so unlike BlogTag.tsx there's no getStaticPaths/loader.
 
 const PAGE = 25
 

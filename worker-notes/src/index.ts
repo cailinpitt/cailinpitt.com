@@ -1,36 +1,10 @@
-// Notes API for cailinpitt.com/notes — the microblog.
-//
-// The shape here is the inverse of the guestbook's. There, anyone may write and
-// the interesting code is the gauntlet that decides whether to let them. Here
-// exactly one person may write, the bearer token is the whole of that decision,
-// and the interesting part is that a note is *live the moment it is published* —
-// no build, no deploy, no commit.
-//
-//   phone Shortcut ─┐
-//                   ├─→ POST /notes ─→ D1 ─→ GET /notes.json ─→ /notes page
-//   compose page  ──┘                    ├─→ GET /feed.xml
-//                                         └─→ GET cailinpitt.com/notes/<id>
-//
-// ## Why nothing is prerendered
-//
-// The rest of the site is static HTML written at build time, and the photo
-// pipeline goes to real trouble (a dispatch, a workflow, a commit) so that a
-// photo from a phone is the same kind of object as one added from the laptop.
-// Notes deliberately do not do that. A thought worth 480 characters is worth
-// publishing in the two seconds it takes to type it, and a note that had to wait
-// for a green CI run would simply not get written. The cost is real and is
-// accepted: a note has no page built for it at deploy time — instead this
-// Worker renders one on demand at cailinpitt.com/notes/<id> (see permalink()
-// below), on a route layered in front of the static site rather than baked
-// into it, so a note is addressable the moment it exists rather than after
-// the next deploy. The RSS feed below is what keeps notes syndicable to a
-// reader that never visits the permalink at all.
-//
-// ## Editing and deleting are first-class
-//
-// Both exist because publishing from a phone means publishing typos. An edit
-// stamps `edited_at` and the site says so — a permalink that quietly changes
-// what it said is the thing worth avoiding, not the edit itself.
+// Notes API for cailinpitt.com/notes — the microblog. Unlike the guestbook
+// (anyone can write, gated by a gauntlet), exactly one person can write here,
+// gated by a bearer token, and a note is live the moment it's published — no
+// build, no deploy, no commit. The permalink (see permalink() below) is
+// rendered on demand at the edge rather than at build time so it's addressable
+// immediately. Editing/deleting are first-class because publishing from a
+// phone means publishing typos; an edit stamps `edited_at` rather than silently rewriting.
 
 import { renderFeed, FEED_ITEMS, title as noteTitle, xml as escapeXml } from './feed'
 import {
@@ -50,22 +24,14 @@ import { scrapeLink } from './linkcard'
 import { renderNoteText, renderText, TEXT_ROWS } from './text'
 import { clean, MAX_LENGTH, validate, type LinkFields } from './validate'
 
-/**
- * Edge-cache lifetime for the read endpoints.
- *
- * Short, and deliberately shorter than the settled-data endpoints elsewhere on
- * the site: the point of this feature is that a note appears immediately, and a
- * five-minute edge TTL would make "immediately" a lie for everyone but the
- * author. 30 seconds still collapses any realistic burst of traffic into one D1
- * query per colo, which is all the free tier needs.
- */
+// Deliberately shorter than the settled-data endpoints elsewhere: the point of
+// this feature is that a note appears immediately, and 30s still collapses a
+// realistic traffic burst into one D1 query per colo.
 const EDGE_TTL = 30
 
 /** The site this Worker serves notes for. Links in the feed and curl view. */
 const SITE = 'https://cailinpitt.com'
 const SITE_NOTES = `${SITE}/notes`
-
-// ---- CORS ----------------------------------------------------------------
 
 // Any loopback port, so a dev server on 5174 instead of 5173 still works without
 // editing wrangler.jsonc.
@@ -78,16 +44,10 @@ function originAllowed(request: Request, env: Env): boolean {
   return allowedOrigins(env).includes(origin) || LOOPBACK.test(origin)
 }
 
-/**
- * Writes are reachable from any origin, unlike the guestbook's.
- *
- * The guestbook refuses an origin it doesn't know, because its write endpoint is
- * driven by a form on a page and anything else calling it is up to no good. This
- * one is driven by an iOS Shortcut as much as by the compose page — a share
- * sheet has no origin at all — so an origin check would reject the primary
- * client. The bearer token is the security boundary, and it is a real one in a
- * way an Origin header never was.
- */
+// Writes are reachable from any origin, unlike the guestbook's: this endpoint is
+// driven by an iOS Shortcut as much as the compose page (a share sheet has no
+// origin at all), so an origin check would reject the primary client. The
+// bearer token is the real security boundary here.
 function corsHeaders(request: Request, env: Env): Record<string, string> {
   const origin = request.headers.get('origin') ?? ''
   return {
@@ -98,8 +58,6 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
-// ---- responses -----------------------------------------------------------
-
 // The cached builders omit CORS: it varies by Origin and is applied by withCors()
 // after the cache, so a cached entry stays origin-independent.
 
@@ -107,8 +65,8 @@ const cachedResponse = (body: string, contentType: string, maxAge: number): Resp
   new Response(body, {
     headers: {
       'content-type': contentType,
-      // max-age is what a browser holds, s-maxage what the edge holds. See the
-      // Caching section of the site README on why they are stated separately.
+      // max-age is what a browser holds, s-maxage what the edge holds — see the
+      // site README's Caching section.
       'cache-control': `public, max-age=${maxAge}, s-maxage=${maxAge}`,
     },
   })
@@ -128,9 +86,7 @@ function jsonNoStore(body: unknown, status: number, cors: Record<string, string>
   })
 }
 
-// ---- edge cache ----------------------------------------------------------
-//
-// Cloudflare does not cache Worker-generated responses on its own, so without
+// Cloudflare doesn't cache Worker-generated responses on its own, so without
 // this every reader executes the Worker and its D1 query. Same helper as the
 // other workers.
 
@@ -162,18 +118,10 @@ async function cached(
   return withCors(fresh, cors)
 }
 
-/**
- * Every cached read, as `[path, variant]`.
- *
- * One list, used by `purge()`. The variants have to be exactly the strings the
- * routes below pass to `cached()`, since the variant is part of the key — a
- * typo here purges nothing and looks like nothing at all, which is how the
- * original version of this went unnoticed.
- *
- * Only unparameterized paths appear. A deep page of older notes is addressed by
- * cursor and cannot be affected by a note added at the top, and `/limits.json`
- * is constant.
- */
+// Used by purge(). Variants must exactly match what the routes below pass to
+// `cached()` — a typo here purges nothing and looks like nothing at all (how
+// this went unnoticed once already). Only unparameterized paths appear: a deep
+// page of older notes is addressed by cursor and unaffected by a new note.
 const CACHED_READS: [path: string, variant: string][] = [
   ['/notes.json', 'json'],
   ['/now.json', 'now'],
@@ -186,26 +134,12 @@ const CACHED_READS: [path: string, variant: string][] = [
   ['/notes', 'text'],
 ]
 
-/**
- * Drop the cached reads after a write.
- *
- * Without this, publishing from the compose page and then opening /notes on a
- * phone could show a feed up to EDGE_TTL seconds old that doesn't have the note
- * in it — the exact moment someone checks, and the exact moment being stale
- * looks like a bug rather than a cache. The compose page prepends its own note
- * locally, so this is for every *other* view: the feed on another device, the
- * homepage strip, the RSS reader that polls a second later.
- *
- * **`origin` must be the origin the read was cached under**, i.e. this Worker's
- * own hostname, and it is taken from the incoming request rather than written
- * down. It used to be built from `SITE` — `https://cailinpitt.com` — while
- * `cached()` keys entries by the request URL, `https://notes.cailinpitt.com`.
- * The two never matched, so every purge deleted nothing and every reader waited
- * out the full TTL. Deriving it from the request is what makes the two sides
- * agree by construction: there is no second copy of the hostname to get wrong,
- * and it keeps working on a preview deployment or a `workers.dev` URL, where a
- * hardcoded origin would silently be the wrong one again.
- */
+// Without this, opening /notes on another device right after publishing could
+// show a feed up to EDGE_TTL seconds stale. `origin` is taken from the incoming
+// request, not hardcoded to `SITE` — it used to be, and since `cached()` keys by
+// the request URL (`notes.cailinpitt.com`, not `cailinpitt.com`), every purge
+// silently deleted nothing. Deriving it from the request makes the two agree by
+// construction, on preview deploys too.
 function purge(ctx: ExecutionContext, request: Request): void {
   const { origin } = new URL(request.url)
   ctx.waitUntil(
@@ -217,26 +151,15 @@ function purge(ctx: ExecutionContext, request: Request): void {
   )
 }
 
-/**
- * Drop one note's cached permalink variants after an edit or delete.
- *
- * These are addressed by id, so they can't sit in `CACHED_READS` (same reason
- * a deep page of `/notes.json` doesn't) — without this, an edited note's
- * permalink would keep showing the old text to a bot or a `curl` for up to
- * `EDGE_TTL` seconds after the edit.
- *
- * Unlike `purge()`, the origin here is hardcoded to `SITE` rather than taken
- * from the request: the permalink is only ever served on the apex zone
- * (`cailinpitt.com/notes/<id>`), never on this Worker's own `notes.…`
- * hostname, and a write typically *arrives* on the `notes.…` hostname — using
- * the request's origin here would purge a cache entry that was never made.
- */
+// Addressed by id, so these can't sit in CACHED_READS (same reason a deep page
+// of /notes.json doesn't). Origin is hardcoded to SITE, unlike purge() — the
+// permalink is only ever served on the apex zone, never this Worker's own
+// `notes.…` hostname a write typically arrives on, so using the request's
+// origin here would purge a cache entry that was never made.
 function purgeNote(ctx: ExecutionContext, id: string): void {
   const bare = new URL(`${SITE}/notes/${id}`)
-  // The JSON variant is only ever requested with ?format=json — unlike the
-  // `?T` no-color option on the text views, that query string isn't an edge
-  // case, it's the only way to reach this variant at all, so purging the bare
-  // URL here would delete a cache entry that was never written under it.
+  // The JSON variant is only ever requested with ?format=json — that's the only
+  // way to reach it, so purging the bare URL would miss it entirely.
   const jsonUrl = new URL(bare)
   jsonUrl.searchParams.set('format', 'json')
 
@@ -249,15 +172,8 @@ function purgeNote(ctx: ExecutionContext, id: string): void {
   )
 }
 
-// ---- auth ----------------------------------------------------------------
-
-/**
- * Bearer-token check for every write route.
- *
- * Compared in constant time. This is the only thing standing between the
- * internet and the contents of the microblog, so it is worth doing properly;
- * length is allowed to leak, the contents are not.
- */
+// Constant-time comparison — the only thing standing between the internet and
+// the microblog's contents; length may leak, contents may not.
 function authorized(request: Request, secret: string | undefined): boolean {
   if (!secret) return false
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
@@ -267,8 +183,6 @@ function authorized(request: Request, secret: string | undefined): boolean {
   return diff === 0
 }
 
-// ---- curl detection ------------------------------------------------------
-
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {
@@ -276,31 +190,18 @@ function wantsText(request: Request, url: URL): boolean {
   return CLI_AGENT.test(request.headers.get('user-agent') ?? '')
 }
 
-/**
- * Link-unfurl bots — the audience the permalink's static HTML exists for.
- * Most name themselves with "bot"/"crawler"/"spider"; the few that don't
- * (facebookexternalhit, WhatsApp, Pinterest's and Embedly's fetchers) are
- * listed by name. Best-effort by nature — a false negative just means that
- * client gets the 302 to the SPA instead of a page with meta tags in it.
- */
+// Link-unfurl bots — the audience the permalink's static HTML exists for. Most
+// self-identify with "bot"/"crawler"/"spider"; the rest are listed by name.
+// Best-effort: a false negative just gets the 302 to the SPA instead.
 const BOT_AGENT =
   /bot|crawler|spider|facebookexternalhit|whatsapp|pinterest|embedly|quora link preview/i
 
 const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fields))
 
-// ---- the write path ------------------------------------------------------
-
-/**
- * Read `text` (and, for JSON senders, an optional context reference) from
- * whichever shape the client found easiest to send.
- *
- * JSON is what the compose page posts, context included. The form and
- * plain-text shapes exist for Shortcuts, whose "Get Contents of URL" action
- * makes JSON awkward to build by hand but form fields trivial — the same
- * accommodation worker-photos makes, and for the same reason: the client that
- * is hardest to debug should have the easiest path. Neither of those sends a
- * context reference, which is fine — it is optional on every note.
- */
+// JSON is what the compose page posts, context included. Form and plain-text
+// shapes exist for Shortcuts, whose "Get Contents of URL" action makes JSON
+// awkward but form fields trivial — same accommodation worker-photos makes.
+// Neither sends a context reference, which is fine since it's optional.
 async function readPayload(request: Request): Promise<{
   text: unknown
   contextType?: unknown
@@ -339,12 +240,8 @@ async function readPayload(request: Request): Promise<{
   return { text: await request.text().catch(() => '') }
 }
 
-/**
- * Delete a hidden link's own text from a note, once validate() has already
- * confirmed the link is really in there. Only the first occurrence — a URL
- * pasted twice on purpose is content, not a formatting artifact to eat twice.
- * Re-cleaned afterward so the deletion can't leave a stray blank paragraph.
- */
+// Only the first occurrence — a URL pasted twice on purpose is content, not a
+// formatting artifact to eat twice. Re-cleaned so no stray blank paragraph is left.
 function stripLink(text: string, link: LinkFields): string {
   if (!link.hidden || !link.url) return text
   const at = text.indexOf(link.url)
@@ -426,12 +323,9 @@ async function remove(
     : jsonNoStore({ id, error: 'no such note' }, 404, cors)
 }
 
-/**
- * Ask GitHub to render this note's OG card (.github/workflows/note-og.yml).
- * Rendering needs satori/resvg/sharp, none of which run in a Worker — see
- * scripts/generate-note-og.mjs. A failure here is not a failed publish: the
- * note is already live, and just goes out without a card image this time.
- */
+// Rendering needs satori/resvg/sharp, none of which run in a Worker — see
+// scripts/generate-note-og.mjs. Failure here isn't a failed publish: the note
+// is already live, it just goes out without a card image this time.
 async function dispatchOgCard(env: Env, id: string): Promise<void> {
   if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) return
   try {
@@ -453,13 +347,9 @@ async function dispatchOgCard(env: Env, id: string): Promise<void> {
 /** Above the size a link's own image is worth re-hosting as-is; past this, skip the image and keep the text. */
 const MAX_LINK_IMAGE_BYTES = 6_000_000
 
-/**
- * Fetch a link's image and write it to R2 under this note's id, unresized —
- * there's no sharp in a Worker, so unlike the site's own OG cards this
- * stores whatever the source serves, capped by size rather than normalized.
- * `LinkCard.tsx` on the client handles the varying aspect ratios with
- * `object-fit: cover`. Returns whether it worked.
- */
+// Unresized — no sharp in a Worker, so unlike the site's own OG cards this
+// stores whatever the source serves, capped by size. LinkCard.tsx handles the
+// varying aspect ratios with `object-fit: cover`.
 async function storeLinkImage(env: Env, id: string, imageUrl: string): Promise<boolean> {
   const res = await fetch(imageUrl, {
     signal: AbortSignal.timeout(8000),
@@ -492,22 +382,11 @@ async function storeLinkImage(env: Env, id: string, imageUrl: string): Promise<b
   return true
 }
 
-/**
- * Scrapes a link, re-hosts its image, and persists the result — the
- * background half of a note's link card, kicked off from `ctx.waitUntil` in
- * publish/edit above. Runs entirely inside this Worker (see linkcard.ts's
- * header for why that's possible here but not for the site's own rendered
- * cards), so this typically finishes in a couple of seconds rather than the
- * ~1–2 minutes a GitHub Actions run would take.
- *
- * Re-scrapes rather than trusting whatever `/notes/link-preview` last
- * returned to the compose page: this is what actually gets persisted and
- * shown to every reader, so the Worker stays the one source of truth for it,
- * the same way it already is for everything else a note stores.
- *
- * Best-effort like dispatchOgCard: a failure here is not a failed publish,
- * the note is already live, and it just goes out without a card this time.
- */
+// Background half of a note's link card, kicked off from ctx.waitUntil in
+// publish/edit. Runs entirely inside this Worker (see linkcard.ts), finishing
+// in seconds rather than the ~1-2min a GitHub Actions run would take.
+// Re-scrapes rather than trusting /notes/link-preview's last result, so the
+// Worker stays the one source of truth. Best-effort like dispatchOgCard.
 async function buildLinkCard(
   env: Env,
   ctx: ExecutionContext,
@@ -533,16 +412,10 @@ async function buildLinkCard(
   }
 }
 
-/**
- * `GET /notes/link-preview?url=<url>` — a live, unstored scrape for the
- * compose page to show a card *while typing*, before anything is published.
- * Gated by PUBLISH_TOKEN like every other write: the compose page is the
- * only realistic caller, and without the gate this would be an open
- * fetch-anything-and-return-it proxy. The image here is the source's own
- * URL, not re-hosted — re-hosting a link that's never actually published
- * would just be an orphaned R2 object; see buildLinkCard for the persisted,
- * re-hosted version that runs after a real publish.
- */
+// Live, unstored scrape for the compose page to show a card while typing.
+// Gated by PUBLISH_TOKEN — without it this would be an open fetch-anything
+// proxy. Image is the source's own URL, not re-hosted (that would orphan an R2
+// object for a link never published) — see buildLinkCard for the persisted version.
 async function linkPreviewRoute(
   request: Request,
   cors: Record<string, string>,
@@ -562,18 +435,11 @@ async function linkPreviewRoute(
   }
 }
 
-// ---- the permalink ---------------------------------------------------------
-
-/**
- * A note as a static page: real `<meta property="og:...">` tags, so a link
- * shared to Slack/Discord/iMessage/etc. unfurls the note's own text instead
- * of the generic feed card. `og:image` points at a card rendered
- * asynchronously by .github/workflows/note-og.yml (dispatchOgCard above) —
- * referenced unconditionally, since the R2 key is deterministic from the id.
- * If the workflow hasn't finished yet, that URL 404s and the crawler just
- * renders without a thumbnail. This page is for bots; a real browser never
- * sees it — see permalink() below.
- */
+// A note as a static page with real og: meta tags, so a link shared to
+// Slack/Discord/etc. unfurls the note's own text. og:image points at a card
+// rendered async by .github/workflows/note-og.yml (dispatchOgCard) —
+// referenced unconditionally since the R2 key is deterministic from the id; if
+// the workflow hasn't finished, that URL just 404s. For bots only — see permalink() below.
 function noteHtml(note: Note): string {
   const heading = noteTitle(note.text)
   const description = note.text.replace(/\s+/g, ' ').trim()
@@ -609,19 +475,9 @@ function noteHtml(note: Note): string {
   ].join('\n')
 }
 
-/**
- * `cailinpitt.com/notes/<id>` — the permalink, rendered at the edge rather
- * than at deploy time so a note is addressable the moment it is published
- * (see the header of this file). Four audiences:
- *
- *   - `?format=json`: the site's own /notes page, resolving a permalink by id
- *     directly instead of paging through the whole feed looking for it.
- *   - curl/wget/etc: the same plain-text view the feed gets, for one note.
- *   - a link-unfurl bot (BOT_AGENT): noteHtml() above.
- *   - anyone else, i.e. a real browser: redirected to /notes#<id>, where the
- *     note lives inside the interactive feed. User-Agent dependent, so this
- *     one response can never be cached.
- */
+// cailinpitt.com/notes/<id> — the permalink. Four audiences: ?format=json (the
+// site's own /notes page resolving by id), curl/wget (plain text), a link-
+// unfurl bot (noteHtml()), or a real browser (redirected to /notes#<id>).
 async function permalink(
   request: Request,
   env: Env,
@@ -667,8 +523,6 @@ async function permalink(
   })
 }
 
-// ---- worker --------------------------------------------------------------
-
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const cors = corsHeaders(request, env)
@@ -678,15 +532,11 @@ export default {
     const single = url.pathname.match(/^\/notes\/([a-f0-9]{4,32})$/)
     const tagMatch = url.pathname.match(/^\/notes\/tag\/([A-Za-z0-9_][A-Za-z0-9_-]{0,49})\.json$/)
     try {
-      // ---- cailinpitt.com/notes/* — the permalink -----------------------
-      //
-      // This Worker's route on the apex zone only ever sees paths already
-      // scoped to /notes/* (see wrangler.jsonc), everything else on
-      // cailinpitt.com is GitHub Pages. A path that isn't a note id — most
-      // often /notes/compose, a real prerendered page — is passed straight
-      // through: a same-zone fetch() bypasses Cloudflare's routing layer and
-      // goes directly to the zone's configured origin, so this can't loop
-      // back into the route that dispatched here.
+      // cailinpitt.com/notes/* — the permalink. This Worker's apex-zone route
+      // only ever sees paths under /notes/* (see wrangler.jsonc); a path that
+      // isn't a note id (e.g. /notes/compose) passes straight through — a
+      // same-zone fetch() bypasses Cloudflare's routing layer and goes
+      // directly to the zone's origin, so this can't loop back into itself.
       if (url.hostname === 'cailinpitt.com') {
         if (single && request.method === 'GET') {
           return await permalink(request, env, ctx, cors, single[1], url)
@@ -694,8 +544,7 @@ export default {
         return fetch(request)
       }
 
-      // ---- writes (PUBLISH_TOKEN only, never cached) ----
-
+      // Writes (PUBLISH_TOKEN only, never cached).
       if (url.pathname === '/notes' && request.method === 'POST') {
         return await publish(request, env, ctx, cors)
       }
@@ -707,15 +556,12 @@ export default {
         return await remove(request, env, ctx, cors, single[1])
       }
 
-      // Not edge-cached, unlike everything below: this is a live scrape of
-      // whatever URL was asked for, called from the compose page while
-      // typing (see linkPreviewRoute's own comment).
+      // Not edge-cached, unlike everything below — see linkPreviewRoute.
       if (url.pathname === '/notes/link-preview' && request.method === 'GET') {
         return await linkPreviewRoute(request, cors, env)
       }
 
-      // ---- reads (public, edge-cached) ----
-
+      // Reads (public, edge-cached).
       if (url.pathname === '/notes.json') {
         return await cached(url, 'json', ctx, cors, async () =>
           json(
@@ -728,21 +574,18 @@ export default {
         )
       }
 
-      // Every hashtag ever used, for "browse by tag" on /notes — unlike the
-      // per-tag route below, this *is* in CACHED_READS/purge() (unparameterized,
-      // one well-known path) so a new note's tags show up in the cloud the
-      // moment the purge lands, same as the note itself does in /notes.json.
+      // Unlike the per-tag route below, this is in CACHED_READS/purge() (one
+      // well-known unparameterized path) so a new note's tags show up in the
+      // cloud the moment the purge lands.
       if (url.pathname === '/notes/hashtags.json') {
         return await cached(url, 'hashtags', ctx, cors, async () =>
           json(await listAllHashtags(env.DB), EDGE_TTL),
         )
       }
 
-      // A note's hashtags aren't a separate column — see hashtags.ts — so
-      // this is its own query rather than a filter over /notes.json, and it
-      // isn't in CACHED_READS/purge() for the same reason a deep page of
-      // /notes.json isn't: parameterized by tag, low traffic, the edge TTL
-      // alone is enough to keep it from ever being far behind.
+      // Hashtags aren't a separate column (see hashtags.ts), so this is its own
+      // query. Not in CACHED_READS/purge(): parameterized by tag, low traffic,
+      // the edge TTL alone keeps it close enough.
       if (tagMatch) {
         return await cached(url, `tag:${tagMatch[1]}`, ctx, cors, async () =>
           json(
@@ -755,8 +598,8 @@ export default {
         )
       }
 
-      // Just the newest note, for the homepage strip — the same shape the other
-      // workers' /now.json endpoints have, so the homepage treats it the same way.
+      // Newest note, for the homepage strip — same shape as the other workers'
+      // /now.json endpoints.
       if (url.pathname === '/now.json') {
         return await cached(url, 'now', ctx, cors, async () => {
           const { notes, total } = await listNotes(env.DB, { limit: 1 })
@@ -778,16 +621,16 @@ export default {
         )
       }
 
-      // The numbers the compose page enforces client-side, served rather than
-      // duplicated, so the counter cannot disagree with validate.ts.
+      // Served rather than duplicated, so the compose page's counter can't
+      // disagree with validate.ts.
       if (url.pathname === '/limits.json') {
         return await cached(url, 'limits', ctx, cors, async () =>
           json({ maxLength: MAX_LENGTH, pageSize: PAGE_SIZE, maxPageSize: MAX_PAGE_SIZE }, 86_400),
         )
       }
 
-      // `curl notes.cailinpitt.com` → the terminal view. Checked before the
-      // redirect below, which is what a browser on the same path gets instead.
+      // `curl notes.cailinpitt.com` → the terminal view; a browser on the same
+      // path gets the redirect below instead.
       if ((url.pathname === '/' || url.pathname === '/notes') && wantsText(request, url)) {
         return await cached(url, 'text', ctx, cors, async () =>
           cachedResponse(
@@ -803,10 +646,8 @@ export default {
         )
       }
 
-      // Same paths in a browser: the real page rather than a 404. 302 and
-      // no-store, because this response is User-Agent dependent — a cached
-      // permanent redirect could later be replayed to a client that wanted the
-      // terminal view, which would break `curl` for this URL.
+      // Same paths in a browser: the real page, not a 404. 302 + no-store since
+      // this is UA-dependent — a cached redirect could later break `curl` here.
       if (url.pathname === '/' || url.pathname === '/notes') {
         return new Response(null, {
           status: 302,

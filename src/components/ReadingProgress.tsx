@@ -1,26 +1,18 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 
 interface ReadingProgressProps {
-  /** The element being read — progress is measured across this, not the page. */
+  /** Progress is measured across this element, not the page. */
   targetRef: RefObject<HTMLElement | null>
 }
 
-/**
- * A hairline at the top of the window that fills as you read a post.
- *
- * It tracks the *article*, not the document: the bar hits 100% when the last
- * line of the post reaches the bottom of the window, so the related-posts list,
- * the newer/older nav, and the footer don't read as another 15% left to go.
- *
- * Nothing renders until there is something to track — a post shorter than the
- * window can't be scrolled through, and a progress bar stuck at either end is
- * just a stripe across the page. That also keeps it off the prerendered HTML,
- * so it can't flash in before hydration measures anything.
- */
+// Tracks the *article*, not the document: hits 100% when the post's last line
+// reaches the bottom of the window, so the related-posts list and footer
+// don't read as another 15% left to go. Renders nothing until there's
+// something to track, which also keeps it off the prerendered HTML.
 export function ReadingProgress({ targetRef }: ReadingProgressProps) {
   const [progress, setProgress] = useState<number | null>(null)
-  // Written from the scroll handler and read on the next frame, so a burst of
-  // scroll events costs one measurement rather than one per event.
+  // Written from the scroll handler, read next frame — a burst of scroll
+  // events costs one measurement, not one per event.
   const frame = useRef<number | null>(null)
 
   useEffect(() => {
@@ -30,8 +22,8 @@ export function ReadingProgress({ targetRef }: ReadingProgressProps) {
     const measure = () => {
       frame.current = null
       const top = el.getBoundingClientRect().top + window.scrollY
-      // How far the page scrolls between the article's first line reaching the
-      // top of the window and its last line reaching the bottom.
+      // Distance scrolled between the article's first line hitting the top
+      // and its last line hitting the bottom.
       const distance = el.offsetHeight - window.innerHeight
       if (distance <= 0) {
         setProgress(null)
@@ -48,9 +40,9 @@ export function ReadingProgress({ targetRef }: ReadingProgressProps) {
     measure()
     window.addEventListener('scroll', schedule, { passive: true })
     window.addEventListener('resize', schedule)
-    // Images and embeds land after first paint and change the article's height,
-    // which moves the finish line. Without this the bar reads short on a photo
-    // essay until something else happens to trigger a re-measure.
+    // Images/embeds land after first paint and change the article's height,
+    // moving the finish line — without this the bar reads short until
+    // something else triggers a re-measure.
     const observer = new ResizeObserver(schedule)
     observer.observe(el)
 
@@ -65,9 +57,8 @@ export function ReadingProgress({ targetRef }: ReadingProgressProps) {
   if (progress === null) return null
 
   return (
-    // Decorative: it says nothing a screen reader can't get from where it already
-    // is in the document, and announcing a value that changes on every scroll
-    // frame would be noise.
+    // aria-hidden: a value that changes on every scroll frame would be noise,
+    // and a screen reader already has this from its place in the document.
     <div className="reading-progress" aria-hidden="true">
       <div className="reading-progress-fill" style={{ transform: `scaleX(${progress})` }} />
     </div>

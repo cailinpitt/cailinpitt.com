@@ -17,12 +17,9 @@ import { toPreviews, type PhotoPreview } from '../lib/photos'
 import { formatDate } from '../lib/posts'
 import { pageSchema } from '../lib/structuredData'
 
-// A /now page (nownownow.org): what has my attention at the moment, which is a
-// different question from what the blog archive or /projects answers.
-//
-// The prose is content/now.md — edit that, not this file. Everything else here
-// is the two things a page like this needs that a Markdown file can't carry:
-// when it was last true, and what is happening right now.
+// A /now page (nownownow.org). Prose lives in content/now.md — edit that, not
+// this file; this file only adds what Markdown can't carry: when it was last
+// true, and what's happening right now.
 
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
 const SOURCE_FILE = '/now.md'
@@ -81,14 +78,8 @@ export function Component() {
   const [showSource, setShowSource] = useState(false)
   const panel = useHistoryPanel()
 
-  /**
-   * The date of the last commit to touch this file.
-   *
-   * The whole claim a /now page makes is "this was true recently", so the date
-   * belongs at the top rather than in the provenance line at the foot — and it
-   * comes from git rather than a frontmatter field, which is the sort of thing
-   * you forget to bump in the edit where it matters most.
-   */
+  // From git, not a frontmatter field easy to forget to bump — the page's
+  // whole claim is "this was true recently," so it belongs up top.
   const updated = history?.commits[0]?.date ?? null
 
   return (
@@ -117,18 +108,15 @@ export function Component() {
           )}
         </header>
 
-        {/* Live, and deliberately above the prose: the rest of the page is true
-            as of the date above, this is true as of now. Both render nothing
-            until their fetch lands, so the page reads fine without them — which
-            is also why this is a plain div. A labelled <section> would announce
-            an empty region on every prerendered load. */}
+        {/* Above the prose since it's true as of now, not the date above. Plain
+            div, not a labelled <section>: bars render nothing until their fetch
+            lands, and a section would announce an empty region meanwhile. */}
         <div className="now-live">
           <NowPlayingBar />
           <ReadingBar />
           <WatchingBar />
           <MovingBar />
-          {/* The newest frames, under the bars. Prerendered, unlike the two
-              above it — these come from the build, not a Worker. */}
+          {/* Prerendered from the build, unlike the bars above (Worker-fetched). */}
           <PhotoStrip photos={photos} />
         </div>
 

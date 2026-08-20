@@ -58,19 +58,10 @@ export async function loader(): Promise<TimelineData | null> {
 }
 
 /**
- * Pull more of a cursor-paged stream until it reaches back past `floor` — the
- * other streams have to cover the whole window the listening days opened up, or
- * the older rows would understate what happened on them.
- *
- * **A stream that fails gives back what it already had**, rather than rejecting.
- * These run as a batch, and one unreachable Worker used to fail the batch and
- * with it the whole "load older" click — five streams' worth of history thrown
- * away because the sixth timed out. Swallowing here keeps the failure the size
- * of the thing that failed, which is the same contract the initial load keeps.
- *
- * The cursor is returned unchanged on failure rather than nulled, so the next
- * click retries that stream instead of writing it off for the session — the
- * common cause is a blip, not a dead endpoint.
+ * Pulls a cursor-paged stream until it passes `floor`, so older rows aren't
+ * understated. On failure, returns what it has and leaves the cursor alone
+ * (instead of throwing/nulling) so one bad endpoint doesn't cost the whole
+ * batch its history, and the next click retries just that stream.
  */
 async function topUp<T>(
   items: T[],
@@ -84,8 +75,7 @@ async function topUp<T>(
   let next = cursor
   for (let page = 0; next && page < TOP_UP_LIMIT; page++) {
     const oldest = all.length ? dateOf(all[all.length - 1]) : null
-    // Once the tail is older than the floor, the window is covered. A null floor
-    // means listening is exhausted and everything left should be shown.
+    // Null floor means listening is exhausted, so show everything left.
     if (floor && oldest && oldest < floor) break
     try {
       const result = await load(next, signal)
@@ -124,25 +114,11 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     const controller = new AbortController()
     controllerRef.current = controller
 
-    // allSettled, not all.
-    //
-    // This page is the only one that reads *every* Worker, which makes it the
-    // one place where "a Worker is down" is most likely to be true of something.
-    // With Promise.all, any single unreachable endpoint rejected the whole batch
-    // and the page rendered its error state — five working streams thrown away
-    // because the sixth was unavailable. That is the opposite of the contract
-    // the rest of the site keeps ("a Worker being down costs that section and
-    // nothing else"), and it is a failure mode that grows more likely with every
-    // stream added.
-    //
-    // So each stream is now allowed to fail on its own. A missing stream
-    // contributes no rows and the day is assembled from the rest; the page only
-    // reports an error when *nothing* answered, which is the one case where
-    // there is genuinely nothing to show.
+    // allSettled, not all: this page reads every Worker, so one being down
+    // shouldn't blank the page — each stream fails independently instead.
     Promise.allSettled([
-      // The compact projection, not the full bundle: this page shows a count and
-      // a top artist per day and renders no individual track, which is ~93% of
-      // what the bundle carries.
+      // Compact projection (count + top artist/day), not the full bundle —
+      // this page renders no individual track, ~93% of the bundle unused.
       fetchTimelineDays(controller.signal),
       fetchReading(controller.signal),
       fetchWatching(controller.signal),
@@ -151,13 +127,9 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     ]).then(async ([listening, reading, watching, moving, notes]) => {
       if (controller.signal.aborted) return
 
-      // Listening sets the window (see the module comment on buildTimeline):
-      // its first page is a fixed 14 days, deeper than any other stream's
-      // default first page. Without topping the rest up to match, a day near
-      // the bottom of that window would show scrobbles but silently drop
-      // articles/books/films/activities/notes that exist but hadn't been
-      // paged in yet — the same gap "Load older days" closes via topUp(),
-      // just not yet visible for a page nobody has paged past.
+      // Listening's first page (14 days) is deeper than the other streams'
+      // default page, so top them up to match or a day near the bottom would
+      // show scrobbles but silently drop items not yet paged in.
       let initialFloor: string | null = null
       if (listening.status === 'fulfilled') {
         setDays(listening.value.days)
@@ -247,9 +219,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
       if (controller.signal.aborted) return
 
       const streams = [listening, reading, watching, moving, notes]
-      // Every stream failing means no network, a total outage, or an ad blocker
-      // eating the requests — the error state is honest there. Anything less and
-      // the page has something to show.
+      // Error only when every stream failed (no network/outage/blocker) —
+      // anything less, there's still something to show.
       setError(streams.every((result) => result.status === 'rejected'))
       setReady(true)
     })
@@ -257,8 +228,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
     return () => controller.abort()
   }, [])
 
-  // Scrobbles are the densest stream and the only one worth a real cursor, so the
-  // oldest loaded listening day is how far back the page can honestly go.
+  // Scrobbles are the densest stream, so the oldest loaded day is how far
+  // back the page can honestly go.
   const floor = before != null && days.length ? days[days.length - 1].date : null
 
   const loadMore = useCallback(async () => {
@@ -277,8 +248,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
           articles,
           articleCursor,
           nextFloor,
-          // Same local bucketing buildTimeline uses, so "reached the floor" here
-          // means the same thing it will mean when the rows are assembled.
+          // Same bucketing buildTimeline uses, so "reached floor" means the
+          // same thing here.
           (article) => dayKey(article.readAt),
           async (cursor, signal) => {
             const page = await fetchOlderArticles(cursor, 20, signal)
@@ -323,7 +294,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
           notes,
           noteCursor,
           nextFloor,
-          // Local bucketing, matching what buildTimeline does with them.
+          // Matches buildTimeline's bucketing.
           (note) => dayKey(note.createdAt),
           async (cursor, signal) => {
             const page = await fetchOlderNotes(cursor, 25, signal)
@@ -379,16 +350,13 @@ export function Component() {
   const { posts, photos } = useLoaderData() as TimelineData
   const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos)
 
-  // Every activity already folded into a loaded day — not a separate fetch,
-  // just what's already on the page, for resolveContext() to search when a
-  // note references one (see notesContext.ts).
+  // Already-loaded activities, for resolveContext() to search when a note
+  // references one (see notesContext.ts).
   const activities = useMemo(() => timeline.flatMap((day) => day.activities), [timeline])
   const contextSources: ContextSources = { posts, photos, activities }
 
-  // Same calendar date in years already loaded, minus today itself — today's
-  // row is already the top of the list below, not something "on this day"
-  // needs to repeat. See onThisDay() in lib/timeline.ts for why this doesn't
-  // reach past what's already on the page.
+  // Today's own row is already the top of the list, so exclude it from "on
+  // this day" (see onThisDay() in lib/timeline.ts).
   const monthDay = keyForOffset(0).slice(5)
   const otd = useMemo(
     () => onThisDay(timeline, monthDay).filter((day) => day.date !== keyForOffset(0)),
@@ -417,10 +385,7 @@ export function Component() {
         <Link to="/notes">notes</Link>, and <Link to="/photos">photos</Link>.
       </p>
 
-      {/* `error` now means *every* stream failed, and it is set at the same time
-          as `ready` rather than instead of it — so this tests it on its own.
-          Previously it could only be true while `!ready`, which is no longer a
-          state this component enters. */}
+      {/* error means every stream failed; set alongside ready, not instead of it. */}
       {error ? (
         <p className="timeline-error">Could not load the timeline right now. Try again later.</p>
       ) : !ready ? (
@@ -604,7 +569,6 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
               <ul className="timeline-thumbs">
                 {day.photos.map((photo) => (
                   <li key={photo.id}>
-                    {/* Straight to that photo's own page. */}
                     <Link to={`/photos/${photo.id}`}>
                       <img
                         src={imageUrl(photo.thumb ?? photo.src)}
@@ -626,10 +590,8 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
 
 function FilmEvent({ film }: { film: Film }) {
   const href = letterboxdUrl(film)
-  // The year belongs to the title — "Tag (2018)" is how you say which Tag — so
-  // it is part of the link text, not a fragment left outside it. Rating and
-  // rewatch are notes about the viewing and go in the muted clause after it.
-  // Either of those can be absent.
+  // Year is part of the title text ("Tag (2018)"); rating/rewatch are notes
+  // about the viewing and go in the muted clause after, either optional.
   const name = `${film.title}${film.year ? ` (${film.year})` : ''}`
   const detail = [stars(film.rating), film.rewatch ? 'rewatch' : null].filter(Boolean).join(' · ')
 

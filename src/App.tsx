@@ -5,16 +5,8 @@ import { photoIds } from 'virtual:site-index'
 import { listeningYears } from './lib/listeningYears'
 import { allPeriods, urlFor } from './lib/periodKeys'
 
-/**
- * Give every page the same error boundary.
- *
- * It has to go on the children, not the layout route: an errorElement replaces
- * the route it sits on, and putting it upstairs would take the header and nav
- * down with the page. Applied here rather than written out fifteen times so a
- * route added later can't quietly opt out of it — which matters, because the
- * error it mostly catches is a deploy landing mid-visit and that can happen on
- * any route.
- */
+// Applied to children, not the layout route, so the header/nav survive an errorElement
+// swap. Centralized here so new routes can't opt out — mainly catches deploy-mid-visit.
 const withErrorBoundary = (routes: RouteRecord[]): RouteRecord[] =>
   routes.map((route) => ({ ...route, errorElement: <RouteError /> }))
 
@@ -25,22 +17,17 @@ export const routes: RouteRecord[] = [
     children: withErrorBoundary([
       { index: true, lazy: () => import('./pages/Home') },
       { path: 'blog', lazy: () => import('./pages/BlogIndex') },
-      // The microblog. One page for the whole feed — a note is addressed as
-      // `/notes#<id>`, not a route, because notes live in D1 and are never
-      // prerendered (see worker-notes/src/index.ts). `notes/compose` is a static
-      // segment, so it outranks nothing and collides with nothing.
+      // A note is addressed as `/notes#<id>`, not a route — notes live in D1 and
+      // are never prerendered (see worker-notes/src/index.ts).
       { path: 'notes', lazy: () => import('./pages/Notes') },
       { path: 'notes/compose', lazy: () => import('./pages/NotesCompose') },
-      // Every note tagged #foo, newest first — client-fetched like the feed
-      // itself (notes are D1-backed and live, not build-time content, so
-      // unlike blog/tag/:tag below there's no getStaticPaths/loader here).
+      // Client-fetched like the feed itself; no getStaticPaths since notes are D1-backed, not build-time.
       { path: 'notes/tag/:tag', lazy: () => import('./pages/NotesTag') },
       { path: 'blog/tag/:tag', lazy: () => import('./pages/BlogTag') },
       { path: 'blog/:year/:month/:day/:slug', lazy: () => import('./pages/BlogPost') },
       { path: 'projects', lazy: () => import('./pages/Projects') },
       { path: 'listening', lazy: () => import('./pages/Listening') },
-      // Static segments outrank dynamic ones in React Router, so these win over
-      // 'listening/:a' below rather than being parsed as a period key.
+      // Static segments outrank dynamic ones in React Router, so this wins over 'listening/:a'.
       {
         path: 'listening/wrapped',
         lazy: () => import('./pages/ListeningWrapped'),
@@ -50,10 +37,7 @@ export const routes: RouteRecord[] = [
         lazy: () => import('./pages/ListeningWrapped'),
         getStaticPaths: () => listeningYears().map((y) => `/listening/wrapped/${y}`),
       },
-      // Years and all-time sit one level down, weeks and months two — one page
-      // serves all four. Concrete paths for the prerenderer come from date
-      // arithmetic over a constant start date rather than the listening API, so a
-      // Worker outage can't fail an unrelated deploy.
+      // Static paths come from date arithmetic, not the listening API, so a Worker outage can't fail the deploy.
       {
         path: 'listening/:a',
         lazy: () => import('./pages/ListeningPeriod'),
@@ -80,9 +64,7 @@ export const routes: RouteRecord[] = [
       {
         path: 'photos/:id',
         lazy: () => import('./pages/PhotoDetail'),
-        // Every photograph gets its own prerendered page. The ids come from the
-        // build-time index rather than the manifest itself, so the browser build
-        // doesn't carry a list of five hundred slugs it will never read.
+        // From the build-time index, not the manifest, so the browser build skips 500 unused slugs.
         getStaticPaths: () => photoIds.map((id) => `/photos/${id}`),
       },
       { path: 'about', lazy: () => import('./pages/About') },

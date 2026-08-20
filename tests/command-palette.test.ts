@@ -3,10 +3,7 @@ import type { RouteRecord } from 'vite-react-ssg'
 import { routes } from '../src/App'
 import { LISTED_PAGES, PAGES } from '../src/components/CommandPalette'
 
-// The palette's page list is hand-written (see the comment on PAGES), and a page
-// missing from it is invisible from ⌘K while looking perfectly fine everywhere
-// else. Posts, photo years, and tags are derived from content, so they can't
-// drift — only this list can, and only when a route is added or removed.
+// PAGES is hand-written (see its own comment); a missing entry is invisible from ⌘K but fine everywhere else.
 
 /** Every leaf route, so a page outside <Layout> (e.g. /terminal) is still checked. */
 const leaves = (list: RouteRecord[]): RouteRecord[] =>
@@ -37,24 +34,19 @@ describe('the command palette page list', () => {
   })
 
   it('keeps the compose page out of the palette', () => {
-    // The palette's resting state renders every listed page, so an entry without
-    // `unlisted` is shown to every visitor the moment they press ⌘K — which for
-    // a compose box is not what anyone wants. It still has to be in PAGES to
-    // satisfy the route-coverage test above; this is what keeps both true.
+    // Must stay in PAGES for route coverage, but marked unlisted so it isn't shown to every visitor.
     expect(PAGES.map((entry) => entry.to)).toContain('/notes/compose')
     expect(LISTED_PAGES.map((entry) => entry.to)).not.toContain('/notes/compose')
   })
 
   it('lists every page that is not explicitly unlisted', () => {
-    // Guards the filter itself: a typo in the predicate that dropped everything
-    // would pass the test above while quietly emptying the palette.
+    // Guards the filter itself: a broken predicate could empty the palette and still pass the test above.
     expect(LISTED_PAGES.length).toBe(PAGES.filter((entry) => !entry.unlisted).length)
     expect(LISTED_PAGES.length).toBe(PAGES.length - 1)
   })
 
   it('gives every entry a distinct id', () => {
-    // Ids are React keys and the lookup key for the precomputed haystacks; a
-    // duplicate would drop a row out of the results.
+    // Ids are React keys and the haystack lookup key; a duplicate drops a row from results.
     const ids = PAGES.map((entry) => entry.id)
     expect(new Set(ids).size).toBe(ids.length)
   })

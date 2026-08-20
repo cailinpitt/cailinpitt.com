@@ -7,21 +7,14 @@
 import { fetchDiary, type DiaryEntry } from './letterboxd'
 import { mirrorImage } from './images'
 
-/**
- * Rows per INSERT statement. D1 caps bound parameters at 100 per query and each
- * film binds 13, so 7 rows (91 parameters) is the most that fits.
- */
+// D1 caps bound parameters at 100 per query; each film binds 13, so 7 rows
+// (91 parameters) is the most that fits.
 const ROWS_PER_INSERT = 7
 
-/**
- * Posters mirrored per run.
- *
- * Each costs 2 subrequests (one fetch, one R2 put), and the rest of a run
- * spends ~6 — the feed, a couple of D1 calls. 15 leaves real headroom under the
- * 50-subrequest ceiling. Whatever is left over is picked up by the next run;
- * those cards show a placeholder until then. On Workers Paid (10,000
- * subrequests) raise this past the archive size to backfill in one pass.
- */
+// Posters mirrored per run: 2 subrequests each, and the rest of a run spends
+// ~6, leaving headroom under the 50-subrequest free-plan ceiling. Leftovers
+// are picked up next run. Raise past archive size on Workers Paid to backfill
+// in one pass.
 function mirrorBudget(env: Env): number {
   const configured = Number(env.MIRROR_BUDGET)
   return Number.isFinite(configured) && configured > 0 ? configured : 15
@@ -131,14 +124,9 @@ async function writeFilms(
   await db.batch(statements)
 }
 
-/**
- * Rebuild the `stats` row.
- *
- * Unlike worker-reading, this cannot be computed from the rows held in memory:
- * the sync only ever sees the newest 50 entries, while these totals describe
- * the whole archive. So it is two aggregate queries once a day, which is
- * exactly the cost the `stats` table exists to keep off the read path.
- */
+// Rebuild `stats`. Unlike worker-reading, this can't be computed from rows in
+// memory — the sync only sees the newest 50 entries — so it's two aggregate
+// queries once a day, kept off the read path by the stats table.
 async function recomputeStats(db: D1Database): Promise<void> {
   const [totals, byYear] = await Promise.all([
     db

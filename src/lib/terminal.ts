@@ -11,8 +11,6 @@ import { kindIcon, longDate, summary, type ActivityNow } from './moving'
 import type { EntryPage } from './guestbook'
 import type { NotePage } from './notes'
 
-// ---- output --------------------------------------------------------------
-
 export type Tone = 'default' | 'muted' | 'accent' | 'error' | 'prompt'
 
 export interface Line {
@@ -31,8 +29,6 @@ const link = (text: string, href: string): Line => ({ text, href })
 const err = (text: string): Line => ({ text, tone: 'error' })
 const muted = (text: string): Line => ({ text, tone: 'muted' })
 const blank = (): Line => ({ text: '' })
-
-// ---- the filesystem ------------------------------------------------------
 
 export type NodeKind = 'dir' | 'post' | 'photo' | 'page'
 
@@ -213,8 +209,6 @@ export const echoLine = (cwd: string, input: string): Line => ({
   text: `${promptPath(cwd)} $ ${input}`,
   tone: 'prompt',
 })
-
-// ---- commands ------------------------------------------------------------
 
 export interface CommandSpec {
   name: string
@@ -548,9 +542,8 @@ export async function run(
         if (article) lines.push(blank(), ...articleLines(article))
       }
 
-      // The last film, whenever it was. Unlike the article above there is no
-      // "today" filter — films are logged a few times a week, so a same-day
-      // rule would leave this off the screen most of the time.
+      // No "today" filter, unlike the article above — films are logged a few times a week,
+      // so a same-day rule would leave this off the screen most of the time.
       if (watching.status === 'fulfilled' && watching.value.lastFilm) {
         const film = watching.value.lastFilm
         lines.push(
@@ -761,8 +754,6 @@ export async function run(
     }
   }
 }
-
-// ---- tab completion ------------------------------------------------------
 
 export function commonPrefix(values: string[]): string {
   if (!values.length) return ''

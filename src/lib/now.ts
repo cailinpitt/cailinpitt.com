@@ -10,8 +10,7 @@ export interface NowPage {
   body: string
 }
 
-// Same loading shape as colophon.ts and projects.ts: import.meta.glob rather
-// than a static import, so it resolves in both the SSG prerender and the browser.
+// import.meta.glob (not a static import) so this resolves in both the SSG prerender and the browser.
 const rawModules = import.meta.glob('/content/now.md', {
   query: '?raw',
   import: 'default',

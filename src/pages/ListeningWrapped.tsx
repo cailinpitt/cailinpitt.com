@@ -1,8 +1,6 @@
-// A year, told as a story rather than a table.
-//
-// Reads the same year blob the period view does — no new endpoint, no new data.
-// Everything on this page is derived in src/lib/wrapped.ts, so the page itself
-// is only layout.
+// A year, told as a story rather than a table. Reads the same year blob the
+// period view does — no new endpoint — and everything is derived in
+// src/lib/wrapped.ts, so this page itself is only layout.
 
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -20,8 +18,8 @@ type State =
 
 export function Component() {
   const params = useParams<{ year?: string }>()
-  // No year in the URL means this year. An out-of-range one falls back rather
-  // than 404ing, since /listening/wrapped is the shareable address.
+  // No year in URL means this year; out-of-range falls back rather than
+  // 404ing, since /listening/wrapped is the shareable address.
   const year =
     params.year && withinArchive('y', params.year) ? params.year : currentKey('y')
 
@@ -53,9 +51,8 @@ export function Component() {
         title={`Listening · ${year} wrapped`}
         description={`Cailin Pitt's ${year} in music — top artists, tracks and genres, listening time, and the patterns behind them.`}
         path={`/listening/wrapped/${year}`}
-        // The one /listening sub-page worth its own card: a year in review is
-        // the thing anyone would actually share. Six of them, against the ~360
-        // period pages that reuse the section card.
+        // The one /listening sub-page worth its own card — a year in review
+        // is what anyone would actually share.
         card={{ kicker: 'Listening', meta: `${year} in review` }}
       />
       <section className="listening wrapped">
@@ -89,12 +86,8 @@ export function Component() {
   )
 }
 
-/**
- * Every year with an archive, as its own wrapped.
- *
- * Sourced from the same constant `listeningYears()` the prerenderer uses, so the
- * list can't drift from the pages that actually exist, and it needs no API call.
- */
+// Sourced from the same listeningYears() the prerenderer uses, so the list
+// can't drift from the pages that actually exist, and needs no API call.
 function WrappedYearNav({ year }: { year: string }) {
   const years = listeningYears()
   if (years.length < 2) return null
@@ -120,7 +113,7 @@ function WrappedBody({ stats, year }: { stats: PeriodStats; year: string }) {
   const cards = buildCards(stats)
   const traits = deriveTraits(stats)
 
-  // Below the floor the numbers are noise, and a Wrapped built on 12 scrobbles
+  // Below the floor the numbers are noise — a Wrapped built on 12 scrobbles
   // would be confidently meaningless.
   if (stats.scrobbles < MIN_SCROBBLES) {
     return (

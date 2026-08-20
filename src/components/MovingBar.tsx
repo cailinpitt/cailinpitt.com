@@ -3,17 +3,11 @@ import { Link } from 'react-router-dom'
 import { formatDayLabel } from '../lib/datetime'
 import { duration, kindIcon, summary, type ActivityNow } from '../lib/moving'
 
-/**
- * Compact last-activity strip, the counterpart to WatchingBar. Client-fetched
- * from the lightweight /now.json endpoint; renders nothing until it has data,
- * so the prerendered shell and any API hiccup just leave the page clean.
- *
- * No polling — this syncs once a day.
- *
- * Where the other bars show cover art, this shows the kind's mark: an activity
- * has no image, and a blank placeholder in that slot would read as a failure to
- * load rather than as "there is nothing to show".
- */
+// Compact last-activity strip, counterpart to WatchingBar. Client-fetched
+// from /now.json; renders nothing until it has data, so an API hiccup just
+// leaves the page clean. No polling — syncs once a day. Shows the kind's
+// mark instead of cover art, since a blank image slot would read as a load
+// failure rather than "nothing to show".
 export function MovingBar() {
   const [now, setNow] = useState<ActivityNow | null>(null)
 
@@ -31,8 +25,8 @@ export function MovingBar() {
   const activity = now?.lastActivity
   if (!activity) return null
 
-  // Distance is already in the headline when there is one, so the second line
-  // carries the time instead of repeating it.
+  // Distance is already in the headline when there is one, so the second
+  // line carries the time instead of repeating it.
   const secondary = activity.distanceMi > 0 ? duration(activity.movingTime) : null
 
   return (
@@ -42,8 +36,7 @@ export function MovingBar() {
           {kindIcon(activity.kind)}
         </span>
         <span className="now-bar-text">
-          {/* formatDayLabel, not the page's longDate: the chips say "Today"
-              when it was today, and this one should read the same. */}
+          {/* formatDayLabel, not longDate: matches how the chips say "Today". */}
           <span className="now-bar-label">Last moved · {formatDayLabel(activity.startDate)}</span>
           <span className="now-bar-track">
             <span className="now-bar-title">{summary(activity)}</span>

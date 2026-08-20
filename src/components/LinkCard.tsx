@@ -1,16 +1,11 @@
 import { linkCardImageUrl, type Note } from '../lib/notes'
 
 /**
- * A note's attached link, shown as a Twitter/Bluesky-style card: image,
- * title, subtitle, hostname. Modeled on resolveContext/.note-context in
- * notesContext.ts — a pure function of the note, rendering nothing until
- * there's something to show.
- *
- * Renders nothing until linkTitle or linkImageReady is set — a note can have
- * `linkUrl` set the instant it's published, before the background scrape
- * (buildLinkCard in worker-notes/src/index.ts) has finished. There's no
- * loading state here for that gap: the note itself is already visible, and
- * the card just appears within the next poll once it's ready.
+ * A note's attached link, shown as a Twitter/Bluesky-style card. Renders
+ * nothing until linkTitle or linkImageReady is set — `linkUrl` can be set
+ * before the background scrape (buildLinkCard in worker-notes/src/index.ts)
+ * finishes, and there's no loading state for that gap; the card just appears
+ * on the next poll.
  */
 export function LinkCard({ note }: { note: Note }) {
   if (!note.linkUrl || (!note.linkTitle && !note.linkImageReady)) return null

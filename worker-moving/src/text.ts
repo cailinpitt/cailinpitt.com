@@ -1,7 +1,6 @@
-// Terminal rendering of the activity bundle, for `curl`-style clients.
-// Same conventions as the other workers' text.ts: 72 columns, ANSI on by
-// default, `?T` to turn it off. A separate copy because the workers are
-// separate packages and this one renders different rows.
+// Terminal rendering of the activity bundle, for `curl`-style clients. Same
+// conventions as the other workers' text.ts (72 columns, ANSI by default, `?T`
+// to disable) — a separate copy since the packages share no module.
 
 import type { Activity, MovingBundle } from './store'
 
@@ -104,14 +103,9 @@ function summary(activity: Activity): string {
     : `${verb} for ${duration(activity.movingTime)}`
 }
 
-/**
- * " · <3 145 avg · 178 max", or nothing when there was no monitor.
- *
- * Mirrors heartRate() in src/lib/moving.ts, the same way summary() does — the
- * terminal view and the page have to read the same. The page draws a ♥; here it
- * is ASCII, because this output goes to whatever terminal and encoding the
- * reader happens to have, and a mojibaked glyph is worse than a plain one.
- */
+// " · <3 145 avg · 178 max", or nothing without a monitor. Mirrors heartRate()
+// in src/lib/moving.ts; ASCII `<3` here instead of the page's ♥ since a
+// mojibaked glyph is worse than a plain one on an unknown terminal encoding.
 function heartRate(activity: Activity): string {
   const bpm = (value: number | null | undefined) =>
     typeof value === 'number' && value > 0 ? Math.round(value) : null

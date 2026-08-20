@@ -22,17 +22,14 @@ export function Component() {
   const [bundle, setBundle] = useState<ReadingBundle | null>(null)
   const [error, setError] = useState(false)
 
-  // The tab lives in the url so a link can point straight at the articles, and
-  // so this can become /books and /articles later without changing anything a
-  // reader has bookmarked. Safe against hydration mismatches because the tabs
-  // only render once `bundle` is set, which never happens during prerender.
+  // Tab lives in the url so a link can point straight at articles. Safe against
+  // hydration mismatches since tabs only render once `bundle` is set (never during prerender).
   const [params, setParams] = useSearchParams()
   const tab: Tab = params.get('tab') === 'articles' ? 'articles' : 'books'
   const setTab = (next: Tab) =>
     setParams(next === 'books' ? {} : { tab: next }, { replace: true })
 
-  // Unlike /listening there is no polling: books sync once a day and articles
-  // arrive by email, so nothing here changes while the page is open.
+  // Unlike /listening, no polling: books sync once a day and articles arrive by email.
   useEffect(() => {
     const controller = new AbortController()
     fetchReading(controller.signal)
@@ -85,10 +82,8 @@ export function Component() {
             </dl>
           </section>
 
-          {/* Books and articles are peers, so they share top billing rather than
-              stacking — the article log used to sit below the whole book history,
-              where nobody would ever scroll to find it. The counts on the tabs are
-              what advertise that the other half exists. */}
+          {/* Peers, not stacked — articles used to sit below the whole book
+              history where nobody scrolled to find them. */}
           <div className="segmented reading-tabs" role="tablist" aria-label="Reading">
             {(['books', 'articles'] as Tab[]).map((key) => (
               <button
@@ -150,14 +145,8 @@ export function Component() {
   )
 }
 
-// ---- pagination ----------------------------------------------------------
-
-/**
- * Shared "load older" behavior for the two paginated sections.
- *
- * Both lists are newest-first behind an opaque cursor, so the only things that
- * differ are which endpoint to call and how to key an item for deduping.
- */
+// Shared "load older" behavior: both lists are newest-first behind an opaque
+// cursor, so only the endpoint and the dedupe key differ.
 function usePaginated<T>(
   initial: T[],
   initialCursor: string | null,
@@ -204,8 +193,6 @@ function usePaginated<T>(
 // Module-level so they're referentially stable across renders.
 const bookKey = (book: Book) => `${book.userBookId}-${book.readId}`
 const articleKey = (article: Article) => article.id
-
-// ---- finished books ------------------------------------------------------
 
 function FinishedBooks({
   initial,
@@ -263,8 +250,6 @@ function FinishedBooks({
     </section>
   )
 }
-
-// ---- article log ---------------------------------------------------------
 
 function ArticleLog({
   initial,
@@ -329,8 +314,6 @@ function ArticleLog({
     </section>
   )
 }
-
-// ---- loading state -------------------------------------------------------
 
 function ReadingSkeleton() {
   return (

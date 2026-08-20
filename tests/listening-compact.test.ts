@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compactDays } from '../worker-listening/src/compact'
 
-// /timeline reads a count and a top artist per day and renders no individual
-// track, so the Worker folds the track lists away before sending them. The fold
-// used to happen in the browser, over the full bundle; these are the rules that
-// came across with it.
+// /timeline needs only a count and top artist per day, so the Worker folds away the track lists before sending.
 
 const track = (artist: string, uts = 0) => ({
   uts,
@@ -34,8 +31,7 @@ describe('compactDays', () => {
   })
 
   it('carries the count the day arrived with rather than recounting', () => {
-    // The bundle's `count` is the day's real total; `tracks` can be a capped
-    // tail of it. Recomputing from the tracks would understate a heavy day.
+    // `tracks` can be a capped tail; recomputing from it would understate a heavy day.
     const out = compactDays([{ date: '2026-08-07', count: 240, tracks: [track('Vegyn')] }])
     expect(out[0].count).toBe(240)
   })

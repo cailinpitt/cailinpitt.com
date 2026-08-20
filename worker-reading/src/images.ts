@@ -1,27 +1,13 @@
 // Mirror remote images (book covers, article social cards) into the site's own
-// R2 bucket, so /reading serves them from images.cailinpitt.com like everything
-// else — no hotlinking publishers' CDNs, no broken art when a site reorganizes,
-// and no third-party host seeing every visitor.
+// R2 bucket, so /reading serves them from images.cailinpitt.com — no hotlinking
+// publishers' CDNs, no broken art on a redesign, no third party seeing visitors.
 //
-// Keys are content-addressed *by source url*, so a re-sync never needs to
-// re-upload and a changed remote image lands on a new key rather than being
-// replaced at the old one. That is the same cache-busting reasoning as the
-// gallery renditions: objects go up `immutable`, so the bytes at a given key
-// must never change.
-//
-// ## Subrequest budget
-//
-// On the Workers **free plan** an invocation gets 50 subrequests, and R2/KV/D1
-// binding calls count toward it alongside `fetch()`. So this deliberately makes
-// exactly **two** subrequests per image (one fetch, one put) and never calls
-// `head()` to test for an existing key — callers avoid redundant work instead by
-// tracking what they have already mirrored (see MIRROR_BUDGET in sync.ts).
-// Re-putting an identical key is harmless: the key is a hash of the source url,
-// so the bytes are the same.
-//
-// There is no `sharp` in Workers, so images are stored at their original size.
-// The page uses fixed aspect-ratio boxes with object-fit, which prevents layout
-// shift without needing to know each image's dimensions.
+// Keys are content-addressed by source url (immutable, same as gallery
+// renditions), so a re-sync never re-uploads. Free-plan Workers get 50
+// subrequests per invocation, so this spends exactly 2 per image (fetch + put)
+// and never calls head() — callers track what's already mirrored instead (see
+// MIRROR_BUDGET in sync.ts). No `sharp` here, so images stay original size; the
+// page uses fixed aspect-ratio boxes to avoid layout shift.
 
 import { sha256Hex } from './hash'
 
@@ -50,14 +36,9 @@ const EXTENSIONS: Record<string, string> = {
 /** Key length. 12 hex chars is 48 bits — ample for a few thousand images. */
 const KEY_HASH_LENGTH = 12
 
-/**
- * Copy `source` into R2.
- *
- * Returns the root-relative `/images/reading/…` path to store in D1 (the site's
- * `imageUrl()` rewrites it to the R2 domain at render time), or null if the
- * image could not be mirrored. Callers must treat null as non-fatal: an entry
- * with no art still belongs in the log.
- */
+// Copy `source` into R2. Returns the root-relative /images/reading/… path to
+// store in D1, or null if it couldn't be mirrored — non-fatal, an entry with
+// no art still belongs in the log.
 export async function mirrorImage(env: Env, source: string | null): Promise<string | null> {
   if (!source) return null
 

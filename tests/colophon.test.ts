@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fillTemplate } from '../src/lib/colophon'
 
-// The substitution step behind the numbers quoted in content/colophon.md. It is
-// a fill-in-the-blanks pass, not a template language — these tests are mostly
-// about the three decisions in it that aren't obvious.
+// Fill-in-the-blanks substitution behind content/colophon.md, not a template language.
 
 describe('fillTemplate', () => {
   it('substitutes values, thousands-separating numbers', () => {
@@ -14,8 +12,7 @@ describe('fillTemplate', () => {
   })
 
   it('leaves an unknown placeholder in the text rather than blanking it', () => {
-    // A typo should be visible the first time the page is previewed, not quietly
-    // delete half a sentence.
+    // A typo should be visible on preview, not silently delete a sentence.
     expect(fillTemplate('{{photoss}} photographs', { photos: 10 })).toBe('{{photoss}} photographs')
   })
 
@@ -33,8 +30,7 @@ describe('fillTemplate', () => {
   })
 
   it('leaves a section alone when the key is unknown entirely', () => {
-    // Same reasoning as the placeholder above: a typo in the section name should
-    // surface, not silently delete the paragraph it wraps.
+    // Same reasoning as the placeholder above, but for section names.
     const body = '{{#locatedd}}text{{/locatedd}}'
     expect(fillTemplate(body, { located: 5 })).toBe(body)
   })

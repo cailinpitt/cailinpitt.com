@@ -1,13 +1,7 @@
 import { Link } from 'react-router-dom'
 import { imageUrl, type PhotoPreview } from '../lib/photos'
 
-/**
- * A row of recent photographs linking into the feed — the homepage's strip, and
- * the one at the foot of the live block on /now.
- *
- * The grid is `auto-fill`, so it lays out whatever it's given; how many photos
- * to show is the caller's decision, not this component's.
- */
+/** A row of recent photographs linking into the feed (homepage strip, and the foot of /now). Grid is `auto-fill`; how many to show is the caller's call. */
 export function PhotoStrip({ photos }: { photos: PhotoPreview[] }) {
   if (!photos.length) return null
 
@@ -21,9 +15,7 @@ export function PhotoStrip({ photos }: { photos: PhotoPreview[] }) {
             // The photo's own color underneath, as on the feed tiles.
             style={photo.tint ? { background: photo.tint } : undefined}
           >
-            {/* The strip's tiles cap at 130px (see .photo-previews), so this is
-                the one place on the site that was fetching a 1000px rendition to
-                paint a thumbnail. */}
+            {/* Tiles cap at 130px (.photo-previews) — srcset/sizes avoid fetching a 1000px rendition for a thumbnail. */}
             <img
               src={imageUrl(photo.src)}
               srcSet={photo.srcset}

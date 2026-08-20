@@ -1,8 +1,6 @@
-// Terminal rendering of the watching bundle, for `curl`-style clients.
-// The counterpart to worker/src/text.ts and worker-reading/src/text.ts — same
-// conventions (72 columns, ANSI on by default, `?T` to turn it off), and
-// deliberately a separate copy: the workers are separate packages with no
-// shared module, and this one renders different rows.
+// Terminal rendering of the watching bundle, for `curl`-style clients. Same
+// conventions as the other workers' text.ts (72 columns, ANSI by default, `?T`
+// to disable) — a deliberate separate copy since the packages share no module.
 
 import type { Film, WatchingBundle } from './store'
 
@@ -59,26 +57,16 @@ const num = (n: number) => n.toLocaleString('en-US')
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/**
- * "Jul 9" from a YYYY-MM-DD string, read as written.
- *
- * Letterboxd logs a date, not a timestamp, so there is no zone to convert and
- * nothing to gain from routing it through Date — parsing the digits cannot slip
- * a day the way a UTC round-trip can.
- */
+// "Jul 9" from a YYYY-MM-DD string, read as written — no zone to convert, so
+// no day can slip the way a UTC round-trip could.
 function shortDate(date: string): string {
   const [, month, day] = date.split('-')
   const index = Number(month) - 1
   return MONTHS[index] ? `${MONTHS[index]} ${Number(day)}` : date
 }
 
-/**
- * "★★★½" from a 0–5 rating.
- *
- * Half stars are rendered rather than rounded, unlike the book shelf: on
- * Letterboxd the half is the whole point of the scale, and a terminal can spell
- * it without needing a second glyph set.
- */
+// "★★★½" from a 0–5 rating. Half stars rendered, not rounded (unlike the book
+// shelf) — on Letterboxd the half is the whole point of the scale.
 function stars(rating: number | null): string {
   if (rating == null || rating <= 0) return ''
   const full = Math.floor(rating)

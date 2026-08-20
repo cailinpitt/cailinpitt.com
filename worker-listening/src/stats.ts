@@ -55,16 +55,10 @@ export interface Bundle {
   recentDays: DayLog[]
   /** Cursor for /days pagination: fetch older logs with ?before=<uts>. */
   nextBefore: number | null
-  /**
-   * A five-field projection of the current year's period blob.
-   *
-   * Rides along in the bundle rather than being its own endpoint: /listening
-   * already fetches this, and a separate request would cost a Worker invocation
-   * per page view to deliver 21 KB when the page reads five numbers. Same
-   * reasoning as /now.json projecting away its 40-track tail.
-   *
-   * Absent when the year blob isn't built yet; the section then renders nothing.
-   */
+  // Projection of the current year's period blob. Rides along in the bundle
+  // rather than its own endpoint — a separate request would cost a Worker
+  // invocation to deliver 21KB when the page reads five numbers. Absent when
+  // the year blob isn't built yet.
   year?: {
     key: string
     scrobbles: number
@@ -95,17 +89,10 @@ function topOf<T>(
     .map((e) => ({ ...e.row, count: e.count, image: e.image }))
 }
 
-/**
- * Aggregate one window from rows already in memory.
- *
- * This used to be four SQL aggregates per window, eight across 7d and 30d, each
- * re-reading rows the others had just read — ~10k rows per refresh, 96 times a
- * day. The 30-day window is only ~2k rows, so fetching it once and folding both
- * windows out of it in JS is both fewer queries (8 → 1) and fewer rows (5x).
- *
- * It also removes the INDEXED BY hazard entirely: there is no GROUP BY left for
- * the planner to satisfy with the wrong index.
- */
+// Used to be 8 SQL aggregates (7d+30d), each re-reading overlapping rows —
+// ~10k rows/refresh. Fetching the 30-day window once (~2k rows) and folding
+// both windows out of it in JS cuts queries 8→1 and rows 5x, and removes the
+// INDEXED BY hazard since there's no GROUP BY for the planner to mis-satisfy.
 export function windowStats(rows: Scrobble[], since: number, days: number): StatWindow {
   const artists = new Map<string, { count: number; image: string | null; label: string; row: { name: string } }>()
   const albums = new Map<string, { count: number; image: string | null; label: string; row: { album: string; artist: string } }>()
@@ -189,12 +176,8 @@ export async function fetchLastPlayed(db: D1Database): Promise<Scrobble | null> 
   )
 }
 
-/**
- * Rows to pull per day asked for. The archive's heaviest day is ~155 scrobbles,
- * so this clears it comfortably; a heavier day is not a correctness problem
- * either, since it just splits across two pages and the client merges same-dated
- * days back together.
- */
+// Archive's heaviest day is ~155 scrobbles; a heavier one just splits across
+// two pages and the client re-merges same-dated days.
 const ROWS_PER_DAY = 250
 
 /** Hard ceiling on one /days response, whatever `limit` asks for. */
@@ -207,17 +190,12 @@ export async function fetchOlderDays(
   before: number,
   maxDays: number,
 ): Promise<{ days: DayLog[]; nextBefore: number | null }> {
-  // Scale the chunk to what was actually asked for rather than a flat 2,000 —
-  // the on-this-day expansion wants a single day and was reading 2,000 rows for
-  // it. A row cap rather than a time bound on purpose: gaps in listening cost
-  // nothing, because the index walk descends through uts and simply finds no
-  // rows for silent days, so this stays correct across a month of silence.
-  // Absolute ceiling as well as a per-day one. maxDays * ROWS_PER_DAY reaches
-  // 3,500 for the 14 days /timeline asks for, and since the range below is
-  // open-ended that is 3,500 rows genuinely read — ~1,400 requests would spend a
-  // whole day's D1 budget. 900 still covers 14 days at this archive's ~51/day;
-  // a stretch of unusually heavy days truncates, and the caller just paginates
-  // again, which `more` below already handles.
+  // Chunk scales to what was asked for, not a flat 2,000 (on-this-day wants a
+  // single day). Row cap rather than time bound, so silent days cost nothing —
+  // the index walk just finds no rows for them. MAX_DAY_ROWS caps the open-ended
+  // range too: maxDays*ROWS_PER_DAY hits 3,500 for /timeline's 14 days, which at
+  // scale would burn a day's D1 budget in ~1,400 requests; 900 still covers 14
+  // days at this archive's ~51/day, and heavier stretches just paginate again.
   const limit = Math.min(maxDays * ROWS_PER_DAY, MAX_DAY_ROWS)
   const rows = await db
     .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts < ?1 ORDER BY uts DESC LIMIT ?2`)
@@ -233,14 +211,8 @@ export async function fetchOlderDays(
   return { days, nextBefore }
 }
 
-/**
- * 7d + 30d windows plus the recent per-day logs, from a *single* query.
- *
- * The 30-day window is the widest thing here (~2k rows) and strictly contains
- * both the 7-day window and the 11 days of log rows, so one fetch feeds all
- * three. That replaces nine queries with one and reads the rows once instead of
- * three times over.
- */
+// 7d + 30d windows plus the recent logs from a single query: the 30-day window
+// (~2k rows) strictly contains both, so one fetch replaces nine queries.
 export async function computeStats(
   db: D1Database,
   env: Env,
@@ -265,11 +237,8 @@ export async function computeStats(
   return { windows: { '7d': window7, '30d': window30 }, recentDays, nextBefore }
 }
 
-/**
- * Per-day counts for the last ~53 weeks (calendar heatmap). This is the only
- * query that scans a year of rows, so it runs on the slow cadence (every ~6 h).
- * The SQL day expression uses the same fixed offset as localDay().
- */
+// Last ~53 weeks for the calendar heatmap. The only query that scans a year of
+// rows, hence the slow ~6h cadence. Day expression matches localDay()'s offset.
 export async function computeHeatmap(db: D1Database, env: Env): Promise<Bundle['heatmap']> {
   const offset = Number(env.TZ_OFFSET_SECONDS) || 0
   const now = Math.floor(Date.now() / 1000)

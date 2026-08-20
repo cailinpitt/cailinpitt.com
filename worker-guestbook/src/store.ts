@@ -1,9 +1,6 @@
-// D1 access. Every query in the guestbook lives here.
-//
-// The whole read path is one indexed query per request, behind an edge cache, so
-// there are no precomputed blobs and no KV namespace — see the note in
-// wrangler.jsonc. The write path adds two COUNT(*)s for the rate limits, both of
-// which are index seeks rather than scans.
+// D1 access. Every query in the guestbook lives here. The read path is one
+// indexed query behind an edge cache — no precomputed blobs, no KV (see
+// wrangler.jsonc). Writes add two COUNT(*)s for rate limits, both index seeks.
 
 import { newId } from './hash'
 import type { CleanEntry } from './validate'
@@ -65,15 +62,9 @@ const toEntry = (row: Row): Entry => ({
 export const PAGE_SIZE = 25
 export const MAX_PAGE_SIZE = 50
 
-/**
- * One page of entries, newest first.
- *
- * Ordering is `created_at DESC, id DESC` and the cursor carries both halves, so
- * entries sharing a second (two people signing at once, or a seeded import) can
- * never be skipped or repeated across a page boundary the way a bare timestamp
- * cursor would allow. `id` is random, which makes it an arbitrary but stable
- * tiebreak — exactly what a cursor needs.
- */
+// Ordered by (created_at, id) DESC, cursor carrying both — entries sharing a
+// second (two people signing at once) can't be skipped or repeated at a page
+// boundary the way a bare timestamp cursor would allow.
 export async function listEntries(
   db: D1Database,
   opts: { before?: string | null; limit?: number } = {},
@@ -188,13 +179,8 @@ export function countSince(db: D1Database, since: number): Promise<number> {
     .then((row) => row?.n ?? 0)
 }
 
-/**
- * Newest entries with their IP bucket attached — the moderation view.
- *
- * Only ever reached behind the ADMIN_TOKEN. The hash is included because it is
- * what makes a flood legible: ten entries under ten names and one hash is one
- * person, and the CLI can group on it.
- */
+// Moderation view: newest entries with their IP bucket attached, so the CLI
+// can group ten entries under one hash as one person.
 export async function listForAdmin(db: D1Database, limit: number): Promise<AdminEntry[]> {
   const { results } = await db
     .prepare(

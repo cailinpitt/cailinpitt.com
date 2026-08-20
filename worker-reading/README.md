@@ -24,7 +24,7 @@ one read API:
 | Route | Auth | Notes |
 |---|---|---|
 | `GET /reading.json` | — | the bundle: `currentlyReading`, `recentBooks`, `articles`, `counts`, `nextCursor` |
-| `GET /articles?cursor=&limit=` | — | older articles. Cursor is `<read_at>:<id>` — composite, because two articles saved in the same second would drop one at a page boundary |
+| `GET /articles?cursor=&limit=` | — | older articles. Cursor is `<read_at>:<id>` — composite, so two articles saved in the same second don't drop one at a page boundary |
 | `GET /` or `/reading` | — | terminal view for CLI user-agents, else a 302 (`no-store`) |
 | `POST /ingest` | `Bearer INGEST_TOKEN` | save an article |
 | `PATCH /ingest` | `Bearer INGEST_TOKEN` | set or extend its note |
@@ -69,7 +69,7 @@ curl -sX POST https://reading.cailinpitt.com/ingest \
   -d '{"url":"https://arstechnica.com/...","note":"optional"}'
 ```
 
-One path, three verbs, all keyed by the url you shared (tracking params and all — they're
+One path, three verbs, all keyed by the url you shared (tracking params and all —
 canonicalized away before hashing), so you never need an id:
 
 | Verb | Body | Does |
@@ -86,7 +86,7 @@ response says `noted: true`.
 
 Deleting leaves the mirrored image in R2 on purpose: keys are content-addressed, so re-saving
 reuses the object, and `prune-r2.mjs` never touches this prefix. A few KB is cheaper than risking
-the deletion of an image another row still points at.
+deletion of an image another row still points at.
 
 `/ingest` allows **any** origin. The bookmarklet runs in the page context of whatever article is
 open, so an allowlist can't work — the token is the security boundary.
@@ -97,8 +97,8 @@ Three shortcuts, all built the same way: Shortcuts → new shortcut → **Get Co
 in settings enable **Show in Share Sheet** accepting *URLs* and *Safari web pages*. Each gets
 `authorization` = `Bearer <INGEST_TOKEN>` as a header.
 
-- **"Save to reading"** — URL `https://reading.cailinpitt.com/ingest`, method **POST**, Request Body
-  **JSON**, key `url` = **Shortcut Input**.
+- **"Save to reading"** — URL `https://reading.cailinpitt.com/ingest`, method **POST**, Request
+  Body **JSON**, key `url` = **Shortcut Input**.
 - **"Remove from reading"** — same, method **DELETE**.
 - **"Save to reading with note"** — three actions, in this order:
 
@@ -109,8 +109,8 @@ in settings enable **Show in Share Sheet** accepting *URLs* and *Safari web page
   ```
 
   > Order is load-bearing. Shortcuts defaults every action's input to the *previous action's
-  > output*, so if **Ask for Input** sits above **Get URLs from Input**, that action hunts for a url
-  > inside the note you typed, `url` arrives empty, and the API rejects the body. The variable
+  > output*, so if **Ask for Input** sits above **Get URLs from Input**, that action hunts for a
+  > url inside the note you typed, `url` arrives empty, and the API rejects the body. The variable
   > picker doesn't reliably offer "Shortcut Input", so relying on the default order is the
   > dependable fix.
 
@@ -133,10 +133,10 @@ javascript:(()=>{if(!confirm('Remove from reading?'))return;fetch('https://readi
 
 ### No KV, unlike the listening worker
 
-That worker precomputes blobs into KV because it has ~100k scrobbles and a per-minute cron. This one
-has a few hundred books and a few thousand articles, so every query in `src/store.ts` is a small
-indexed scan and the bundle is built straight from D1 behind a 5-minute edge cache. KV here would be
-a staleness ladder in exchange for nothing.
+That worker precomputes blobs into KV because it has ~100k scrobbles and a per-minute cron. This
+one has a few hundred books and a few thousand articles, so every query in `src/store.ts` is a
+small indexed scan and the bundle is built straight from D1 behind a 5-minute edge cache. KV here
+would be a staleness ladder in exchange for nothing.
 
 ### Caching
 
@@ -154,13 +154,13 @@ books, 21 articles, 1 precomputed `stats` row. That number is **flat** — it do
 archive. Two fixes got it there, both worth preserving:
 
 - **Pagination, not full history.** The bundle used to carry every finished book. It's rebuilt per
-  edge colo per TTL, so payload size multiplies by traffic — the history is unbounded but the
-  bundle must not be.
+  edge colo per TTL, so payload size multiplies by traffic — history is unbounded but the bundle
+  must not be.
 - **No `COUNT(*)` at runtime.** Totals were four subqueries scanning every finished book and
   article (~750 rows per build, rising forever). Now one precomputed `stats` row.
 
 The binding free-tier constraint is Workers' **100k requests/day**, i.e. ~100k `/reading` visits —
-the edge cache doesn't reduce that, because the Cache API runs *inside* the Worker. D1 reads only
+the edge cache doesn't reduce that, since the Cache API runs *inside* the Worker. D1 reads only
 matter above ~100k builds/day, which the TTL puts out of reach; `EDGE_TTL` is the lever if it ever
 gets close. Writes are negligible.
 
@@ -170,11 +170,11 @@ On the free plan an invocation gets **50 subrequests**, and R2/KV/D1 binding cal
 `fetch()`. That shapes two things:
 
 - `mirrorImage()` spends exactly **two** subrequests per image (one fetch, one R2 put) and never
-  calls `head()` to test for an existing key. Callers avoid redundant work instead — `syncBooks()`
-  reads the `cover_source → cover` map out of D1 first, so a steady-state sync makes no image
-  subrequests at all.
-- New covers are mirrored **`MIRROR_BUDGET` per run** (default 18); the rest are picked up next run
-  and render a placeholder meanwhile. On Workers Paid (10,000 subrequests) raise it to 400+ in
+  calls `head()` to test for an existing key. Callers avoid redundant work instead —
+  `syncBooks()` reads the `cover_source → cover` map out of D1 first, so a steady-state sync makes
+  no image subrequests at all.
+- New covers are mirrored **`MIRROR_BUDGET` per run** (default 18); the rest are picked up next
+  run and render a placeholder meanwhile. On Workers Paid (10,000 subrequests) raise it to 400+ in
   `wrangler.jsonc` and the library mirrors in one pass.
 
 So a first sync of a few hundred books needs several passes — see [Backfilling
@@ -184,8 +184,8 @@ covers](#backfilling-covers).
 
 Hardcover is the source of truth and rows there can be edited or deleted, so `syncBooks()` does
 `DELETE FROM books` + re-insert in a single atomic D1 batch. At this size that's cheaper and more
-correct than diffing, and deletions and edits come free. Rows are per *read session*, so a re-read
-is its own row. `ROWS_PER_INSERT` is 7 because D1 caps bound parameters at 100 and each row binds 13.
+correct than diffing, and deletions/edits come free. Rows are per *read session*, so a re-read is
+its own row. `ROWS_PER_INSERT` is 7 because D1 caps bound parameters at 100 and each row binds 13.
 
 ## Testing in pieces
 
@@ -198,9 +198,9 @@ npm run reading:probe -- --json | head -40
 
 Runs the *exact* queries `src/hardcover.ts` uses and prints what came back: counts by status, how
 many have covers/authors/dates, what you're currently reading, the five most recently finished.
-The fastest way to confirm the query shape — in particular that Hardcover's **max query depth of 3**
-is satisfied, which is why authors are fetched separately by `book_id` and joined locally rather
-than through `user_books → book → contributions → author`.
+The fastest way to confirm the query shape — in particular that Hardcover's **max query depth of
+3** is satisfied, why authors are fetched separately by `book_id` and joined locally rather than
+through `user_books → book → contributions → author`.
 
 ### Books, into D1
 
@@ -210,9 +210,9 @@ Deploy, then drive the sync through `POST /sync`:
 npm run reading:sync                  # from the repo root
 ```
 
-Prints `{ books, rows, coversMirrored, coversRemaining }`. Also how you pick up a book you just
-finished without waiting for 09:00 UTC. If `ADMIN_TOKEN` and `READING_ADMIN_TOKEN` in `.env` drift,
-`/sync` returns 401 — re-put both.
+Prints `{ books, rows, coversMirrored, coversRemaining }` — also how to pick up a book you just
+finished without waiting for 09:00 UTC. If `ADMIN_TOKEN` and `READING_ADMIN_TOKEN` in `.env`
+drift, `/sync` returns 401 — re-put both.
 
 Then look at what landed:
 
@@ -222,14 +222,14 @@ npx wrangler d1 execute cailinpitt-reading --remote \
              SUM(cover IS NOT NULL) AS with_cover FROM books"
 ```
 
-> **Why not `wrangler dev --remote`?** It works but is fiddly: it needs `--test-scheduled` before
+> **Why not `wrangler dev --remote`?** It works but is fiddly: needs `--test-scheduled` before
 > `/__scheduled` exists (without it the request just hangs), the custom domain must already be
 > provisioned by a deploy, and the R2 binding needs `preview_bucket_name`. `npm run dev:remote`
 > bundles those flags, but `POST /sync` against the deployed Worker is shorter and exercises the
 > real thing.
 
-`preview_bucket_name` deliberately points at the *same* bucket the site serves, since covers have to
-land where they'll be read from. That's safe because R2 keys here are a SHA-256 of the source url,
+`preview_bucket_name` deliberately points at the *same* bucket the site serves, since covers have
+to land where they'll be read from. Safe because R2 keys here are a SHA-256 of the source url,
 uploaded immutable — any run can only rewrite a key with identical bytes.
 
 #### Backfilling covers
@@ -238,11 +238,11 @@ uploaded immutable — any run can only rewrite a key with identical bytes.
 npm run reading:sync -- --covers    # from the repo root
 ```
 
-Loops `POST /sync`, pacing at 6s between passes because each one re-fetches the library and
-Hardcover rate-limits at 60 requests/minute. `coversRemaining` counts down by `MIRROR_BUDGET` (18)
-per run, so ~420 books needs a couple of dozen passes. It stops when the remainder plateaus — some
-books have no cover url on Hardcover at all and stay `cover = NULL` forever, rendering a
-placeholder. The probe reports that count.
+Loops `POST /sync`, pacing at 6s between passes since each re-fetches the library and Hardcover
+rate-limits at 60 requests/minute. `coversRemaining` counts down by `MIRROR_BUDGET` (18) per run,
+so ~420 books needs a couple dozen passes. Stops when the remainder plateaus — some books have no
+cover url on Hardcover at all and stay `cover = NULL` forever, rendering a placeholder. The probe
+reports that count.
 
 Confirm one landed:
 
@@ -281,10 +281,11 @@ curl reading.cailinpitt.com     # color
 curl reading.cailinpitt.com?T   # no color
 ```
 
-A 72-column ANSI page. Dispatch rules are identical to the listening worker's — see
-[`worker-listening/README.md`](../worker-listening/README.md#terminal-view). Shows what you're reading now (falling back
-to the last book finished, so the top is never blank between books), this year and all-time counts,
-the last 8 books finished with ratings, and the last 8 articles grouped by day.
+A 72-column ANSI page. Dispatch rules match the listening worker's — see
+[`worker-listening/README.md`](../worker-listening/README.md#terminal-view). Shows what you're
+reading now (falling back to the last book finished, so the top is never blank between books),
+this year and all-time counts, the last 8 books finished with ratings, and the last 8 articles
+grouped by day.
 
 The renderer deliberately copies the listening worker's helpers (`clip`, `fit`, `ink`, `stars`)
 rather than sharing a module — the two Workers are separate packages with separate deploys, and a
@@ -295,7 +296,7 @@ shared package would couple them for about 60 lines of string padding.
 Covers and social cards are mirrored into the **same bucket the photos use**, under
 `images/reading/`, served from `images.cailinpitt.com`.
 
-`scripts/prune-r2.mjs` decides what to delete by reading the repo, and these objects are referenced
-only from D1 — invisible from there. Its `PROTECTED_PREFIXES` guard lists `images/reading/` for
-exactly that reason. **Do not remove it**: without it, `npm run images:prune -- --delete` would wipe
-every cover off the site.
+`scripts/prune-r2.mjs` decides what to delete by reading the repo, and these objects are
+referenced only from D1 — invisible from there. Its `PROTECTED_PREFIXES` guard lists
+`images/reading/` for exactly that reason. **Do not remove it**: without it, `npm run
+images:prune -- --delete` would wipe every cover off the site.

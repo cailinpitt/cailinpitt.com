@@ -1,25 +1,16 @@
 // Activity windows from the moving Worker, for the "what I listen to while
-// moving" crossover.
-//
-// This is the only place the listening Worker depends on another service, so it
-// is deliberately defensive: a period build must succeed whether or not moving
-// answers. A failure here costs the crossover section, never the period.
-//
-// Cost: one subrequest per period build (~65/day steady, plus the backfill
-// walk). The moving side serves these from an indexed range behind a one-hour
-// edge cache, so repeated builds in the same hour don't reach its D1 at all.
+// moving" crossover. Only place this Worker depends on another service, so it's
+// deliberately defensive — a period build must succeed whether or not moving
+// answers. ~65 subrequests/day steady; moving caches its response for an hour.
 
 export interface ActivityWindow {
   id: string
   kind: string
   /** Unix seconds, UTC. */
   startedAt: number
-  /**
-   * Usable window length — moving time plus a pause allowance, capped at what
-   * was recorded. See the note in worker-moving's store.ts: raw elapsed time
-   * runs ~3.6x longer than actual movement because recordings get left running,
-   * which would sweep a whole evening into "while moving".
-   */
+  // Usable window length (moving time + pause allowance, capped at recorded
+  // span). Raw elapsed time runs ~3.6x longer than actual movement since
+  // recordings get left running — see worker-moving's store.ts.
   seconds?: number
   /** Raw recorded span. Only used as a fallback for an older moving Worker. */
   elapsedTime?: number
@@ -28,14 +19,8 @@ export interface ActivityWindow {
 /** Give up rather than let a slow neighbour stall the cron tick. */
 const TIMEOUT_MS = 5_000
 
-/**
- * Windows overlapping [from, to).
- *
- * Returns [] on any failure — an unreachable moving Worker, a timeout, a shape
- * that doesn't parse. The caller can't tell "no activities" from "couldn't ask",
- * and deliberately so: both mean the same thing for the section, which is that
- * there is nothing to show.
- */
+// Returns [] on any failure (unreachable, timeout, bad shape) — deliberately
+// indistinguishable from "no activities", since both mean nothing to show.
 export async function fetchWindows(
   env: Env,
   from: number,

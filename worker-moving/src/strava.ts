@@ -6,10 +6,7 @@ const API = 'https://www.strava.com/api/v3'
 /** Refresh this early, so a token can't expire mid-run. */
 const EXPIRY_SKEW = 300
 
-/**
- * Coarse bucket the page groups on. `ride` and `ebike` are split because they
- * are different efforts, and the log labels them differently.
- */
+/** Coarse bucket the page groups on. `ride`/`ebike` split — different efforts. */
 export type ActivityKind = 'ride' | 'ebike' | 'lift' | 'walk' | 'run' | 'yoga' | 'climb' | 'other'
 
 export interface SummaryActivity {
@@ -34,11 +31,8 @@ export interface SummaryActivity {
 const METERS_PER_MILE = 1609.344
 const FEET_PER_METER = 3.280839895
 
-/**
- * sport_type → bucket. Kept in sync by hand with the same table in
- * scripts/moving-backfill.mjs, which reads the export's older `type`
- * vocabulary (spaces and hyphens, e.g. "E-Bike Ride").
- */
+// sport_type → bucket. Kept in sync by hand with the same table in
+// scripts/moving-backfill.mjs, which reads the export's older `type` vocabulary.
 const KINDS: Record<string, ActivityKind> = {
   Ride: 'ride',
   GravelRide: 'ride',
@@ -71,12 +65,9 @@ interface TokenResponse {
   expires_at: number
 }
 
-/**
- * A usable access token, refreshing when the stored one is near expiry.
- *
- * Strava returns a new refresh token on every exchange and invalidates the old
- * one, so the result is written back to `auth` before it is used for anything.
- */
+// A usable access token, refreshing when near expiry. Strava invalidates the
+// old refresh token on every exchange, so the new one is written back to
+// `auth` before use.
 export async function accessToken(env: Env): Promise<string> {
   const row = await env.DB.prepare(
     'SELECT refresh_token, access_token, expires_at FROM auth WHERE id = 1',
@@ -85,8 +76,7 @@ export async function accessToken(env: Env): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
   if (row?.access_token && row.expires_at > now + EXPIRY_SKEW) return row.access_token
 
-  // Falls back to the seed secret only on the very first run, before the table
-  // has ever held a token.
+  // Seed secret only on the very first run, before the table holds a token.
   const refresh = row?.refresh_token || env.STRAVA_REFRESH_TOKEN
   if (!refresh) throw new Error('No refresh token: set the STRAVA_REFRESH_TOKEN secret')
 
@@ -133,16 +123,10 @@ interface RawActivity {
   max_heartrate?: number
 }
 
-/**
- * Heart rate, or null when the activity wasn't recorded with a monitor.
- *
- * Strava sends these on the activity *summary*, so the log gets them for free —
- * no per-activity request, and no change to the rate-limit budget.
- *
- * `has_heartrate` is checked rather than trusting the numbers: it is false on an
- * activity with no monitor, where the averages are absent entirely. Rounded to
- * whole bpm, and a non-positive reading is treated as no reading at all.
- */
+// Heart rate, or null with no monitor. Strava sends these on the activity
+// summary — free, no per-activity request or rate-limit cost. Checks
+// has_heartrate rather than trusting the numbers, since it's false when
+// averages are absent entirely.
 function heartRate(raw: RawActivity): { avgHr: number | null; maxHr: number | null } {
   if (!raw.has_heartrate) return { avgHr: null, maxHr: null }
   const bpm = (value: number | undefined) =>
@@ -174,12 +158,8 @@ function toActivity(raw: RawActivity): SummaryActivity {
 /** Strava's maximum. */
 export const PER_PAGE = 200
 
-/**
- * One page of the athlete's activities, newest first.
- *
- * `after` bounds a run to recent activity; `before` walks backwards into the
- * archive. Both are unix seconds. Paging stops when a page comes back short.
- */
+// One page of activities, newest first. `after` bounds a run to recent
+// activity; `before` walks backwards into the archive. Both unix seconds.
 export async function fetchActivities(
   token: string,
   options: { page: number; after?: number; before?: number; perPage?: number },

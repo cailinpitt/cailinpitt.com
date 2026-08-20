@@ -23,8 +23,7 @@ describe('countWords', () => {
   })
 
   it('ignores code, embeds, and image syntax', () => {
-    // The photo essays are mostly images and iframes; counting those as prose is
-    // what used to make a page you take in at a glance claim to be a long read.
+    // Photo essays are mostly images/iframes; counting those as prose falsely claimed a long read.
     const body = [
       'Two words.',
       '',

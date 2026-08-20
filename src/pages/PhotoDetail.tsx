@@ -5,12 +5,8 @@ import { formatPhotoDate, imageUrl, photoNeighbors, yearAnchor, type Photo } fro
 import { formatSettings } from '../lib/exif'
 import { photoSchema } from '../lib/structuredData'
 
-// One photograph, at its own permanent URL.
-//
-// This is what replaced the gallery lightbox: a page rather than a `?photo=12`
-// query on a gallery route, so a single frame can be linked, shared with its own
-// social card (the photograph itself — see the note on <Seo image> below), and
-// prerendered like everything else on the site.
+// One photograph at its own permanent URL — replaced the gallery lightbox so a
+// single frame can be linked, shared with its own social card, and prerendered.
 
 interface PhotoPage {
   photo: Photo
@@ -40,9 +36,8 @@ export function Component() {
   const settings = formatSettings(photo.exif)
   const place = photo.exif?.place
 
-  // ←/→ page through the feed, the way the lightbox used to. Bound to the
-  // document rather than a focused element: there's nothing to focus on a page
-  // that is mostly one photograph.
+  // ←/→ page through the feed. Bound to the document, not a focused element —
+  // nothing to focus on a page that's mostly one photograph.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return
@@ -64,10 +59,8 @@ export function Component() {
         title={when}
         description={photo.alt}
         path={`/photos/${params.id ?? photo.id}`}
-        // The photograph is its own social card. That also keeps
-        // scripts/generate-og.mjs from rendering a card per photo, which at this
-        // many photos would be most of a deploy — see the skip it makes for
-        // pages that name their own image.
+        // The photograph is its own social card — also skips generate-og.mjs
+        // rendering one per photo, which at this volume would dominate a deploy.
         image={imageUrl(photo.src)}
         imageAlt={photo.alt}
         jsonLd={photoSchema(photo)}
@@ -83,8 +76,7 @@ export function Component() {
           alt={photo.alt}
           width={photo.width}
           height={photo.height}
-          // Same placeholder color the tile used, so arriving from the feed the
-          // box that was already the right color simply sharpens into the photo.
+          // Same placeholder color as the feed tile, so it sharpens into place rather than flashing.
           style={photo.tint ? { background: photo.tint } : undefined}
           // The one image the visitor came for: no lazy loading, and ask for it early.
           fetchPriority="high"

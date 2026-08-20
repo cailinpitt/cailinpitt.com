@@ -69,8 +69,7 @@ describe('tag normalization', () => {
   })
 
   it('never matches on substrings', () => {
-    // The reason matching is exact: these all contain a shorter genre name and
-    // would be mis-filed by any substring rule.
+    // Exact match only: these all contain a shorter genre name a substring rule would mis-file.
     expect(normalizeTag('demo')).toBeNull()
     expect(normalizeTag('poppy')).toBeNull()
     expect(normalizeTag('rocksteady')).toBeNull()
@@ -85,8 +84,7 @@ describe('tag normalization', () => {
 
 describe('artist genre selection', () => {
   it("sums aliases so a split scene doesn't lose to a single stray tag", () => {
-    // Turnstile's real tags. Hardcore's aliases together (100+61+16) beat any
-    // single other tag, which is the whole point of folding before ranking.
+    // Turnstile's real tags: hardcore's aliases (100+61+16) beat any single other tag.
     const tags = [
       { name: 'hardcore', count: 100 },
       { name: 'hardcore punk', count: 61 },

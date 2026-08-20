@@ -1,10 +1,6 @@
-// Capture metadata carried by gallery images, and how it's phrased in the UI.
-// Written into src/lib/gallery-images.json by `npm run images:sync`, which reads
-// it from the originals — see scripts/exif.mjs for where each field comes from.
-//
-// Everything is optional. Only galleries built from originals/ have any of this:
-// the pre-2026 photos came from Squarespace with their EXIF already stripped, so
-// most images carry no `exif` at all and the caption simply omits the line.
+// Capture metadata for gallery images, written by `npm run images:sync` (scripts/exif.mjs).
+// Everything is optional: pre-2026 photos came from Squarespace with EXIF already stripped,
+// so most images carry none of this and the caption just omits the line.
 
 export interface PhotoExif {
   /** Camera wall clock, without a timezone: "2026-07-18T19:32:23". */
@@ -17,11 +13,7 @@ export interface PhotoExif {
   iso?: number
   /** Actual focal length in mm, not 35mm-equivalent. */
   focalLength?: number
-  /**
-   * [lat, lon], rounded to ~0.7 miles. Deliberately coarse — see scripts/exif.mjs.
-   * Not a tuple type: the manifest is a JSON import, which infers number[], and
-   * widening here beats casting the whole manifest through `unknown`.
-   */
+  /** [lat, lon], rounded to ~0.7 miles (see scripts/exif.mjs). number[] not a tuple, since the manifest is a JSON import that infers number[]. */
   place?: number[]
 }
 
@@ -32,11 +24,8 @@ const dateFmt = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 })
 
-/**
- * "July 18, 2026" from a stored wall clock. The stamp has no zone, so only the
- * date half is used and it's pinned to UTC — letting the browser's zone near it
- * would slide an evening photo onto the next day.
- */
+// "July 18, 2026" from a stored wall clock (no zone) — pinned to UTC so the browser's zone
+// can't slide an evening photo onto the next day.
 export function formatShotDate(shot?: string): string | null {
   if (!shot) return null
   const parsed = new Date(`${shot.slice(0, 10)}T12:00:00Z`)

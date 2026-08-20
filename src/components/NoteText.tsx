@@ -3,15 +3,9 @@ import { Link } from 'react-router-dom'
 import { paragraphs, segments } from '../lib/notes'
 
 /**
- * A note's text: paragraphs on blank lines, line breaks inside them, bare
- * URLs turned into links, and `#hashtag`s turned into links to every other
- * note using that tag.
- *
- * Everything here is React elements built from a parsed data structure — there
- * is no HTML string in the pipeline and no `dangerouslySetInnerHTML`, so a note
- * cannot contribute markup to the page no matter what was typed into it. That is
- * the reason notes are plain text rather than Markdown: the only formatting a
- * short thought needs is a working link, and this is what a working link costs.
+ * Renders a note's text: paragraphs, line breaks, bare URLs, and `#hashtag`s
+ * as links. Built entirely from React elements, no HTML string or
+ * `dangerouslySetInnerHTML` — a note can't inject markup no matter what was typed.
  */
 export function NoteText({ text }: { text: string }) {
   return (

@@ -1,14 +1,9 @@
 // Watching API for cailinpitt.com/watching.
 //
-//  scheduled (daily): pull the Letterboxd diary feed into D1 and mirror any
-//    new poster art to R2. Same cadence as the reading worker, and for the same
-//    reason — a run that finds nothing costs almost nothing, while a slower
-//    cron just means a film sits unpublished for days. Nothing here needs the
-//    listening worker's per-minute schedule.
-//  fetch: serve the bundle straight from D1 behind the edge cache. There is no
-//    ingest endpoint — the feed is pulled, never pushed.
-//
-// No KV, for the reason set out at the top of src/store.ts.
+//  scheduled (daily): pull the Letterboxd diary feed into D1 and mirror new
+//    poster art to R2.
+//  fetch: serve the bundle from D1 behind the edge cache. No ingest endpoint —
+//    the feed is pulled, never pushed. No KV — see store.ts.
 
 import { sync } from './sync'
 import { FILM_PAGE, buildBundle, buildNow, fetchFilms } from './store'
@@ -17,27 +12,15 @@ import { renderText } from './text'
 /** Edge-cache lifetime. The underlying data changes daily at most. */
 const EDGE_TTL = 300
 
-/**
- * Browser freshness and origin protection, as two separate numbers.
- *
- * They used to be one, which tied "how fresh the page looks" to "how much D1
- * work a traffic spike can cause". Only `s-maxage` does the second job — it
- * collapses a colo's visitors into one origin build per window — so it keeps
- * the old value, while `max-age` drops to something a person would accept
- * waiting.
- *
- * `stale-while-revalidate` lets the refresh happen behind an instant response
- * rather than in front of one.
- */
+// Split from one TTL into two: max-age is what a person will wait for a fresh
+// page, s-maxage is what bounds D1 load per colo per window — they don't need
+// to match. stale-while-revalidate serves instantly while refreshing behind it.
 const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
 
 /** Where a browser landing on the API gets sent. */
 const SITE_WATCHING = 'https://cailinpitt.com/watching'
 
-/**
- * Constant-time string compare, so a token can't be recovered by timing the
- * `/sync` endpoint. Length is allowed to leak; the contents are not.
- */
+/** Constant-time compare, so /sync's token can't be recovered by timing. */
 function secretEquals(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0
@@ -56,10 +39,9 @@ function localYear(offsetSeconds: number): number {
   return new Date((Date.now() / 1000 + offsetSeconds) * 1000).getUTCFullYear()
 }
 
-// Any loopback port, so a dev server that lands on 5174 instead of 5173 still
-// works without editing wrangler.jsonc. Everything this API serves is already
-// public on the site, so the allowlist is about not being a free CORS backend
-// for other origins — not about guarding secrets.
+// Any loopback port, so a dev server on a different port still works. This
+// data is already public, so the allowlist is about not being a free CORS
+// backend for other origins, not guarding secrets.
 const LOOPBACK = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -73,10 +55,8 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
-// Deliberately omits CORS: it varies by Origin and is applied by withCors()
-// after the cache, so a cached entry stays origin-independent. Storing it would
-// serve one visitor's access-control-allow-origin to everyone behind the same
-// cache entry.
+// Omits CORS deliberately: it varies by Origin and is applied by withCors()
+// after the cache, so a cached entry stays origin-independent.
 function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -88,8 +68,7 @@ function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   })
 }
 
-// Terminal client. Deliberately narrow: anything that is not clearly a CLI
-// fetcher gets the normal redirect. Mirrors the other two workers' rule.
+// Deliberately narrow: anything not clearly a CLI fetcher gets the normal redirect.
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {
@@ -114,10 +93,7 @@ function withCors(res: Response, cors: Record<string, string>): Response {
   return out
 }
 
-/**
- * Cache key. The variant is folded into the URL rather than keying on the raw
- * request so that one path can safely produce more than one body.
- */
+// Variant folded into the URL so one path can safely produce more than one body.
 const cacheKey = (url: URL, variant: string): Request => {
   const key = new URL(url.toString())
   key.searchParams.set('__variant', variant)
@@ -159,9 +135,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
 
     try {
-      // `curl watching.cailinpitt.com` → the terminal view, the counterpart to
-      // the other two workers'. Checked before the redirect below, which is
-      // what a browser on the same path gets instead.
+      // curl → terminal view, checked before the browser redirect below.
       if ((url.pathname === '/' || url.pathname === '/watching') && wantsText(request, url)) {
         const year = localYear(Number(env.TZ_OFFSET_SECONDS) || 0)
         return cached(url, 'text', ctx, cors, async () =>
@@ -175,10 +149,8 @@ export default {
         )
       }
 
-      // Run the daily sync on demand. This exists because the poster backfill
-      // needs several passes (see MIRROR_BUDGET in sync.ts) and because there is
-      // otherwise no way to pick up a film you just logged without waiting for
-      // 09:00 UTC. Never cached, and 401s without the ADMIN_TOKEN secret.
+      // Runs the daily sync on demand — for the poster backfill (see
+      // MIRROR_BUDGET) and to pick up a film without waiting for the cron.
       if (url.pathname === '/sync') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: cors })
@@ -186,11 +158,9 @@ export default {
         if (!authorized(request, env.ADMIN_TOKEN)) {
           return new Response('Unauthorized', { status: 401, headers: cors })
         }
-        // Report the failure to the caller rather than only to the log. This
-        // route is authenticated, so there is nothing to leak, and the common
-        // failures (schema not applied, Letterboxd 403ing the Worker's IP) are
-        // ones you want to see immediately instead of going digging in
-        // `wrangler tail`.
+        // Reported to the caller, not just the log — this route is authenticated
+        // and failures (schema not applied, Letterboxd 403ing the IP) are worth
+        // seeing now.
         let body: string
         let status = 200
         try {
@@ -233,12 +203,8 @@ export default {
         })
       }
 
-      // A browser on the bare API host gets sent to the real page, not a 404.
-      //
-      // 302 and no-store, deliberately. This response is User-Agent dependent
-      // now that the terminal view shares the path, so a permanent or
-      // shared-cached redirect could later be replayed to a client that wanted
-      // the text — which would break `curl` for that URL.
+      // 302 + no-store: this response is User-Agent dependent (terminal view
+      // shares the path), so a cached redirect could break `curl` for this URL.
       if (url.pathname === '/' || url.pathname === '/watching') {
         return new Response(null, {
           status: 302,

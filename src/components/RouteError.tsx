@@ -8,21 +8,15 @@ import {
 } from '../lib/stale-build'
 
 /**
- * What renders when a route fails instead of loading.
- *
- * Sits on each child route rather than the layout route, so the header, nav,
- * and footer survive a failure — you can navigate back out of it.
- *
- * The common failure by far is a stale build (see lib/stale-build.ts), and for
- * that this component is invisible: it reloads before anyone reads it. The
- * visible half is for everything else, plus the case where the reload itself
- * didn't help.
+ * What renders when a route fails instead of loading. Sits on each child route
+ * (not the layout route) so header/nav/footer survive and you can navigate out.
+ * Invisible for the common case, a stale build (lib/stale-build.ts) — it
+ * reloads before anyone reads it; visible otherwise.
  */
 export function RouteError() {
   const error = useRouteError()
   const location = useLocation()
-  // `false` until we've decided, so the first paint is blank rather than a
-  // flash of "something went wrong" on its way to a reload.
+  // Starts false so the first paint is blank, not a flash of the error on the way to a reload.
   const [showMessage, setShowMessage] = useState(false)
 
   const href = location.pathname + location.search + location.hash
@@ -38,10 +32,7 @@ export function RouteError() {
       shouldReload(readReloadMarker(window.sessionStorage), href, marker.at) &&
       writeReloadMarker(window.sessionStorage, marker)
     ) {
-      // assign() rather than reload(): React Router has already committed the
-      // navigation, so the address bar is on the destination — but assigning
-      // the href we matched on is right either way, and it means the user lands
-      // where they clicked instead of back where they started.
+      // assign() not reload(): Router already committed the nav, so this lands on the destination the user clicked.
       window.location.assign(href)
       return
     }

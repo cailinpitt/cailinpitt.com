@@ -14,9 +14,7 @@ import {
 } from '../src/lib/periodKeys'
 import { parsePeriod, periodContaining, enumeratePeriods } from '../worker-listening/src/periods'
 
-// Period keys are URLs, so they have to be stable and unambiguous forever. The
-// awkward cases are all at the year boundary, where ISO weeks belong to a year
-// that isn't the one their Monday falls in.
+// Period keys are URLs, so must be stable forever. Awkward cases are at the year boundary, where ISO weeks can belong to a different year than their Monday.
 
 const utc = (iso: string) => new Date(`${iso}T00:00:00Z`)
 
@@ -100,9 +98,7 @@ describe('stepping between periods', () => {
   })
 
   it('crosses the year boundary by week correctly', () => {
-    // Stepping back over New Year has to land on the previous ISO year's last
-    // week, which is 52 or 53 depending on the year — so derive it rather than
-    // hard-coding, and check the Monday really moved exactly seven days.
+    // The previous ISO year's last week is 52 or 53 depending on the year, so derive it rather than hard-code.
     const from = weekStartOf('2023-W01')!
     const back = step('w', '2023-W01', -1, now)
     expect(back).toBe('2022-W52')
@@ -168,9 +164,7 @@ describe('prerendered path list', () => {
   })
 })
 
-// The client and the Worker each do this arithmetic independently — the client
-// to build URLs at build time, the Worker to turn a URL back into a time range.
-// If they ever disagree, pages resolve to the wrong data, so pin them together.
+// The client and Worker do this arithmetic independently; if they disagree, pages resolve to the wrong data.
 describe('client and Worker agree', () => {
   it('produces the same keys for the same instants', () => {
     for (const iso of ['2021-03-01', '2021-01-01', '2024-02-29', '2026-08-06', '2020-12-31']) {

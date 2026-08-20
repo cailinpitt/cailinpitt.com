@@ -8,9 +8,7 @@ export interface ProjectsPage {
   body: string
 }
 
-// Load the single Markdown source for the /projects page at build time. Using
-// import.meta.glob (rather than a static import) keeps this resolving in both the
-// Node SSG prerender and the browser build, matching how posts.ts loads content.
+// import.meta.glob (not a static import) so this resolves in both the SSG prerender and the browser build.
 const rawModules = import.meta.glob('/content/projects.md', {
   query: '?raw',
   import: 'default',

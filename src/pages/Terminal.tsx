@@ -150,9 +150,9 @@ export function Component() {
     setLines(motd(stats))
   }, [stats])
 
-  // This page is dark whatever the site theme is, so the browser chrome has to be
-  // told; index.html's media-scoped tags would leave a paper toolbar above it.
-  // Restored on the way out, before ThemeToggle mounts on the next page.
+  // This page is dark regardless of site theme, so browser chrome must be
+  // told directly — index.html's media-scoped tags would leave a paper
+  // toolbar above it. Restored on the way out.
   useEffect(() => {
     const screen = screenRef.current
     if (!screen) return

@@ -1,10 +1,9 @@
 // Listening API for cailinpitt.com/listening.
 //
-//  scheduled (every minute): pull Last.fm, append new scrobbles to D1, refresh
-//    now-playing. Heavier aggregates recompute on slower cadences so we never
-//    scan the whole archive at 1/min — see the cost notes in the README.
-//  fetch: serve the precomputed bundle (assembled from a few KV blobs) and a
-//    /days endpoint for paginating older daily logs straight from D1.
+// scheduled (every minute): pull Last.fm, append new scrobbles to D1, refresh
+// now-playing; heavier aggregates recompute on slower cadences (see README).
+// fetch: serve the precomputed bundle plus a /days endpoint for paginating
+// older daily logs from D1.
 
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
@@ -30,103 +29,67 @@ import { compactDays, type CompactDay } from './compact'
 const HEAVY_INTERVAL = 15 * 60 // 7d/30d windows + recent logs
 const HEATMAP_INTERVAL = 6 * 60 * 60 // year heatmap
 
-/**
- * Enrichment runs on every other minute, two entities at a time.
- *
- * That is ~1,440 lookups a day, so the initial 4,340 artists + 8,854 albums
- * would take about nine days from the cron alone — which is why there is a
- * backfill script (scripts/enrich-listening.mjs) to do it in one pass. This
- * cadence is for keeping up with new artists afterwards, a handful a day.
- */
+// 2/min keeps up with new artists (~1.4k lookups/day); initial backfill uses scripts/enrich-listening.mjs
 const ENRICH_EVERY_MINUTES = 2
 
-/** How often the artist→genre and track→duration lookup blobs are republished. */
 const LOOKUP_INTERVAL = 24 * 60 * 60
 
 const KEY = {
   now: 'now:v1',
   stats: 'stats:v1',
   heatmap: 'heatmap:v1',
-  // Cold-path only, and TTL'd — NOT the old per-tick meta:total counter. See
-  // totalFallback(). Written at most once per TTL, and only when now:v1 is absent.
+  // Cold-path only, TTL'd — not the old per-tick meta:total counter. See totalFallback().
   totalFallback: 'meta:total:fallback',
   years: 'years:v1',
-  /** When the genre/duration lookup blobs were last rebuilt. */
   lookupsBuiltAt: 'meta:v1:built-at',
   onThisDay: (date: string) => `onthisday:v1:${date}`,
 } as const
 
 const DAY = 86_400
 
-/**
- * Edge TTL for the archival endpoints. These are derived from data that changes
- * at most twice a day, so caching them for a minute (like the live bundle) would
- * spend Worker invocations and KV reads re-serving identical bytes.
- */
+// Archive data changes at most twice a day; a 1-min TTL here would waste Worker
+// invocations and KV reads re-serving identical bytes.
 const ARCHIVE_EDGE_TTL = 3600
 
-/** How long the cold-path COUNT(*) result is reused for. KV minimum is 60s. */
+/** KV minimum TTL is 60s. */
 const TOTAL_FALLBACK_TTL = 300
 
-/** Edge-cache lifetime for the read endpoints. */
 const EDGE_TTL = 60
 
-/** Widest span /during will answer. An activity is hours, not days. */
+/** An activity is hours, not days. */
 const DURING_MAX_SPAN = 24 * 60 * 60
 
-/**
- * Most windows /during-counts will answer for at once.
- *
- * One statement per window, against D1's ~50-per-invocation ceiling. 30 matches
- * a page of activities exactly and leaves headroom.
- */
+// D1 caps ~50 statements per invocation; 30 windows (one statement each) matches
+// a page of activities and leaves headroom.
 const COUNTS_MAX_WINDOWS = 30
 
-/**
- * Row cap for /during, chosen so the *request* ceiling binds before the D1 one.
- *
- * Every unauthenticated endpoint over D1 is a budget an attacker can spend, and
- * an edge cache does not help — vary a query param and the key is fresh. So the
- * lever is rows per request: at 60, exhausting 5M row-reads takes ~83k requests,
- * which is past the Workers free-plan ceiling of 100k/day. Cloudflare cuts off
- * requests before D1 dies, which is the failure mode you want.
- *
- * 60 covers ~3.5 hours at a track every 3.5 minutes. Longer activities truncate,
- * which is the right trade for a decorative list.
- */
+// Unauthenticated D1 endpoints are attacker-spendable budget, and edge caching
+// doesn't help (vary a param, get a fresh key) — so the row cap is the lever.
+// At 60 rows, exhausting the 5M row-read budget takes ~83k requests, past the
+// 100k/day Workers ceiling, so Cloudflare cuts off requests before D1 does.
+// 60 rows ~= 3.5h at a track every 3.5min; longer activities just truncate.
 const DURING_MAX_ROWS = 60
 
-/**
- * Snap /during's bounds to a minute.
- *
- * Callers pass an activity's start, which is already stable, so this is lossless
- * for them. What it removes is the cheapest cache-bust: nudging `from` by a
- * second no longer mints a new cache entry and a new query.
- */
+// Callers pass an activity's start (already stable), so snapping is lossless for
+// them while killing the cheapest cache-bust: nudging `from` by a second.
 const DURING_SNAP = 60
 
-/** Where a browser landing on the terminal endpoint gets sent. */
 const SITE_LISTENING = 'https://cailinpitt.com/listening'
-
-// ---- shapes stored in KV -------------------------------------------------
 
 interface NowBlob {
   nowPlaying: NowPlaying | null
   lastPlayed: Scrobble | null
-  /** All-time count, straight from Last.fm's `@attr.total` — no COUNT(*) needed. */
+  /** Straight from Last.fm's `@attr.total` — no COUNT(*) needed. */
   totalScrobbles: number
-  /**
-   * The tail of the Last.fm response, newest first. Rides along for free: ingest
-   * already fetches these and already writes this blob whenever the track
-   * changes. getBundle() merges them over the 15-minute-old recentDays so the
-   * log is current to ~1 min instead of lagging a quarter of an hour.
-   */
+  // Tail of the Last.fm response, newest first. Free: ingest already fetches it
+  // and writes this blob on every track change. getBundle() merges it over the
+  // 15-min-old recentDays so the log reads current to ~1 min instead of 15.
   recent: Scrobble[]
-  /** When this state last *changed* (not when the cron last ran) — see ingest(). */
+  /** When this state last *changed*, not when the cron last ran — see ingest(). */
   updatedAt: number
 }
 
-/** How many recent scrobbles to carry in now:v1 (Last.fm gives us 50 per pull). */
+/** Last.fm gives 50 per pull. */
 const RECENT_CARRY = 40
 interface StatsBlob {
   windows: Bundle['windows']
@@ -142,20 +105,15 @@ interface HeatmapBlob {
 const readJSON = <T>(env: Env, key: string): Promise<T | null> =>
   env.KV.get<T>(key, 'json')
 
-// ---- ingest + recompute --------------------------------------------------
-
-// The parts of the blob a reader can actually observe. `updatedAt` is deliberately
-// excluded: it ticks every run and would make every blob look "new".
+// `updatedAt` is deliberately excluded — it ticks every run and would make every
+// blob look "new".
 const nowIdentity = (b: NowBlob) => JSON.stringify([b.nowPlaying, b.lastPlayed, b.totalScrobbles])
 
-/**
- * Re-offer this much overlap on every pull. Last.fm can deliver a scrobble late
- * or slightly out of order, so filtering strictly on "newer than the last one we
- * saw" would drop it permanently. INSERT OR IGNORE makes the overlap free.
- */
+// Re-offer an hour of overlap on every pull: Last.fm can deliver a scrobble late
+// or out of order, and INSERT OR IGNORE makes re-offering free.
 const INGEST_GRACE = 3600
 
-/** 100 bound parameters per query is a hard D1 limit; 6 columns → 16 rows. */
+/** D1 caps 100 bound params per query; 6 columns → 16 rows per chunk. */
 const INSERT_CHUNK = 16
 
 const INSERT_COLS = 6
@@ -173,9 +131,8 @@ function insertStatements(env: Env, rows: Scrobble[]): D1PreparedStatement[] {
       .join(', ')
     out.push(
       env.DB.prepare(
-        // RETURNING yields only the rows that were actually stored. The hour of
-        // overlap this pull re-offers is dropped by OR IGNORE and must not reach
-        // the summary counters, which increment rather than recompute.
+        // RETURNING yields only rows actually stored; the overlap dropped by OR
+        // IGNORE must not reach the summary counters, which increment rather than recompute.
         `INSERT OR IGNORE INTO scrobbles (uts, track, artist, album, mbid, image)
          VALUES ${tuples}
          RETURNING uts, track, artist, album, mbid, image`,
@@ -185,7 +142,6 @@ function insertStatements(env: Env, rows: Scrobble[]): D1PreparedStatement[] {
   return out
 }
 
-/** Pull recent scrobbles, insert the new ones, refresh now-playing + total. */
 async function ingest(env: Env): Promise<void> {
   const recent = await fetchRecentTracks({
     apiKey: env.LASTFM_API_KEY,
@@ -193,23 +149,21 @@ async function ingest(env: Env): Promise<void> {
     limit: 50,
   })
 
-  // Read now:v1 up front: it tells us how far we already got, which is what lets
-  // us skip re-offering 50 rows we already have.
+  // now:v1 tells us how far we already got, so we can skip re-offering rows we have.
   const prev = await readJSON<NowBlob>(env, KEY.now)
 
-  // The Free plan allows 50 D1 queries per Worker invocation and a batch() counts
-  // each statement separately. Sending one statement per scrobble meant ~49 per
-  // tick — at the ceiling, with computeStats() and computeHeatmap() still to run
-  // in the same invocation. Filtering to what is actually new and packing the
-  // rest into multi-row INSERTs takes a normal tick to zero or one statement.
+  // Free plan allows 50 D1 queries/invocation and batch() counts each statement
+  // separately; one statement per scrobble hit ~49/tick with computeStats() and
+  // computeHeatmap() still to run. Filtering to what's new and packing the rest
+  // into multi-row INSERTs takes a normal tick to zero or one statement.
   const since = prev?.lastPlayed ? prev.lastPlayed.uts - INGEST_GRACE : 0
   const fresh = recent.scrobbles.filter((s) => s.uts > since)
   if (fresh.length) {
     const written = await env.DB.batch<Scrobble>(insertStatements(env, fresh))
     // Layer 1 moves only for rows that were genuinely new (see summaryStatements).
     const inserted = written.flatMap((r) => r.results ?? [])
-    // Read the prior last_uts before the upsert overwrites it — that gap is the
-    // only thing that makes a "returning artist" detectable.
+    // Prior last_uts must be read before the upsert overwrites it — that gap is
+    // what makes a "returning artist" detectable.
     const prior = await priorLastPlay(env.DB, inserted.map((r) => r.artist))
     const summary = summaryStatements(env, inserted, prior)
     if (summary.length) await env.DB.batch(summary)
@@ -224,9 +178,8 @@ async function ingest(env: Env): Promise<void> {
     updatedAt: Math.floor(Date.now() / 1000),
   }
 
-  // KV's free tier allows 1,000 writes/day; this cron fires 1,440 times. Most runs
-  // see the same track as the last one, so only write when something actually
-  // changed — a KV read is ~100x cheaper than the write it saves.
+  // KV free tier allows 1,000 writes/day and this cron fires 1,440 times; only
+  // write when something actually changed (a read is ~100x cheaper than a write).
   if (!prev || nowIdentity(prev) !== nowIdentity(next)) {
     await env.KV.put(KEY.now, JSON.stringify(next))
   }
@@ -244,14 +197,9 @@ async function refreshHeatmap(env: Env): Promise<void> {
   await env.KV.put(KEY.heatmap, JSON.stringify(blob))
 }
 
-/**
- * Compute at most one period blob.
- *
- * A live refresh is always one period. A backfill batch is several, because the
- * backfill is finite — ~356 periods total — so its KV cost is the same however
- * fast it runs, and pacing it slowly only made a rebuild take most of a day.
- * BACKFILL_PER_TICK is sized against D1's per-invocation query ceiling.
- */
+// A live refresh is always one period; a backfill batch is several since the
+// backfill is finite (~356 periods total), so its KV cost is fixed regardless of
+// pace — BACKFILL_PER_TICK is sized against D1's per-invocation query ceiling.
 async function runPeriodWork(env: Env, now: number): Promise<void> {
   const [index, bounds] = await Promise.all([getPeriodIndex(env, now), archiveBounds(env)])
   const unit = await pickWork(env, index, bounds.firstDay, now)
@@ -273,12 +221,11 @@ async function runPeriodWork(env: Env, now: number): Promise<void> {
     )
   }
 
-  // Tell the all-time fold that its inputs moved. Written once per tick however
+  // Tell the all-time fold its inputs moved, once per tick regardless of how
   // many years the batch touched.
   if (touchedYear) await env.KV.put(YEARS_TOUCHED_KEY, String(now))
 }
 
-/** First and last day in the archive, straight off the `days` table's primary key. */
 async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
   const row = await env.DB.prepare('SELECT MIN(day) AS firstDay FROM days').first<{
     firstDay: string | null
@@ -286,52 +233,9 @@ async function archiveBounds(env: Env): Promise<{ firstDay: string | null }> {
   return { firstDay: row?.firstDay ?? null }
 }
 
-/**
- * One cron tick: always ingest, then **one** unit of heavy work.
- *
- * The legacy stats/heatmap refreshes and a period compute are all expensive, so
- * they take turns rather than stacking. The legacy pair go first because
- * /listening and the homepage read them directly.
- */
-/**
- * Enrichment: a couple of Last.fm lookups, then republish the lookup blobs on a
- * slow cadence.
- *
- * The blobs are two KV writes, so they are rebuilt daily rather than whenever
- * the underlying tables change — a period computed before the rebuild simply
- * classifies slightly fewer artists, which self-corrects on its next build.
- */
-async function runEnrichment(env: Env, now: number): Promise<boolean> {
-  const handled = await enrichSome(env, now)
-
-  // One MusicBrainz artist per pass, at most. They cap at one request per second
-  // and resolveArtist() can make two calls, so this is the slowest queue by far —
-  // the bulk of the archive is done by scripts/musicbrainz-listening.mjs and this
-  // only keeps up with newly-heard artists.
-  let origins = false
-  try {
-    origins = await enrichOneOrigin(env, now)
-  } catch (err) {
-    console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', error: String(err) }))
-  }
-
-  // Rebuild when the source data has actually moved, not merely when a timer
-  // expired. See metaWatermark() — a bulk SQL load lands tens of thousands of
-  // rows without passing through enrichSome(), and a timer alone would leave the
-  // lookups pinned to a pre-load snapshot for up to a day.
-  const stamp = await readJSON<{ at: number; watermark: number }>(env, KEY.lookupsBuiltAt)
-  const watermark = await metaWatermark(env.DB)
-  const stale = !stamp || now - stamp.at >= LOOKUP_INTERVAL || stamp.watermark !== watermark
-
-  if (stale) {
-    const counts = await refreshLookups(env)
-    await env.KV.put(KEY.lookupsBuiltAt, JSON.stringify({ at: now, watermark }))
-    console.log(JSON.stringify({ level: 'info', stage: 'lookups', watermark, ...counts }))
-    return true
-  }
-  return handled > 0 || origins
-}
-
+// One cron tick: always ingest, then one unit of heavy work. Stats/heatmap
+// refreshes and a period compute take turns rather than stacking; stats/heatmap
+// go first since /listening and the homepage read them directly.
 async function tick(env: Env): Promise<void> {
   // A Last.fm hiccup during ingest must not stop the D1-derived refreshes below.
   try {
@@ -353,9 +257,8 @@ async function tick(env: Env): Promise<void> {
     return
   }
 
-  // Enrichment before period work, and only on some ticks. Genres and durations
-  // feed the period blobs, so filling them first means fewer periods get built
-  // against a half-empty lookup and then need rebuilding.
+  // Enrichment runs before period work (genres/durations feed period blobs) and
+  // only on some ticks.
   if (new Date(now * 1000).getUTCMinutes() % ENRICH_EVERY_MINUTES === 0) {
     try {
       if (await runEnrichment(env, now)) return
@@ -367,15 +270,46 @@ async function tick(env: Env): Promise<void> {
   await runPeriodWork(env, now)
 }
 
-// ---- read API ------------------------------------------------------------
+// A couple of Last.fm lookups, then republish the lookup blobs on a slow
+// cadence. The blobs are rebuilt daily rather than on every table change — a
+// period computed before the rebuild just classifies slightly fewer artists,
+// self-correcting on the next build.
+async function runEnrichment(env: Env, now: number): Promise<boolean> {
+  const handled = await enrichSome(env, now)
 
-/** Now-playing / last-played only. Cheap (one KV read) — used by the homepage bar. */
+  // At most one MusicBrainz artist per pass — it caps at 1 req/s and
+  // resolveArtist() can make two calls, so this is the slowest queue by far.
+  // scripts/musicbrainz-listening.mjs handles the bulk archive; this just keeps
+  // up with newly-heard artists.
+  let origins = false
+  try {
+    origins = await enrichOneOrigin(env, now)
+  } catch (err) {
+    console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', error: String(err) }))
+  }
+
+  // Rebuild when source data actually moved, not merely on a timer — see
+  // metaWatermark(): a bulk SQL load can land rows without going through
+  // enrichSome(), and a timer alone would leave lookups stale for up to a day.
+  const stamp = await readJSON<{ at: number; watermark: number }>(env, KEY.lookupsBuiltAt)
+  const watermark = await metaWatermark(env.DB)
+  const stale = !stamp || now - stamp.at >= LOOKUP_INTERVAL || stamp.watermark !== watermark
+
+  if (stale) {
+    const counts = await refreshLookups(env)
+    await env.KV.put(KEY.lookupsBuiltAt, JSON.stringify({ at: now, watermark }))
+    console.log(JSON.stringify({ level: 'info', stage: 'lookups', watermark, ...counts }))
+    return true
+  }
+  return handled > 0 || origins
+}
+
+/** Cheap (one KV read) — used by the homepage bar. */
 async function getNow(env: Env): Promise<NowBlob> {
   const blob = await readJSON<NowBlob>(env, KEY.now)
   if (blob) return blob
   // now:v1 is owned by the cron; before its first run, fall back to D1's newest.
-  // totalScrobbles stays 0 here — only getBundle needs it, and it pays for the
-  // COUNT(*) itself rather than making every /now.json miss scan the archive.
+  // totalScrobbles stays 0 — only getBundle needs it and pays for the COUNT(*) itself.
   return {
     nowPlaying: null,
     lastPlayed: await fetchLastPlayed(env.DB),
@@ -385,14 +319,10 @@ async function getNow(env: Env): Promise<NowBlob> {
   }
 }
 
-/**
- * All-time count when now:v1 is missing. COUNT(*) reads the whole archive (~100k
- * rows), so without this a cold now:v1 would make *every* concurrent request pay
- * for a full scan until the next cron tick rewrote the key — enough traffic in
- * that window would exhaust D1's daily row-read budget outright. Caching the
- * result under a short TTL bounds it to one scan per TTL instead of one per
- * request, and the key expires on its own once now:v1 is healthy again.
- */
+// COUNT(*) scans the whole archive (~100k rows); without caching, a cold now:v1
+// would make every concurrent request pay for a full scan until the next cron
+// tick, and enough traffic could exhaust D1's daily row-read budget. The TTL
+// bounds it to one scan per TTL, and the key expires once now:v1 is healthy again.
 async function totalFallback(env: Env): Promise<number> {
   const cached = await env.KV.get(KEY.totalFallback)
   if (cached !== null) return Number(cached)
@@ -401,37 +331,24 @@ async function totalFallback(env: Env): Promise<number> {
   return n
 }
 
-/** How many days the homepage sparkline covers. */
 const SPARK_DAYS = 90
 
-/**
- * Daily counts for the last ~3 months, oldest first — the homepage sparkline.
- *
- * A projection of the heatmap blob the cron already computes, so this costs one
- * KV read and no D1 at all. It exists as its own endpoint because the homepage
- * would otherwise have to pull the whole /listening.json bundle (top lists,
- * windows, 40 tracks a day) to draw one 90-point line, and it can't ride on
- * /now.json, which is deliberately uncached and kept to four fields.
- *
- * Today's bar inherits the heatmap's ~6h cadence, so it can read low against a
- * day still in progress. That's the right trade here — a shape over 90 days
- * doesn't need minute freshness, and paying for a D1 scan to get it would.
- */
+// Projection of the heatmap blob the cron already computes (one KV read, no D1).
+// Its own endpoint because /listening.json's full bundle is overkill for a
+// 90-point line, and /now.json is deliberately uncached and kept to four fields.
+// Today's bar inherits the heatmap's ~6h cadence, which is fine for a 90-day shape.
 async function getSparkline(env: Env): Promise<{ from: string; days: number[] }> {
   const blob = await readJSON<HeatmapBlob>(env, KEY.heatmap)
-  // No D1 fallback, deliberately — unlike getBundle, which rebuilds a cold blob.
-  // computeHeatmap scans a year of rows, and this endpoint sits on the homepage:
-  // on a cold or evicted key that would be a full-year scan on every 60s cache
-  // miss until the next cron tick, up to six hours away. The sparkline is
-  // decoration, so it does without until the cron fills the blob in, and the
-  // client hides an empty series.
+  // No D1 fallback, deliberately: computeHeatmap scans a year of rows, and on a
+  // cold blob that would mean a full-year scan per cache miss. The sparkline is
+  // decoration, so it waits for the cron and the client hides an empty series.
   if (!blob) return { from: '', days: [] }
   const heatmap = blob.heatmap
   const offset = Number(env.TZ_OFFSET_SECONDS) || 0
   const now = Math.floor(Date.now() / 1000)
 
-  // Walk calendar days rather than the blob's keys: a day with no scrobbles has
-  // no entry there, and the line needs its zero to keep the spacing honest.
+  // Walk calendar days rather than the blob's keys, so a zero-scrobble day still
+  // gets its zero and keeps the spacing honest.
   const days: number[] = []
   let from = ''
   for (let i = SPARK_DAYS - 1; i >= 0; i--) {
@@ -442,14 +359,9 @@ async function getSparkline(env: Env): Promise<{ from: string; days: number[] }>
   return { from, days }
 }
 
-/**
- * The daily log with the tracks folded away — /timeline's first page.
- *
- * Reads the same two blobs getBundle does and applies the same merge, so the
- * two pages can never disagree about a day; it just drops what /timeline never
- * renders. Deliberately no cold-KV rebuild: getBundle owns that path, and a
- * timeline missing its scrobble stream still shows six other ones.
- */
+// /timeline's first page. Reads the same blobs and merge as getBundle, so the
+// two pages can't disagree about a day; just drops the track lists /timeline
+// never renders. No cold-KV rebuild — getBundle owns that path.
 async function getTimelineDays(
   env: Env,
 ): Promise<{ days: CompactDay[]; nextBefore: number | null }> {
@@ -467,9 +379,8 @@ async function getBundle(env: Env): Promise<Bundle> {
     readJSON<HeatmapBlob>(env, KEY.heatmap),
   ])
 
-  // Cold KV (fresh deploy / evicted key): rebuild the missing piece straight from
-  // D1 and cache it back. The read path never calls Last.fm, so a Last.fm outage
-  // can never make a page load fail — worst case now-playing is briefly stale.
+  // Cold KV (fresh deploy / evicted key): rebuild from D1 and cache it back. The
+  // read path never calls Last.fm, so a Last.fm outage never fails a page load.
   let stats = statsBlob
   if (!stats) {
     const computed = await computeStats(env.DB, env)
@@ -483,13 +394,10 @@ async function getBundle(env: Env): Promise<Bundle> {
     await env.KV.put(KEY.heatmap, JSON.stringify(heat))
   }
 
-  // The total rides along in now:v1 (Last.fm's own count). It's only missing on a
-  // cold read before the first cron run, where D1 can stand in. `||` short-circuits,
-  // so the fallback costs nothing on the normal path.
+  // The total rides along in now:v1 (Last.fm's own count) and only falls back to
+  // D1 on a cold read before the first cron run; `||` short-circuits the fallback.
   const total = nowInfo.totalScrobbles || (await totalFallback(env))
 
-  // One KV read on a bundle cache miss (not per request — this is edge-cached),
-  // projected down to what the page actually shows.
   const yearKey = String(new Date((now + (Number(env.TZ_OFFSET_SECONDS) || 0)) * 1000).getUTCFullYear())
   const yearBlob = await readJSON<PeriodStats>(env, blobKey('y', yearKey))
 
@@ -519,38 +427,31 @@ async function getBundle(env: Env): Promise<Bundle> {
   }
 }
 
-/**
- * Splice scrobbles newer than the log's newest entry back into the day groups.
- *
- * Re-grouping the whole list is lossless — groupDays() derives `count` from the
- * tracks it is given, and recentDays always holds every track for its days — so
- * this cannot double-count a scrobble already present. Filtering on `uts` is what
- * keeps it idempotent: the Last.fm tail overlaps what D1 already has.
- */
+// Splicing rather than re-fetching: groupDays() derives `count` from what it's
+// given, and recentDays always holds every track for its days, so re-grouping
+// can't double-count. Filtering on `uts` keeps it idempotent since the Last.fm
+// tail overlaps what D1 already has.
 function mergeRecent(days: DayLog[], recent: Scrobble[] | undefined, offset: number): DayLog[] {
-  // `recent` is absent from blobs written before this field existed, and stays
-  // absent until the cron next rewrites now:v1 — do not assume it is there.
+  // `recent` is absent from blobs written before this field existed and stays
+  // absent until the cron next rewrites now:v1 — do not assume it's there.
   const newest = days[0]?.tracks[0]?.uts ?? 0
   const fresher = (recent ?? []).filter((s) => s.uts > newest).sort((a, b) => b.uts - a.uts)
   if (!fresher.length) return days
   return groupDays([...fresher, ...days.flatMap((d) => d.tracks)], offset)
 }
 
-// ---- year in review + on this day ---------------------------------------
-
 const tzOffset = (env: Env) => Number(env.TZ_OFFSET_SECONDS) || 0
 
-/** Which years have scrobbles. Cheap to derive (MIN/MAX are index seeks) but cached anyway. */
+/** MIN/MAX are cheap index seeks, but cached anyway. */
 async function getYears(env: Env): Promise<number[]> {
   const cached = await readJSON<number[]>(env, KEY.years)
   if (cached) return cached
   const years = await listYears(env.DB, tzOffset(env))
-  // A day: the list only changes at New Year, or the first time a backfill lands.
+  // A day: the list only changes at New Year or on a backfill.
   await env.KV.put(KEY.years, JSON.stringify(years), { expirationTtl: DAY })
   return years
 }
 
-/** Seconds until the next local midnight — how long an "on this day" blob stays valid. */
 function untilLocalMidnight(now: number, offset: number): number {
   const elapsed = (now + offset) % 86_400
   return Math.max(60, 86_400 - elapsed)
@@ -572,10 +473,9 @@ async function getOnThisDay(env: Env): Promise<OnThisDay> {
   return result
 }
 
-// Any loopback port, so a dev server that lands on 5174 instead of 5173 still
-// works without editing wrangler.jsonc. Everything this API serves is already
-// public on the site, so the allowlist is about not being a free CORS backend
-// for other origins — not about guarding secrets.
+// Any loopback port so a dev server on 5174 still works without editing
+// wrangler.jsonc. Everything served here is already public, so the allowlist is
+// about not being a free CORS backend for other origins, not guarding secrets.
 const LOOPBACK = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -589,8 +489,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
-// Terminal client. Deliberately narrow: anything that is not
-// clearly a CLI fetcher gets the normal JSON/HTML behavior.
+// Deliberately narrow: anything not clearly a CLI fetcher gets normal JSON/HTML.
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {
@@ -599,7 +498,7 @@ function wantsText(request: Request, url: URL): boolean {
   return CLI_AGENT.test(ua)
 }
 
-// Both builders deliberately omit CORS: it varies by Origin and is applied by
+// Both builders omit CORS deliberately: it varies by Origin and is applied by
 // withCors() after the cache, so a cached entry stays origin-independent.
 
 function textResponse(body: string): Response {
@@ -620,22 +519,14 @@ function json(body: unknown, maxAge: number): Response {
   })
 }
 
-// ---- edge cache ----------------------------------------------------------
-//
-// Cloudflare does not cache Worker-generated responses on its own, so without
-// this every request executes the Worker and pays its KV reads — at 3 reads per
-// bundle that caps the free tier around 33k requests/day. It also collapses the
-// cold-KV rebuild paths in getBundle() from once-per-request to once-per-colo
-// per TTL, which is what keeps a traffic spike off D1.
+// Cloudflare doesn't cache Worker responses on its own, so without this every
+// request pays its KV reads (3/bundle caps the free tier ~33k requests/day). It
+// also collapses getBundle()'s cold-KV rebuild to once-per-colo per TTL.
 
-/**
- * Cache key. Deliberately *not* the raw request:
- *
- *  - The variant is folded into the URL because one path can produce two bodies
- *    (`/` is the terminal view for curl and a 404 for browsers).
- *  - CORS headers are left off the cached body entirely and re-applied per
- *    request, so the entry does not have to be duplicated per Origin.
- */
+// Not the raw request: the variant is folded into the URL since one path can
+// produce two bodies (`/` is the terminal view for curl, a 404 for browsers).
+// CORS is left off the cached body and re-applied per request instead of being
+// duplicated per Origin.
 const cacheKey = (url: URL, variant: string): Request => {
   const key = new URL(url.toString())
   key.searchParams.set('__variant', variant)
@@ -707,10 +598,8 @@ export default {
             },
           })
         }
-        // Straight off the period blob — no computation, same as /p/y/<year>.
-        // These URLs stay because `curl listening.cailinpitt.com/2025` is a
-        // published address, but they are now an alias, not a second code path.
-        // Same blobs as /p/y/<year>, so the same namespace-aware variant.
+        // Straight off the period blob, same as /p/y/<year> — kept as an alias
+        // since `curl listening.cailinpitt.com/2025` is a published address.
         return cached(url, `${asJson ? 'year-json' : 'year-text'}:${PREFIX}`, ctx, cors, async () => {
           const review = await readJSON<PeriodStats>(env, blobKey('y', String(year)))
           if (!review) {
@@ -725,11 +614,8 @@ export default {
             : textResponse(renderYear(review, !url.searchParams.has('T')))
         })
       }
-      // ---- period blobs ---------------------------------------------------
-      //
-      // Read-only by construction: a missing blob is a 404, never a computation.
-      // The cron owns every one of these, so no amount of traffic here can
-      // trigger a D1 scan.
+      // Period blobs are read-only by construction: a missing blob is a 404,
+      // never a computation — the cron owns all of these.
       const periodMatch = url.pathname.match(/^\/p\/(w|m|y|all)\/([\w-]+)\.json$/)
       if (periodMatch) {
         const [, kind, key] = periodMatch
@@ -738,14 +624,12 @@ export default {
         const period = parsePeriod(kind, key, offset)
         if (!period) return new Response('Bad period', { status: 400, headers: cors })
 
-        // The blob namespace is part of the cache variant, so bumping PREFIX
-        // invalidates the edge too. Without this, a completed period would keep
-        // serving its previous body for the full 24-hour TTL after a rebuild —
-        // the rebuild would be correct and invisible.
+        // PREFIX is part of the cache variant so bumping it invalidates the edge
+        // too — otherwise a rebuild would be invisible for the full 24h TTL.
         return cached(url, `period:${PREFIX}`, ctx, cors, async () => {
           const blob = await readJSON<PeriodStats>(env, blobKey(period.kind, period.key))
           if (!blob) {
-            // Not computed yet. Short cache so the page picks it up once the
+            // Not computed yet — short cache so the page picks it up once the
             // cron gets to it, rather than pinning a 404 at the edge for an hour.
             return new Response(JSON.stringify({ error: 'not ready' }), {
               status: 404,
@@ -755,17 +639,16 @@ export default {
               },
             })
           }
-          // A finished period can never change again, so let it be cached hard.
+          // A finished period can never change again, so cache it hard.
           return json(blob, blob.complete ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL * 5)
         })
       }
 
       if (url.pathname === '/periods.json') {
-        // Short TTL, unlike the other archival endpoints: this list grows every
-        // few minutes while the backfill walks history, and an hour-long cache
-        // pins an early, near-empty copy for the whole of it. Goes through the
-        // same cached index as the cron — see getPeriodIndex() — so a cold edge
-        // cache can't force a real KV list() beyond one per INDEX_CACHE_INTERVAL.
+        // Short TTL: this list grows every few minutes during backfill, and an
+        // hour-long cache would pin an early, near-empty copy. Goes through the
+        // same cached index as the cron (getPeriodIndex()), so a cold edge cache
+        // can't force more than one real KV list() per INDEX_CACHE_INTERVAL.
         return cached(url, 'periods', ctx, cors, async () =>
           json(await getPeriodIndex(env, Math.floor(Date.now() / 1000)), EDGE_TTL),
         )
@@ -778,11 +661,9 @@ export default {
         return cached(url, 'otd', ctx, cors, async () => json(await getOnThisDay(env), ARCHIVE_EDGE_TTL))
       }
 
-      // Same paths in a browser: send them to the real page instead of a 404.
-      //
-      // 302 and no-store, deliberately. This response is User-Agent dependent, so
-      // a permanent or shared-cached redirect could later be replayed to a client
-      // that wanted the terminal view — which would break `curl` for that URL.
+      // Same paths in a browser get redirected to the real page instead of a 404.
+      // 302 + no-store deliberately: this response is UA-dependent, so a shared
+      // cache could later replay the terminal view to a browser.
       if (url.pathname === '/' || url.pathname === '/listening') {
         return new Response(null, {
           status: 302,
@@ -790,9 +671,8 @@ export default {
         })
       }
       if (url.pathname === '/now.json') {
-        // Deliberately uncached: one KV read, and this is the endpoint whose
-        // freshness is actually visible (the homepage now-playing bar).
-        // `recent` is projected out — the bar needs four fields, not 40 tracks.
+        // Deliberately uncached: one KV read, and the freshness here is actually
+        // visible (the homepage now-playing bar). `recent` is projected out.
         const { nowPlaying, lastPlayed, totalScrobbles, updatedAt } = await getNow(env)
         return withCors(json({ nowPlaying, lastPlayed, totalScrobbles, updatedAt }, 30), cors)
       }
@@ -804,13 +684,10 @@ export default {
       if (url.pathname === '/listening.json') {
         return cached(url, 'json', ctx, cors, async () => json(await getBundle(env), EDGE_TTL))
       }
-      // What was playing between two instants. Built for /moving, which asks it
-      // per activity when someone expands one.
-      //
-      // Cheap by construction rather than by caching: an index range over
-      // idx_scrobbles_uts returning a couple of dozen rows, and only when a
-      // visitor actually asks. The span cap is what keeps it that way — without
-      // it this is a full-archive scan with extra steps.
+      // What was playing between two instants — /moving asks this per activity
+      // when someone expands one. Cheap by construction (an idx_scrobbles_uts
+      // range scan) rather than by caching; the span cap keeps it from becoming
+      // a full-archive scan.
       if (url.pathname === '/during') {
         const from = Number(url.searchParams.get('from'))
         const to = Number(url.searchParams.get('to'))
@@ -828,21 +705,17 @@ export default {
         key.searchParams.set('to', String(snapTo))
         return cached(key, 'during', ctx, cors, async () => {
           const rows = await fetchPeriodRows(env.DB, snapFrom, snapTo, DURING_MAX_ROWS)
-          // A window that has already ended can never gain scrobbles, so it is
-          // immutable and cached hard; one still in progress is not.
+          // A window already ended can never gain scrobbles, so it's cached hard;
+          // one still in progress is not.
           const settled = snapTo < Math.floor(Date.now() / 1000) - 3600
           return json({ tracks: rows }, settled ? ARCHIVE_EDGE_TTL * 24 : EDGE_TTL)
         })
       }
 
-      // Which of these windows have any music at all.
-      //
-      // Asked once per /moving page render so the UI can hide the expander on
-      // activities with nothing to show — thirty separate /during calls would be
-      // absurd, and a toggle that opens to "nothing" is worse than no toggle.
-      //
-      // Costs one request and ~300 rows for a page of thirty, and the window
-      // list is stable until a new activity syncs, so it caches well.
+      // Which of these windows have any music at all — asked once per /moving
+      // render so the UI can hide the expander on activities with nothing to
+      // show. Costs ~300 rows for a page of thirty and caches well since the
+      // window list is stable until a new activity syncs.
       if (url.pathname === '/during-counts') {
         const spec = url.searchParams.get('w') ?? ''
         const windows: { from: number; to: number }[] = []
@@ -863,7 +736,7 @@ export default {
         )
       }
 
-      // /timeline's first page: the same days /listening.json carries, minus the
+      // /timeline's first page: same days /listening.json carries, minus the
       // track lists it never renders.
       if (url.pathname === '/timeline.json') {
         return cached(url, 'timeline', ctx, cors, async () =>

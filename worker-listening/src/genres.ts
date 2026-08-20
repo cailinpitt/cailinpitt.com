@@ -1,25 +1,11 @@
-// Genre taxonomy.
-//
-// Last.fm tags are user-generated and only loosely about genre: a typical artist
-// carries a mix of real genres, scene shorthand, cities, decades, and personal
-// filing labels ("seen live", "albums i own", "female vocalists"). Left raw, a
-// genre chart is mostly junk and its biggest slices are the least informative.
-//
-// So this is an allowlist, not a denylist: a tag counts only if it maps to a
-// canonical genre below, and everything else is dropped. Subgenres fold into a
-// parent, which is what makes shares comparable across periods.
-//
-// **This file is meant to be edited.** It encodes taste, not fact. Adding an
-// alias or splitting a genre out of its parent is a normal change. After any
-// edit, bump PREFIX in period.ts — completed period blobs are frozen forever, so
-// that is the only thing that makes them pick up the new mapping.
+// Genre taxonomy. Last.fm tags are user-generated and only loosely genre (scene
+// shorthand, cities, personal labels like "seen live"), so this is an allowlist:
+// a tag counts only if it maps to a canonical genre below, subgenres fold into a
+// parent. Meant to be edited — after any change, bump PREFIX in period.ts, since
+// that's the only way completed (frozen) period blobs pick up the new mapping.
 
-/**
- * Canonical genre → every tag that should fold into it.
- *
- * Order matters only for readability. Matching is exact on the lowercased tag,
- * so entries here should be written the way Last.fm actually spells them.
- */
+// Canonical genre → every tag that folds into it. Matching is exact on the
+// lowercased tag, so entries must match how Last.fm actually spells them.
 const ALIASES: Record<string, string[]> = {
   // --- guitars, loud ---
   hardcore: [
@@ -107,14 +93,8 @@ for (const [genre, tags] of Object.entries(ALIASES)) {
 /** Every canonical genre, for reference and tests. */
 export const CANONICAL_GENRES = [...new Set(TAG_TO_GENRE.values())].sort()
 
-/**
- * Map one raw Last.fm tag to a canonical genre, or null to drop it.
- *
- * Deliberately exact rather than fuzzy. Substring matching sounds appealing but
- * misfires badly here — "post-hardcore" contains "hardcore", "emo" appears
- * inside "emocore" *and* "demo", and "pop" inside "pop punk". An explicit alias
- * list is longer but never surprises.
- */
+// Deliberately exact, not fuzzy: substring matching misfires here ("emo" is
+// inside "emocore" and "demo", "pop" inside "pop punk").
 export function normalizeTag(tag: string): string | null {
   return TAG_TO_GENRE.get(tag.trim().toLowerCase()) ?? null
 }
@@ -125,15 +105,9 @@ export interface RawTag {
   count: number
 }
 
-/**
- * Collapse an artist's raw tags into canonical genres, strongest first.
- *
- * Weights are kept because Last.fm's top tag is usually the real answer and the
- * tail is noise: Turnstile comes back hardcore 100, hardcore punk 61, punk 17,
- * then a scatter of 1s. Folding sums the weights of every alias that maps to the
- * same parent, so an artist tagged across three hardcore subgenres reads as
- * decisively hardcore rather than being split three ways.
- */
+// Weights are kept because Last.fm's top tag is usually right and the tail is
+// noise; summing weights per parent means three hardcore-subgenre tags read as
+// decisively hardcore instead of splitting three ways.
 export function tagsToGenres(tags: RawTag[], limit = 3): string[] {
   const scores = new Map<string, number>()
   for (const tag of tags) {
@@ -149,13 +123,8 @@ export function tagsToGenres(tags: RawTag[], limit = 3): string[] {
     .map(([genre]) => genre)
 }
 
-/**
- * The single genre an artist counts as.
- *
- * One genre per artist, not several: if an artist counted toward three genres,
- * period shares would sum past 100% and "31% hardcore" would stop meaning
- * anything. The secondary genres are still stored, so a future view can use them.
- */
+// One genre per artist: counting toward several would let period shares sum
+// past 100%. Secondary genres are still stored for a future view.
 export function primaryGenre(tags: RawTag[]): string | null {
   return tagsToGenres(tags, 1)[0] ?? null
 }

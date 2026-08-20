@@ -143,10 +143,9 @@ deploy so the custom domain exists).
 
 ### One-time migration for the period views (do this in order)
 
-The summary tables must exist **before** the new Worker ships, because every
-ingest tick writes to them. Deploying first doesn't lose scrobbles — the tick
-catches its own errors — but it logs a failure every minute until the tables
-land.
+The summary tables must exist **before** the new Worker ships — every ingest tick writes to them.
+Deploying first doesn't lose scrobbles (the tick catches its own errors) but logs a failure every
+minute until the tables land.
 
 ```bash
 cd worker-listening
@@ -158,13 +157,13 @@ wrangler d1 execute cailinpitt-listening --remote --file=backfill-summary.sql
 npm run deploy
 ```
 
-Step 2 writes absolute values (`plays = COUNT(*)`), so it is safe to re-run if
-it is interrupted. It must not race a *running* new Worker, though — the tick
-increments these counters, so run it before the deploy, not after.
+Step 2 writes absolute values (`plays = COUNT(*)`), so it's safe to re-run if interrupted. It must
+not race a *running* new Worker, though — the tick increments these counters, so run it before the
+deploy, not after.
 
-After deploying, the cron backfills period blobs on its own: years first, then
-months, then weeks, one every three minutes. All ~356 periods finish inside a
-day; `/listening/<year>` pages work within about twenty minutes. Watch it with:
+After deploying, the cron backfills period blobs on its own: years first, then months, then weeks,
+one every three minutes. All ~356 periods finish inside a day; `/listening/<year>` pages work within
+about twenty minutes. Watch it with:
 
 ```bash
 curl -s https://listening.cailinpitt.com/periods.json | python3 -m json.tool | head
@@ -182,9 +181,8 @@ wrangler d1 execute cailinpitt-listening --remote --file=schema-v3.sql
 npm run deploy
 ```
 
-The cron enriches two entities a minute, which would take about nine days to
-work through 4,340 artists and 8,854 albums. The backfill does it in roughly an
-hour instead:
+The cron enriches two entities a minute — about nine days to work through 4,340 artists and 8,854
+albums. The backfill does it in roughly an hour instead:
 
 ```bash
 node scripts/enrich-listening.mjs            # ~1 hour, resumable
@@ -192,11 +190,10 @@ cd worker-listening
 wrangler d1 execute cailinpitt-listening --remote --file=../scripts/enrich.sql
 ```
 
-`enrich.sql` is large — roughly 7 MB and ~31,000 statements, because unlike
-`backfill.sql` (which packs 100 rows per `INSERT`) this writes one upsert per
-entity. If `wrangler` times out or rejects the file, split it and load in
-chunks. Every statement is a self-contained single line and an idempotent
-upsert, so chunking is safe and a failed chunk can just be re-run:
+`enrich.sql` is large — roughly 7 MB and ~31,000 statements, because unlike `backfill.sql` (which
+packs 100 rows per `INSERT`) this writes one upsert per entity. If `wrangler` times out or rejects
+the file, split it and load in chunks — every statement is a self-contained, idempotent upsert, so a
+failed chunk can just be re-run:
 
 ```bash
 cd /tmp && rm -rf d1chunks && mkdir d1chunks
@@ -210,20 +207,18 @@ done
 
 The row-write total (~31k) is well inside D1's 100k writes/day free-tier cap.
 
-Durations come from `album.getInfo`, which returns the whole tracklist per call —
-8,854 album lookups cover all 18,114 tracks.
+Durations come from `album.getInfo`, which returns the whole tracklist per call — 8,854 album
+lookups cover all 18,114 tracks.
 
-Genre stats read an artist→genre blob rebuilt daily, so after loading the SQL the
-genres appear on periods built from the next rebuild onward. To force it sooner,
-delete `meta:v1:built-at` from KV.
+Genre stats read an artist→genre blob rebuilt daily, so genres appear on periods built from the next
+rebuild onward. To force it sooner, delete `meta:v1:built-at` from KV.
 
-**Editing the taxonomy** in `worker-listening/src/genres.ts` is expected — it
-encodes taste. Raw tags are stored, not canonical genres, so a change needs no
-re-fetching. But completed period blobs are frozen, so after editing it you must
-bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy — the prefix is
-part of the edge cache key too, so this invalidates both KV and the edge; the backfill
-walk then rebuilds every period under the new prefix within a day. Old keys are
-orphaned and only cost KV storage, which isn't a metered constraint here.
+**Editing the taxonomy** in `worker-listening/src/genres.ts` is expected — it encodes taste. Raw
+tags are stored, not canonical genres, so a change needs no re-fetching. But completed period blobs
+are frozen, so after editing you must bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and
+redeploy — the prefix is part of the edge cache key too, invalidating both KV and the edge; the
+backfill walk then rebuilds every period under the new prefix within a day. Old keys are orphaned
+and only cost KV storage, not a metered constraint here.
 
 ### Artist origin and era (Tier D)
 
@@ -236,37 +231,33 @@ node ../scripts/musicbrainz-listening.mjs      # ~75 min, resumable
 wrangler d1 execute cailinpitt-listening --remote --file=../scripts/musicbrainz.sql
 ```
 
-`schema-v4.sql` is `ALTER TABLE ... ADD COLUMN`, which SQLite can't make
-conditional — re-running it errors on the second pass. That's harmless.
+`schema-v4.sql` is `ALTER TABLE ... ADD COLUMN`, which SQLite can't make conditional — re-running it
+errors on the second pass. Harmless.
 
-MusicBrainz caps at one request per second, hence the runtime. Accuracy comes
-from Last.fm's `artist.getInfo` MBID, which turns a fuzzy name search into an
-exact lookup; measured across the top artists here, the two methods never
-disagreed.
+MusicBrainz caps at one request per second, hence the runtime. Accuracy comes from Last.fm's
+`artist.getInfo` MBID, turning a fuzzy name search into an exact lookup; measured across the top
+artists here, the two methods never disagreed.
 
-**Reviewing the fuzzy matches.** Use `node scripts/review-origins.mjs`, which
-ranks them by play count and hides everything under 0.1% of the archive — a wrong
-country on a one-play artist moves nothing. `--verify 20` then asks MusicBrainz
-which of the top names are shared by more than one act, which is the actual
-signal. (The `score` column in the review file is not: MusicBrainz returns 100
-for any exact name match, including when several acts share the name.)
+**Reviewing the fuzzy matches.** Use `node scripts/review-origins.mjs`, which ranks by play count
+and hides everything under 0.1% of the archive (a wrong country on a one-play artist moves nothing).
+`--verify 20` then asks MusicBrainz which of the top names are shared by more than one act — the
+actual signal (the `score` column in the review file is not: MusicBrainz returns 100 for any exact
+name match, including when several acts share the name).
 
 ```bash
 node scripts/review-origins.mjs             # ranked by plays
 node scripts/review-origins.mjs --verify 20 # + name-collision check, after the backfill
 ```
 
-Original note: Artists resolved by name search — the only ones
-that can be confidently *wrong* — are listed in `scripts/musicbrainz.review.txt`.
-The failure mode is a name shared by two acts: Last.fm resolves "Turnstile" to a
-Spanish group rather than the Baltimore band. Correct any in `ORIGIN_OVERRIDES`
-(`worker-listening/src/musicbrainz.ts`), which is applied when the lookup blob is
-built, so a correction needs no re-fetch — redeploy, then delete
-`meta:v1:built-at` from KV to rebuild immediately.
+Artists resolved by name search — the only ones that can be confidently *wrong* — are listed in
+`scripts/musicbrainz.review.txt`. Failure mode: a name shared by two acts (Last.fm resolves
+"Turnstile" to a Spanish group rather than the Baltimore band). Correct any in `ORIGIN_OVERRIDES`
+(`worker-listening/src/musicbrainz.ts`), applied when the lookup blob is built, so a correction
+needs no re-fetch — redeploy, then delete `meta:v1:built-at` from KV to rebuild immediately.
 
-**Era is groups only.** MusicBrainz's `life-span.begin` is a formation year for a
-band but a *birth* year for a person, so counting both would file Charli xcx
-under the 1990s. Solo artists are excluded from the era chart by design.
+**Era is groups only.** MusicBrainz's `life-span.begin` is a formation year for a band but a
+*birth* year for a person, so counting both would file Charli xcx under the 1990s. Solo artists are
+excluded from the era chart by design.
 
 ### Returning artists
 
@@ -277,21 +268,18 @@ wrangler d1 execute cailinpitt-listening --remote --file=backfill-returns.sql
 npm run deploy
 ```
 
-The backfill is one `LAG()` pass over the archive (~101k rows, once). After it,
-ingest maintains the table incrementally: each tick reads the artists' previous
-`last_uts` *before* the summary upsert overwrites it, which is the only moment
-the gap is visible.
+The backfill is one `LAG()` pass over the archive (~101k rows, once). After it, ingest maintains the
+table incrementally: each tick reads the artists' previous `last_uts` *before* the summary upsert
+overwrites it — the only moment the gap is visible.
 
-The 365-day threshold lives in two places that must agree — `RETURN_GAP` in
-`src/summary.ts` and the `WHERE` clause in `backfill-returns.sql`. Changing one
-means re-running the backfill.
+The 365-day threshold lives in two places that must agree — `RETURN_GAP` in `src/summary.ts` and the
+`WHERE` clause in `backfill-returns.sql`. Changing one means re-running the backfill.
 
 ### Baking periods into the build
 
-Completed periods are fetched at build time into `public/listening-data/` so they
-serve as static assets instead of Worker requests. It runs automatically as
-`prebuild`, and never fails a build — an unreachable Worker just means the client
-fetches at runtime instead.
+Completed periods are fetched at build time into `public/listening-data/` to serve as static assets
+instead of Worker requests. Runs automatically as `prebuild`, and never fails a build — an
+unreachable Worker just means the client fetches at runtime instead.
 
 ```bash
 npm run listening:bake                 # refresh the local copy by hand
@@ -422,10 +410,10 @@ cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
 cd .. && npm run moving:sync -- --refresh   # fill in history; ~12 API requests
 ```
 
-`schema.sql` is `CREATE TABLE IF NOT EXISTS`, so it cannot add a column to a table
-that already exists. Re-running `schema-v2.sql` fails with "duplicate column name",
-which is how you know it was already applied. The `--refresh` is what backfills the
-archive — the incremental sync only ever rewrites the last week.
+`schema.sql` is `CREATE TABLE IF NOT EXISTS`, so it can't add a column to a table that already
+exists. Re-running `schema-v2.sql` fails with "duplicate column name" — that's how you know it was
+already applied. `--refresh` is what backfills the archive; the incremental sync only ever rewrites
+the last week.
 
 Import history from the bulk export (strava.com/settings/privacy → request an archive):
 
@@ -436,8 +424,8 @@ cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
 cd .. && npm run moving:sync -- --refresh   # fix dates, recompute `stats`
 ```
 
-The `--refresh` is required, not tidiness: the export carries no local timestamp, so the generated
-SQL dates every activity with a fixed Central offset. Only the API knows which day a ride actually
+`--refresh` is required, not tidiness: the export carries no local timestamp, so the generated SQL
+dates every activity with a fixed Central offset — only the API knows which day a ride actually
 belongs to. The generated `.sql` is gitignored.
 
 After changing the `kind` mapping in `worker-moving/src/strava.ts`, re-derive the stored column —

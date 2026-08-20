@@ -3,12 +3,8 @@ import { Head } from 'vite-react-ssg'
 const SITE_URL = 'https://cailinpitt.com'
 const SITE_NAME = 'Cailin Pitt'
 
-/**
- * What only the page itself knows about its social card. Emitted as a hint for
- * scripts/generate-og.mjs, which renders the card from the built HTML at deploy
- * time; everything else on the card (title, description) it reads off the tags
- * below, so the two can't drift apart.
- */
+/** Hint for scripts/generate-og.mjs, which renders the card at deploy time from
+ * the built HTML; title/description come from the tags below so they can't drift. */
 interface OgCard {
   /** Section label in the card's top-right. Defaults to one derived from the path. */
   kicker?: string
@@ -25,13 +21,10 @@ interface SeoProps {
   description?: string
   /** Page path, e.g. /blog/2023/3/3/slug. Used for canonical + og:url. */
   path?: string
-  /**
-   * Override the social card. Pages don't normally set this: each one gets a
-   * generated card at /og<path>.jpg. Absolute or root-relative.
-   */
+  /** Override the social card; otherwise each page gets a generated card at
+   * /og<path>.jpg. Absolute or root-relative. */
   image?: string
   imageAlt?: string
-  /** Page-specific details for the generated card. */
   card?: OgCard
   type?: 'website' | 'article'
   /** schema.org JSON-LD to embed (a single object or an array of them). */
@@ -40,29 +33,14 @@ interface SeoProps {
   publicationUri?: string | null
   /** AT-URI of this page's site.standard.document record (standard.site, Phase 8). */
   documentUri?: string | null
-  /**
-   * Path of this page's published Markdown source, if it has one. Advertised as
-   * an alternate representation so a crawler or a reader that would rather have
-   * the source than the page can find it without being told.
-   */
+  /** Path of this page's published Markdown source, advertised as an alternate
+   * representation for crawlers/readers that want the source instead. */
   markdownPath?: string
-  /**
-   * An RSS feed this page is the human view of, advertised for autodiscovery.
-   *
-   * index.html already carries the site's own /feed.xml on every page. This is
-   * for a feed belonging to *one* page — /notes, whose feed is served by its
-   * Worker rather than written at build time — which has no business being
-   * advertised from the front page or from every post.
-   */
+  /** RSS feed this page is the human view of (autodiscovery). Distinct from the
+   * site-wide /feed.xml in index.html — for a page with its own feed, e.g. /notes. */
   feed?: { href: string; title: string }
-  /**
-   * Keep this page out of search results and out of sitemap.xml.
-   *
-   * For pages that exist but aren't publications: /notes/compose is a writing
-   * tool, not a thing to read. scripts/generate-sitemap.mjs reads the emitted
-   * meta tag rather than being told separately, so a page can't be noindex and
-   * still get submitted.
-   */
+  /** Keep out of search results and sitemap.xml — e.g. /notes/compose, a tool
+   * rather than a publication. generate-sitemap.mjs reads this same meta tag. */
   noindex?: boolean
 }
 
@@ -70,17 +48,11 @@ interface SeoProps {
 const serializeJsonLd = (data: object | object[]) =>
   JSON.stringify(data).replace(/</g, '\\u003c')
 
-/**
- * Where this page's generated card lives. Mirrors cardFile() in
- * scripts/generate-og.mjs — the two must agree, or pages point at a 404.
- */
+// Mirrors cardFile() in scripts/generate-og.mjs — must agree or pages 404.
 const ogCardPath = (path: string) => `/og/${path === '/' ? 'index' : path.replace(/^\//, '')}.jpg`
 
-/**
- * Per-page <title>, meta description, canonical, and Open Graph / Twitter tags.
- * Covers the build-time metadata items from specification.website. Rendered into
- * <head> at prerender time by vite-react-ssg's <Head>.
- */
+// Per-page <title>, description, canonical, and OG/Twitter tags, rendered into
+// <head> at prerender time by vite-react-ssg's <Head>.
 export function Seo({
   title,
   description,
@@ -100,12 +72,10 @@ export function Seo({
   const fullTitle = path === '/' ? title : `${title} — ${SITE_NAME}`
   const src = image ?? ogCardPath(path)
   const img = src.startsWith('http') ? src : `${SITE_URL}${src}`
-  // Our own cards are 1200x630 whether this page generated one or is reusing
-  // another page's, so the dimensions follow the *image*, not whether it was
-  // supplied. A page passing a photograph declares nothing, since it isn't.
+  // 1200x630 dimensions follow whether the image is one of our own generated
+  // cards, not whether this page supplied it (it may be reusing another's).
   const isOgCard = src.startsWith('/og/') || src.startsWith(`${SITE_URL}/og/`)
-  // Whether *this page* gets a card rendered for it. A page reusing another's
-  // has nothing to hint about, so the build-time hint below is suppressed.
+  // Suppress the build-time hint below when reusing another page's card.
   const generated = !image
 
   return (

@@ -7,12 +7,9 @@ const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 
 export const ACTIVITY_PAGE = 30
 const MAX_ACTIVITY_PAGE = 100
 
-// name and commute are stored but deliberately not served: the log renders a
-// summary built from the numbers, and neither field reaches the page.
-// `started_at` and `elapsed_time` are what make an activity a *window* in time
-// rather than a date, which is what the listening crossover needs to ask "what
-// was playing during this ride". Both were already stored and synced; they just
-// weren't served.
+// name and commute are stored but not served — the log renders a summary from
+// the numbers instead. started_at/elapsed_time make an activity a *window* in
+// time, which is what the listening crossover needs.
 const COLS =
   'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
   'elapsed_time, trainer, avg_hr, max_hr, ' +
@@ -31,19 +28,11 @@ export interface Activity {
   movingTime: number
   /** Seconds including pauses — the raw recorded span. */
   elapsedTime: number
-  /**
-   * The activity's usable window, in seconds — what "during this activity"
-   * means. Moving time plus a pause allowance, capped at what was recorded; see
-   * the note on ActivityWindow for why raw elapsed time is the wrong answer.
-   * Served here too so callers don't have to re-derive the rule.
-   */
+  /** Usable window in seconds — moving time plus a pause allowance, capped at
+   * what was recorded. See ActivityWindow for why raw elapsed time is wrong. */
   windowSeconds: number
   trainer: boolean
-  /**
-   * Average bpm, or null when the activity was recorded without a monitor —
-   * which is most of the archive, and every row predating the column. Callers
-   * render nothing rather than a zero.
-   */
+  /** Average bpm, or null without a monitor — most of the archive. */
   avgHr: number | null
   /** Peak bpm, or null on the same terms. */
   maxHr: number | null
@@ -157,8 +146,6 @@ export async function fetchActivities(
   }
 }
 
-// ---- the homepage strip / terminal ----------------------------------------
-
 export interface ActivityNow {
   lastActivity: Activity | null
   updatedAt: number
@@ -175,8 +162,6 @@ export async function buildNow(db: D1Database): Promise<ActivityNow> {
     updatedAt: Math.floor(Date.now() / 1000),
   }
 }
-
-// ---- the bundle -----------------------------------------------------------
 
 interface YearTotals {
   activities: number
@@ -243,18 +228,11 @@ export interface ActivityWindow {
   /** Unix seconds, UTC. */
   startedAt: number
   /**
-   * The window's usable length in seconds — what "during this activity" means.
-   *
-   * Not raw `elapsed_time`. Recordings routinely get left running long after the
-   * activity ends: across 2021 the elapsed total is 1,081 hours against 304 of
-   * actual moving, and 84 activities exceed four hours. Anything consuming this
-   * as a time window would sweep up a whole evening after a 40-minute ride.
-   *
-   * Not raw `moving_time` either — that excludes genuine pauses at lights and
-   * rest stops, which are still part of the activity.
-   *
-   * So: moving time plus a pause allowance, never exceeding what was actually
-   * recorded.
+   * Usable window length. Not raw elapsed_time — recordings routinely run long
+   * after the activity ends (2021: 1,081h elapsed vs 304h actual moving), which
+   * would sweep up a whole evening after a 40-minute ride. Not raw moving_time
+   * either, since that excludes genuine pauses at lights. So: moving time plus
+   * a pause allowance, capped at what was recorded.
    */
   seconds: number
   /** The raw recorded span, for callers that want to see the difference. */
@@ -265,20 +243,12 @@ export interface ActivityWindow {
  * literally in COLS above, which cannot interpolate. */
 const PAUSE_GRACE = 30 * 60
 
-/**
- * Activities overlapping a time range, as bare windows.
- *
- * Exists for the listening crossover, which needs to ask "was I moving when this
- * scrobble happened" for a whole period at once. Serving that off /activities
- * would mean paginating the full records; this is four columns and one index
- * range, so a year costs a few hundred small rows.
- *
- * The range test is overlap, not containment: an activity that started before
- * `from` can still be running inside it. But `started_at + elapsed_time` is not
- * indexable, so the lower bound is expressed on `started_at` alone — nothing can
- * have started more than MAX_ACTIVITY_SECONDS before `from` and still overlap.
- * That keeps this an index range instead of a full scan as the table grows.
- */
+// Activities overlapping a time range, as bare windows — for the listening
+// crossover's "was I moving when this scrobble happened". Four columns and one
+// index range beats paginating /activities. Overlap, not containment: the
+// lower bound is expressed on started_at alone (nothing can start more than
+// MAX_ACTIVITY_SECONDS before `from` and still overlap), keeping this an
+// index range instead of a full scan.
 /** Generous ceiling on activity length; the longest on record is ~15.5 hours. */
 const MAX_ACTIVITY_SECONDS = 24 * 60 * 60
 

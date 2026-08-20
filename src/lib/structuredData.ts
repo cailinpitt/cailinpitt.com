@@ -128,15 +128,9 @@ export function pageSchema(options: PageSchemaOptions): Json {
   return graph(personNode(), websiteNode(), pageNode(options))
 }
 
-/**
- * A single photograph's page. The photo is the point of the page, so it goes out
- * as a real ImageObject rather than only as the page's primary image.
- *
- * `dateCreated` is emitted only for a photo with a capture time. Most of the
- * archive carries an approximate date good to the year (see src/lib/photos.ts),
- * and a schema consumer has no way to know that — better to say nothing than to
- * publish a day that was never a day.
- */
+// The photo is the point of the page, so it goes out as a real ImageObject, not just the
+// page's primary image. `dateCreated` is emitted only for a real capture time — better to
+// say nothing than publish an approximate date (see src/lib/photos.ts) as a real day.
 export function photoSchema(photo: Photo): Json {
   const path = `/photos/${photo.id}`
   const url = abs(path)
@@ -222,9 +216,8 @@ export function blogPostSchema(post: Post): Json {
       isPartOf: ref(BLOG_ID),
       datePublished: post.date,
       ...(post.updated ? { dateModified: post.updated } : {}),
-      // wordCount is measured, so it goes out whenever there is one. timeRequired
-      // is the same estimate the page shows, as an ISO 8601 duration — so it is
-      // held to the same threshold, and the two can never disagree.
+      // timeRequired is the same estimate the page shows (ISO 8601 duration), held to the
+      // same threshold so the two can never disagree.
       ...(post.words ? { wordCount: post.words } : {}),
       ...(hasReadingEstimate(post.words) ? { timeRequired: `PT${readingMinutes(post.words)}M` } : {}),
       ...(post.description ? { description: post.description } : {}),

@@ -8,12 +8,9 @@ export function Layout() {
   const { pathname, hash } = useLocation()
   const photosActive = pathname === '/photos' || pathname.startsWith('/photos/')
 
-  // A single note (/notes#<id>) gets no header or footer — just the note
-  // itself and a way back, the same "nothing to distract from the one thing
-  // you were sent to read" idea the permalink's whole existence is about. The
-  // rest of /notes (the feed) keeps the full chrome. This is a hash check
-  // rather than a route of its own because a note has no route of its own —
-  // see the note on notePath() in src/lib/notes.ts.
+  // A single note (/notes#<id>) gets no header/footer — nothing to distract
+  // from the one thing you were sent to read. Hash check, not its own route,
+  // since a note has no route of its own — see notePath() in src/lib/notes.ts.
   const minimal = pathname === '/notes' && hash.length > 1
 
   // The palette's trigger belongs in the nav and its dialog does not, so the open
@@ -24,8 +21,7 @@ export function Layout() {
 
   return (
     <>
-      {/* Reset scroll to top on navigation (and restore it on back/forward). React
-          Router's data router doesn't do this automatically. */}
+      {/* React Router's data router doesn't reset scroll on navigation by default. */}
       <ScrollRestoration />
       {!minimal && (
         <a className="skip-link" href="#main">
@@ -34,12 +30,8 @@ export function Layout() {
       )}
       {!minimal && (
         <header className="site-header">
-          {/* Two rows, deliberately. The utility buttons used to be the last two
-              items of nav-links, which meant they wrapped along with the page
-              links — so every page added shoved them further, and they ended up
-              stranded on a row of their own. Keeping them on the title row
-              instead means the link list is the only thing that grows, and it is
-              the one part designed to wrap. */}
+          {/* Two rows, deliberately: the utility buttons used to wrap along with
+              nav-links and end up stranded on their own row as pages were added. */}
           <nav className="site-nav" aria-label="Primary">
             <div className="site-nav-top">
               <Link to="/" className="site-title">
@@ -79,10 +71,8 @@ export function Layout() {
               <li>
                 <NavLink to="/blog">Blog</NavLink>
               </li>
-              {/* Next to Blog rather than inside Logs: the Logs group is the
-                  Worker-backed activity feeds, which are records of what happened.
-                  Notes are writing, and they belong beside the other writing even
-                  though they happen to be Worker-backed too. */}
+              {/* Next to Blog, not in Logs: Notes is writing, not an activity feed,
+                  even though it's Worker-backed too. */}
               <li>
                 <NavLink to="/notes">Notes</NavLink>
               </li>

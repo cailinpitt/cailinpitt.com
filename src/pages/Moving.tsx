@@ -81,13 +81,9 @@ export function Component() {
   )
 }
 
-// ---- this year --------------------------------------------------------------
-
-/**
- * Renders nothing when the field is absent, the same rule /listening's "this
- * year" section follows: an older Worker or a cron that hasn't recomputed the
- * yearly totals yet shouldn't show a broken tile.
- */
+// Renders nothing when the field is absent (same rule as /listening's "this
+// year"), so an older Worker or a cron that hasn't recomputed totals yet
+// doesn't show a broken tile.
 function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
   if (counts.bikeMilesThisYear == null) return null
   const year = new Date().getFullYear()
@@ -105,8 +101,6 @@ function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
     </section>
   )
 }
-
-// ---- the log --------------------------------------------------------------
 
 function MovingLog({
   initial,
@@ -193,17 +187,9 @@ function MovingLog({
   )
 }
 
-/**
- * How many tracks were playing during each loaded activity, in one request.
- *
- * Batched deliberately: the alternative is asking per row, which is thirty
- * requests for a page nobody may interact with. Re-runs when the list grows,
- * asking only about the activities it hasn't already covered.
- *
- * Failure is silent — the map stays empty, every row reports "unknown", and the
- * expanders simply all show. That degrades to the previous behavior rather than
- * to a broken page.
- */
+// Batched deliberately (one request, not thirty per row nobody may open); reruns
+// only for activities not already covered. Failure is silent — the map stays
+// empty, every row reports "unknown", degrading gracefully rather than breaking.
 function useTrackCounts(activities: Activity[]): Map<string, number> {
   const [counts, setCounts] = useState<Map<string, number>>(new Map())
 
@@ -241,8 +227,6 @@ function useTrackCounts(activities: Activity[]): Map<string, number> {
 
   return counts
 }
-
-// ---- loading state --------------------------------------------------------
 
 function MovingSkeleton() {
   return (

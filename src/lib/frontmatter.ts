@@ -1,8 +1,6 @@
-// Minimal, dependency-free frontmatter parser.
-//
-// We control the exact format the migration script emits (see scripts/migrate-posts.mjs),
-// so we don't need a full YAML parser (and we avoid pulling gray-matter / Buffer into the
-// browser bundle). Supported value forms per line:
+// Minimal, dependency-free frontmatter parser — we control the exact format the migration
+// script emits (scripts/migrate-posts.mjs), so a full YAML parser (gray-matter / Buffer in
+// the browser bundle) isn't needed. Supported value forms per line:
 //   key: plain text
 //   key: "quoted text"
 //   key: ["json", "array"]

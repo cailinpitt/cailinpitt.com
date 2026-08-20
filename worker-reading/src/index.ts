@@ -1,13 +1,9 @@
 // Reading API for cailinpitt.com/reading.
 //
-//  scheduled (daily): pull the whole hardcover.app library into D1 and mirror
-//    any new cover art to R2. Books change a few times a week at most, so
-//    there is nothing here that needs the listening worker's per-minute cadence.
-//  fetch: serve the bundle straight from D1 behind the edge cache, and manage
-//    articles at /ingest (POST to save, PATCH to note, DELETE to remove) from
-//    the share-sheet Shortcuts and the bookmarklets. No KV: at this data
-//    volume precomputed blobs would be complexity without a payoff (see the note
-//    at the top of src/store.ts).
+//  scheduled (daily): pull the hardcover.app library into D1 and mirror new
+//    cover art to R2.
+//  fetch: serve the bundle from D1 behind the edge cache, and manage articles
+//    at /ingest (POST save, PATCH note, DELETE remove). No KV — see store.ts.
 
 import { annotateArticle, deleteArticle, ingestArticle, resolveId } from './articles'
 import {
@@ -24,27 +20,15 @@ import { renderText } from './text'
 /** Edge-cache lifetime. The underlying data changes daily, or when you save one. */
 const EDGE_TTL = 300
 
-/**
- * Browser freshness and origin protection, as two separate numbers.
- *
- * They used to be one, which tied "how fresh the page looks" to "how much D1
- * work a traffic spike can cause". Only `s-maxage` does the second job — it
- * collapses a colo's visitors into one origin build per window — so it keeps
- * the old value, while `max-age` drops to something a person would accept
- * waiting.
- *
- * `stale-while-revalidate` lets the refresh happen behind an instant response
- * rather than in front of one.
- */
+// Split from one TTL into two: max-age is what a person will wait for a fresh
+// page, s-maxage is what bounds D1 load per colo per window — they don't need
+// to match. stale-while-revalidate serves instantly while refreshing behind it.
 const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
 
 /** Where a browser landing on the API gets sent. */
 const SITE_READING = 'https://cailinpitt.com/reading'
 
-/**
- * Constant-time string compare, so a token can't be recovered by timing the
- * `/sync` endpoint. Length is allowed to leak; the contents are not.
- */
+/** Constant-time compare, so /sync's token can't be recovered by timing. */
 function secretEquals(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0
@@ -58,14 +42,9 @@ function authorized(request: Request, secret: string | undefined): boolean {
   return Boolean(secret) && Boolean(token) && secretEquals(token, secret as string)
 }
 
-/**
- * `/ingest` is callable from any origin, unlike the read endpoints.
- *
- * The bookmarklet runs in the page context of whatever article is open, so the
- * origin is arbitrary by design and an allowlist can't work. The bearer token is
- * the security boundary — without it every request is a 401 — and the worst a
- * leaked one can do is add an article to the log.
- */
+// /ingest is callable from any origin, unlike the read endpoints: the
+// bookmarklet runs in whatever page is open, so an allowlist can't work. The
+// bearer token is the boundary — worst case a leaked one adds an article.
 const INGEST_CORS: Record<string, string> = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, PATCH, DELETE, OPTIONS',
@@ -73,16 +52,9 @@ const INGEST_CORS: Record<string, string> = {
   'access-control-max-age': '86400',
 }
 
-/**
- * Read a JSON field that should be text, tolerating a single-element array.
- *
- * The iOS Shortcut builds its body from `Get URLs from Input`, which produces a
- * *list* — Shortcuts serializes that as `{"url": ["https://…"]}` rather than a
- * bare string. Requiring a string there rejected the request with an error that
- * pointed at the body while the Shortcut looked perfectly correct on screen.
- * Coercing here is cheaper than asking every caller to add a "Get Item from
- * List" step they have no reason to expect.
- */
+// The iOS Shortcut's "Get URLs from Input" produces a list, serialized as
+// `{"url": ["https://…"]}` rather than a bare string — coerce rather than
+// making every caller add a "Get Item from List" step.
 function asText(value: unknown): string | null {
   if (typeof value === 'string') return value.trim() || null
   if (Array.isArray(value)) {
@@ -97,10 +69,9 @@ function localYear(offsetSeconds: number): number {
   return new Date((Date.now() / 1000 + offsetSeconds) * 1000).getUTCFullYear()
 }
 
-// Any loopback port, so a dev server that lands on 5174 instead of 5173 still
-// works without editing wrangler.jsonc. Everything this API serves is already
-// public on the site, so the allowlist is about not being a free CORS backend
-// for other origins — not about guarding secrets.
+// Any loopback port, so a dev server on a different port still works. This
+// data is already public, so the allowlist is about not being a free CORS
+// backend for other origins, not guarding secrets.
 const LOOPBACK = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/
 
 function corsHeaders(request: Request, env: Env): Record<string, string> {
@@ -114,10 +85,8 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   }
 }
 
-// Deliberately omits CORS: it varies by Origin and is applied by withCors()
-// after the cache, so a cached entry stays origin-independent. Storing it would
-// serve one visitor's access-control-allow-origin to everyone behind the same
-// cache entry.
+// Omits CORS deliberately: it varies by Origin and is applied by withCors()
+// after the cache, so a cached entry stays origin-independent.
 function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -129,8 +98,7 @@ function json(body: unknown, ttl: { browser: number; edge: number }): Response {
   })
 }
 
-// Terminal client. Deliberately narrow: anything that is not clearly a CLI
-// fetcher gets the normal redirect. Mirrors the listening worker's rule.
+// Deliberately narrow: anything not clearly a CLI fetcher gets the normal redirect.
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {
@@ -167,10 +135,7 @@ function withCors(res: Response, cors: Record<string, string>): Response {
   return out
 }
 
-/**
- * Cache key. The variant is folded into the URL rather than keying on the raw
- * request so that one path can safely produce more than one body.
- */
+// Variant folded into the URL so one path can safely produce more than one body.
 const cacheKey = (url: URL, variant: string): Request => {
   const key = new URL(url.toString())
   key.searchParams.set('__variant', variant)
@@ -212,9 +177,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors })
 
     try {
-      // `curl reading.cailinpitt.com` (or /reading) → the terminal view, the
-      // counterpart to the listening worker's. Checked before the redirect
-      // below, which is what a browser on the same path gets instead.
+      // curl → terminal view, checked before the browser redirect below.
       if ((url.pathname === '/' || url.pathname === '/reading') && wantsText(request, url)) {
         const offset = Number(env.TZ_OFFSET_SECONDS) || 0
         return cached(url, 'text', ctx, cors, async () =>
@@ -229,9 +192,7 @@ export default {
         )
       }
 
-      // The article endpoint. One path, three verbs, all keyed by url (or id):
-      //   POST   save it            PATCH  note it            DELETE  drop it
-      // The share-sheet Shortcuts and the bookmarklets all talk to this.
+      // One path, three verbs, keyed by url (or id): POST save, PATCH note, DELETE drop.
       if (url.pathname === '/ingest') {
         if (!authorized(request, env.INGEST_TOKEN)) {
           return new Response('Unauthorized', { status: 401, headers: cors })
@@ -284,10 +245,8 @@ export default {
         return new Response('Method not allowed', { status: 405, headers: cors })
       }
 
-      // Run the daily sync on demand. This exists because the cover backfill
-      // needs many passes (see MIRROR_BUDGET) and because there is otherwise no
-      // way to pick up a book you just finished without waiting for 09:00 UTC.
-      // Never cached, and 401s without the ADMIN_TOKEN secret.
+      // Runs the daily sync on demand — for the cover backfill (see MIRROR_BUDGET)
+      // and to pick up a finished book without waiting for the cron.
       if (url.pathname === '/sync') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: cors })
@@ -295,10 +254,8 @@ export default {
         if (!authorized(request, env.ADMIN_TOKEN)) {
           return new Response('Unauthorized', { status: 401, headers: cors })
         }
-        // Report the failure to the caller rather than only to the log. This
-        // route is authenticated, so there is nothing to leak, and the common
-        // failures (schema not applied, HARDCOVER_TOKEN unset) are ones you want
-        // to see immediately instead of going digging in `wrangler tail`.
+        // Reported to the caller, not just the log — this route is authenticated
+        // and failures (schema not applied, missing token) are worth seeing now.
         let body: string
         let status = 200
         try {
@@ -346,12 +303,8 @@ export default {
         })
       }
 
-      // A browser on the bare API host gets sent to the real page, not a 404.
-      //
-      // 302 and no-store, deliberately. This response is User-Agent dependent
-      // now that the terminal view shares the path, so a permanent or
-      // shared-cached redirect could later be replayed to a client that wanted
-      // the text — which would break `curl` for that URL.
+      // 302 + no-store: this response is User-Agent dependent (terminal view
+      // shares the path), so a cached redirect could break `curl` for this URL.
       if (url.pathname === '/' || url.pathname === '/reading') {
         return new Response(null, {
           status: 302,

@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { identities as IDENTITIES, descriptions as DESCRIPTIONS } from '../../content/identity'
 
-// Rotating self-description for the homepage headline, in the spirit of dame.is:
-// "Cailin is {identity} who {description}." The two halves are shuffled
-// independently, so any pairing reads true as long as every identity and every
-// description is individually true. It auto-rotates every 10s and offers a
-// shuffle button for an immediate reroll. Auto-rotation is suppressed for
-// visitors who prefer reduced motion; the shuffle button always works.
-//
-// Edit the phrasing in content/identity.ts — no need to touch this file.
+// Rotating homepage headline, in the spirit of dame.is: identity and
+// description shuffle independently, so any pairing reads true as long as each
+// half is individually true. Auto-rotates every 10s (suppressed under
+// reduced-motion); edit phrasing in content/identity.ts, not here.
 
 const ROTATE_MS = 10_000
 
@@ -38,9 +34,8 @@ export function IdentityLine() {
     setTick((t) => t + 1)
   }, [])
 
-  // (Re)start the auto-rotate countdown from zero, unless the visitor prefers
-  // reduced motion. Called on mount and after every manual shuffle, so a click
-  // gives a fresh 10s before the next automatic reroll.
+  // Called on mount and after every manual shuffle, so a click gives a fresh
+  // 10s before the next automatic reroll.
   const restartTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current)
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches

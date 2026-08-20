@@ -21,9 +21,7 @@ import {
   type Photo,
 } from '../src/lib/photos'
 
-// The feed's two invariants: a photo's id is a URL that must never move, and its
-// place in the feed is decided by year first and date second. Everything here is
-// about one of those two.
+// The feed's two invariants: a photo's id is a URL that must never move, and its place is decided by year then date.
 
 const photo = (over: Partial<Photo> & Pick<Photo, 'id' | 'year' | 'date'>): Photo => ({
   src: `/images/${over.year}/${over.id}.webp`,
@@ -100,9 +98,7 @@ describe('resolveDate', () => {
 })
 
 describe('feed order', () => {
-  // A recovered upload date can land outside the year the photo is filed under,
-  // which is exactly why year leads: a 2014 photo uploaded in 2016 belongs in the
-  // 2014 block, at the position that upload time gives it.
+  // A recovered upload date can land outside the photo's filed year, which is why year leads.
   const feed = [
     photo({ id: '2014-a', year: '2014', date: '2016-11-13T20:48:06', approx: true }),
     photo({ id: '2016-b', year: '2016', date: '2016-02-02T00:00:00', approx: true }),
@@ -174,8 +170,7 @@ describe('how a date is phrased', () => {
 })
 
 describe('what belongs to a photo', () => {
-  // npm run photos:rm deletes from this. Missing a rendition leaves an orphan in
-  // R2; missing the original means the next images:sync republishes the photo.
+  // npm run photos:rm deletes from this; missing a rendition orphans it in R2.
   it('finds both renditions and the original stem', () => {
     expect(
       photoFiles({
@@ -223,8 +218,7 @@ describe('what belongs to a photo', () => {
   })
 
   it('deletes only the widths a photo actually has', () => {
-    // An entry synced before a width was added never had that file; asking R2
-    // to delete it would report a phantom as missing.
+    // A width added after sync never had that file; deleting it would report a phantom.
     const files = photoFiles({
       id: '2019-x',
       src: '/images/2019/x.webp',
@@ -236,8 +230,7 @@ describe('what belongs to a photo', () => {
 })
 
 describe('grid renditions', () => {
-  // The encoder and the browser have to agree on which files exist: a width the
-  // srcset offers but images:sync never wrote is a 404 the browser picks itself.
+  // Encoder and browser must agree: a width the srcset offers but sync never wrote is a self-inflicted 404.
   it('offers exactly the widths the sync script encodes', () => {
     expect(GRID_WIDTHS_UI).toEqual(GRID_WIDTHS)
   })

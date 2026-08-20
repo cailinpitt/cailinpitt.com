@@ -5,33 +5,24 @@ import { describe, expect, it } from 'vitest'
 import { glyphs, MAX_LENGTH, notePath, noteUrl, paragraphs, segments } from '../src/lib/notes'
 import { clean, validate, MAX_LENGTH as WORKER_MAX } from '../worker-notes/src/validate'
 
-// The pure halves of the microblog, on both sides of the wire.
-//
-// worker-notes/ has no test setup of its own — same arrangement as
-// worker-guestbook's validate.ts, which is tested from here for the same reason:
-// the file is pure, it decides what may be stored, and it is worth more covered
-// from the site's suite than uncovered in a package nobody runs `vitest` in.
+// The pure halves of the microblog. worker-notes/ has no test setup of its own, same arrangement as worker-guestbook's validate.ts.
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('the character limit', () => {
   it('is the same number on both sides of the wire', () => {
-    // The compose box counts down from its own copy so the counter is right on
-    // the first keystroke, before any request could have landed. If these drift,
-    // the box happily accepts a note the Worker then refuses.
+    // The compose box counts down from its own copy; if these drift it accepts a note the Worker refuses.
     expect(MAX_LENGTH).toBe(WORKER_MAX)
   })
 
   it('is the number the schema comment claims', () => {
-    // schema.sql documents the cap next to the column it bounds. A stale comment
-    // there is how the next person learns the wrong limit.
+    // schema.sql documents the cap next to the column; a stale comment teaches the wrong limit.
     const schema = readFileSync(path.join(ROOT, 'worker-notes', 'schema.sql'), 'utf8')
     expect(schema).toContain(`<= ${MAX_LENGTH} code points`)
   })
 
   it('counts an emoji as one character', () => {
-    // '👋'.length is 2. A counter that used it would tell you a note of emoji
-    // was twice as long as it is, and the Worker would disagree.
+    // '👋'.length is 2; a counter using it would disagree with the Worker.
     expect(glyphs('👋')).toBe(1)
     expect(glyphs('👋👋')).toBe(2)
     expect(glyphs('hello')).toBe(5)
@@ -61,8 +52,7 @@ describe('validate', () => {
   })
 
   it('measures the limit in code points, not UTF-16 units', () => {
-    // MAX_LENGTH emoji is exactly at the limit, and would be twice over it if
-    // anything here used .length.
+    // MAX_LENGTH emoji is at the limit, but would be twice over it under .length.
     expect(validate({ text: '👋'.repeat(MAX_LENGTH) }).ok).toBe(true)
     expect(validate({ text: '👋'.repeat(MAX_LENGTH + 1) }).ok).toBe(false)
   })
@@ -125,10 +115,7 @@ describe('validate', () => {
   })
 
   it('accepts a hidden link even once the text no longer contains it', () => {
-    // Re-saving a note whose link was already hidden on a previous edit: the
-    // text was stripped then, so requiring the url to still be present here
-    // would make every subsequent save of that note fail. See the comment on
-    // validateLink in validate.ts.
+    // Re-saving a note whose link text was already stripped on a previous edit. See validateLink in validate.ts.
     expect(validate({ text: 'just the caption now', linkUrl: 'https://example.com', linkHidden: true }).ok).toBe(
       true,
     )
@@ -145,16 +132,14 @@ describe('validate', () => {
 
 describe('clean', () => {
   it('keeps newlines but drops the other control characters', () => {
-    // The zero-width and bidi characters are the ones worth naming: they are how
-    // stored text renders in an order it isn't stored in.
+    // Zero-width and bidi chars are how stored text renders in an order it isn't stored in.
     expect(clean('a​b')).toBe('ab')
     expect(clean('a‮b')).toBe('ab')
     expect(clean('one\ntwo')).toBe('one\ntwo')
   })
 
   it('collapses a run of blank lines to one', () => {
-    // A stray paste of newlines would otherwise be a note three screens tall in
-    // a feed with no per-note height limit.
+    // A stray paste of newlines would be a note three screens tall in a feed with no height limit.
     expect(clean('a\n\n\n\n\nb')).toBe('a\n\nb')
   })
 
@@ -205,17 +190,14 @@ describe('segments', () => {
   })
 
   it('does not link a sentence that merely contains a period', () => {
-    // The rule is deliberately narrow: anything cleverer starts turning ordinary
-    // prose into links.
+    // Deliberately narrow: anything cleverer starts turning ordinary prose into links.
     expect(segments('I went to bed.Then I got up')).toEqual([
       { kind: 'text', value: 'I went to bed.Then I got up' },
     ])
   })
 
   it('loses no text, whatever the input', () => {
-    // The invariant that matters: segments() is a partition of the string. A bug
-    // in the trailing-punctuation trimming would silently eat characters out of
-    // a published note.
+    // segments() must partition the string; a trimming bug would silently eat characters.
     for (const text of [
       'plain',
       'https://a.example',
@@ -274,20 +256,14 @@ describe('paragraphs', () => {
 
 describe('notePath', () => {
   it('is an anchor on the feed, not a route', () => {
-    // notePath is for the SPA's own internal navigation, which stays a
-    // client-side jump rather than a round trip through the Worker. The real,
-    // externally-shareable address is noteUrl, below — the two are deliberately
-    // different, not a leftover of one replacing the other.
+    // For the SPA's internal navigation only; noteUrl below is the shareable address, deliberately different.
     expect(notePath('a3f91c2b40d1')).toBe('/notes#a3f91c2b40d1')
   })
 })
 
 describe('noteUrl', () => {
   it('points at the real permalink, not the feed anchor', () => {
-    // worker-notes serves this path directly (see the header of
-    // worker-notes/src/index.ts) — unlike notePath, this is meant to be shared
-    // outside the SPA, where a bot needs a URL to fetch rather than a hash to
-    // scroll to.
+    // worker-notes serves this path directly, meant to be shared outside the SPA (a bot needs a URL, not a hash).
     expect(noteUrl('a3f91c2b40d1', 'https://cailinpitt.com')).toBe(
       'https://cailinpitt.com/notes/a3f91c2b40d1',
     )

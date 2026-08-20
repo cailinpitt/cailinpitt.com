@@ -1,8 +1,5 @@
-// One period of listening — a week, a month, a year, or all of it.
-//
-// All four granularities are this one component: the Worker ships the same blob
-// shape for each, so the only thing that changes is the navigator and which
-// sections have data to show.
+// One period of listening — week, month, year, or all time. All four
+// granularities share this component since the Worker ships the same blob shape.
 
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -160,13 +157,8 @@ export function Component() {
 const trendLabel = (kind: PeriodKind) =>
   kind === 'y' ? 'By month' : kind === 'all' ? 'By year' : 'By day'
 
-/**
- * Granularity switch plus prev/next.
- *
- * Switching granularity keeps your place rather than jumping to today — going
- * from a week in March 2023 to "month" lands on March 2023, which is almost
- * always what you meant.
- */
+// Granularity switch plus prev/next. Switching keeps your place rather than
+// jumping to today — a week in March 2023 → "month" lands on March 2023.
 function PeriodNav({ kind, periodKey }: { kind: PeriodKind; periodKey: string }) {
   const navigate = useNavigate()
   const prev = step(kind, periodKey, -1)

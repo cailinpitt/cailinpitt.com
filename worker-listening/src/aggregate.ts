@@ -1,8 +1,6 @@
 // Tier A aggregation: everything derivable from timestamps and text alone.
-//
-// This runs on the cron, never on a request — a year is ~18,700 rows and the
-// free plan allows 10 ms of CPU per fetch invocation. One pass over the rows
-// fills every counter; nothing here re-reads the input.
+// Cron-only, never on a request — a year is ~18,700 rows against a 10ms CPU
+// budget per fetch invocation. One pass over the rows fills every counter.
 
 import type { Scrobble } from './lastfm'
 import { dayKey, hourOf, weekdayOf, type Period } from './periods'
@@ -32,13 +30,7 @@ export interface RankedArtist {
   count: number
   share: number
   image: string | null
-  /**
-   * Rank in the previous period's top list, or null if absent from it.
-   *
-   * Null means "not on last period's chart" — **not** "never heard before". An
-   * artist with years of history that simply ranked below the cut is null here.
-   * Use `isNew` for the other question; the caller fills it from first_uts.
-   */
+  /** Rank in the previous period's chart, or null if absent — not the same as "never heard before"; use `isNew` for that. */
   prevRank: number | null
   /** First ever heard inside this period. Set by the caller. */
   isNew?: boolean
@@ -269,10 +261,8 @@ function daySpan(period: Period, now: number, offset: number): string[] {
   return out
 }
 
-/**
- * Build the trend series. Weeks and months plot days; a year plots months;
- * all-time plots years — so the shape stays readable at every granularity.
- */
+// Weeks/months plot days, a year plots months, all-time plots years — keeps the
+// shape readable at every granularity.
 function buildSeries(
   period: Period,
   byDay: Map<string, number>,
@@ -410,12 +400,10 @@ export function aggregate(input: AggregateInput): PeriodStats {
     runAlbum = null
   }
 
-  // Both lists are ascending, so the overlap is a merge rather than a lookup per
-  // row: `windowAt` only ever moves forward. O(rows + windows).
-  // `seconds` is the bounded window; `elapsedTime` is the raw span a moving
-  // Worker deployed before that distinction existed would send. Preferring the
-  // former keeps a version skew between the two Workers from silently widening
-  // every window back out to hours.
+  // Both lists are ascending, so this is a merge (windowAt only moves forward),
+  // O(rows + windows). Prefer `seconds` (the bounded window) over `elapsedTime`
+  // (the raw span an older moving Worker sends) so version skew between the two
+  // Workers can't silently widen a window back out to hours.
   const windows = (input.windows ?? [])
     .map((w) => ({ ...w, length: w.seconds ?? w.elapsedTime ?? 0 }))
     .filter((w) => w.length > 0)
@@ -475,10 +463,9 @@ export function aggregate(input: AggregateInput): PeriodStats {
         knownCountryPlays++
         countryCounts.set(origin.c, (countryCounts.get(origin.c) ?? 0) + 1)
       }
-      // Groups only. MusicBrainz's life-span.begin is the formation year for a
-      // band but the *birth* year for a person, so mixing them would file solo
-      // artists into an era by when they were born — Charli xcx would land in
-      // the 1990s. Different quantities; don't add them up.
+      // Groups only: MusicBrainz's life-span.begin is formation year for a band
+      // but birth year for a person, so mixing them would file solo artists by
+      // birth decade (Charli xcx would land in the 1990s).
       if (origin.y && origin.k === 'Group') {
         const decade = Math.floor(origin.y / 10) * 10
         decadeCounts.set(decade, (decadeCounts.get(decade) ?? 0) + 1)
@@ -517,9 +504,7 @@ export function aggregate(input: AggregateInput): PeriodStats {
       else movingTracks.set(mk, { track: r.track, artist: r.artist, count: 1 })
     }
 
-    // Scrobble 1 is a milestone like any other — it is simply the first one, and
-    // treating it as such means it folds into all-time with the rest rather than
-    // needing a field of its own.
+    // Scrobble 1 is just the first milestone — no need for a separate field.
     const n = playsBefore + i + 1
     if (n === 1 || n % MILESTONE_STEP === 0) {
       milestones.push({ n, uts: r.uts, track: r.track, artist: r.artist })
@@ -627,10 +612,8 @@ export function aggregate(input: AggregateInput): PeriodStats {
   const perDay = Math.round((scrobbles / elapsedDays) * 10) / 10
   const pct = (a: number, b: number) => (b ? Math.round(((a - b) / b) * 1000) / 10 : null)
 
-  // Genre shares are of *classified* plays, not of all plays. Dividing by the
-  // total would make every share shrink as coverage fell, so an unenriched
-  // archive would read as "20% hardcore, 80% nothing" instead of "hardcore leads,
-  // based on the 40% we can classify". `genreCoverage` reports the caveat.
+  // Shares are of *classified* plays, not all plays — dividing by total would
+  // shrink every share as coverage fell. `genreCoverage` reports the caveat.
   const genres = [...genreCounts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, GENRE_N)
@@ -683,9 +666,8 @@ export function aggregate(input: AggregateInput): PeriodStats {
 
   const kindPlays = groupPlays + soloPlays
 
-  // Extrapolate over unknown durations rather than under-reporting: with 80%
-  // coverage, scaling by 1/0.8 is a far better estimate of hours listened than
-  // silently dropping a fifth of the plays. `coverage` says how much is measured.
+  // Extrapolate over unknown durations rather than under-report: at 80%
+  // coverage, scaling by 1/0.8 beats silently dropping a fifth of the plays.
   const durationCoverage = scrobbles ? knownDurationPlays / scrobbles : 0
   const estimatedSeconds = durationCoverage > 0 ? Math.round(knownSeconds / durationCoverage) : 0
   const topByTime = [...secondsByArtist.entries()]
@@ -747,9 +729,8 @@ export function aggregate(input: AggregateInput): PeriodStats {
     curios: { ...curios, longestTitle },
 
     genres,
-    // Genres present now but absent from the previous period. Not "first ever" —
-    // that needs an archive-wide first-play per genre, which belongs with the
-    // discovery rollups rather than here.
+    // New vs. the previous period, not "first ever" — that needs an archive-wide
+    // first-play per genre, which belongs with the discovery rollups.
     newGenres: previous
       ? genres.map((g) => g.name).filter((name) => !previous.genres?.some((p) => p.name === name))
       : [],

@@ -31,15 +31,10 @@ import {
 const POLL_MS = 60_000
 
 /**
- * Now-playing on its own clock.
- *
- * The bundle is edge-cached for 60s and is ~116 KB of aggregates that change
- * every 15 minutes at best; now-playing changes every few minutes and is 521
- * bytes. Polling /now.json separately keeps this card as fresh as the homepage
- * bar — and because both read the same endpoint, the two cannot disagree.
- *
- * Falls back to the bundle's copy until the first response lands, so the card
- * never flashes empty, and keeps the last good value if a poll fails.
+ * Now-playing polls /now.json (521 bytes) on its own clock, separate from the
+ * 116 KB bundle (60s edge cache, changes every ~15min) — keeps this card as
+ * fresh as the homepage bar, and both reading the same endpoint means they
+ * can't disagree. Falls back to the bundle's copy until the first poll lands.
  */
 function useNowPlaying(fallback: NowState | null): NowState | null {
   const [now, setNow] = useState<NowState | null>(null)
@@ -153,12 +148,10 @@ export function Component() {
   )
 }
 
-// ---- on this day ---------------------------------------------------------
-
 /**
- * The same calendar day in previous years. Fetched separately from the bundle:
- * it changes once a day, so it rides a 1-hour edge cache rather than the
- * bundle's 60s, and a failure here must not take the rest of the page with it.
+ * The same calendar day in previous years. Fetched separately from the bundle
+ * since it only changes once a day (1-hour edge cache vs. the bundle's 60s),
+ * and a failure here shouldn't take the rest of the page with it.
  */
 function OnThisDaySection() {
   const [data, setData] = useState<OnThisDay | null>(null)
@@ -196,12 +189,9 @@ function OnThisDaySection() {
 }
 
 /**
- * One past year. The API sends the day's *last* few plays, not all of them, so
- * the subset is labelled explicitly — showing 5 rows under a "91 scrobbles"
- * heading otherwise reads as though 5 were all there was.
- *
- * Expanding reuses /days: passing the newest track's uts + 1 as the cursor
- * returns that whole day, so this needs no new endpoint.
+ * One past year. API sends only the day's last few plays, so the subset is
+ * labelled explicitly. Expanding reuses /days (newest track's uts + 1 as
+ * cursor returns the whole day) — no new endpoint needed.
  */
 function OnThisDayYearBlock({ year: y }: { year: OnThisDayYear }) {
   const [full, setFull] = useState<Scrobble[] | null>(null)
@@ -280,15 +270,11 @@ function OnThisDayYearBlock({ year: y }: { year: OnThisDayYear }) {
   )
 }
 
-// ---- year links ----------------------------------------------------------
-
 /**
- * The year so far.
- *
- * Reads the projection the bundle already carries rather than fetching the year
- * blob: that blob is 21 KB to show five numbers, and a separate request would
- * spend a Worker invocation on every page view. Renders nothing when the field
- * is absent — an older Worker, or a year the cron hasn't built.
+ * The year so far. Reads the projection the bundle already carries rather
+ * than fetching the 21 KB year blob just to show five numbers — that'd cost a
+ * Worker invocation per page view. Renders nothing when the field is absent
+ * (older Worker, or a year the cron hasn't built).
  */
 function ThisYear({ year }: { year: Bundle['year'] }) {
   if (!year || year.scrobbles === 0) return null
@@ -333,10 +319,7 @@ function ThisYear({ year }: { year: Bundle['year'] }) {
   )
 }
 
-/**
- * Entry points into the period views. The current week and month lead, because
- * they're the two that change; the years and all-time are the archive behind them.
- */
+/** Entry points into the period views: current week/month lead since they're the two that change; years and all-time are the archive behind them. */
 function YearLinks() {
   const now = new Date()
   return (
@@ -364,8 +347,6 @@ function YearLinks() {
     </section>
   )
 }
-
-// ---- now playing ---------------------------------------------------------
 
 function NowPlayingCard({
   nowPlaying,
@@ -404,8 +385,6 @@ function NowPlayingCard({
     </section>
   )
 }
-
-// ---- windowed stats (7d / 30d) -------------------------------------------
 
 function WindowStats({
   windows,
@@ -455,12 +434,6 @@ function WindowStats({
   )
 }
 
-
-
-
-
-// ---- heatmap -------------------------------------------------------------
-
 interface HeatCell {
   key: string
   count: number
@@ -505,11 +478,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 // Rows run Sunday→Saturday (buildWeeks backs the start up to a Sunday).
 const DAY_NAMES = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 
-/**
- * Which week column each month label sits above. A column is a month's first
- * *full* week when its Sunday falls on the 1st–7th, so labels line up with where
- * the month visibly begins and the partial leading month stays unlabeled.
- */
+/** Which week column each month label sits above — a month's first full week (Sunday falls on the 1st-7th), so a partial leading month stays unlabeled. */
 function monthLabels(weeks: (HeatCell | null)[][]): { index: number; label: string }[] {
   const out: { index: number; label: string }[] = []
   let lastMonth = ''
@@ -586,8 +555,6 @@ function HeatmapSection({ heatmap }: { heatmap: Heatmap }) {
     </section>
   )
 }
-
-// ---- daily log -----------------------------------------------------------
 
 function DailyLog({
   initialDays,
@@ -673,9 +640,6 @@ function mergeDays(existing: DayLog[], older: DayLog[]): DayLog[] {
   }
   return [...merged, ...older]
 }
-
-// ---- shared bits ---------------------------------------------------------
-
 
 function ListeningSkeleton() {
   return (

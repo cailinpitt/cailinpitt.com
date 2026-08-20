@@ -23,27 +23,9 @@ const RESOLVED_ID = '\0virtual:site-index'
 const HISTORY_ID = 'virtual:post-history'
 const RESOLVED_HISTORY_ID = '\0virtual:post-history'
 
-/**
- * A tiny post index for the command palette (⌘K), as a virtual module.
- *
- * The palette needs the title, path, date, and tags of every post *on every
- * page*, which no route loader provides — those are per-route by design. The two
- * obvious alternatives are both worse: an eager `import.meta.glob` of the
- * Markdown would ship every post's body to the browser, and a generated JSON
- * file would cost a request before the palette could open.
- *
- * So the frontmatter is read at build time and inlined as a module — roughly a
- * hundred bytes per post, no bodies, no fetch. It uses the same parser the site
- * does, so it can't disagree with the rendered pages about what a post is called.
- *
- * It also carries two things about the photo feed:
- *
- *   photoIds    every photo's permalink slug, which App.tsx hands to the
- *               prerenderer as the static paths for /photos/:id. Emitted **only
- *               into the SSR build** — the browser has no use for five hundred
- *               ids, and shipping them would cost more than the palette saves.
- *   photoYears  the years the feed covers, which the palette does need.
- */
+// Build-time post index for the command palette (⌘K) — frontmatter only, no bodies, no fetch.
+// photoIds (photo permalink slugs, for App.tsx's /photos/:id prerender paths) is SSR-only;
+// the browser build has no use for 500 ids.
 function siteIndex(): Plugin {
   const dir = path.join(process.cwd(), 'content', 'blog')
   const manifest = path.join(process.cwd(), 'src', 'lib', 'photos.json')
@@ -97,27 +79,10 @@ function siteIndex(): Plugin {
   }
 }
 
-/**
- * The git history of everything written in Markdown, as a virtual module — the
- * data behind the provenance line at the foot of a post, and at the foot of the
- * colophon (src/components/PostHistory.tsx).
- *
- * One `git log` for the whole of content/, not one per file: 34 subprocesses to
- * say what a single pass already knows would be the slowest thing in the build.
- * Renames aren't followed (`--follow` takes exactly one pathspec), which costs
- * nothing here — a post's file name is its URL, so renaming one is a redirect
- * problem nobody has taken on.
- *
- * Keyed by route rather than by file name, because `path:` is the site's unique
- * key for a post and a frontmatter `slug:` may disagree with the file. A
- * Markdown file sitting directly in content/ is a page whose route is its name,
- * which is the same rule scripts/generate-markdown.mjs publishes sources by.
- *
- * **A shallow clone reports almost no history**, and would quietly show every
- * post as brand new. .github/workflows/deploy.yml checks out with
- * `fetch-depth: 0` for this reason. Outside a git repo entirely — a tarball, a
- * fresh unzip — the map comes back empty and the line simply doesn't render.
- */
+// Per-post git history (src/components/PostHistory.tsx). One `git log` for all of content/
+// rather than per-file, and keyed by route (frontmatter `path:`) since a `slug:` may disagree
+// with the file name. Needs a full clone — .github/workflows/deploy.yml uses `fetch-depth: 0`,
+// otherwise every post would look brand new.
 function postHistory(): Plugin {
   const dir = path.join(process.cwd(), 'content', 'blog')
   const content = path.join(process.cwd(), 'content')
@@ -132,18 +97,14 @@ function postHistory(): Plugin {
       const remote = await run('git', ['remote', 'get-url', 'origin'])
       repo = repoWebUrl(remote.stdout)
     } catch {
-      // No git, no remote, or not a repo. The feature is additive: without
-      // history the page renders exactly as it did before it existed.
+      // No git, no remote, or not a repo — feature is additive, page just renders without history.
       return { repo: null, history: {} }
     }
 
-    // One `git show` per commit, not per commit *per post*: the reformat that
-    // touched 31 posts is one patch containing all 31, and asking git 31 times
-    // for slices of it would be the slowest thing in the build.
+    // One `git show` per commit, not per commit per post, since one commit can touch many posts.
     const shas = new Set<string>()
     for (const entry of Object.values(byFile)) {
-      // Commits are newest-first, so dropping the last one drops the commit
-      // that created the file — whose "diff" is the whole post.
+      // Commits are newest-first; drop the last one, whose "diff" is the whole file being created.
       for (const commit of entry.commits.slice(0, -1)) shas.add(commit.sha)
     }
     for (const sha of shas) {
@@ -156,8 +117,7 @@ function postHistory(): Plugin {
           if (fileDiff.truncated) commit.truncated = true
         }
       } catch {
-        // A patch git won't produce (a binary blob, a broken object) costs the
-        // page its diff, not its history.
+        // A patch git won't produce costs the page its diff, not its history.
       }
     }
 
@@ -197,14 +157,8 @@ function postHistory(): Plugin {
   }
 }
 
-/**
- * Serve `/blog/<path>.md` and `/<page>.md` in dev, the way the built site does.
- *
- * In production those files are real: scripts/generate-markdown.mjs copies each
- * source next to its prerendered HTML. Without this the ".md file" link on a
- * post or the colophon would be the one thing on the page that only works in
- * production, which is how it ends up broken.
- */
+// In production scripts/generate-markdown.mjs copies sources next to their prerendered HTML;
+// this serves the same `.md` URLs in dev so the ".md file" link doesn't only work in prod.
 function markdownSource(): Plugin {
   const content = path.join(process.cwd(), 'content')
   const blog = path.join(content, 'blog')
@@ -220,13 +174,10 @@ function markdownSource(): Plugin {
           return res.end(raw)
         }
 
-        // A page: content/colophon.md answers at /colophon.md. Same rule the
-        // build applies, and the reason it's a single path segment is that the
-        // route for such a page is its filename.
+        // A page: content/colophon.md answers at /colophon.md, same rule the build applies.
         if (!url.startsWith('/blog/')) {
           const name = url.slice(1)
-          // A bare filename and nothing else — no separators, no traversal, so
-          // this can't be talked into reading outside content/.
+          // Bare filename only, no separators — can't be used to traverse outside content/.
           if (/^[a-z0-9-]+\.md$/i.test(name)) {
             const raw = await readFile(path.join(content, name), 'utf8').catch(() => null)
             if (raw !== null) return send(raw)

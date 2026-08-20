@@ -1,34 +1,18 @@
-// Client for the notes API (the Cloudflare Worker in /worker-notes) — the
-// microblog behind /notes.
-//
-// Like /listening, /reading, and /guestbook, the page is prerendered as a static
-// shell and fetches this in the browser. Unlike those, this module also carries
-// the *write* path: publishing, editing, and deleting, all bearer-token gated
-// and driven from /notes/compose.
-//
-// These interfaces mirror the Worker's by hand — the two aren't a shared
-// package, so a change on one side has to be made on the other.
+// Client for the notes API (Cloudflare Worker in /worker-notes) — the microblog behind
+// /notes. Also carries the write path (publish/edit/delete), bearer-token gated and driven
+// from /notes/compose. Interfaces mirror the Worker's by hand — not a shared package.
 
 const API_BASE = import.meta.env.VITE_NOTES_API ?? 'https://notes.cailinpitt.com'
 
-/**
- * The apex site's own origin — where the permalink route lives
- * (cailinpitt.com/notes/<id>, not notes.cailinpitt.com/...; see the header of
- * worker-notes/src/index.ts). Same pattern as SITE_URL in Seo.tsx/structuredData.ts.
- */
+// The apex origin, where the permalink route lives (cailinpitt.com/notes/<id>, not
+// notes.cailinpitt.com/...). Same pattern as SITE_URL in Seo.tsx/structuredData.ts.
 const SITE_URL = 'https://cailinpitt.com'
 
 /** The feed's own RSS, served by the Worker rather than written at build time. */
 export const NOTES_FEED_URL = `${API_BASE}/feed.xml`
 
-/**
- * Mirrors MAX_LENGTH in worker-notes/src/validate.ts. Used for the compose
- * box's counter and its client-side guard.
- *
- * Duplicated rather than fetched because the counter has to be right on the
- * first keystroke, before any request could have landed. `tests/notes.test.ts`
- * pins this against the Worker's copy so the two cannot drift.
- */
+// Mirrors MAX_LENGTH in worker-notes/src/validate.ts. Duplicated (not fetched) because the
+// counter must be right on the first keystroke; tests/notes.test.ts pins the two together.
 export const MAX_LENGTH = 480
 
 /** What a note can reference: another content type's own id space. */
@@ -90,8 +74,6 @@ export class NoteError extends Error {
   }
 }
 
-// ---- reads ---------------------------------------------------------------
-
 export async function fetchNotes(signal?: AbortSignal): Promise<NotePage> {
   const res = await fetch(`${API_BASE}/notes.json`, { signal })
   if (!res.ok) throw new Error(`Notes API ${res.status}`)
@@ -144,22 +126,11 @@ export async function fetchNotesByTag(
   return res.json() as Promise<NotePage>
 }
 
-/**
- * One note, resolved directly by id — a call to the permalink route
- * (`?format=json` is how it asks for JSON rather than the HTML or redirect a
- * browser or a bot would get; see worker-notes/src/index.ts). `null` means
- * the id doesn't exist (or was deleted), not a network failure — a failure
- * still throws.
- *
- * Always the real cailinpitt.com origin, never a relative path: the
- * permalink route only exists on the apex zone, which is only the *page's*
- * own origin when the page is actually being served from cailinpitt.com. In
- * dev (localhost:5173) or on a preview deploy, a relative fetch would resolve
- * against the wrong origin and 404 there instead. The Worker's CORS already
- * allows any localhost/127.0.0.1 origin (see corsHeaders() in
- * worker-notes/src/index.ts), so this works cross-origin in dev without
- * needing a local Worker running.
- */
+// One note by id, via the permalink route (`?format=json` asks for JSON instead of the
+// HTML/redirect a browser or bot gets). `null` means the id doesn't exist; a real failure
+// still throws. Always SITE_URL, never a relative path — the permalink route only exists on
+// the apex zone, and dev/preview origins would 404 there. Worker CORS allows localhost, so
+// this works cross-origin in dev without a local Worker.
 export async function fetchNote(id: string, signal?: AbortSignal): Promise<Note | null> {
   const res = await fetch(`${SITE_URL}/notes/${id}?format=json`, { signal })
   if (res.status === 404) return null
@@ -167,8 +138,6 @@ export async function fetchNote(id: string, signal?: AbortSignal): Promise<Note 
   const { note } = (await res.json()) as { note: Note }
   return note
 }
-
-// ---- writes --------------------------------------------------------------
 
 async function write(
   path: string,
@@ -246,12 +215,8 @@ export interface LinkPreview {
   image: string | null
 }
 
-/**
- * A live, on-demand scrape of `url` — what /notes/compose calls (debounced)
- * as soon as a link is detected, so a card shows up while composing rather
- * than only after publishing. `null` on any failure: this is preview UX, not
- * something worth surfacing as an error while someone is mid-thought.
- */
+// On-demand scrape of `url`, called (debounced) by /notes/compose as soon as a link is
+// detected. `null` on any failure — preview UX, not worth surfacing as an error mid-thought.
 export async function fetchLinkPreview(
   url: string,
   token: string,
@@ -269,22 +234,11 @@ export async function fetchLinkPreview(
   }
 }
 
-// ---- the publish token ---------------------------------------------------
-
 const TOKEN_KEY = 'notes-publish-token'
 
-/**
- * The publish token, kept in localStorage so it is pasted once per device
- * rather than once per note.
- *
- * This is a real trade and worth being clear about: a token in localStorage is
- * readable by any script running on cailinpitt.com. The site ships no
- * third-party JavaScript and has no user-generated HTML, so the realistic threat
- * is a stolen or borrowed laptop rather than an injection — and against that,
- * `forgetToken()` below and rotating the Worker secret are the answers. The
- * alternative, typing 64 hex characters on a phone every time, would mean the
- * compose page never got used.
- */
+// Kept in localStorage so it's pasted once per device, not once per note. Readable by any
+// script on cailinpitt.com, but the site ships no third-party JS or user HTML, so the
+// realistic threat is a stolen laptop, not injection — forgetToken()/secret rotation cover that.
 export function loadToken(): string {
   if (typeof localStorage === 'undefined') return ''
   return localStorage.getItem(TOKEN_KEY) ?? ''
@@ -300,8 +254,6 @@ export function forgetToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-// ---- presentation --------------------------------------------------------
-
 /** Code-point length — `'👋'.length` is 2, this counts it as 1. Matches the Worker. */
 export const glyphs = (s: string): number => [...s].length
 
@@ -313,34 +265,17 @@ export type Segment =
   | { kind: 'link'; value: string; href: string }
   | { kind: 'hashtag'; value: string; tag: string }
 
-/**
- * Bare URLs in a note. Deliberately narrow: an explicit http(s) scheme, or a
- * `www.` host. Notes are plain text, so anything cleverer (a scheme-less
- * `example.com/thing`) would start turning ordinary sentences that happen to
- * contain a period into links.
- *
- * Parentheses are *inside* the match rather than excluded from it, because they
- * are inside plenty of real URLs — `…/wiki/Tag_(2018_film)` is the canonical
- * example, and excluding them silently truncates the link to a 404. Sorting out
- * which trailing bracket belongs to the URL and which to the sentence around it
- * is `trimTrailing` below, not the pattern.
- */
+// Bare URLs: an explicit http(s) scheme, or a `www.` host — nothing scheme-less, or ordinary
+// sentences with periods would start matching. Parens stay inside the match (real URLs like
+// `…/wiki/Tag_(2018_film)` need them); trimTrailing below sorts out which bracket is whose.
 const URL_RE = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+)/gi
 
 /** Punctuation that ends a sentence rather than a URL. */
 const TRAILING = /[.,;:!?'"]+$/
 
-/**
- * Give back the characters at the end of a match that belong to the prose rather
- * than to the URL: sentence punctuation, and any closing bracket with no opener
- * inside the URL itself.
- *
- * Counting rather than just checking for a `(` is what separates
- * `(https://example.com)` — where the paren is the sentence's — from
- * `https://en.wikipedia.org/wiki/Tag_(2018_film)`, where it is the URL's. The
- * loop runs to a fixed point because the two rules feed each other: `…com).`
- * needs the stop trimmed before the bracket is on the end to be judged.
- */
+// Strips trailing chars that belong to the prose, not the URL: sentence punctuation, and any
+// closing bracket with no opener inside the URL. Runs to a fixed point since `…com).` needs
+// the stop trimmed before the bracket can be judged.
 function trimTrailing(url: string): string {
   let current = url
   for (;;) {
@@ -354,12 +289,8 @@ function trimTrailing(url: string): string {
   }
 }
 
-/**
- * `#word` tokens. Must start right after a non-word/non-`#` boundary, so a
- * URL's own fragment (`…#section`) and a stray `##` don't turn into tags —
- * the overlap check in segments() below is belt-and-suspenders for the same
- * thing, since a URL match can itself contain a `#`.
- */
+// `#word` tokens, must follow a non-word/non-`#` boundary so a URL fragment (`…#section`) or
+// stray `##` don't match — the overlap check in segments() below backstops the same thing.
 const HASHTAG_RE = /(?<![\w#])#(\w[\w-]{0,49})/g
 
 interface Span {
@@ -368,18 +299,8 @@ interface Span {
   segment: Segment
 }
 
-/**
- * A note split into plain text, links, and hashtags, ready to render as React
- * elements.
- *
- * This is why notes can be plain text rather than Markdown: the only formatting
- * a 480-character thought actually needs is a clickable link (or tag), and doing
- * that as a data structure the page maps over means there is no HTML string
- * anywhere in the pipeline — no `dangerouslySetInnerHTML`, nothing to sanitize,
- * and no way for a note to contribute markup to the page.
- *
- * Pure and covered by tests/notes.test.ts.
- */
+// A note split into plain text, links, and hashtags, ready to render as React elements — no
+// HTML string in the pipeline, so no dangerouslySetInnerHTML or sanitizing. Pure, tested in tests/notes.test.ts.
 export function segments(text: string): Segment[] {
   const spans: Span[] = []
 
@@ -416,33 +337,17 @@ export function segments(text: string): Segment[] {
   return out
 }
 
-/**
- * A note's paragraphs, split on blank lines. The Worker has already collapsed
- * runs of three or more newlines to two, so this can't produce empty paragraphs
- * from stored text.
- */
+// Split on blank lines; the Worker already collapses 3+ newlines to two, so no empty paragraphs.
 export const paragraphs = (text: string): string[] =>
   text.split(/\n{2,}/).filter((para) => para.trim().length > 0)
 
-/**
- * Where a note lives inside the SPA: an anchor on the feed rather than a
- * route, so following one is an instant client-side jump rather than a round
- * trip through the Worker. Not the address to *share* — see noteUrl below.
- */
+// An anchor on the feed, not a route, so following one is an instant client-side jump.
+// Not the address to *share* — see noteUrl below.
 export const notePath = (id: string): string => `/notes#${id}`
 
-/**
- * The real, externally-shareable permalink — served by worker-notes at the
- * edge (see the header of worker-notes/src/index.ts) rather than baked in at
- * build time, so a note is addressable the moment it's published. This is
- * what unfurls properly when shared: a bot gets a page with the note's own
- * meta tags, a browser is bounced to notePath(id) above.
- *
- * `origin` defaults to the page's own, same as the inline
- * `window.location.origin` this replaces in ShareButton — parameterized so
- * this stays callable (and testable) outside a browser, the same guard
- * loadToken/saveToken use for localStorage.
- */
+// The real, externally-shareable permalink, served by worker-notes at the edge rather than
+// baked in at build time, so a note is addressable the moment it's published — a bot gets
+// meta tags, a browser is bounced to notePath(id). `origin` is parameterized so this stays testable outside a browser.
 export function noteUrl(id: string, origin?: string): string {
   const base = origin ?? (typeof window === 'undefined' ? '' : window.location.origin)
   return `${base}/notes/${id}`

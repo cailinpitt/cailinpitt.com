@@ -1,9 +1,7 @@
-// D1 access. Every query the notes Worker runs lives here.
-//
-// One indexed query per read, behind the edge cache — no precomputed blobs and
-// no KV, for the same reason the guestbook has none: this is a few hundred short
-// rows and a `SELECT … ORDER BY created_at DESC LIMIT 25` over an index is
-// cheaper than anything that would have to be kept in step with it.
+// D1 access. Every query the notes Worker runs lives here. One indexed query
+// per read behind the edge cache, no precomputed blobs or KV — same reason as
+// the guestbook: a few hundred rows, so an indexed SELECT is cheaper than
+// anything that would need to be kept in step with it.
 
 // ContextType/NoteContext live in validate.ts, not here — see the comment
 // there on why the import runs in this direction.
@@ -46,15 +44,9 @@ export const PAGE_SIZE = 25
 /** Ceiling on `?limit=`. */
 export const MAX_PAGE_SIZE = 100
 
-/**
- * A short, opaque id — 6 random bytes as hex.
- *
- * Short because it is a permalink a person might read out or paste into a
- * message (`/notes#a3f91c2b40d1`), and random rather than sequential because an
- * incrementing id would publish how many notes have ever been written, including
- * the ones deleted for being typos. 48 bits is far past collision range for a
- * feed one person writes by hand.
- */
+// Short since it's a permalink someone might paste (/notes#a3f91c2b40d1);
+// random rather than sequential so an id can't reveal how many notes have ever
+// existed, deleted typos included. 48 bits is far past collision range here.
 export function newId(): string {
   return [...crypto.getRandomValues(new Uint8Array(6))]
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -93,16 +85,9 @@ const toNote = (row: Row): Note => ({
 const COLUMNS =
   'id, text, created_at, edited_at, context_type, context_ref, link_url, link_hidden, link_title, link_description, link_image_ready'
 
-/**
- * The pagination cursor: `<created_at>_<id>`.
- *
- * Not a bare timestamp, which is what the guestbook uses. Two guestbook
- * signatures in the same second means two different people happened to click at
- * once and is vanishingly rare; two *notes* in the same second is one Shortcut
- * firing twice on a flaky connection, which is a thing that actually happens. A
- * bare-timestamp cursor would then either skip the second note or loop on it
- * forever, so the id breaks the tie and the sort carries it.
- */
+// Not a bare timestamp like the guestbook uses: two notes in the same second
+// (a Shortcut firing twice on a flaky connection) is a real occurrence, and a
+// bare-timestamp cursor would skip or loop on the second one. The id breaks the tie.
 const encodeCursor = (note: Note): string => `${note.createdAt}_${note.id}`
 
 const decodeCursor = (raw: string | null | undefined): { uts: number; id: string } | null => {
@@ -145,18 +130,10 @@ export async function listNotes(
   }
 }
 
-/**
- * A LIKE prefilter cuts the row count down cheaply before the real check —
- * hashtagsIn() (hashtags.ts), the same rule the client's segments() uses to
- * decide what actually renders as a clickable tag. Without the second pass,
- * searching "tag" would also return a note whose only hashtag is "tagging":
- * SQL LIKE has no word-boundary concept, so `%#tag%` matches both.
- *
- * Bounded at MAX_TAG_SCAN rather than the whole table: this site is "a few
- * hundred short rows" per the header comment above, so a scan this wide is
- * still cheap, and a hashtag from years back doesn't quietly stop being
- * reachable as the table grows past what a single page could hold anyway.
- */
+// LIKE prefilters cheaply before the real check, hashtagsIn() (hashtags.ts) —
+// without it, searching "tag" would also match a note whose only hashtag is
+// "tagging" since SQL LIKE has no word-boundary concept. Bounded at
+// MAX_TAG_SCAN rather than the whole table; still cheap at this table's size.
 const MAX_TAG_SCAN = 2000
 
 export async function listNotesByTag(
@@ -202,18 +179,10 @@ export interface HashtagSummary {
   count: number
 }
 
-/**
- * Every hashtag ever used, most-used first and then alphabetical — the list
- * behind "browse by tag" on /notes. A full-table scan of just the `text`
- * column, not the LIKE-prefiltered approach listNotesByTag uses: there's no
- * single tag to filter toward here, and this site is "a few hundred short
- * rows" (see the header comment above), so reading every row's text once is
- * still cheap. Cached at the edge and purged on every write, same as
- * /notes.json, rather than kept as a running count column — one query stays
- * correct by construction; a counter would need to be decremented on every
- * delete and edit that removes a tag, which is exactly the kind of thing
- * that quietly drifts.
- */
+// Full scan of just `text`, not the LIKE-prefiltered approach listNotesByTag
+// uses — no single tag to filter toward. Cached and purged like /notes.json
+// rather than kept as a running counter, which would need decrementing on
+// every delete/edit and would quietly drift.
 export async function listAllHashtags(db: D1Database): Promise<HashtagSummary[]> {
   const { results } = await db.prepare('SELECT text FROM notes').all<{ text: string }>()
   const counts = new Map<string, number>()
@@ -275,13 +244,9 @@ export async function insertNote(
   return note
 }
 
-/**
- * Rewrite a note's text, stamping `edited_at`.
- *
- * The stamp is not optional and not suppressible: the site shows an "edited"
- * marker from it, because silently changing what a published thing says is the
- * one thing a permalink shouldn't do. Returns null when there is no such note.
- */
+// Stamp is not optional or suppressible — the site shows an "edited" marker
+// from it, since silently changing a published note's text is the one thing a
+// permalink shouldn't do.
 export async function updateNote(
   db: D1Database,
   id: string,
@@ -290,11 +255,9 @@ export async function updateNote(
   link: LinkFields | null = null,
 ): Promise<Note | null> {
   const editedAt = Math.floor(Date.now() / 1000)
-  // link_title/link_description/link_image_ready are reset here rather than
-  // preserved, even when link_url is unchanged: an edit re-dispatches the
-  // link-card job unconditionally (same as the per-note OG card does for
-  // every edit), and a stale title left in place until that job finishes
-  // would show text that no longer matches what was just typed.
+  // Reset even when link_url is unchanged: an edit re-dispatches the link-card
+  // job unconditionally, and a stale title left until it finishes would show
+  // text that no longer matches what was just typed.
   const { meta } = await db
     .prepare(
       `UPDATE notes SET
@@ -316,12 +279,8 @@ export async function updateNote(
   return getNote(db, id)
 }
 
-/**
- * Fill in a link card's fetched title/description/image once buildLinkCard()
- * in index.ts finishes scraping it. Doesn't touch `edited_at` — this isn't
- * an edit to what the note says, only to the card attached alongside it.
- * Returns null when there is no such note.
- */
+// Doesn't touch `edited_at` — this isn't an edit to what the note says, only
+// to the card attached alongside it.
 export async function setLinkCard(
   db: D1Database,
   id: string,

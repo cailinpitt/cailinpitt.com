@@ -1,9 +1,6 @@
-// D1 reads for the /watching API.
-//
-// Same shape as worker-reading's store: no precomputed KV blobs, because at a
-// few hundred films every query below is a small indexed seek. Building the
-// bundle straight from D1 behind the edge cache is simpler than a staleness
-// ladder and comfortably inside the free tier.
+// D1 reads for the /watching API. Same shape as worker-reading's store: no
+// precomputed KV blobs, since at a few hundred films every query is a small
+// indexed seek — straight from D1 behind the edge cache is comfortably free-tier.
 
 /** Films per page, and the ceiling on what a caller may ask for. */
 export const FILM_PAGE = 24
@@ -67,12 +64,8 @@ const toFilm = (r: FilmRow): Film => ({
   poster: r.poster,
 })
 
-// ---- pagination ----------------------------------------------------------
-//
-// The cursor is composite — `<watched_date>:<id>` — for the same reason
-// worker-reading's are: the leading column is not unique. Letterboxd logs a
-// date, not a timestamp, so several films routinely share one, and a bare date
-// cursor would silently drop all but one of them at each page boundary.
+// Composite cursor (`<watched_date>:<id>`): several films can share a logged
+// date, so a bare date cursor would drop all but one at a page boundary.
 
 const encodeCursor = (f: Film): string => `${f.watchedDate}:${f.id}`
 
@@ -116,20 +109,13 @@ export async function fetchFilms(
   }
 }
 
-// ---- the homepage strip / terminal ---------------------------------------
-
 export interface WatchingNow {
   lastFilm: Film | null
   updatedAt: number
 }
 
-/**
- * One row.
- *
- * Deliberately not the full bundle, matching /reading's /now.json: whatever
- * ends up calling this (the terminal's `watching`, a homepage strip later) has
- * no business reading 24 rows to render one line.
- */
+// One row, not the full bundle (matching /reading's /now.json) — no business
+// reading 24 rows to render one line.
 export async function buildNow(db: D1Database): Promise<WatchingNow> {
   const film = await db
     .prepare(`SELECT ${FILM_COLS} FROM films ORDER BY watched_date DESC, id DESC LIMIT 1`)
@@ -140,8 +126,6 @@ export async function buildNow(db: D1Database): Promise<WatchingNow> {
     updatedAt: Math.floor(Date.now() / 1000),
   }
 }
-
-// ---- the bundle ----------------------------------------------------------
 
 interface YearTotals {
   films: number

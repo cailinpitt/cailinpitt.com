@@ -48,9 +48,7 @@ describe('period fetching', () => {
   })
 
   it('falls back to the API when an SPA fallback answers 200 with HTML', async () => {
-    // The regression this guards: a dev server answers /listening-data/... with
-    // index.html and a 200, so `res.ok` is true and the old code handed HTML to
-    // res.json(), surfacing as "could not load" instead of falling through.
+    // Regression guard: a dev server answers with index.html and 200, so `res.ok` is true and old code fed HTML to res.json().
     const calls = stubFetch((url) =>
       url.startsWith('/listening-data/') ? spaFallback() : json({ key: '2024-W10', scrobbles: 7 }),
     )

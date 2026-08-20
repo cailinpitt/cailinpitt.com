@@ -2,14 +2,9 @@
 // so declare them here. TypeScript merges this into the generated Env interface.
 interface Env {
   /**
-   * Turnstile *secret* key — the server half of the widget whose site key is in
-   * wrangler.jsonc. Used once per submission against
-   * challenges.cloudflare.com/turnstile/v0/siteverify.
-   *
-   * Cloudflare's always-passes test secret is `1x0000000000000000000000000000000AA`,
-   * which is what worker-guestbook/.dev.vars carries so local dev works before
-   * you've made a real widget. Set the real one with:
-   *   wrangler secret put TURNSTILE_SECRET
+   * Turnstile secret key — server half of the widget whose site key is in
+   * wrangler.jsonc. `.dev.vars` carries Cloudflare's always-passes test secret
+   * for local dev. Set the real one with: wrangler secret put TURNSTILE_SECRET
    */
   TURNSTILE_SECRET: string
   /**

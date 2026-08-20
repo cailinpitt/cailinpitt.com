@@ -1,14 +1,9 @@
-// Input validation for POST /entries.
+// Input validation for POST /entries. Bound the length, strip characters that
+// only show up in spam or break the layout, and refuse non-http(s) websites.
 //
-// Everything a stranger can type passes through here before it reaches D1. The
-// rules are deliberately boring: bound the length, strip the characters that
-// only ever show up in spam or break the layout, and refuse a website that
-// isn't an ordinary http(s) address.
-//
-// Not handled here, because it doesn't need to be: escaping. The page renders
-// entries as React text nodes and the curl view writes them as plain text, so
-// there is no context in which a stored `<script>` is anything but eleven
-// visible characters. Sanitizing on input would only mangle honest messages.
+// Deliberately no escaping here: entries render as React text nodes or plain
+// text, so a stored `<script>` is just eleven visible characters. Sanitizing
+// on input would only mangle honest messages.
 
 /** Caps, in Unicode code points (so an emoji counts as one, not two). */
 export const LIMITS = {
@@ -38,21 +33,13 @@ const fail = (field: keyof CleanEntry, error: string): Validation => ({ ok: fals
 /** Code-point length. `'👋'.length` is 2; this counts it as 1. */
 const glyphs = (s: string) => [...s].length
 
-/**
- * Control (Cc) and format (Cf) characters. Cc is the C0/C1 control range; Cf
- * covers the zero-width and bidi-override characters, which are the standard
- * way to hide a word from a filter or to make text render in an order it isn't
- * stored in. Neither category has any business in a guestbook entry.
- *
- * Newline survives — it is Cc, so the replacer has to spare it explicitly.
- */
+// Cc (C0/C1 controls) and Cf (zero-width/bidi-override chars — the standard
+// way to hide text from a filter or reorder it). Newline is Cc, so the
+// replacer spares it explicitly.
 const INVISIBLE = /\p{Cc}|\p{Cf}/gu
 
-/**
- * Normalize one user string: NFC (so visually identical names compare equal),
- * newlines to `\n`, invisibles gone, and no more than one blank line in a row —
- * otherwise a single entry could push the rest of the guestbook off the screen.
- */
+// Normalize: NFC (visually identical names compare equal), newlines to `\n`,
+// invisibles gone, and no more than one blank line in a row.
 function clean(raw: unknown): string {
   if (typeof raw !== 'string') return ''
   return raw
@@ -71,15 +58,9 @@ function countLinks(message: string): number {
   return matches?.length ?? 0
 }
 
-/**
- * A website field, normalized to a URL we're willing to render as a link.
- *
- * Bare `example.com` is upgraded to `https://example.com` — people type it that
- * way and rejecting it would be pedantic. Everything else is refused: a scheme
- * other than http(s) (`javascript:`, `data:`), a host with no dot, and
- * credentials in the URL (`https://paypal.com@evil.example`, which renders
- * misleadingly).
- */
+// Normalizes to a URL we're willing to render as a link. Bare `example.com` is
+// upgraded to https://; everything else non-http(s), dotless, or carrying
+// credentials (misleading-URL trick) is refused.
 function cleanWebsite(
   raw: unknown,
 ): { ok: true; value: string | null } | { ok: false; error: string } {

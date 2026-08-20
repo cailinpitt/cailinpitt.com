@@ -1,21 +1,12 @@
-// Client for the guestbook API (the Cloudflare Worker in /worker-guestbook).
-// Like /listening and /reading, the page is prerendered as a static shell and
-// fetches this in the browser.
-//
-// These interfaces mirror the Worker's by hand — the two aren't a shared
-// package, so a change on one side has to be made on the other.
+// Client for the guestbook API (Cloudflare Worker in /worker-guestbook), fetched in the
+// browser like /listening and /reading. Interfaces mirror the Worker's by hand — not a
+// shared package, so a change on one side has to be made on the other.
 
 const API_BASE = import.meta.env.VITE_GUESTBOOK_API ?? 'https://guestbook.cailinpitt.com'
 
-/**
- * Turnstile *site* key — public by design; it ships in the page's HTML. Kept in
- * sync by hand with TURNSTILE_SITE_KEY in worker-guestbook/wrangler.jsonc.
- *
- * The widget is registered for `cailinpitt.com` and `localhost`, so this works
- * in local dev as-is. Override with VITE_TURNSTILE_SITE_KEY to point a build at
- * a different widget — e.g. Cloudflare's always-passes test key,
- * `1x00000000000000000000AA`, paired with the test secret in .dev.vars.
- */
+// Turnstile *site* key — public by design, ships in the page HTML. Kept in sync by hand with
+// TURNSTILE_SITE_KEY in worker-guestbook/wrangler.jsonc. Override with VITE_TURNSTILE_SITE_KEY
+// to point a build at a different widget, e.g. Cloudflare's test key `1x00000000000000000000AA`.
 export const TURNSTILE_SITE_KEY =
   import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '0x4AAAAAAEEBNcQ83mO9Fcud'
 
@@ -57,10 +48,8 @@ export interface SignPayload {
   nickname: string
 }
 
-/**
- * A rejected submission. `field` is present when the Worker could attribute the
- * problem to one input, which is what lets the form show the message inline.
- */
+// `field` is present when the Worker could attribute the problem to one input, letting the
+// form show the message inline.
 export class SignError extends Error {
   readonly field?: keyof typeof LIMITS
   readonly status: number
@@ -91,14 +80,8 @@ export async function fetchOlderEntries(
   return res.json() as Promise<EntryPage>
 }
 
-/**
- * Submit an entry.
- *
- * Resolves to the created entry, or to null in the one case where the Worker
- * reports success without writing anything: a filled honeypot. The form treats
- * both as success, which is the point — a bot that fills every field should
- * come away believing it worked.
- */
+// Resolves to null when the Worker reports success without writing anything (a filled
+// honeypot) — the form treats both as success, so a bot believes it worked.
 export async function signGuestbook(payload: SignPayload): Promise<Entry | null> {
   const res = await fetch(`${API_BASE}/entries`, {
     method: 'POST',
@@ -119,14 +102,8 @@ export async function signGuestbook(payload: SignPayload): Promise<Entry | null>
   return data?.entry ?? null
 }
 
-// ---- presentation helpers ------------------------------------------------
-
-/**
- * A country code as its flag emoji, built from regional indicator codepoints —
- * no image assets and no lookup table. Returns null for anything that isn't two
- * letters, including the nulls the Worker stores when Cloudflare can't place an
- * address.
- */
+// Built from regional indicator codepoints — no image assets, no lookup table. Null for
+// anything that isn't two letters, including the nulls Cloudflare can't place an address for.
 export function flagEmoji(code: string | null): string | null {
   if (!code || !/^[A-Za-z]{2}$/.test(code)) return null
   return String.fromCodePoint(

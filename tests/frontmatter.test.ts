@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseFrontmatter } from '../src/lib/frontmatter'
 
-// The hand-rolled parser in src/lib/frontmatter.ts is the one thing standing
-// between a post's frontmatter and every listing on the site. It is deliberately
-// not YAML, so what it does and doesn't support is worth pinning down.
+// Hand-rolled, deliberately not YAML — pins down what it does and doesn't support.
 
 describe('parseFrontmatter', () => {
   it('reads plain, quoted, and JSON-array values', () => {
@@ -44,8 +42,7 @@ describe('parseFrontmatter', () => {
   })
 
   it('falls back to the raw string when an array value will not parse', () => {
-    // A typo in the brackets should show up as a visibly wrong tag, not throw
-    // and take the whole build down.
+    // A bracket typo should show up as a visibly wrong tag, not crash the build.
     const { data } = parseFrontmatter('---\ntags: ["music"\n---\n')
     expect(data.tags).toBe('["music"')
   })

@@ -8,14 +8,9 @@ import {
   type Sparkline,
 } from '../lib/listening'
 
-// Two small homepage pieces that make the page different every day without
-// anything new being written: a 90-day scrobble sparkline and a line about what
-// was playing on this date in an earlier year.
-//
-// Both render nothing until their fetch lands and nothing at all if it fails, so
-// the prerendered homepage is unaffected and an API hiccup just leaves the page
-// a little quieter. That also covers /sparkline.json being a newer endpoint than
-// whatever Worker is currently deployed — it 404s and the line simply stays away.
+// Two homepage pieces (90-day scrobble sparkline, "on this day" line) that
+// render nothing until their fetch lands and nothing if it fails — covers API
+// hiccups and /sparkline.json being newer than whatever Worker is deployed.
 
 const BAR = 2
 const GAP = 1
@@ -85,8 +80,7 @@ export function OnThisDayLine() {
     return () => controller.abort()
   }, [])
 
-  // The endpoint returns the years newest-first; the most recent one is the most
-  // interesting, and on a date with no history there are simply none.
+  // Newest-first; a date with no history simply has none.
   const year = data?.years?.[0]
   if (!year) return null
 

@@ -1,34 +1,8 @@
-// Merging the site's eight activity streams into one day-per-row timeline (/timeline).
-//
-// The streams live in five places and none of them knows about the others:
-// scrobbles come from the listening Worker, articles and books from the reading
-// Worker, films from the watching Worker, rides and lifts from the moving
-// Worker, notes from the notes Worker, and posts and photos are static
-// content compiled into the build. So the merge happens here, in the browser,
-// keyed on a YYYY-MM-DD day.
-//
-// ## What decides how far back the timeline goes
-//
-// Scrobbles are by far the densest stream and the only one with a real cursor
-// worth paging, so they set the floor: the timeline shows every day from today
-// back to the oldest listening day loaded, and the other streams are filtered
-// into that window. Paging pulls another block of listening days, drops the
-// floor, and tops the other streams up to match. Once listening runs out there
-// is no floor left and everything remaining is shown.
-//
-// A day with no scrobbles still gets a row if something else happened on it —
-// the listening days seed the map, they don't limit it.
-//
-// ## Day bucketing is inherited, not re-derived
-//
-// Each stream is bucketed the way its own page already buckets it (see the notes
-// in datetime.ts): the Worker groups scrobbles into US Central days, articles
-// bucket by the viewer's local zone, and activities/films/books/posts/photos carry date
-// strings that are used as written — a film's watched date is the day Cailin
-// logged it against, which is the only day it can honestly sit on. Those rules disagree at the margins for a visitor far
-// from US Central, which is a pre-existing property of the data rather than
-// something this page can fix — recomputing it would need per-scrobble
-// timestamps the aggregates don't carry.
+// Merges the site's 8 activity streams (5 Workers + static content) into one day-per-row
+// timeline, keyed on YYYY-MM-DD. Scrobbles are the one stream with a real cursor, so their
+// loaded window sets the floor; paging pulls more listening days and tops the rest up to
+// match. Each stream keeps its own page's day-bucketing (see datetime.ts) rather than
+// re-deriving one, so results can disagree slightly at timezone margins.
 
 import { dayKey } from './datetime'
 import type { Photo } from './photos'
@@ -54,12 +28,8 @@ export interface TimelineDay {
   notes: Note[]
 }
 
-/**
- * Photos that can be placed on a timeline at all — the ones whose date is a real
- * capture time. Everything before 2026 came out of Squarespace EXIF-stripped and
- * carries an approximate date good only to the year (see src/lib/photos.ts), and
- * a day-per-row page has nowhere to put that: they'd all pile onto January 1st.
- */
+// Photos with a real capture time only — pre-2026 Squarespace photos carry an approximate,
+// year-only date (src/lib/photos.ts) that would all pile onto January 1st here.
 export function datedPhotos(photos: Photo[]): Photo[] {
   return photos.filter((photo) => !photo.approx)
 }
@@ -73,12 +43,7 @@ export interface TimelineSources {
   posts: PostSummary[]
   photos: Photo[]
   notes: Note[]
-  /**
-   * Oldest day to include, YYYY-MM-DD. Days older than this are dropped, because
-   * the streams that reach past it are only partly loaded and a row built from
-   * them would understate what actually happened. Null once listening is
-   * exhausted, which means "show everything left".
-   */
+  /** Oldest day to include; older streams are only partly loaded so a row would understate what happened. Null once listening is exhausted. */
   floor: string | null
 }
 
@@ -145,10 +110,8 @@ export function buildTimeline({
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
   for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
-  // Notes are instants, so they bucket in the viewer's own zone the way articles
-  // do — the same inherited-bucketing property described above, and the same
-  // consequence: a note written just before midnight in Central can land on the
-  // previous day for a reader in Tokyo.
+  // Notes are instants, bucketed in the viewer's own zone like articles — a note written
+  // just before midnight Central can land on the previous day for a reader in Tokyo.
   for (const note of notes) dayFor(dayKey(note.createdAt))?.notes.push(note)
 
   return [...byDate.values()]
@@ -167,21 +130,9 @@ export function buildTimeline({
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
-/**
- * Days that fall on the same month and day as `monthDay` (a `"MM-DD"` slice of
- * a `YYYY-MM-DD` key, e.g. from `keyForOffset(0)` in datetime.ts) — the same
- * calendar date in whatever years are already in `days`.
- *
- * Pure and unbounded by design: it only ever looks at days already loaded into
- * the page, the same set `buildTimeline` produced. It does not page anything
- * in on its own — /listening's equivalent feature (`fetchOnThisDay` in
- * lib/listening.ts) can afford a dedicated Worker endpoint because scrobbles
- * are the one stream with real depth; asking every other stream's Worker the
- * same question would be six new endpoints for a feature that's a bonus
- * section, not the point of the page. So this is honest about its limit: a
- * fresh visit with little history loaded will often turn up nothing, and
- * "Load older days" is what deepens it.
- */
+// Days matching `monthDay` ("MM-DD") across whatever years are already loaded into `days` —
+// pure, and doesn't page anything in itself (unlike /listening's dedicated fetchOnThisDay
+// endpoint), so a fresh visit with little history can turn up nothing until "Load older days".
 export function onThisDay(days: TimelineDay[], monthDay: string): TimelineDay[] {
   return days.filter((day) => day.date.slice(5) === monthDay)
 }

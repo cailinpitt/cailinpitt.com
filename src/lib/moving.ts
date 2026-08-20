@@ -1,9 +1,5 @@
-// Client for the activity API (the Cloudflare Worker in /worker-moving).
-// Like /reading and /watching, the page is prerendered as a static shell and
-// fetches this in the browser.
-//
-// These interfaces mirror the Worker's by hand — the two aren't a shared
-// package, so a change on one side has to be made on the other.
+// Client for the activity API (Cloudflare Worker in /worker-moving), fetched in the browser
+// like /reading and /watching. Interfaces mirror the Worker's by hand — not a shared package.
 
 const API_BASE = import.meta.env.VITE_MOVING_API ?? 'https://moving.cailinpitt.com'
 
@@ -19,49 +15,23 @@ export interface Activity {
   elevationFt: number
   movingTime: number
   trainer: boolean
-  /**
-   * Average bpm, when the activity was recorded with a heart-rate monitor.
-   * Null or absent otherwise — most of the archive, and everything logged
-   * before the column existed. Optional so an older Worker reads as "no heart
-   * rate" rather than breaking the type.
-   */
+  /** Average bpm, when recorded with a heart-rate monitor. Null/absent for most of the archive. */
   avgHr?: number | null
   /** Peak bpm, on the same terms. Served, but not rendered on the log. */
   maxHr?: number | null
   /** Unix seconds, UTC. Absent on a Worker deployed before the crossover. */
   startedAt?: number
-  /**
-   * The activity's *movement* window in seconds — moving time plus a 30-minute
-   * pause allowance, capped at what was recorded.
-   *
-   * This is the listening Worker's "while moving" rule, and it is deliberately
-   * tight: a recording left running would otherwise let a 40-minute ride claim
-   * a whole evening of scrobbles as time spent moving. Not what the soundtrack
-   * expander asks for — see soundtrackWindow(). Optional for the same reason
-   * as `startedAt`.
-   */
+  /** Moving time + 30min pause allowance, capped at what was recorded — the listening
+   * Worker's tight "while moving" rule, deliberately not what soundtrackWindow() uses. */
   windowSeconds?: number
   /** The whole recorded span in seconds, pauses and all. */
   elapsedTime?: number
 }
 
-/**
- * The span the "what was playing" expander asks about: the whole recording.
- *
- * Not `windowSeconds`, which answers a different question. That one exists to
- * keep the *statistic* honest — hours spent moving to music — and clamps a long
- * recording down to moving time plus half an hour. But a ride with real stops
- * in it (an errand run, a day of working from three coffee shops) is one outing
- * to the person who took it, and the music kept playing through the stops. 21
- * of the last 100 activities here ran 3x longer than their moving time, so this
- * is the normal case, not the odd one.
- *
- * Over-including costs a slightly longer list on a row nobody has to expand.
- * Under-including silently drops most of the answer: one 5h41m ride showed 5 of
- * its 37 tracks. Those are not symmetric, so this takes the recorded span and
- * falls back to the tight window only when an older Worker sends no elapsed
- * time.
- */
+// The whole recorded span, not `windowSeconds` — stops (an errand, a coffee shop) are still
+// part of the outing and the music kept playing. Falls back to windowSeconds only when an
+// older Worker sends no elapsed time; under-including drops most of the answer (one 5h41m
+// ride showed 5 of 37 tracks under the tight window), so the wider span is preferred.
 export function soundtrackWindow(activity: Activity): { from: number; to: number } | null {
   const span = activity.elapsedTime ?? activity.windowSeconds
   if (!activity.startedAt || !span || span <= 0) return null
@@ -122,10 +92,8 @@ export async function fetchOlderActivities(
   return res.json() as Promise<ActivityPage>
 }
 
-// ---- presentation helpers -------------------------------------------------
-//
-// Nothing here names where the data comes from, on purpose. The provider is an
-// implementation detail of the Worker and stays out of anything rendered.
+// Nothing here names where the data comes from — the provider is a Worker implementation
+// detail and stays out of anything rendered.
 
 /** "1h 12m", or "48m" under the hour. */
 export function duration(seconds: number): string {
@@ -184,18 +152,9 @@ const VERBS: Record<ActivityKind, string> = {
   other: 'Moved',
 }
 
-/**
- * Whole-bpm average and peak, or null when the activity carries no heart rate.
- *
- * Returns the numbers rather than a formatted string because the row renders
- * them as marked-up parts — a heart glyph, then labelled figures. Null and zero
- * both mean "no monitor": see the Worker's schema for why a stored zero would
- * be a lie rather than a reading.
- *
- * `max` can be null on its own. An activity always has an average if it has any
- * heart rate at all, but the peak is a separate field and old rows may lack it,
- * so the caller renders whichever it gets.
- */
+// Returns numbers, not a formatted string, since the row renders them as marked-up parts
+// (heart glyph + labelled figures). Null and zero both mean "no monitor"; `max` can be null
+// on its own since older rows may lack a peak even with an average.
 export function heartRate(activity: Activity): { avg: number; max: number | null } | null {
   const bpm = (value: number | null | undefined) =>
     typeof value === 'number' && value > 0 ? Math.round(value) : null
@@ -203,12 +162,8 @@ export function heartRate(activity: Activity): { avg: number; max: number | null
   return avg === null ? null : { avg, max: bpm(activity.maxHr) }
 }
 
-/**
- * The one-line summary the log reads as: "Biked 10.1 miles", "Lifted for 52m".
- *
- * Built from the numbers rather than the activity's own name, which is usually
- * an autogenerated "Afternoon Ride" and says nothing.
- */
+// Built from the numbers, not the activity's own name, which is usually an autogenerated
+// "Afternoon Ride" that says nothing.
 export function summary(activity: Activity): string {
   const verb = VERBS[activity.kind] ?? VERBS.other
   if (DISTANCE_KINDS.has(activity.kind) && activity.distanceMi > 0) {
@@ -234,12 +189,8 @@ const MONTHS = [
   'December',
 ]
 
-/**
- * "August 5, 2026" from YYYY-MM-DD, read as written.
- *
- * Parsed from the digits rather than via Date: the string is already local to
- * where the activity happened, and a UTC round-trip can slip a day.
- */
+// Parsed from the digits, not via Date: the string is already local to where the activity
+// happened, and a UTC round-trip can slip a day.
 export function longDate(date: string): string {
   const [year, month, day] = date.split('-')
   const index = Number(month) - 1

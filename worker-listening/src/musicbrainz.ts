@@ -1,46 +1,23 @@
-// MusicBrainz client: where an artist is from, what kind of act they are, and
-// when they started.
-//
-// MusicBrainz asks for **one request per second** and a User-Agent identifying
-// the application with contact info. Both are honored — the backfill script
-// paces itself, and the cron only ever makes one or two calls per tick.
-//
-// Two ways in, in order of accuracy:
-//
-//  1. Lookup by MBID. Exact. The MBID comes from Last.fm's artist.getInfo, which
-//     is cheap and fast, so the extra call is worth it.
-//  2. Search by name. A fallback, and a fuzzy one — "Nirvana" alone matches a
-//     dozen acts. The score threshold below is what keeps the worst of that out.
+// MusicBrainz client: where an artist is from, what kind of act, and when they
+// started. Rate limit is 1 req/s (backfill script paces itself; cron makes 1-2
+// calls/tick). Two ways in: exact lookup by MBID (from Last.fm's
+// artist.getInfo), or a fuzzy name search as fallback, gated by MIN_SCORE.
 
 const MB = 'https://musicbrainz.org/ws/2'
 
 /** MusicBrainz requires a descriptive UA with a contact URL. */
 const UA = 'cailinpitt.com-listening/1.0 (+https://cailinpitt.com)'
 
-/**
- * Minimum search score to accept a name match.
- *
- * MusicBrainz scores 0–100. Below this the match is usually a different act
- * with a similar name, and a wrong country is worse than no country — it would
- * silently distort the map rather than just leaving a gap.
- */
+// Below this (0-100 scale) the match is usually a different act with a similar
+// name — a wrong country silently distorts the map, worse than a gap.
 const MIN_SCORE = 90
 
-/**
- * Manual corrections, applied when the origin lookup map is built.
- *
- * Neither resolution path is reliable for artists whose name is shared by
- * another act. Last.fm's MBID is a curated link and usually right, but not
- * always: it resolves "Turnstile" to a Spanish group rather than the Baltimore
- * hardcore band, and the name search can't tell them apart either. There is no
- * automatic fix — disambiguating needs a human who knows which band was meant.
- *
- * So: correct them here. This is applied in buildOriginMap(), not at fetch time,
- * so adding a row costs a redeploy and a lookup rebuild rather than a re-fetch.
- * Delete `meta:v1:built-at` from KV to force the rebuild immediately.
- *
- * `formedYear` is only meaningful for a Group — see the note in aggregate.ts.
- */
+// Manual corrections for artists neither resolution path handles right (e.g.
+// Last.fm's MBID resolves "Turnstile" to a Spanish group, not the Baltimore
+// band) — needs a human, so fix it here. Applied in buildOriginMap(), not at
+// fetch time, so a new row costs a redeploy + lookup rebuild, not a re-fetch;
+// delete `meta:v1:built-at` from KV to force the rebuild immediately.
+// `formedYear` only means anything for a Group — see the note in aggregate.ts.
 export const ORIGIN_OVERRIDES: Record<
   string,
   { country: string | null; kind: string | null; formedYear: number | null }
@@ -80,12 +57,8 @@ interface MBArtist {
   score?: number
 }
 
-/**
- * Read the fields we care about off an artist document.
- *
- * `country` is often absent even when the area is known, so fall back through
- * area then begin-area — that recovers a country for a good number of acts.
- */
+// `country` is often absent even when the area is known, so fall back through
+// area then begin-area to recover it for more acts.
 function shape(artist: MBArtist): ArtistOrigin {
   const country =
     artist.country ??
@@ -124,12 +97,8 @@ export async function searchArtist(name: string): Promise<ArtistOrigin> {
   return shape(hit)
 }
 
-/**
- * Resolve one artist, preferring the exact path.
- *
- * `lastfmMbid` comes from Last.fm's artist.getInfo. It is frequently absent or
- * stale, so a 404 on it falls through to the name search rather than giving up.
- */
+// `lastfmMbid` is frequently absent or stale, so a 404 on it falls through to
+// the name search rather than giving up.
 export async function resolveArtist(
   name: string,
   lastfmMbid?: string | null,

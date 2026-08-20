@@ -1,15 +1,12 @@
-// Guestbook API for cailinpitt.com/guestbook.
-//
-// The first endpoint on this site that accepts writes from the public, which is
-// the only thing that makes it interesting. Reads are the same shape as the
-// other two workers — one D1 query behind the edge cache, plus a curl view.
-// Writes run a layered gauntlet, ordered cheapest-first so an attack is turned
-// away before it costs a database query:
+// Guestbook API for cailinpitt.com/guestbook — the first endpoint on the site
+// that accepts public writes. Reads are one D1 query behind the edge cache
+// plus a curl view. Writes run a layered gauntlet, cheapest first, so an
+// attack is turned away before it costs a database query:
 //
 //   origin → honeypot → Turnstile → validation → per-IP limit → global limit
 //
-// Entries publish the moment they pass. Moderation is after the fact, through
-// the ADMIN_TOKEN routes that `npm run guestbook:list` / `guestbook:rm` drive.
+// Entries publish immediately; moderation is after the fact via ADMIN_TOKEN
+// routes (`npm run guestbook:list` / `guestbook:rm`).
 
 import { ipHash } from './hash'
 import {
@@ -33,32 +30,18 @@ const EDGE_TTL = 30
 /** Where a browser landing on this Worker gets sent. */
 const SITE_GUESTBOOK = 'https://cailinpitt.com/guestbook'
 
-// ---- rate limits ---------------------------------------------------------
-//
-// Two per-person windows and one for the whole guestbook. The numbers are set
-// for how a guestbook is actually used: signing it twice is plausible, signing
-// it four times in an hour is not, and nobody legitimate is the eleventh entry
-// from one address in a day.
-
+// Two per-person windows plus a global one. Signing twice is plausible, four
+// times an hour isn't, and nobody legitimate is the 11th entry from one IP today.
 const HOUR = 3600
 const DAY = 86_400
 
 const PER_IP_HOURLY = 3
 const PER_IP_DAILY = 10
 
-/**
- * The backstop. Per-IP limits do nothing against a botnet, so the guestbook as a
- * whole also refuses to take more than this many entries an hour. It is the
- * reason the daily write volume has a knowable ceiling (~1,440 rows) no matter
- * what happens, which is what keeps a bad day inside D1's free tier.
- *
- * Set high enough that it can only be reached by an attack: an actual burst of
- * human attention — a post doing well somewhere — arrives as tens of entries a
- * day, not sixty an hour.
- */
+// Backstop against a botnet, which per-IP limits alone can't catch. Caps the
+// daily write volume at ~1,440 rows, well inside D1 free tier; a real burst of
+// human attention arrives as tens of entries a day, not sixty an hour.
 const GLOBAL_HOURLY = 60
-
-// ---- CORS ----------------------------------------------------------------
 
 // Any loopback port, so a dev server that lands on 5174 instead of 5173 still
 // works without editing wrangler.jsonc.
@@ -80,8 +63,6 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
     vary: 'origin',
   }
 }
-
-// ---- responses -----------------------------------------------------------
 
 // The cached builders deliberately omit CORS: it varies by Origin and is applied
 // by withCors() after the cache, so a cached entry stays origin-independent.
@@ -116,12 +97,8 @@ function jsonNoStore(body: unknown, status: number, cors: Record<string, string>
   })
 }
 
-// ---- edge cache ----------------------------------------------------------
-//
-// Cloudflare does not cache Worker-generated responses on its own, so without
-// this every reader executes the Worker and its D1 query. Same helper as the
-// other two workers.
-
+// Cloudflare doesn't cache Worker responses on its own, so without this every
+// reader hits the Worker and its D1 query.
 const cacheKey = (url: URL, variant: string): Request => {
   const key = new URL(url.toString())
   key.searchParams.set('__variant', variant)
@@ -150,16 +127,8 @@ async function cached(
   return withCors(fresh, cors)
 }
 
-// ---- auth ----------------------------------------------------------------
-
-/**
- * Bearer-token check for the moderation routes.
- *
- * Compared in constant time. The reading worker's equivalent doesn't bother and
- * is fine in practice, but this one is worth doing properly: it is the only
- * thing standing between the internet and `DELETE`, and a length-independent
- * comparison costs nothing.
- */
+// Bearer-token check for the moderation routes, in constant time — this is
+// the only thing standing between the internet and DELETE.
 function authorized(request: Request, secret: string | undefined): boolean {
   if (!secret) return false
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
@@ -169,16 +138,12 @@ function authorized(request: Request, secret: string | undefined): boolean {
   return diff === 0
 }
 
-// ---- curl detection ------------------------------------------------------
-
 const CLI_AGENT = /^(curl|wget|httpie|HTTPie|xh|powershell|fetch)\b/i
 
 function wantsText(request: Request, url: URL): boolean {
   if (url.searchParams.has('format') || url.searchParams.has('json')) return false
   return CLI_AGENT.test(request.headers.get('user-agent') ?? '')
 }
-
-// ---- the write path ------------------------------------------------------
 
 interface SignPayload {
   name?: unknown
@@ -193,17 +158,11 @@ interface SignPayload {
 
 const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fields))
 
-/**
- * POST /entries.
- *
- * Returns the created row so the client can prepend it immediately: the read
- * endpoint sits behind a 30-second edge cache, so a fresh signer would otherwise
- * refresh and not find themselves.
- */
+// POST /entries. Returns the created row so the client can prepend it
+// immediately — the read endpoint sits behind a 30s edge cache.
 async function sign(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
-  // 1. Origin. Not a security boundary on its own — a non-browser client sets
-  //    any Origin it likes — but it stops the form being embedded and driven
-  //    from someone else's page, and it is free.
+  // 1. Origin. Not a real boundary (a non-browser client sets any Origin it
+  //    likes) but stops the form being embedded elsewhere, for free.
   if (!originAllowed(request, env)) {
     return jsonNoStore({ error: 'Not allowed from this origin.' }, 403, cors)
   }
@@ -211,10 +170,9 @@ async function sign(request: Request, env: Env, cors: Record<string, string>): P
   const payload = (await request.json().catch(() => null)) as SignPayload | null
   if (!payload) return jsonNoStore({ error: 'Expected a JSON body.' }, 400, cors)
 
-  // 2. Honeypot. The form renders a `nickname` field that is hidden from sight
-  //    and from screen readers; a person cannot fill it in, and a bot that fills
-  //    every input will. The response is a normal-looking success with nothing
-  //    written, so the bot records a win and never learns to adapt.
+  // 2. Honeypot. `nickname` is hidden from sight and screen readers; a bot that
+  //    fills every input fills it too. Answered with a fake success so it never
+  //    learns to adapt.
   if (typeof payload.nickname === 'string' && payload.nickname.trim()) {
     log({ level: 'info', rejected: 'honeypot' })
     return jsonNoStore({ ok: true, entry: null }, 200, cors)
@@ -268,9 +226,8 @@ async function sign(request: Request, env: Env, cors: Record<string, string>): P
   }
 
   const entry = await insertEntry(env.DB, checked.value, {
-    // Cloudflare geolocates the connecting IP for us; there is no field to fill
-    // in and no lookup to pay for. Absent on `wrangler dev` and for the handful
-    // of addresses it can't place, which the page renders as simply no flag.
+    // Cloudflare geolocates the IP for free; absent on `wrangler dev` and for
+    // addresses it can't place, which the page just renders as no flag.
     country: (request.cf?.country as string | undefined) ?? null,
     ipHash: hash,
   })
@@ -278,8 +235,6 @@ async function sign(request: Request, env: Env, cors: Record<string, string>): P
 
   return jsonNoStore({ ok: true, entry }, 201, cors)
 }
-
-// ---- worker --------------------------------------------------------------
 
 export default {
   async fetch(request, env, ctx): Promise<Response> {
@@ -314,8 +269,7 @@ export default {
           : jsonNoStore({ id, error: 'no such entry' }, 404, cors)
       }
 
-      // `curl guestbook.cailinpitt.com` → the terminal view. Checked before the
-      // redirect below, which is what a browser on the same path gets instead.
+      // curl → terminal view, checked before the browser redirect below.
       if ((url.pathname === '/' || url.pathname === '/guestbook') && wantsText(request, url)) {
         return cached(url, 'text', ctx, cors, async () =>
           textResponse(
@@ -348,10 +302,8 @@ export default {
         )
       }
 
-      // Same paths in a browser: send them to the real page instead of a 404.
-      // 302 and no-store, because this response is User-Agent dependent — a
-      // cached permanent redirect could later be replayed to a client that
-      // wanted the terminal view, which would break `curl` for this URL.
+      // 302 + no-store: this response is User-Agent dependent (terminal view
+      // shares the path), so a cached redirect could break `curl` for this URL.
       if (url.pathname === '/' || url.pathname === '/guestbook') {
         return new Response(null, {
           status: 302,

@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildCards, deriveTraits, formatHour, formatSpan, MIN_SCROBBLES } from '../src/lib/wrapped'
 import type { PeriodStats } from '../src/lib/listening'
 
-// The narrative is the one place the site editorializes, so the risk is stating
-// something the data doesn't support — a "top genre" drawn from 8% coverage, or
-// a personality read off forty scrobbles. These pin the restraint.
+// The narrative editorializes, so the risk is stating something the data doesn't support. These pin the restraint.
 
 /** A blob with everything present; tests override just the field under test. */
 function stats(over: Partial<PeriodStats> = {}): PeriodStats {

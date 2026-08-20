@@ -1,7 +1,6 @@
 // Terminal rendering of the guestbook, for `curl guestbook.cailinpitt.com`.
-// Same conventions as the listening and reading workers' text views (72
-// columns, ANSI on by default, `?T` to turn it off), and deliberately a
-// separate copy — the three workers are separate packages with no shared module.
+// Same conventions as the other workers' text views (72 columns, ANSI by
+// default, `?T` to disable) — a deliberate separate copy, no shared module.
 
 import type { Entry } from './store'
 
@@ -31,16 +30,10 @@ function ink(color: boolean) {
   }
 }
 
-/**
- * Text safe to print into someone's terminal.
- *
- * This is the one place in the whole feature where escaping actually matters.
- * Entries are written by strangers, and a raw byte stream is exactly how a
- * message could carry ANSI escape sequences that retitle a reader's window,
- * repaint their scrollback, or hide the rest of the guestbook. The browser page
- * doesn't care — React renders text nodes — but a terminal does, so strip C0/C1
- * controls here rather than mangling the stored value on the way in.
- */
+// The one place escaping actually matters: entries are written by strangers,
+// and a raw byte stream could carry ANSI escapes that retitle a window or
+// hide the rest of the guestbook. Stripped here rather than on the way in,
+// since the browser page (React text nodes) doesn't need it.
 function safe(s: string): string {
   return s.replace(/\p{Cc}|\p{Cf}/gu, ' ')
 }
@@ -61,11 +54,8 @@ function shortDate(uts: number, offset: number): string {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
 }
 
-/**
- * Wrap a message to the column width at word boundaries, with a hard split for
- * any single "word" longer than the line — a 400-character URL or a keysmash
- * would otherwise blow out the layout.
- */
+// Wraps at word boundaries, with a hard split for any "word" longer than the
+// line — a 400-character URL or keysmash would otherwise blow out the layout.
 function wrap(text: string, width: number): string[] {
   const out: string[] = []
   for (const paragraph of safe(text).split('\n')) {

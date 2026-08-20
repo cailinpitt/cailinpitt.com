@@ -11,19 +11,14 @@ import {
 } from '../lib/photos'
 import { pageSchema } from '../lib/structuredData'
 
-// The feed: every photograph on the site in one square grid, newest first.
-//
-// There is no pagination and no infinite scroll — all of them are in the
-// prerendered html, and `loading="lazy"` means the browser only fetches the few
-// screens' worth it actually needs. That keeps the page working without
-// JavaScript, keeps Cmd-F useful, and keeps the year anchors real links.
+// Every photograph in one square grid, newest first. No pagination or
+// infinite scroll — all of them are in the prerendered html, and
+// `loading="lazy"` means the browser only fetches what it needs. Keeps the
+// page working without JS, keeps Cmd-F useful, and keeps year anchors real links.
 
-/**
- * What a tile needs, and nothing else. The full manifest entry carries capture
- * metadata and dates that only a photo's own page shows, and this list is five
- * hundred long — carrying those into the prerendered loader data would double it
- * for nothing.
- */
+// What a tile needs, and nothing else — the full manifest entry carries
+// capture metadata only a photo's own page shows, and at 500 photos long,
+// carrying that into loader data would double it for nothing.
 type FeedPhoto = Pick<
   Photo,
   'id' | 'src' | 'thumb' | 'widths' | 'alt' | 'year' | 'width' | 'height' | 'tint'
@@ -53,22 +48,13 @@ export async function loader(): Promise<FeedPhoto[] | null> {
 /** How far below the top of the viewport a tile counts as "what you're looking at". */
 const YEAR_LINE = 96
 
-/**
- * The year of the tiles currently at the top of the feed, for the marker that
- * floats over it while scrolling.
- *
- * Five hundred undated squares give a reader no idea where in fifteen years of
- * photographs they are. The year-break tiles already carry anchors (`#y2019`),
- * so this needs no new markup — it measures those and reports the last one to
- * have passed the line.
- *
- * A scroll listener rather than an IntersectionObserver: the question is "which
- * break is highest above the line", which is a comparison across all of them at
- * one instant, not an event about one crossing. There are ~13 breaks, so a
- * measurement is cheap, and doing it in a rAF means at most one per frame. It
- * also lands correctly on a cold load at `/photos#y2019`, where every crossing
- * happened before there was anything listening.
- */
+// Year of the tiles at the top of the feed, for the floating marker — five
+// hundred undated squares otherwise give no sense of where in fifteen years
+// you are. Reuses the year-break anchors already in the DOM (#y2019). A
+// scroll listener rather than an IntersectionObserver: the question is "which
+// break is highest above the line" across all of them at once, not a single
+// crossing event — and this also lands correctly on a cold load at
+// /photos#y2019, where every crossing already happened before hydration.
 function useFeedYear(years: string[]): string | null {
   const [year, setYear] = useState<string | null>(null)
 
@@ -83,8 +69,8 @@ function useFeedYear(years: string[]): string | null {
     const measure = () => {
       frame = 0
       let current: string | null = null
-      // Newest first, like the feed, so the first break still below the line
-      // ends the search — everything after it is further down the page.
+      // Newest first, like the feed — the first break still below the line
+      // ends the search.
       for (const mark of marks) {
         if (mark.el.getBoundingClientRect().top > YEAR_LINE) break
         current = mark.year
@@ -111,8 +97,8 @@ function useFeedYear(years: string[]): string | null {
 export function Component() {
   const photos = useLoaderData() as FeedPhoto[]
   const count = photos.length
-  // Which tiles start a new year. They carry the only anchors on the page, so
-  // /photos#y2019 still lands somewhere sensible now that /2019 is gone.
+  // Which tiles start a new year — carries the page's only anchors, so
+  // /photos#y2019 still lands sensibly now that /2019 is gone.
   const breaks = useMemo(() => photoYearBreaks(photos), [photos])
   // Stable across renders, so the effect that measures them doesn't re-bind.
   const years = useMemo(
@@ -144,8 +130,8 @@ export function Component() {
       <h1>Photos</h1>
       <p className="photos-map-link">
         <Link to="/photos/map">
-          {/* Stroked in currentColor like the other icons on the site — an emoji
-              pin brings its own red and fights the palette. */}
+          {/* currentColor like the other icons — an emoji pin brings its own
+              red and fights the palette. */}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -162,10 +148,9 @@ export function Component() {
         </Link>
       </p>
 
-      {/* Fixed rather than sticky, so it costs the prerendered page no space and
-          appearing on first scroll shifts nothing. aria-hidden because it is a
-          scroll affordance that changes constantly — the years are reachable as
-          real anchors from ⌘K, which is what a screen reader should use. */}
+      {/* Fixed, not sticky, so it costs the prerendered page no space and
+          shifts nothing on first scroll. aria-hidden since the years are
+          reachable as real anchors from ⌘K. */}
       {feedYear && (
         <p className="photo-year-marker" aria-hidden="true">
           {feedYear}
@@ -178,17 +163,14 @@ export function Component() {
         <ul className="photo-feed">
           {photos.map((photo) => (
             <li key={photo.id} id={breaks.has(photo.id) ? yearAnchor(photo.year) : undefined}>
-              {/* The tile's own color under the image, so a screen of tiles that
-                  haven't loaded reads as the photographs arriving rather than as
-                  a grid of identical gray squares. Inline because it is per-photo
-                  data, not a style. */}
+              {/* Tile's own color under the image, so unloaded tiles read as
+                  photos arriving rather than a grid of gray squares. Inline
+                  since it's per-photo data, not a style. */}
               <Link to={`/photos/${photo.id}`} style={photo.tint ? { background: photo.tint } : undefined}>
 <img
-                  // A tile paints between ~117px (three across a phone) and
-                  // ~306px, so the browser picks from the grid renditions rather
-                  // than always taking the 1000px one. `src` stays the largest
-                  // as the fallback for anything that ignores srcset; the full
-                  // size belongs to the photo's own page.
+                  // Tile paints between ~117px and ~306px, so srcset picks from
+                  // the grid renditions instead of always the 1000px one. `src`
+                  // is the largest as fallback; full size is the photo's own page.
                   src={imageUrl(photo.thumb ?? photo.src)}
                   srcSet={thumbSrcset(photo)}
                   sizes={thumbSrcset(photo) ? FEED_TILE_SIZES : undefined}

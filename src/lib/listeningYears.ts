@@ -1,9 +1,5 @@
-// Which /listening/<year> pages get prerendered.
-//
-// Derived from a constant rather than the API on purpose: the SSG needs these
-// paths at build time, and making the build depend on the Worker being reachable
-// would let an unrelated outage fail a deploy. The range extends by itself each
-// January, since the build runs on every push.
+// Which /listening/<year> pages get prerendered. Derived from a constant, not the API, so a
+// Worker outage can't fail the build — the range extends itself each January.
 
 /** First year with scrobbles in the archive. */
 export const FIRST_LISTENING_YEAR = 2021

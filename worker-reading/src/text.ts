@@ -43,8 +43,6 @@ function ink(color: boolean): Ink {
   }
 }
 
-// ---- text helpers --------------------------------------------------------
-
 /** Truncate to n columns with an ellipsis. */
 function clip(s: string, n: number): string {
   const clean = s.replace(/\s+/g, ' ').trim()
@@ -60,33 +58,18 @@ const fit = (s: string, n: number): string => clip(s, n).padEnd(n)
 
 const num = (n: number) => n.toLocaleString('en-US')
 
-
-/**
- * A URL safe to print into someone's terminal.
- *
- * These arrive from /ingest, and printing raw bytes is exactly how a saved link
- * could write escape sequences to a reader's terminal — retitling their window
- * or worse. Strip C0/C1 controls, and only surface http(s) so a javascript: or
- * file: URL is never presented as somewhere to go.
- *
- * Deliberately not truncated: a clipped URL cannot be copied or clicked, which
- * defeats the point of printing it. Long ones wrap, which is the lesser evil.
- */
+// A URL safe to print into a terminal: strips C0/C1 controls (a saved link
+// could otherwise carry escape sequences) and only allows http(s), so a
+// javascript: or file: URL is never presented as somewhere to go. Not
+// truncated — a clipped URL can't be copied or clicked.
 function safeUrl(url: string | null | undefined): string | null {
   if (!url) return null
   const clean = url.replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
   return /^https?:\/\//i.test(clean) ? clean : null
 }
 
-/**
- * Query parameters that carry no meaning, only telemetry. Dropping them keeps the
- * URL working while cutting the worst offenders roughly in half — a Substack link
- * arrives at 143 characters and leaves at 62.
- *
- * Strictly an allowlist of known-dead keys. Never strip unrecognised parameters:
- * plenty of sites put the actual article id in one, and a URL that looks tidy but
- * 404s is worse than a long one.
- */
+// Allowlist of known telemetry params only — never strip unrecognized ones,
+// since plenty of sites put the real article id in a query param.
 const TRACKING_PARAMS = [
   /^utm_/i,
   /^(fbclid|gclid|mc_cid|mc_eid|igshid|ref_src|ref_url|__twitter_impression)$/i,
@@ -113,13 +96,8 @@ function tidyUrl(url: string): string {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-/**
- * "Jun 9" from a YYYY-MM-DD string, read as written.
- *
- * Hardcover stores dates, not timestamps, so there is no zone to convert and
- * nothing to be gained by routing this through Date — parsing the digits can't
- * slide a finish date onto the day before.
- */
+// "Jun 9" from a YYYY-MM-DD string, read as written — Hardcover stores dates
+// not timestamps, so there's no zone to convert and nothing to slide a day.
 function shortDate(date: string | null): string {
   if (!date) return ''
   const [y, m, d] = date.slice(0, 10).split('-').map(Number)
@@ -158,18 +136,13 @@ function clockTime(uts: number, offset: number): string {
   return `${String(h12).padStart(2, ' ')}:${String(mm).padStart(2, '0')}${period}`
 }
 
-/**
- * "★★★★☆" from a 0–5 rating, matching the site's rounding (half stars round up
- * rather than introducing a third glyph). Unrated books get blanks, so the
- * column still lines up.
- */
+// "★★★★☆" from a 0–5 rating, half stars rounding up. Unrated gets blanks so
+// the column still lines up.
 function stars(rating: number | null): string {
   if (rating == null || rating <= 0) return '     '
   const filled = Math.min(5, Math.round(rating))
   return '★'.repeat(filled) + '☆'.repeat(5 - filled)
 }
-
-// ---- sections ------------------------------------------------------------
 
 function header(c: Ink): string[] {
   const title = 'cailinpitt.com/reading'
@@ -182,11 +155,7 @@ function header(c: Ink): string[] {
   ]
 }
 
-/**
- * What's open right now. Falls back to the most recent finish, so the top of
- * the view is never blank between books — the same choice the homepage strip
- * makes.
- */
+// Falls back to the most recent finish, so the top is never blank between books.
 function currentSection(b: ReadingBundle, c: Ink, now: number): string[] {
   const reading = b.currentlyReading.length > 0
   const books = reading ? b.currentlyReading.slice(0, 3) : b.finishedBooks.slice(0, 1)
@@ -251,14 +220,8 @@ function finishedSection(books: Book[], c: Ink): string[] {
   return ['', `  ${c.accentDim('recently finished')}`, ...lines]
 }
 
-/**
- * Saved articles, grouped under their local date like the listening log's days.
- *
- * Each title is followed by its full URL on its own line. A printed URL beats an
- * OSC 8 hyperlink here: it shows up in every terminal rather than the subset that
- * supports the escape, most terminals linkify it anyway, and it can be copied
- * out of a pipe or a log where an invisible hyperlink target cannot.
- */
+// Each title is followed by its full URL on its own line — a printed URL beats
+// an OSC 8 hyperlink: works in every terminal, and can be copied from a pipe.
 function articlesSection(articles: Article[], c: Ink, offset: number): string[] {
   const rows = articles.slice(0, ARTICLE_ROWS)
   if (!rows.length) return []
@@ -272,17 +235,14 @@ function articlesSection(articles: Article[], c: Ink, offset: number): string[] 
       lastDate = date
     }
     const time = c.dim(clockTime(article.readAt, offset))
-    // No site column: it is the first thing in the URL on the next line, and
-    // dropping it buys ~20 columns of title, which is where truncation actually
-    // costs you something.
+    // No site column — it's the first thing in the URL below, and dropping it
+    // buys ~20 columns of title.
     const title = clip(article.title ?? article.url, WIDTH - 17)
     lines.push(`      ${time}  ${title}`)
 
     const url = safeUrl(article.url)
-    // Indented 8, not aligned under the title at 15. A URL is the one thing here
-    // that genuinely benefits from the extra columns, and it cannot be wrapped by
-    // hand — inserting a newline mid-URL is what makes it uncopyable, which is the
-    // whole reason it is printed rather than hyperlinked.
+    // Indented 8, not aligned at 15: the URL gets the extra columns since it
+    // can't be wrapped by hand without breaking copy-paste.
     if (url) lines.push(`        ${c.faint(tidyUrl(url))}`)
   }
   return ['', `  ${c.accentDim('recently saved')}`, ...lines]
@@ -297,8 +257,6 @@ function footer(c: Ink): string[] {
     '',
   ]
 }
-
-// ---- entry point ---------------------------------------------------------
 
 export interface TextOptions {
   color: boolean

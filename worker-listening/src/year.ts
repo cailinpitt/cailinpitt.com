@@ -1,10 +1,6 @@
-// On-this-day, derived from the D1 archive.
-//
-// The year-in-review that used to live here is gone: period blobs compute the
-// same thing on the cron, and computing it again on the request path was both a
-// duplicate implementation and a ~18,700-row aggregation per cache miss.
-// computeArtistDebuts went with it — the `artists` summary table answers
-// "discovered in this period" with an index range instead of a 100k-row scan.
+// On-this-day, derived from the D1 archive. The year-in-review that used to
+// live here is gone — period blobs compute the same thing on the cron, so
+// duplicating a ~18,700-row aggregation on the request path made no sense.
 
 import type { Scrobble } from './lastfm'
 
@@ -31,10 +27,8 @@ const ROW_COLS = 'uts, track, artist, album, mbid, image'
 
 /** Years with at least one scrobble, oldest first. */
 export async function listYears(db: D1Database, offset: number): Promise<number[]> {
-  // Two queries, deliberately. SQLite only optimizes a *single* MIN or MAX per
-  // query into an index seek; asking for both in one statement plans
-  // "SCAN scrobbles USING COVERING INDEX idx_scrobbles_uts" and measured at
-  // 100,829 rows. Split, each is a "SEARCH" that touches one row.
+  // Two queries deliberately: SQLite only optimizes a *single* MIN/MAX per query
+  // into an index seek — asking for both together measured as a full scan (100,829 rows).
   const [lo, hi] = await Promise.all([
     db.prepare('SELECT MIN(uts) AS v FROM scrobbles').first<{ v: number | null }>(),
     db.prepare('SELECT MAX(uts) AS v FROM scrobbles').first<{ v: number | null }>(),
@@ -47,11 +41,8 @@ export async function listYears(db: D1Database, offset: number): Promise<number[
   return years
 }
 
-/**
- * The same calendar day in previous years. Built from a union of per-year day
- * ranges rather than `strftime('%m-%d', …) = ?`, which would scan the archive;
- * this touches only the handful of rows on those specific days.
- */
+// Union of per-year day ranges rather than `strftime('%m-%d', …) = ?`, which
+// would scan the archive; this touches only the rows on those specific days.
 export async function computeOnThisDay(
   db: D1Database,
   offset: number,

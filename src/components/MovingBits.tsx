@@ -1,9 +1,6 @@
-// The row for /moving. Kept out of the page file so the row and the
-// pagination around it stay readable side by side, matching WatchingBits.
-//
-// Laid out on the same grid as /listening's scrobble rows — a leading measure
-// where the timestamp sits there, then the icon, the line, and any trailing
-// detail. Nothing rendered here links out or names a provider.
+// The row for /moving, kept out of the page file to match WatchingBits. Uses
+// the same grid as /listening's scrobble rows (measure, icon, line, detail).
+// Nothing rendered here links out or names a provider.
 
 import { useState } from 'react'
 import { fetchDuring, formatTime, type Scrobble } from '../lib/listening'
@@ -20,23 +17,13 @@ import {
 /** Cycling is the only kind where "indoor" means anything — a lift always is. */
 const CYCLING = new Set(['ride', 'ebike'])
 
-/**
- * What was playing during one activity.
- *
- * Deliberately lazy: the tracks are fetched only when someone opens the row, so
- * a page of thirty activities costs nothing extra to render. The listening API
- * answers from an index range over a couple of dozen rows and caches a finished
- * window for a day, so a second open is free.
- */
+/** What was playing during one activity. Fetched lazily on open, so a page of thirty activities costs nothing extra; the API caches a finished window for a day. */
 function Soundtrack({ activity, count }: { activity: Activity; count: number }) {
   const [tracks, setTracks] = useState<Scrobble[] | null>(null)
   const [state, setState] = useState<'idle' | 'loading' | 'failed'>('idle')
 
-  // Needs both halves of the window; an older moving Worker sends neither.
-  // `count` of 0 means the batched check found nothing in this window, so there
-  // is no expander to offer — a toggle that opens onto "nothing" is worse than
-  // no toggle. Counts are unknown until that fetch lands, which is why the
-  // caller passes -1 rather than 0 in the meantime.
+  // count === 0 means the batched check found nothing, so skip the expander
+  // (a toggle that opens onto "nothing" is worse than none) — hence -1 default.
   const span = soundtrackWindow(activity)
   if (!span || count === 0) return null
 
@@ -98,8 +85,7 @@ export function MovingRow({
   if (activity.distanceMi > 0) details.push(duration(activity.movingTime))
   if (climbed) details.push(`${Math.round(activity.elevationFt).toLocaleString('en-US')} ft up`)
   if (CYCLING.has(activity.kind) && activity.trainer) details.push('indoor')
-  // Rendered as markup rather than pushed into `details`: the glyph is coloured
-  // and hidden from screen readers, which a joined string can't express.
+  // Rendered separately, not joined into `details`: needs a coloured, aria-hidden glyph.
   const hr = heartRate(activity)
 
   return (
@@ -114,8 +100,7 @@ export function MovingRow({
         {hr && (
           <>
             {details.length > 0 && ' · '}
-            {/* The glyph carries the meaning visually; the label carries it for
-                a screen reader, which would otherwise hear "black heart suit". */}
+            {/* visually-hidden label avoids a screen reader announcing "black heart suit". */}
             <span className="moving-hr-icon" aria-hidden="true">
               ♥
             </span>

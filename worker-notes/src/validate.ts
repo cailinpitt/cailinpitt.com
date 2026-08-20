@@ -1,22 +1,13 @@
-// Input validation for the write endpoints.
-//
-// Unlike the guestbook's, this one guards a token-gated endpoint — the only
-// person it ever says no to is Cailin, typing on a phone. So it is short: bound
-// the length, normalize the whitespace, and strip the invisibles. There is no
-// link limit and no spam heuristic, because there is no stranger on the other
-// end of it.
-//
-// Not handled here, deliberately: escaping. A note renders as React text nodes
-// on the site and as plain text in the curl view, so a stored `<script>` is
-// eighteen visible characters. The one place it would matter is the RSS feed,
-// which escapes on the way out (see feed.ts).
+// Input validation for the write endpoints. Unlike the guestbook's, this guards
+// a token-gated endpoint (the only person it ever says no to is Cailin on her
+// phone), so it's short: bound length, normalize whitespace, strip invisibles —
+// no link limit or spam heuristic. Escaping is deliberately not handled here: a
+// note renders as React text / plain text, not HTML; feed.ts escapes for RSS.
 
-// Defined here rather than in store.ts and imported the other way around:
-// store.ts uses D1's ambient Cloudflare Workers types, which aren't available
-// to the site's own `tsc` — and tests/notes.test.ts imports this file (see the
-// header above) to cover the parts worth testing from the site's suite. A type
-// import from store.ts would drag D1Database into the site's type-check along
-// with it.
+// Defined here rather than in store.ts and imported the other way: store.ts
+// uses D1's ambient Workers types, unavailable to the site's own `tsc`, and
+// tests/notes.test.ts imports this file — a type import from store.ts would
+// drag D1Database into the site's type-check.
 export type ContextType = 'photo' | 'activity' | 'post'
 
 /** The two context fields together, or absent for an ordinary note. */
@@ -25,16 +16,9 @@ export interface NoteContext {
   ref: string
 }
 
-/**
- * The cap, in Unicode code points — so an emoji counts as one character, not
- * two, which is the count the compose box shows and the only one a person would
- * recognize as correct.
- *
- * 480 rather than a round 500 because it is the number Cailin picked for what a
- * passing thought is allowed to be. It is enforced here, mirrored in
- * src/lib/notes.ts for the counter, and pinned by tests/notes-validate.test.ts
- * so the two cannot drift.
- */
+// Unicode code points, so an emoji counts as one character, matching the
+// compose box's counter. Mirrored in src/lib/notes.ts and pinned by
+// tests/notes-validate.test.ts so the two can't drift.
 export const MAX_LENGTH = 480
 
 /** The link a card should be built for, and whether its text was stripped from the note. */
@@ -50,24 +34,15 @@ export type Validation =
 /** Code-point length. `'👋'.length` is 2; this counts it as 1. */
 export const glyphs = (s: string): number => [...s].length
 
-/**
- * Control (Cc) and format (Cf) characters. Cc is the C0/C1 control range; Cf
- * covers the zero-width and bidi-override characters. Neither belongs in a note,
- * and the bidi ones would let stored text render in an order it isn't stored in.
- *
- * Newline is Cc, so the replacer has to spare it explicitly — a note is allowed
- * to have a line break in it.
- */
+// Control (Cc) and format (Cf) characters — the bidi-override ones in Cf would
+// let stored text render in an order it isn't stored in. Newline is Cc, so the
+// replacer spares it explicitly.
 const INVISIBLE = /\p{Cc}|\p{Cf}/gu
 
-/**
- * Normalize a note: NFC, newlines to `\n`, invisibles gone, trailing space per
- * line trimmed, and no more than one blank line in a row.
- *
- * The blank-line collapse is what keeps a stray paste of a hundred newlines from
- * becoming a note that is three screens of nothing — the feed has no per-note
- * height limit, by design, because a note is short.
- */
+// NFC, newlines to `\n`, invisibles gone, trailing space per line trimmed, no
+// more than one blank line in a row — the last is what keeps a stray paste of
+// a hundred newlines from becoming three screens of nothing, since the feed has
+// no per-note height limit by design.
 export function clean(raw: unknown): string {
   if (typeof raw !== 'string') return ''
   return raw
@@ -87,12 +62,8 @@ const CONTEXT_TYPES = new Set<ContextType>(['photo', 'activity', 'post'])
 /** A photo/activity id or a post path — generous, but not unbounded. */
 const MAX_CONTEXT_REF = 200
 
-/**
- * `contextType` and `contextRef` travel together: both present, or both
- * absent. One without the other is a client bug (a picker that set the type
- * but not the ref, or vice versa) rather than something to guess at, so it is
- * refused rather than silently dropped.
- */
+// contextType and contextRef travel together, both present or both absent. One
+// without the other is a client bug, refused rather than silently dropped.
 function validateContext(
   rawType: unknown,
   rawRef: unknown,
@@ -110,25 +81,13 @@ function validateContext(
   return { ok: true, value: { type: rawType as ContextType, ref: rawRef as string } }
 }
 
-/**
- * Same narrow shape as URL_RE in src/lib/notes.ts: an explicit http(s)
- * scheme or a `www.` host, nothing looser — a link card is only ever built
- * for something the note's own autolinker would also have turned blue.
- */
+// Same narrow shape as URL_RE in src/lib/notes.ts: a link card is only ever
+// built for something the note's own autolinker would also have turned blue.
 const LINK_URL_RE = /^(https?:\/\/[^\s<>]+|www\.[^\s<>]+)$/i
 
-/**
- * `linkUrl` and `linkHidden` are optional and independent of `contextType`/
- * `contextRef` — unlike those two, `linkHidden` alone (no `linkUrl`) is
- * refused rather than treated as "no link," since there is nothing to hide.
- *
- * Deliberately *not* checked here: whether `rawUrl` is still present in
- * `text`. index.ts's stripLink() deletes it the first time a link is
- * hidden, so on every edit after that the text legitimately no longer
- * contains it — requiring it here would make re-saving an already-hidden
- * link's note fail validation. stripLink() itself is a no-op when the
- * substring isn't found, so there's nothing to enforce either way.
- */
+// linkHidden alone (no linkUrl) is refused, since there's nothing to hide.
+// Deliberately not checked: whether rawUrl is still in `text` — index.ts's
+// stripLink() deletes it once, so every edit after that legitimately lacks it.
 function validateLink(
   rawUrl: unknown,
   rawHidden: unknown,

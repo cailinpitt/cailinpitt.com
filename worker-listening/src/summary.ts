@@ -12,12 +12,7 @@ const SEP = '\u001f'
 /** 100 bound parameters per query is a hard D1 limit. */
 const MAX_BINDS = 100
 
-/**
- * A silence this long before a play makes it a "return".
- *
- * Must match the threshold in backfill-returns.sql, or history and live ingest
- * disagree about what counts.
- */
+// Must match the threshold in backfill-returns.sql, or history and live ingest disagree.
 export const RETURN_GAP = 365 * 86_400
 
 export interface DiscoveryCounts {
@@ -27,16 +22,9 @@ export interface DiscoveryCounts {
   newArtists: { name: string; uts: number }[]
 }
 
-/**
- * Statements maintaining the summary tables for rows that were *actually*
- * inserted.
- *
- * Correctness note: ingest re-offers an hour of overlap on every pull and leans
- * on INSERT OR IGNORE to drop what it already has. Those ignored rows must not
- * reach these counters, or `plays` drifts upward a little every minute forever.
- * The caller therefore feeds this the RETURNING output of the archive insert,
- * never the raw Last.fm page.
- */
+// Caller must pass the RETURNING output of the archive insert, never the raw
+// Last.fm page — ingest re-offers an hour of overlap, and rows dropped by
+// INSERT OR IGNORE must not reach these counters or `plays` drifts upward forever.
 export function summaryStatements(
   env: Env,
   inserted: Scrobble[],
@@ -147,13 +135,8 @@ export function summaryStatements(
   return out
 }
 
-/**
- * Each artist's current `last_uts`, for the artists in a batch.
- *
- * Must be read before summaryStatements() runs: its UPSERT overwrites the very
- * value that makes a gap detectable. A normal tick has 0–3 artists, so this is a
- * handful of primary-key seeks.
- */
+// Must be read before summaryStatements() runs — its UPSERT overwrites the
+// value that makes a gap detectable.
 export async function priorLastPlay(
   db: D1Database,
   artists: string[],
@@ -168,17 +151,9 @@ export async function priorLastPlay(
   return new Map(rows.results.map((r) => [r.artist, r.last_uts]))
 }
 
-/**
- * When each of these entities was first heard, ever.
- *
- * This is what separates "new to me" from "new to the chart". A leaderboard
- * entry absent from last period's top 25 is not necessarily new — it may have
- * years of history and simply have ranked lower — and labelling it "new" next to
- * a Discovery section that means first-ever play is a straight contradiction.
- *
- * Keyed lookups against the summary tables, so this is ~25 primary-key seeks per
- * list rather than anything resembling a scan.
- */
+// Separates "new to me" from "new to the chart" — an entry absent from last
+// period's top 25 may just have ranked lower, not be first-ever. ~25 primary-key
+// seeks per list, not a scan.
 export async function firstSeenArtists(
   db: D1Database,
   artists: string[],
@@ -232,12 +207,7 @@ export async function returnsIn(
   return rows.results.map((r) => ({ name: r.artist, gapDays: r.gap_days }))
 }
 
-/**
- * Scrobbles strictly before a period, for milestone numbering.
- *
- * Summing the `days` table costs ~2,000 rows; COUNT(*) over `scrobbles` would
- * cost 101k for the same answer.
- */
+// Sums the `days` table (~2,000 rows) instead of COUNT(*) over `scrobbles` (101k).
 export async function playsBefore(db: D1Database, day: string): Promise<number> {
   const row = await db
     .prepare('SELECT COALESCE(SUM(plays), 0) AS n FROM days WHERE day < ?1')
@@ -253,9 +223,8 @@ export async function discoveryIn(
   end: number,
 ): Promise<DiscoveryCounts> {
   const range = 'first_uts >= ?1 AND first_uts < ?2'
-  // The three counts as scalar subqueries in one statement rather than three.
-  // Each is still its own index range; this is purely about the per-invocation
-  // query ceiling, which is what caps how many periods a cron tick can build.
+  // Three scalar subqueries in one statement, not three separate ones — keeps
+  // the per-invocation query ceiling from capping how many periods a tick can build.
   const [counts, names] = await db.batch<Record<string, number> & { artist: string; first_uts: number }>([
     db
       .prepare(
@@ -280,12 +249,8 @@ export async function discoveryIn(
 
 const ROW_COLS = 'uts, track, artist, album, mbid, image'
 
-/**
- * The raw rows for a period, oldest first.
- *
- * Ascending on purpose: session detection, binges and album runs all read the
- * timeline forwards, and milestone numbering counts up from `playsBefore`.
- */
+// Ascending on purpose: session detection, binges and album runs read forward,
+// and milestone numbering counts up from `playsBefore`.
 export async function fetchPeriodRows(
   db: D1Database,
   start: number,
@@ -302,20 +267,11 @@ export async function fetchPeriodRows(
   return rows.results
 }
 
-/**
- * How many scrobbles fall inside each of several windows.
- *
- * One small range query per window, sent as a single batch. Each seeks straight
- * to its own slice of idx_scrobbles_uts, so thirty activities spread over three
- * weeks cost ~300 rows rather than the ~1,500 a single range over the whole span
- * would read.
- *
- * **Not `UNION ALL`.** That is the obvious way to make it one statement, and D1
- * rejects it: SQLITE_MAX_COMPOUND_SELECT is 5 there, far below SQLite's default
- * of 500, so six windows fail with "too many terms in compound SELECT". A batch
- * has no such ceiling — it is bounded instead by D1's ~50 statements per
- * invocation, which is what COUNTS_MAX_WINDOWS respects.
- */
+// One range query per window sent as a batch, each seeking its own slice of
+// idx_scrobbles_uts — 30 activities over 3 weeks cost ~300 rows, not ~1,500.
+// Not UNION ALL: D1's SQLITE_MAX_COMPOUND_SELECT is 5 (vs SQLite's default 500),
+// so 6+ windows fail with "too many terms". batch() has no such ceiling — only
+// D1's ~50 statements/invocation, which COUNTS_MAX_WINDOWS respects.
 export async function countInWindows(
   db: D1Database,
   windows: { from: number; to: number }[],
@@ -357,13 +313,8 @@ export interface AllTimeTotals {
   lastDay: string | null
 }
 
-/**
- * All-time totals without touching `scrobbles` at all.
- *
- * The archive is 101k rows and growing; the summary tables answer the same
- * question in ~4,300 + 8,900 + 18,100 rows of COUNT, and the play total comes
- * from summing ~2,000 day rows.
- */
+// Never touches `scrobbles` (101k rows) — summary tables answer the same
+// question in ~4,300 + 8,900 + 18,100 rows of COUNT, plays from ~2,000 day rows.
 export async function allTimeTotals(db: D1Database): Promise<AllTimeTotals> {
   const [totals, bounds] = await db.batch<Record<string, number | string | null>>([
     db.prepare(

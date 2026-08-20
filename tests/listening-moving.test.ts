@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { aggregate } from '../worker-listening/src/aggregate'
 import { parsePeriod } from '../worker-listening/src/periods'
 
-// The crossover is a merge over two ascending lists, and the boundary cases are
-// where a merge goes wrong: a play exactly on a window's edge, a play between
-// two activities, windows that arrive out of order.
+// A merge over two ascending lists; boundary cases are where a merge goes wrong.
 
 const OFFSET = -18000
 const at = (iso: string) => Math.floor(new Date(`${iso}Z`).getTime() / 1000) - OFFSET

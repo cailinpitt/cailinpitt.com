@@ -1,16 +1,10 @@
 // Thin hardcover.app client — the library read the daily sync needs, nothing else.
 // Returns one normalized row per *read session* (see schema.sql).
 //
-// Two things about this API shape the query below:
-//
-//  1. Hardcover caps **query depth at 3**, so authors cannot be reached through
-//     `user_books → book → contributions → author`. They don't need to be: the
-//     `books.cached_contributors` jsonb column already carries each author's
-//     name and role, so the whole library comes back in one paged query with no
-//     join and no second round trip. (The `contributions` table itself is
-//     polymorphic — `contributable_id`/`contributable_type`, no `book_id` — so
-//     filtering it by book isn't possible anyway.)
-//  2. `me` returns an *array*, not an object — Hasura convention throughout.
+// Hardcover caps query depth at 3, so authors come from the denormalized
+// `books.cached_contributors` jsonb rather than a `contributions` join (that
+// table is polymorphic and can't be filtered by book anyway). And `me` returns
+// an array, not an object — Hasura convention throughout.
 
 const ENDPOINT = 'https://api.hardcover.app/v1/graphql'
 
@@ -43,8 +37,6 @@ export interface BookRow {
   finishedAt: string | null
 }
 
-// ---- wire shapes ---------------------------------------------------------
-
 interface RawRead {
   id: number
   started_at: string | null
@@ -75,8 +67,6 @@ interface GraphQLResponse<T> {
   errors?: { message: string }[]
 }
 
-// ---- queries -------------------------------------------------------------
-
 const ME_QUERY = `query Me { me { id username } }`
 
 const LIBRARY_QUERY = `
@@ -106,8 +96,6 @@ const LIBRARY_QUERY = `
     }
   }`
 
-// ---- transport -----------------------------------------------------------
-
 async function gql<T>(token: string, query: string, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
@@ -134,8 +122,6 @@ async function gql<T>(token: string, query: string, variables?: Record<string, u
   if (!body.data) throw new Error('Hardcover returned no data')
   return body.data
 }
-
-// ---- normalization -------------------------------------------------------
 
 /** A jsonb column can arrive parsed or as a JSON string, depending on the row. */
 function asJson(value: unknown): unknown {
@@ -183,8 +169,6 @@ function authorsFrom(cached: unknown): string | null {
   const names = authors.length ? authors : everyone
   return names.length ? names.join(', ') : null
 }
-
-// ---- public API ----------------------------------------------------------
 
 export async function fetchUserId(token: string): Promise<number> {
   const data = await gql<{ me: { id: number; username: string }[] }>(token, ME_QUERY)

@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react'
 
-/**
- * Advertises a page's terminal view. Both activity Workers render themselves as
- * text for a CLI user-agent (see worker/src/text.ts and worker-reading/src/text.ts),
- * which nobody would ever discover from the page without this.
- *
- * The `$` is presentational — it's outside the copied string and hidden from
- * assistive tech, so pasting what you copied actually runs.
- */
+// Advertises a page's terminal/CLI view (see worker/src/text.ts,
+// worker-reading/src/text.ts) — nobody would discover it otherwise. The `$`
+// is presentational, outside the copied string, so pasting it actually runs.
 export function CurlHint({ command }: { command: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
 

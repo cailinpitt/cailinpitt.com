@@ -1,11 +1,7 @@
 // Layer 2 maintenance: fill artist_meta / album_meta / track_meta a few rows at
-// a time from the cron, and publish the two lookup blobs that period aggregation
-// reads.
-//
-// Aggregation must never join against these tables. A period compute already
-// holds its rows in memory and would need a duration for each of them; querying
-// per period would be ~18k rows every time. Instead the whole lookup is
-// published to KV once a day and read as a single value.
+// a time from the cron, and publish the lookup blobs period aggregation reads.
+// Aggregation never joins against these tables directly — querying per period
+// would be ~18k rows every time, so the whole lookup is published to KV daily.
 
 import { fetchAlbumInfo, fetchArtistInfo, fetchArtistTags, type RawTag } from './lastfm'
 import { primaryGenre } from './genres'
@@ -41,21 +37,13 @@ export type DurationMap = Record<string, number>
 
 export const durationKey = (track: string, artist: string) => `${track}${SEP}${artist}`
 
-// ---- enrichment queue ----------------------------------------------------
-
 interface Pending {
   artists: string[]
   albums: { album: string; artist: string }[]
 }
 
-/**
- * What still needs looking up.
- *
- * An anti-join against the summary tables, ordered by play count so the artists
- * that actually matter to the charts are enriched first — the long tail of
- * one-play artists can wait, and if a lookup never succeeds for them it barely
- * moves a share.
- */
+// Anti-join against the summary tables, ordered by play count so artists that
+// matter to the charts get enriched first — the one-play long tail can wait.
 async function pending(db: D1Database, limit: number): Promise<Pending> {
   const [artists, albums] = await db.batch<Record<string, string>>([
     db
@@ -97,14 +85,8 @@ export async function enrichmentBacklog(db: D1Database): Promise<{ artists: numb
   return { artists: artists.results[0]?.n ?? 0, albums: albums.results[0]?.n ?? 0 }
 }
 
-/**
- * Enrich a couple of entities. Returns how many were handled.
- *
- * Failures are recorded rather than retried immediately: a row that errors gets
- * a meta row with `missing = 1`, which takes it out of the queue. Otherwise one
- * permanently unresolvable artist would sit at the head of the queue forever and
- * block everything behind it.
- */
+// Failures are recorded (a `missing = 1` meta row) rather than retried
+// immediately, so one permanently unresolvable artist can't block the queue.
 export async function enrichSome(env: Env, now: number): Promise<number> {
   const work = await pending(env.DB, PER_TICK)
   const statements: D1PreparedStatement[] = []
@@ -178,14 +160,8 @@ export async function enrichSome(env: Env, now: number): Promise<number> {
   return handled
 }
 
-// ---- lookup blobs --------------------------------------------------------
-
-/**
- * Rebuild the artist → genre map.
- *
- * Normalization happens here, not at fetch time, so revising the taxonomy in
- * genres.ts is a redeploy plus a blob rebuild rather than 4,340 API calls.
- */
+// Normalization happens here, not at fetch time, so revising the taxonomy in
+// genres.ts is a redeploy + blob rebuild rather than 4,340 API calls.
 export async function buildGenreMap(env: Env): Promise<GenreMap> {
   const rows = await env.DB.prepare(
     'SELECT artist, tags FROM artist_meta WHERE tags IS NOT NULL',
@@ -205,14 +181,9 @@ export async function buildGenreMap(env: Env): Promise<GenreMap> {
   return map
 }
 
-/**
- * Enrich one artist's origin from MusicBrainz.
- *
- * Kept to a single artist per call: MusicBrainz asks for one request per second,
- * and resolveArtist() may make two (an MBID lookup, then a name search). The
- * bulk of the archive is done by scripts/musicbrainz-listening.mjs; this only
- * has to keep up with newly-heard artists.
- */
+// One artist per call: MusicBrainz caps 1 req/s and resolveArtist() may make
+// two. scripts/musicbrainz-listening.mjs handles the bulk archive; this just
+// keeps up with newly-heard artists.
 export async function enrichOneOrigin(env: Env, now: number): Promise<boolean> {
   const row = await env.DB.prepare(
     `SELECT a.artist FROM artists a
@@ -262,7 +233,6 @@ export async function enrichOneOrigin(env: Env, now: number): Promise<boolean> {
   }
 }
 
-/** Rebuild the artist → origin map. */
 export async function buildOriginMap(env: Env): Promise<OriginMap> {
   const rows = await env.DB.prepare(
     `SELECT artist, country, kind, formed_year FROM artist_meta
@@ -281,12 +251,10 @@ export async function buildOriginMap(env: Env): Promise<OriginMap> {
   return map
 }
 
-/** Rebuild the (track, artist) → seconds map. */
 export async function buildDurationMap(env: Env): Promise<DurationMap> {
-  // Joined against `tracks` so the map holds only what has actually been played.
-  // album.getInfo returns every track on a record, scrobbled or not, which put
-  // 50k entries in a blob that 18k would cover — and this blob is parsed by the
-  // period builder, where its size is CPU.
+  // Joined against `tracks` so the map holds only what's actually been played —
+  // album.getInfo returns a record's whole tracklist, which put 50k entries in a
+  // blob that 18k would cover, and blob size is CPU for the period builder.
   const rows = await env.DB.prepare(
     `SELECT m.track, m.artist, m.duration FROM track_meta m
        JOIN tracks t ON t.track = m.track AND t.artist = m.artist
@@ -298,19 +266,11 @@ export async function buildDurationMap(env: Env): Promise<DurationMap> {
   return map
 }
 
-/**
- * Newest `fetched_at` across the meta tables.
- *
- * This is the "has the source data changed" signal for the lookup blobs. A pure
- * timer is not enough: a bulk load from scripts/enrich-listening.mjs writes tens
- * of thousands of rows without going through enrichSome(), so a blob rebuilt
- * just before it would stay pinned to a near-empty snapshot until the timer
- * expired — and every period computed in that window would classify against
- * nothing. Both columns are indexed, so this is two index seeks.
- *
- * track_meta needs no check of its own: its rows are always written in the same
- * batch as the album row that produced them.
- */
+// The "has the source data changed" signal for the lookup blobs. A pure timer
+// isn't enough: scripts/enrich-listening.mjs can bulk-write rows without going
+// through enrichSome(), which would otherwise leave a blob pinned to a
+// near-empty snapshot until the timer expired. track_meta needs no check of its
+// own — its rows are always written alongside the album row that produced them.
 export async function metaWatermark(db: D1Database): Promise<number> {
   const [artists, albums, mb] = await db.batch<{ v: number | null }>([
     db.prepare('SELECT MAX(fetched_at) AS v FROM artist_meta'),
@@ -326,18 +286,10 @@ export interface MetaLookups {
   origins: OriginMap
 }
 
-/**
- * Parsed lookups, held for the life of the isolate.
- *
- * These blobs total ~1 MB of JSON, and `env.KV.get(key, 'json')` parses on every
- * call. Period building reads them once per period, so a tick building several
- * was spending its whole 10 ms CPU budget re-parsing identical bytes — enough to
- * fail the invocation outright with exceededCpu, which silently stalls the
- * backfill because nothing gets written.
- *
- * Isolates are recycled freely, so this is best-effort: a cold one pays the
- * parse, and the TTL keeps a long-lived one from serving a stale map forever.
- */
+// Parsed lookups (~1MB of JSON), cached for the isolate's life. Re-parsing per
+// period was spending the whole 10ms CPU budget on identical bytes, enough to
+// fail invocations with exceededCpu and silently stall the backfill. Best-effort
+// since isolates recycle freely; the TTL keeps a long-lived one from going stale.
 let lookupCache: { at: number; value: MetaLookups } | null = null
 const LOOKUP_CACHE_MS = 10 * 60 * 1000
 
@@ -356,13 +308,9 @@ export async function readLookups(env: Env): Promise<MetaLookups> {
   return value
 }
 
-/**
- * Republish both lookups. Two KV writes, so this runs daily rather than per tick.
- *
- * The duration map is the big one — ~18k entries, a few hundred KB. That is well
- * inside KV's 25 MB value ceiling, and reading it once per period compute is far
- * cheaper than the ~18k D1 row reads the equivalent join would cost.
- */
+// Two KV writes, so this runs daily rather than per tick. The duration map is
+// the big one (~18k entries, a few hundred KB) — well inside KV's 25MB ceiling,
+// and far cheaper than the ~18k D1 row reads an equivalent join would cost.
 export async function refreshLookups(
   env: Env,
 ): Promise<{ genres: number; durations: number; origins: number }> {

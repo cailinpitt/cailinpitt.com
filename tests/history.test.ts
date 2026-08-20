@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { BULK_POSTS, parsePostHistory, repoWebUrl } from '../src/lib/history'
 
-// The provenance line at the foot of a post is only as trustworthy as this
-// parser. What matters is the distinction it draws: a commit that edited one
-// post is a revision of that post, and a commit that swept 31 posts at once is
-// repo plumbing that must not be counted as one. See src/lib/history.ts.
+// A commit editing one post is a revision; a commit sweeping 31 at once is plumbing, not a revision. See src/lib/history.ts.
 
 const RECORD = '\x1e'
 const FIELD = '\x1f'
@@ -49,8 +46,7 @@ describe('parsePostHistory', () => {
   })
 
   it('does not count a commit that rewrote the whole archive', () => {
-    // The real shape of this repo: a migration, then a reformat of all 31, and
-    // one post edited on its own afterward.
+    // Real shape of this repo: a migration, a reformat of all 31, then one post edited alone.
     const history = parsePostHistory(
       log([
         { sha: 'ddd', date: '2026-07-01T09:00:00-05:00', subject: 'fix', files: [post(1)] },

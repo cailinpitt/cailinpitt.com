@@ -1,13 +1,9 @@
-// Scrapes a link's own OG metadata, for the Twitter/Bluesky-style card a
-// note's attached link gets. Runs entirely inside the Worker — no sharp, no
-// satori, unlike the per-note card this site renders for itself
-// (scripts/generate-note-og.mjs), because there is nothing to *render* here:
-// a card for someone else's page is close to their own title, description,
-// and image, not a composition this site draws.
-//
-// Two callers, both in index.ts: the live preview route (scrape only, shown
-// while composing) and the background job that persists a card after
-// publish (scrape, then also fetch and re-host the image).
+// Scrapes a link's own OG metadata for the Twitter/Bluesky-style card a note's
+// attached link gets. Runs entirely inside the Worker — no sharp/satori needed,
+// unlike scripts/generate-note-og.mjs, since there's nothing to render, just a
+// card close to the source page's own title/description/image. Two callers in
+// index.ts: the live preview route (scrape only), and the background job that
+// persists a card after publish (scrape + re-host the image).
 
 export interface LinkPreview {
   title: string | null

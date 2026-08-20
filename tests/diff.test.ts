@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { elide, parseUnifiedDiff, wordDiff, type Token } from '../src/lib/diff'
 
-// A post's markdown puts a whole paragraph on one line, so git's line diff says
-// "this 1,200-character paragraph left, this near-identical one arrived". The
-// refinement in src/lib/diff.ts is what makes that readable, and these pin down
-// the cases where it should and shouldn't apply.
+// Post paragraphs are single lines, so git's line diff is unreadable without the refinement in src/lib/diff.ts.
 
 /** The rendered result of a token stream, as three strings. */
 const parts = (tokens: Token[]) => ({
@@ -70,7 +67,7 @@ describe('elide', () => {
   })
 
   it('drops the run before the first change entirely', () => {
-    // Nobody needs the opening of a paragraph to understand a change at its end.
+    // No one needs the opening of a paragraph to understand a change at its end.
     const tokens = elide([
       { kind: 'same', text: `${long(200)} ` },
       { kind: 'add', text: 'new' },
@@ -135,8 +132,7 @@ describe('parseUnifiedDiff', () => {
   })
 
   it('shows a rewrite as a replacement rather than confetti', () => {
-    // Two lines with almost nothing in common: word-marking every token would
-    // be less readable than the before and after.
+    // Lines with almost nothing in common: word-marking every token is less readable than before/after.
     const [diff] = parseUnifiedDiff(
       patch('content/blog/a.md', [
         '@@ -7 +7 @@',
@@ -174,8 +170,7 @@ describe('parseUnifiedDiff', () => {
   })
 
   it('does not treat a frontmatter fence as a file header', () => {
-    // Frontmatter opens with "---", the same three characters that open the
-    // old-file line of a patch.
+    // Frontmatter's "---" is the same three chars that open a patch's old-file line.
     const [diff] = parseUnifiedDiff(
       patch('content/blog/a.md', ['@@ -1,3 +1,3 @@', '----', '-title: "Old"', '+title: "New"']),
     )

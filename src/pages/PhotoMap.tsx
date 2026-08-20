@@ -5,15 +5,9 @@ import { Seo } from '../components/Seo'
 import { formatPhotoDate, imageUrl, type Photo } from '../lib/photos'
 import { pageSchema } from '../lib/structuredData'
 
-// Where the photos were taken, from the coordinates images:sync reads off each
-// original. Leaflet renders the map and OpenStreetMap serves the tiles — both
-// free, no account and no key, which is why they're here rather than a
-// commercial tile provider. Attribution below is required by the tile policy.
-//
-// Leaflet touches `window` the moment it's imported, so it can't be a top-level
-// import on a prerendered page: the module is pulled in inside the effect, which
-// only ever runs in a browser. The page's shell prerenders as normal and the map
-// fills in after mount.
+// Leaflet + OpenStreetMap tiles: free, no key. Leaflet touches `window` on
+// import, so it's dynamically imported inside the effect (browser-only) rather
+// than at the top level, which would break prerendering.
 
 interface MapData {
   photos: Photo[]
@@ -90,9 +84,8 @@ export function Component() {
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map)
 
-        // circleMarker rather than the default pin: it's drawn, not an image, so
-        // it sidesteps Leaflet's bundler-hostile marker icon URLs entirely — and
-        // it takes the site's accent color.
+        // circleMarker, not the default pin: drawn rather than an image, so it
+        // sidesteps Leaflet's bundler-hostile icon URLs and takes the accent color.
         for (const pin of pins) {
           L.circleMarker([pin.lat, pin.lon], {
             radius: 7,

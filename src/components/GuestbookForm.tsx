@@ -8,24 +8,10 @@ import {
 } from '../lib/guestbook'
 
 /**
- * The sign-the-guestbook form.
- *
- * Three things here are less obvious than they look:
- *
- * 1. **Turnstile loads late.** The challenge script is injected the first time
- *    someone interacts with the form, not on page load. Most people who open
- *    /guestbook are there to read it, and they should not pay for a third-party
- *    script to do that — the page has no other external requests and shouldn't
- *    grow one for a form nobody touched.
- *
- * 2. **Submitting can outrun the token.** If the widget hasn't produced one yet,
- *    the submission is held and fires from the token callback instead of making
- *    the person press the button twice. `pendingSubmit` is that latch.
- *
- * 3. **The honeypot is invisible to people, not just to sighted people.** It is
- *    `aria-hidden`, untabbable, and `autocomplete="off"`, so no screen reader
- *    announces it and no password manager fills it. Only something walking the
- *    DOM and filling every input will — which is exactly what it detects.
+ * The sign-the-guestbook form. Turnstile loads lazily on first interaction
+ * (most visitors are just reading, not signing), submission can be held
+ * pending a token, and the honeypot is hidden from assistive tech too —
+ * see the comments at each site below.
  */
 
 // The widget's own global, loaded by the injected script.
@@ -41,7 +27,7 @@ declare global {
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
 
-/** Inject the Turnstile script once per page, and resolve when it's usable. */
+// Injects the script once per page and resolves when it's usable.
 function loadTurnstile(): Promise<void> {
   if (window.turnstile) return Promise.resolve()
   const existing = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_SRC}"]`)
@@ -59,11 +45,8 @@ function loadTurnstile(): Promise<void> {
   return done
 }
 
-/**
- * `challenging` is the deferred-submit state: pressed Sign, waiting on a token.
- * Kept distinct from `submitting` so the button can say which one is happening —
- * "Signing…" while a challenge is quietly waiting for a click is a lie.
- */
+// `challenging`: pressed Sign, waiting on a token. Kept distinct from
+// `submitting` so the button doesn't say "Signing…" while nothing is happening yet.
 type Status = 'idle' | 'challenging' | 'submitting' | 'done'
 
 /** Which field an error belongs to, or 'form' for the ones that belong to none. */
@@ -77,9 +60,8 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
   const [status, setStatus] = useState<Status>('idle')
   const [errors, setErrors] = useState<Partial<Record<ErrorTarget, string>>>({})
 
-  // Turnstile state. `token` is single-use, so it is cleared after every
-  // submission; the widget itself is removed on success and re-armed on
-  // failure — see the note in submit() for why those differ.
+  // `token` is single-use, cleared after every submission; the widget itself
+  // is removed on success and re-armed on failure — see submit() for why.
   const widgetRef = useRef<HTMLDivElement>(null)
   const widgetId = useRef<string | null>(null)
   const token = useRef<string | null>(null)
@@ -111,11 +93,10 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
       const entry = await signGuestbook({
         ...draft.current,
         token: token.current ?? '',
-        // Always sent, always empty from a person. See the note up top.
-        nickname: '',
+        nickname: '', // Always sent, always empty from a person — the honeypot.
       })
-      // A null entry means the honeypot caught it — which cannot happen from
-      // this form, since it never fills the field. Treated as success anyway.
+      // A null entry means the honeypot caught it, which can't happen from
+      // this form. Treated as success anyway.
       if (entry) onSigned(entry)
       setStatus('done')
       setName('')
@@ -123,15 +104,10 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
       setWebsite('')
       setLocation('')
 
-      // Tear the widget down rather than resetting it.
-      //
-      // `reset()` re-arms the challenge, and Turnstile treats a second
-      // submission from the same address as more suspicious than the first —
-      // so with `interaction-only` it answers by popping a "verify you are
-      // human" checkbox *after* the entry has already posted, for a submission
-      // nobody is making. Removing it instead leaves the form quiet; if someone
-      // starts writing a second entry, the focus handler renders a fresh widget
-      // and the challenge runs then, which is when it actually means something.
+      // Remove rather than reset(): re-arming makes Turnstile treat a second
+      // submission as more suspicious, popping a checkbox after the entry has
+      // already posted. A fresh widget renders instead if someone starts a
+      // second entry, via the focus handler.
       removeWidget()
       setChallengeStarted(false)
     } catch (err) {
@@ -140,16 +116,15 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
         [target]: err instanceof Error ? err.message : 'Something went wrong. Try again.',
       })
       setStatus('idle')
-      // A retry *is* imminent here, and the spent token can't be reused, so
-      // this is the one case where re-arming in place is the right move.
+      // A retry is imminent here and the spent token can't be reused, so
+      // re-arming in place is right this time.
       window.turnstile?.reset(widgetId.current ?? undefined)
     } finally {
-      // Spent either way — single-use is the property the whole defense rests on.
-      token.current = null
+      token.current = null // Spent either way — single-use is the whole defense.
     }
   }, [onSigned, removeWidget])
 
-  /** Start the challenge. Called on first interaction with any field. */
+  // Called on first interaction with any field.
   const startChallenge = useCallback(() => {
     if (challengeStarted) return
     setChallengeStarted(true)
@@ -182,16 +157,14 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
       .catch(() => setChallengeFailed(true))
   }, [challengeStarted, submit])
 
-  // Tear the widget down on unmount so a client-side navigation away and back
-  // doesn't leave an orphaned iframe behind.
+  // Avoids an orphaned iframe on a client-side navigation away and back.
   useEffect(() => removeWidget, [removeWidget])
 
   const onSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     if (status === 'submitting' || status === 'challenging') return
 
-    // Client-side checks are for feedback only — the Worker re-checks all of
-    // this, because nothing arriving over the network can be trusted.
+    // Feedback only — the Worker re-checks everything, since nothing over the network is trusted.
     if (!name.trim()) return setErrors({ name: 'A name is required.' })
     if (!message.trim()) return setErrors({ message: 'A message is required.' })
 
@@ -199,7 +172,7 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
     if (token.current) {
       void submit()
     } else {
-      // Held until the challenge produces a token. See the note up top.
+      // Held until the challenge produces a token — see submit()'s callback.
       pendingSubmit.current = true
       setStatus('challenging')
     }
@@ -332,8 +305,7 @@ export function GuestbookForm({ onSigned }: { onSigned: (entry: Entry) => void }
         </p>
       )}
 
-      {/* Only when the challenge is holding a submission up. Points at the
-          widget, which by then is visible and waiting for a click. */}
+      {/* Points at the widget, which is visible and waiting for a click by now. */}
       {status === 'challenging' && (
         <p className="guestbook-waiting" role="status">
           One moment — finishing the spam check above.

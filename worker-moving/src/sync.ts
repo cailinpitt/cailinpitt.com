@@ -61,11 +61,10 @@ export async function sync(
   let lastPage = 0
 
   if (options.refresh) {
-    // Re-pull rows we already hold, to correct columns the export got wrong —
-    // notably start_date, which the CSV can only approximate because it carries
-    // no local timestamp. Driven by an explicit page number rather than the
-    // `before` cursor the backfill uses: every row already exists, so the
-    // oldest-row cursor would never advance.
+    // Re-pull rows already held, to correct columns the CSV export got wrong
+    // (notably start_date, which it can only approximate). Driven by an
+    // explicit page number, not the backfill's `before` cursor — every row
+    // already exists, so that cursor would never advance.
     const from = Math.max(1, options.page ?? 1)
     for (let i = 0; i < budget; i++) {
       lastPage = from + i
@@ -77,9 +76,9 @@ export async function sync(
       }
     }
   } else if (options.backfill) {
-    // No `after`, so a first run on an empty archive walks the whole history a
-    // budget at a time. `before` is the oldest row we hold, which makes each
-    // pass resume where the last one stopped with no cursor to persist.
+    // No `after`: a first run on an empty archive walks the whole history a
+    // budget at a time. `before` is the oldest row held, so each pass resumes
+    // where the last stopped with no cursor to persist.
     const before = bounds?.oldest ?? undefined
     for (let page = 1; page <= budget; page++) {
       const batch = await fetchActivities(token, { page, before })
@@ -104,10 +103,8 @@ export async function sync(
   const added = await countNew(env.DB, collected)
   const changed = await writeActivities(env.DB, collected)
 
-  // Recomputing scans the whole table twice. The cron runs every 30 minutes and
-  // almost every run re-offers the same week and changes nothing, so it is
-  // skipped unless a row actually moved — see STATS_MAX_AGE for why it still
-  // happens on a quiet day.
+  // Recomputing scans the table twice, so skip it unless a row actually moved
+  // — see STATS_MAX_AGE for why it still happens on a quiet day.
   const recomputed = changed > 0 || (await statsStale(env.DB))
   if (recomputed) await recomputeStats(env.DB)
 
@@ -159,16 +156,14 @@ const MUTABLE = [
 /**
  * Store the fetched activities, and report how many rows actually moved.
  *
- * An upsert guarded by a `WHERE` that compares every column, rather than a bare
- * `INSERT OR REPLACE`. The incremental pull re-offers a week of overlap on every
- * run, so the vast majority of these rows are byte-identical to what is already
- * stored; REPLACE rewrote them all and left no way to tell a real edit from the
- * overlap. With the guard, `RETURNING` yields exactly the rows that were new or
- * genuinely different — which is what lets the caller skip recomputing the
- * totals on a run that changed nothing.
+ * Upsert guarded by a WHERE comparing every column, not a bare INSERT OR
+ * REPLACE: the incremental pull re-offers a week of overlap every run, so most
+ * rows are byte-identical, and REPLACE would rewrite them all with no way to
+ * tell a real edit from the overlap. The guard makes RETURNING yield only rows
+ * that changed, so a no-op run can skip recomputing totals.
  *
- * `IS NOT` rather than `<>`, because a NULL on either side of `<>` is NULL, not
- * true, and a column going to or from NULL is precisely an edit.
+ * `IS NOT` rather than `<>`, since `<>` against a NULL is NULL, not true, and
+ * a column moving to/from NULL is exactly an edit.
  */
 async function writeActivities(db: D1Database, activities: SummaryActivity[]): Promise<number> {
   if (!activities.length) return 0
@@ -216,15 +211,10 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
   return written.reduce((n, r) => n + (r.results?.length ?? 0), 0)
 }
 
-/**
- * How long the totals may go without a recompute, however quiet Strava is.
- *
- * The `changed > 0` guard only sees rows this sync wrote. Anything that edits
- * the table out of band — scripts/moving-recategorize.sql after a change to the
- * `kind` mapping is the standing example — would otherwise leave the totals
- * wrong indefinitely, where before every sync silently repaired them. A daily
- * floor bounds that to a day and still skips ~47 of the 48 runs.
- */
+// How long totals may go without a recompute, however quiet Strava is. The
+// `changed > 0` guard only sees rows this sync wrote, so an out-of-band edit
+// (e.g. scripts/moving-recategorize.sql) would otherwise leave totals wrong
+// indefinitely. This floor bounds that to a day, skipping ~47 of 48 runs.
 const STATS_MAX_AGE = 24 * 60 * 60
 
 /** Whether the stored totals are old enough to rebuild on their own account. */

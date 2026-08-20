@@ -1,9 +1,5 @@
-// Client for the reading API (the Cloudflare Worker in /worker-reading). Like
-// /listening, the page is prerendered as a static shell and fetches this in the
-// browser.
-//
-// These interfaces mirror the Worker's by hand — the two aren't a shared package,
-// so a change on one side has to be made on the other.
+// Client for the reading API (Cloudflare Worker in /worker-reading), fetched in the browser
+// like /listening. Interfaces mirror the Worker's by hand — not a shared package.
 
 import { imageUrl } from './images'
 
@@ -115,8 +111,6 @@ export async function fetchOlderArticles(
   return res.json() as Promise<ArticlePage>
 }
 
-// ---- presentation helpers ------------------------------------------------
-
 /** Covers and social cards are R2 paths; everything else passes through. */
 export const readingImage = (src: string | null): string | null => imageUrl(src ?? undefined) ?? null
 
@@ -133,22 +127,16 @@ export function faviconUrl(url: string): string | null {
   }
 }
 
-/**
- * "★★★★☆" from a 0–5 rating. Hardcover allows half stars; they round up here
- * rather than introducing a third glyph, and the accessible label carries the
- * exact value anyway.
- */
+// Hardcover allows half stars; rounded up here rather than adding a third glyph, since the
+// accessible label carries the exact value anyway.
 export function stars(rating: number | null): string | null {
   if (rating == null || rating <= 0) return null
   const filled = Math.min(5, Math.round(rating))
   return '★'.repeat(filled) + '☆'.repeat(5 - filled)
 }
 
-/**
- * Split books into year sections, newest first. The API already returns them in
- * finish-date order, so this only has to walk the list once and start a new
- * group when the year changes.
- */
+// The API already returns books in finish-date order, so this just walks once and starts a
+// new group on year change.
 export function booksByYear(books: Book[]): { year: string; books: Book[] }[] {
   const years: { year: string; books: Book[] }[] = []
   for (const book of books) {

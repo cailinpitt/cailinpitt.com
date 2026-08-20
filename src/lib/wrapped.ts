@@ -1,27 +1,11 @@
-// Turn a period's stats into a narrative.
-//
-// Pure functions over a PeriodStats blob — no fetching, no new data. Everything
-// here is a reading of numbers the Worker already computed, which is what makes
-// it testable and what let it be built while the enrichment backfill ran.
-//
-// Two rules throughout:
-//
-//  - **Never assert something the data doesn't support.** Every card and trait
-//    returns null when its inputs are missing or too thin, and the page renders
-//    what survives. A half-enriched archive gets fewer cards, not wrong ones.
-//  - **Thresholds are stated, not hidden.** They're arbitrary by nature, so they
-//    live in one block with the reasoning attached.
-//
-// Voice: first person. This is Cailin's listening on Cailin's site, so the copy
-// says "I played", never "you played" — addressing the reader would imply the
-// numbers were theirs. Matches /listening ("What I have on").
+// Turns a period's PeriodStats into a narrative. Pure, no fetching. Two rules: never assert
+// what the data doesn't support (missing/thin inputs just skip the card or trait), and
+// thresholds are stated in one block (T below) rather than hidden inline. Voice is first
+// person — "I played", not "you played", since this is Cailin's listening on Cailin's site.
 
 import type { PeriodStats } from './listening'
 
-/**
- * A period needs at least this many scrobbles before any of it means anything.
- * Below this, "my top artist" is noise and the traits are coin flips.
- */
+// Below this many scrobbles, "my top artist" is noise and the traits are coin flips.
 export const MIN_SCROBBLES = 50
 
 const T = {
@@ -55,13 +39,8 @@ export interface Trait {
   detail: string
 }
 
-/**
- * Read the period's character off its indices.
- *
- * Traits are independent rather than one composite archetype: real listening
- * doesn't reduce to a single label, and a person can be both a loyalist and a
- * night owl. Each is emitted only when its evidence is actually strong.
- */
+// Traits are independent, not one composite archetype — a person can be both a loyalist and
+// a night owl. Each is emitted only when its evidence is actually strong.
 export function deriveTraits(stats: PeriodStats): Trait[] {
   const out: Trait[] = []
   if (stats.scrobbles < MIN_SCROBBLES) return out
@@ -179,13 +158,8 @@ export function formatSpan(seconds: number): string {
   return `${num(Math.round(hours))} hours`
 }
 
-/**
- * The narrative cards, in reading order.
- *
- * Each is skipped when its data is absent, so this returns a shorter deck rather
- * than one with holes — a period from before enrichment simply has no genre or
- * time card.
- */
+// Each card is skipped when its data is absent, so this returns a shorter deck rather than
+// one with holes — a period from before enrichment simply has no genre or time card.
 export function buildCards(stats: PeriodStats): Card[] {
   const cards: Card[] = []
   if (stats.scrobbles < MIN_SCROBBLES) return cards

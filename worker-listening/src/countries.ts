@@ -70,13 +70,8 @@ const NAMES: Record<string, string> = {
 
 export const countryName = (code: string): string => NAMES[code] ?? code
 
-/**
- * Regional-indicator flag emoji for a two-letter code.
- *
- * Built arithmetically rather than stored: 'US' → 🇺🇸. Codes that aren't two
- * ASCII letters (MusicBrainz's XW and XE) get a globe instead, since there is no
- * flag for them.
- */
+// Built arithmetically rather than stored: 'US' → 🇺🇸. Non-letter codes
+// (MusicBrainz's XW/XE) get a globe instead.
 export function countryFlag(code: string): string {
   if (!/^[A-Za-z]{2}$/.test(code) || code === 'XW' || code === 'XE') return '🌐'
   const base = 0x1f1e6 - 'A'.charCodeAt(0)

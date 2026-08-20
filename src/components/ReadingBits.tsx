@@ -19,8 +19,7 @@ export function BookCard({ book, dateLabel }: { book: Book; dateLabel: 'started'
 
   const inner = (
     <>
-      {/* alt="" because the title sits right beside it — announcing the cover
-          art too would just make a screen reader say the book twice. */}
+      {/* alt="": title is right beside it, no need to announce the book twice. */}
       <Art src={readingImage(book.cover)} alt="" className="book-cover" />
       <span className="book-meta">
         <span className="book-title">{book.title}</span>

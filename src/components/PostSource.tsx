@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react'
 
 /**
- * View-source for a post: flips the article between the rendered page and the
- * Markdown it was written in, the way a browser's own view-source does.
- *
- * It reads the body out of the loader data the page is already rendering from,
- * so switching costs no request and can't show something different from what's
- * on screen. The `.md` link goes to the real file
- * (scripts/generate-markdown.mjs copies it next to the HTML) — that one carries
- * the frontmatter too, which the body alone doesn't.
+ * View-source for a post: flips between rendered page and the Markdown it was
+ * written in. Reads the body from the loader data already rendering the page,
+ * so switching costs no request. The `.md` link goes to the real file
+ * (scripts/generate-markdown.mjs copies it next to the HTML), which carries
+ * frontmatter the body alone doesn't.
  */
 export function PostSource({
   body,
@@ -40,13 +37,10 @@ export function PostSource({
     }
   }
 
-  // A fragment, not a row: the page puts these in `.post-source-bar` alongside
-  // the link to the post's history, so the two sit in one row of controls.
+  // A fragment, not a row: the page puts these in `.post-source-bar` alongside the history link.
   return (
     <>
-      {/* A toggle button: the label stays put and aria-pressed carries the
-          state, so a screen reader announces what pressing it does rather than
-          renaming the control out from under anyone who just used it. */}
+      {/* Label stays put, aria-pressed carries state — avoids renaming the control out from under a screen reader user who just pressed it. */}
       <button type="button" aria-pressed={open} onClick={() => onToggle(!open)}>
         Markdown
       </button>

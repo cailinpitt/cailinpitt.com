@@ -11,9 +11,7 @@ export interface ColophonPage {
   body: string
 }
 
-// Same loading shape as projects.ts: import.meta.glob (rather than a static
-// import) keeps this resolving in both the Node SSG prerender and the browser
-// build.
+// import.meta.glob (not a static import) so this resolves in both the SSG prerender and the browser build.
 const rawModules = import.meta.glob('/content/colophon.md', {
   query: '?raw',
   import: 'default',
@@ -32,24 +30,10 @@ export const colophonPage: ColophonPage = {
 
 export type TemplateValues = Record<string, string | number>
 
-/**
- * The counters the prose quotes, substituted into the Markdown before it's
- * rendered.
- *
- * Two forms, both deliberately tiny — this is a fill-in-the-blanks step, not a
- * template language, and anything more would be better off back in JSX:
- *
- *   {{photos}}                  the value, thousands-separated if it's a number
- *   {{#located}}…{{/located}}   kept only when that value is non-zero
- *
- * The section form exists because a count can legitimately be zero, and "0 of
- * them carry a location" is a sentence that shouldn't be published. A repo whose
- * photos carry no EXIF just doesn't get that paragraph.
- *
- * An unknown placeholder is left in the text rather than blanked, so a typo
- * shows up as `{{photoss}}` the first time the page is previewed instead of
- * silently deleting half a sentence.
- */
+// Fill-in-the-blanks, not a template language: `{{photos}}` substitutes (number-formatted),
+// `{{#located}}…{{/located}}` keeps its section only when that value is non-zero. Unknown
+// placeholders are left as-is rather than blanked, so a typo is visible instead of silently
+// deleting a sentence.
 export function fillTemplate(body: string, values: TemplateValues): string {
   const present = (key: string) => {
     const value = values[key]

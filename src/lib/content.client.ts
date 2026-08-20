@@ -1,6 +1,5 @@
-// Development-only content loading for `vite` CSR mode. Production uses the
-// server-only loaders in content.server.ts plus generated static loader data, so
-// these eager Markdown imports are removed from the production client build.
+// Dev-only content loading for `vite` CSR mode; production uses content.server.ts instead,
+// so these eager Markdown imports are stripped from the production client build.
 
 import atprotoData from '../../content/atproto.json'
 import photoManifest from './photos.json'

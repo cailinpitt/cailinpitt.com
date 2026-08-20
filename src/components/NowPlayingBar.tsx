@@ -5,17 +5,10 @@ import { ListenLinks } from './ListenLinks'
 
 const POLL_MS = 60_000
 
-/**
- * Compact now-playing / last-played strip for the homepage. Client-fetched from
- * the lightweight /now.json endpoint; renders nothing until it has data (so the
- * prerendered shell and any API hiccup just leave the homepage clean).
- *
- * Polling pauses while the tab is hidden. /now.json is the one endpoint left
- * uncached at the edge — a KV read per request by design, since its freshness is
- * what's visible here — so a forgotten background tab was quietly spending 1,440
- * reads a day to update something nobody was looking at. Refreshing on the way
- * back keeps it current the moment it's on screen again.
- */
+// Now-playing strip, client-fetched from /now.json (renders nothing until it
+// has data). Polling pauses while the tab is hidden — /now.json is a KV read
+// per request by design, so a background tab was wasting 1,440 reads/day;
+// refreshing on visibility-return keeps it current the moment it's seen again.
 export function NowPlayingBar() {
   const [now, setNow] = useState<NowState | null>(null)
 

@@ -1,27 +1,8 @@
-// Date/time formatting shared by the activity pages (/listening, /reading).
-//
-// ## Everything a visitor reads as a clock is in *their* timezone
-//
-// A scrobble or an article is an instant, and `formatTime` / `formatRelative`
-// render it in the browser's local zone — a visitor in Berlin sees the time
-// their own clock showed, not Cailin's. Nothing here pins a zone.
-//
-// ## Day *labels* name a calendar date, not a zone
-//
-// `formatDayLabel` takes a YYYY-MM-DD key that has already been bucketed —
-// client-side from local timestamps on /reading, server-side by the listening
-// Worker (which groups scrobbles into US Central days; see TZ_OFFSET_SECONDS in
-// worker-listening/wrangler.jsonc). So it formats the key *as written*, in UTC, rather
-// than reinterpreting it in some other zone and printing a different date than
-// the one it was handed. "Today"/"Yesterday" then compare that date against the
-// viewer's own calendar date, which is what makes those two words true for the
-// person reading them.
-//
-// The consequence worth knowing: for a visitor many hours from US Central, a
-// listening bucket can be labeled "Yesterday" while holding a track whose local
-// time reads as today. The bucket boundary is Cailin's midnight and cannot be
-// recomputed from the aggregates the Worker sends (the heatmap carries per-day
-// counts only, not timestamps).
+// formatTime/formatRelative render in the viewer's local zone. formatDayLabel instead takes
+// an already-bucketed YYYY-MM-DD key (bucketed client-side, or server-side into US Central
+// days by the listening Worker — see TZ_OFFSET_SECONDS in worker-listening/wrangler.jsonc)
+// and formats it as UTC so the date never shifts — meaning a bucket can read "Yesterday" for
+// a track whose local time is today.
 
 const timeFmt = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',

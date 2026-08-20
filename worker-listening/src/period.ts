@@ -1,7 +1,5 @@
 // Period blob orchestration: build one PeriodStats, and track which ones exist.
-//
-// Nothing here runs on a request. The fetch handler only ever reads a finished
-// blob out of KV — see the note at the top of index.ts.
+// Nothing here runs on a request — the fetch handler only reads a finished blob.
 
 import { aggregate, type PeriodStats } from './aggregate'
 import {
@@ -26,38 +24,20 @@ import {
 import { readLookups } from './enrich'
 import { fetchWindows } from './moving'
 
-/**
- * Blob namespace. **Bump this whenever a stored period's shape or meaning
- * changes** — a new stat, or an edit to the genre taxonomy in genres.ts.
- *
- * Completed periods are frozen forever, so there is no other way to make them
- * pick up a change. Bumping orphans the old keys (they cost storage only, and
- * KV storage is not a metered constraint here) and the backfill walk rebuilds
- * every period under the new prefix within a day.
- *
- * v2: genres (Tier B) and listening time (Tier C).
- * v3: rebuild after the genre/duration backfill landed — v2 blobs were computed
- *     against near-empty lookups and would otherwise stay that way forever.
- */
+// Blob namespace. Bump whenever a stored period's shape/meaning changes (new
+// stat, genre taxonomy edit) — completed periods are frozen, so bumping is the
+// only way to make them pick up a change. Orphans the old keys (storage is
+// cheap) and the backfill walk rebuilds everything under the new prefix in a day.
 export const PREFIX = 'p:v4:'
 
 export const blobKey = (kind: PeriodKind, key: string) => `${PREFIX}${kind}:${key}`
 
-/**
- * When a year blob was last written.
- *
- * All-time is folded out of the year blobs rather than scanned, so it is stale
- * the moment any year changes — but on its own 24-hour timer it would keep
- * serving the old fold for up to a day. That is visible: during a rebuild it
- * reports one year's seconds divided by every scrobble.
- *
- * A single timestamp is enough to detect it, and costs one KV read per tick
- * against reading all six year blobs. Sharing PREFIX is safe: listPeriods()
- * skips any key without a `kind:key` shape.
- */
+// All-time is folded out of the year blobs rather than scanned, so it goes
+// stale the moment any year changes; this timestamp lets a tick detect that
+// without re-reading all six year blobs. Sharing PREFIX is safe — listPeriods()
+// skips any key without a `kind:key` shape.
 export const YEARS_TOUCHED_KEY = `${PREFIX}years-touched`
 
-/** Which period blobs exist, by kind. */
 export interface PeriodIndex {
   w: string[]
   m: string[]
@@ -67,14 +47,10 @@ export interface PeriodIndex {
 
 const TOP_N = 25
 
-/**
- * Enumerate existing blobs by listing KV rather than maintaining an index key.
- *
- * An index key would have to be rewritten every time a period is frozen — ~356
- * extra writes during the initial backfill, against a 1,000 writes/day ceiling
- * that `now:v1` already spends a third of. Listing costs a read instead, and the
- * whole archive is ~356 keys, comfortably inside one 1,000-key list page.
- */
+// Lists KV rather than maintaining an index key: an index key would need ~356
+// extra writes during the initial backfill against a 1,000 writes/day ceiling
+// `now:v1` already spends a third of. The whole archive is ~356 keys, well
+// within one list page.
 export async function listPeriods(env: Env): Promise<PeriodIndex> {
   const out: PeriodIndex = { w: [], m: [], y: [], all: false }
   let cursor: string | undefined
@@ -112,18 +88,11 @@ interface IndexCache {
   computedAt: number
 }
 
-/**
- * Cached wrapper around listPeriods().
- *
- * KV list() is capped at 1,000/day account-wide. Called from every cron tick
- * that reaches runPeriodWork, that alone blows the budget once the backfill
- * finishes and enrichment stops finding new work to short-circuit on first —
- * both leave nothing standing between the tick and this call, ~1,300 times a
- * day. A get() is effectively free (100k/day), so pay for a real list() once
- * per INDEX_CACHE_INTERVAL and serve every tick in between off one cheap read.
- * The archive only grows a few periods a day, so a half-hour-stale index costs
- * nothing but, at worst, one redundant period build that self-corrects next tick.
- */
+// KV list() is capped at 1,000/day account-wide, and runPeriodWork calls this
+// on nearly every tick once backfill finishes (~1,300/day) — that alone blows
+// the budget. get() is effectively free (100k/day), so a real list() runs once
+// per INDEX_CACHE_INTERVAL and every tick in between reads the cache; worst case
+// is one redundant, self-correcting period build.
 export async function getPeriodIndex(env: Env, now: number): Promise<PeriodIndex> {
   const cached = await env.KV.get<IndexCache>(INDEX_CACHE_KEY, 'json')
   if (cached && now - cached.computedAt < INDEX_CACHE_INTERVAL) return cached.index
@@ -133,12 +102,8 @@ export async function getPeriodIndex(env: Env, now: number): Promise<PeriodIndex
   return index
 }
 
-/**
- * Build one period's stats.
- *
- * Reads the previous period's blob when it exists so deltas and rank movement
- * come for free — one KV read against re-aggregating a second period.
- */
+// Reads the previous period's blob when it exists so deltas and rank movement
+// come for free (one KV read vs. re-aggregating a second period).
 export async function computePeriod(
   env: Env,
   period: Period,
@@ -186,15 +151,10 @@ export async function computePeriod(
   return stats
 }
 
-/**
- * Flag the leaderboard entries that are genuinely first-time, not just new to
- * the chart.
- *
- * Three keyed lookups of ~25 rows each. Without this the UI can only ask "was it
- * on last period's chart", which labels a long-standing artist "new" the moment
- * it drops out of the top 25 for one period — the exact thing that made Dust
- * read as new in 2026 after five years of plays.
- */
+// Flags entries genuinely first-time, not just new to the chart. Without this
+// the UI can only ask "was it on last period's chart", which mislabels a
+// long-standing artist "new" the moment it drops out of the top 25 for a
+// period (this is what made Dust read as new in 2026 after 5 years of plays).
 async function markNewEntries(
   db: D1Database,
   stats: PeriodStats,
@@ -218,14 +178,10 @@ async function markNewEntries(
   }
 }
 
-/**
- * All-time, assembled without reading a single raw scrobble.
- *
- * Totals and leaderboards come off the summary tables; the shape-of-the-listening
- * fields are folded out of the year blobs, which are already computed. A streak
- * that crosses New Year is therefore counted as two — the price of never scanning
- * 101k rows, and invisible at this granularity.
- */
+// All-time, assembled without reading a raw scrobble: totals/leaderboards come
+// off the summary tables, and shape-of-listening fields fold out of the already-
+// computed year blobs. A streak crossing New Year counts as two — the price of
+// never scanning 101k rows.
 async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
   const offset = Number(env.TZ_OFFSET_SECONDS) || 0
   const [totals, tops] = await Promise.all([
@@ -493,8 +449,6 @@ async function computeAllTime(env: Env, now: number): Promise<PeriodStats> {
   }
 }
 
-// ---- work queue ----------------------------------------------------------
-
 /** How stale a live period may get before it is recomputed. */
 const LIVE_INTERVAL: Record<PeriodKind, number> = {
   w: 30 * 60,
@@ -510,45 +464,23 @@ export interface WorkUnit {
   backfill: boolean
 }
 
-/**
- * How much work one tick may take on, as a cost budget rather than a count.
- *
- * The backfill is **finite**: ~356 periods, one KV write each, then pickWork
- * finds nothing and it stops. Its daily write cost is 356 total however fast it
- * runs, so pacing buys nothing — an earlier throttle here treated it as though
- * it ran forever and made a rebuild take most of a day.
- *
- * Two things actually bind, and they disagree about what "one period" costs:
- *
- *  - **D1 queries per invocation**, ~50. A period costs 8, and ingest plus the
- *    archive-bounds lookup want 3, so ~5 periods is the ceiling.
- *  - **CPU per invocation.** A week is ~380 rows to fold, a year ~18,700. Five
- *    weeks is nothing; five years is 93,000 rows in one tick.
- *
- * So a year counts as more than a week. Weighting them means a tick takes five
- * weeks or one year plus a couple of months, never five years.
- *
- * **Currently 1.** The free plan enforces a 10 ms CPU ceiling on scheduled
- * invocations too, and a batch of five blew straight through it — the tick fails
- * with exceededCpu, writes nothing, and the backfill silently stalls on whatever
- * period it reached. Raise this only with `wrangler tail` open: the symptom is
- * an `exceededCpu` outcome, not an error in the logs.
- */
+// Cost budget, not a count. The backfill is finite (~356 periods, one KV write
+// each) so pacing buys nothing once it's done. Two things actually bind: D1
+// queries/invocation (~50; a period costs 8, ingest+bounds want 3, so ~5 is the
+// ceiling) and CPU (a week is ~380 rows, a year ~18,700, so a year is weighted
+// heavier). Currently 1: the free plan's 10ms CPU ceiling on scheduled
+// invocations made a batch of 5 fail with exceededCpu (writes nothing, backfill
+// silently stalls). Raise only with `wrangler tail` open — the symptom is an
+// exceededCpu outcome, not a logged error.
 const TICK_BUDGET = 1
 
 /** What each granularity costs against TICK_BUDGET, by rows to aggregate. */
 const PERIOD_COST: Record<Exclude<PeriodKind, 'all'>, number> = { y: 5, m: 2, w: 1 }
 
-/**
- * Pick at most one period to (re)compute this tick.
- *
- * Deliberately one: a year is ~18,700 rows to read and aggregate, and doing
- * several in one invocation is how you blow both the CPU ceiling and the 1,000
- * KV writes/day budget. At 1,440 ticks a day there is no hurry.
- *
- * Live periods come first so the site stays current, and only then does the
- * backfill walk fill in history.
- */
+// At most one period per tick: a year is ~18,700 rows, and several in one
+// invocation blows both the CPU ceiling and the KV writes/day budget. At 1,440
+// ticks/day there's no hurry. Live periods go first so the site stays current;
+// only then does backfill fill in history.
 export async function pickWork(
   env: Env,
   index: PeriodIndex,

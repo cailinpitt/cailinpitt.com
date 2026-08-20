@@ -10,9 +10,7 @@ export interface AboutPage {
   body: string
 }
 
-// Same loading shape as now.ts, uses.ts, colophon.ts, and projects.ts:
-// import.meta.glob rather than a static import, so it resolves in both the SSG
-// prerender and the browser build.
+// import.meta.glob (not a static import) so this resolves in both the SSG prerender and the browser build.
 const rawModules = import.meta.glob('/content/about.md', {
   query: '?raw',
   import: 'default',

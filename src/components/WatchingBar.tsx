@@ -9,15 +9,10 @@ import {
 } from '../lib/watching'
 
 /**
- * Compact last-watched strip, the counterpart to ReadingBar. Client-fetched
- * from the lightweight /now.json endpoint; renders nothing until it has data,
- * so the prerendered shell and any API hiccup just leave the page clean.
- *
- * No polling, like the reading bar and unlike the listening one: films sync
- * once a day, so there is nothing to refresh while someone sits on the page.
- *
- * Links to /watching rather than to Letterboxd — the film's own page is one
- * click further on, from the card.
+ * Compact last-watched strip, counterpart to ReadingBar. Client-fetched from
+ * /now.json; renders nothing until it has data, so a hiccup leaves the page
+ * clean. No polling — films sync once a day. Links to /watching, not
+ * Letterboxd; the film's Letterboxd page is one click further, from the card.
  */
 export function WatchingBar() {
   const [now, setNow] = useState<WatchingNow | null>(null)
@@ -37,8 +32,7 @@ export function WatchingBar() {
 
   const watched = formatWatchedDate(film.watchedDate)
   const rating = stars(film.rating)
-  // Year and rating share the secondary line, the way the book bar carries the
-  // author there. Both are optional: an unrated film still belongs on the strip.
+  // Year and rating share the secondary line; both optional (an unrated film still belongs here).
   const secondary = [film.year, rating].filter(Boolean).join(' · ')
 
   return (

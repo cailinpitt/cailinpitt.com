@@ -223,8 +223,7 @@ describe('completion', () => {
 })
 
 describe('commands', () => {
-  // COMMANDS drives `help`, so a name listed there but not handled would print
-  // "command not found" to someone who read it off the help output.
+  // COMMANDS drives `help`; a name listed there but not handled prints "command not found".
   it('implements every command it advertises', async () => {
     const { shell } = fakeShell()
     for (const spec of COMMANDS) {
@@ -278,8 +277,7 @@ describe('commands', () => {
     expect(result.lines[1].text).toContain('open listening')
   })
 
-  // /colophon and /projects are each one Markdown file, published next to their
-  // HTML the way a post is — so `cat` reads them rather than pointing at `open`.
+  // /colophon and /projects are each a Markdown file published next to their HTML, like a post.
   it('cat prints a page written as a Markdown file', async () => {
     const { shell } = fakeShell()
     const result = await run('cat colophon', state(), shell)

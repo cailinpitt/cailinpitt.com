@@ -21,48 +21,25 @@ import { pageSchema } from '../lib/structuredData'
 
 const AVATAR = imageUrl('/images/about/cailin.webp')
 
-// The microblog: short thoughts, newest first, nothing else on the page.
+// Microblog: short thoughts, newest first, no titles/tags/cards — a sentence
+// doesn't need the furniture a blog post gets. Avatar repeats per note since
+// there's only one author.
 //
-// ## Why this looks nothing like /blog
+// Fetches rather than prerenders: notes are published from a phone and need
+// to go live within seconds, same pattern as /listening and /reading. A
+// single note does get its own prerendered permalink though, at
+// cailinpitt.com/notes/<id>, served by worker-notes (see its header for why
+// that's a Worker route, not a build step).
 //
-// The blog is an essay you sit down with — it earns a title, a reading time,
-// tags, related posts, a provenance line, and a source toggle. A note is a
-// sentence. Every one of those affordances applied to a sentence would be
-// furniture around a thing smaller than the furniture, so the page has none of
-// them: no titles, no tags, no cards. One column, a hairline between notes,
-// and a timestamp that is also the permalink. The avatar repeats down the feed
-// on purpose — there's only ever one author — so a page of short entries reads
-// as a stream of someone's thoughts rather than a changelog.
-//
-// ## Why it fetches instead of prerendering
-//
-// Notes live in D1 and are published from a phone; the whole point is that one
-// is live seconds after it is typed, without a build. So this page is a static
-// shell and the notes arrive over fetch, the same arrangement /listening and
-// /reading use. The feed itself still has no prerendered page of its own — but
-// a single note now does, at cailinpitt.com/notes/<id>, served at the edge by
-// worker-notes rather than built at deploy time. See the header of
-// worker-notes/src/index.ts for why that's a Worker route and not a build step.
-//
-// ## Why landing on /notes#<id> still fetches by id rather than paging
-//
-// `/notes#<id>` (this hash, not the permalink above) is the SPA's own internal
-// address for a note — notePath() in lib/notes.ts. It used to resolve by
-// paging through `/notes.json` looking for a match, back when that was the
-// only read endpoint. Now that the permalink route exists, `fetchNote(id)`
-// asks for that one note directly (a same-origin call to the permalink's own
-// `?format=json` view) — one indexed lookup regardless of how old the note is,
-// where the old approach cost a request per page between here and there.
+// `/notes#<id>` is the SPA's own internal address for a note (notePath() in
+// lib/notes.ts). It now resolves via fetchNote(id) — one indexed lookup —
+// instead of paging through /notes.json like before the permalink existed.
 
-/** Notes per page. Matches PAGE_SIZE on the Worker. */
+/** Matches PAGE_SIZE on the Worker. */
 const PAGE = 25
 
-/**
- * A note's timestamp, in the reader's own zone: relative for the first day, then
- * the date. A microblog is mostly read at the top, where "20m ago" is what the
- * reader wants to know; further down, "20m ago" would be absurd and the calendar
- * date is the useful thing.
- */
+// Relative for the first day, then a calendar date — "20m ago" only makes
+// sense near the top of the feed.
 const dateFmt = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' })
 const dateYearFmt = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -81,8 +58,6 @@ function stamp(uts: number): string {
 /** The full stamp, for the `title` tooltip and the machine-readable attribute. */
 const isoOf = (uts: number) => new Date(uts * 1000).toISOString()
 
-// ---- share -----------------------------------------------------------------
-
 const SHARE_ICON = (
   <svg
     viewBox="0 0 24 24"
@@ -98,11 +73,8 @@ const SHARE_ICON = (
   </svg>
 )
 
-/**
- * Native share sheet where one exists, a clipboard copy where it doesn't.
- * Mirrors the copy button in CurlHint/PostSource: a transient label plus an
- * aria-live echo, since the icon alone says nothing happened.
- */
+// Native share sheet, or a clipboard copy fallback; transient label plus
+// aria-live echo since the icon alone says nothing happened.
 function ShareButton({ id, text }: { id: string; text: string }) {
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
 
@@ -147,12 +119,10 @@ function ShareButton({ id, text }: { id: string; text: string }) {
   )
 }
 
-// ---- one note's markup, shared by the feed and the permalink view ---------
-
+// Shared markup for the feed and the permalink view.
 export function NoteRow({ note }: { note: Note }) {
-  // /notes never loads photos, activities, or the post list just to label a
-  // reference — see the header of notesContext.ts — so this falls back to a
-  // generic label ("a photo", "a workout") rather than fetching anything.
+  // No fetch just to label a reference — falls back to generic text ("a
+  // photo") rather than loading photos/activities/posts; see notesContext.ts.
   const context = resolveContext(note.contextType, note.contextRef)
 
   return (
@@ -175,8 +145,8 @@ export function NoteRow({ note }: { note: Note }) {
               {stamp(note.createdAt)}
             </time>
           </Link>
-          {/* Said out loud rather than hidden: a permalink that quietly changes
-              what it says is the thing worth avoiding, not the edit. */}
+          {/* Shown, not hidden: a permalink that silently changes what it says
+              is the problem, not the edit itself. */}
           {note.editedAt && (
             <span className="note-edited" title={isoOf(note.editedAt)}>
               edited
@@ -189,8 +159,6 @@ export function NoteRow({ note }: { note: Note }) {
     </>
   )
 }
-
-// ---- the feed ---------------------------------------------------------------
 
 function useNotes() {
   const [notes, setNotes] = useState<Note[]>([])
@@ -230,21 +198,12 @@ function useNotes() {
   return { notes, cursor, ready, error, loading, loadMore }
 }
 
-/** What a query is matched against: the note's own text, lowercased. */
 const haystack = (note: Note): string => note.text.toLowerCase()
 
-/**
- * Every whitespace-separated term has to appear somewhere, in any order — same
- * rule the blog index's filter uses, and for the same reason: substring rather
- * than prefix matching, so a query narrows without anyone having to think
- * about word order.
- *
- * This only searches notes already paged into memory client-side — there is no
- * server-side search endpoint, deliberately: a note is short enough that
- * "search" here means "filter what's on screen," and standing up a Worker
- * endpoint for it would be D1 load spent on a feature reached by typing a
- * word, not by search traffic.
- */
+// Every term must appear somewhere, any order, substring match — same rule as
+// the blog filter. Client-side only, deliberately: no server search endpoint,
+// since a note is short enough that "search" just means filtering what's on
+// screen.
 function filterNotes(notes: Note[], index: Map<string, string>, query: string): Note[] {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (!terms.length) return notes
@@ -254,12 +213,8 @@ function filterNotes(notes: Note[], index: Map<string, string>, query: string): 
   })
 }
 
-/**
- * Every hashtag ever used, for the "browse by tag" cloud at the foot of the
- * feed — same shape as /blog's own tag cloud (collectTags in lib/tags.ts),
- * just fetched from the Worker instead of computed from build-time posts.
- * A failure here costs only the cloud, not the feed above it.
- */
+// Tag cloud data, fetched from the Worker (mirrors collectTags in
+// lib/tags.ts for /blog). A failure here only loses the cloud, not the feed.
 function useHashtags(): HashtagSummary[] {
   const [tags, setTags] = useState<HashtagSummary[]>([])
 
@@ -286,9 +241,8 @@ function NotesFeed() {
 
   return (
     <>
-      {/* Nothing renders until the fetch lands, and nothing at all if it
-          fails — same contract as every other Worker-backed page here. The
-          shell above is prerendered and always present. */}
+      {/* Renders nothing until fetch lands or fails — same contract as other
+          Worker-backed pages; shell above is prerendered. */}
       {error && (
         <p className="notes-empty">
           The notes are not loading right now. They are still there — try again in a moment, or
@@ -347,8 +301,8 @@ function NotesFeed() {
         </p>
       )}
 
-      {/* Below the feed rather than above it, same call /blog makes: the
-          notes are what someone came for, not the tags. */}
+      {/* Below the feed, not above — same call /blog makes; the notes are
+          what someone came for. */}
       {tags.length > 0 && (
         <section className="tag-index" aria-labelledby="tags-heading">
           <h2 id="tags-heading" className="eyebrow">
@@ -369,8 +323,6 @@ function NotesFeed() {
     </>
   )
 }
-
-// ---- a single note, addressed by permalink ---------------------------------
 
 function useSingleNote(id: string): { note: Note | null | undefined; error: boolean } {
   // undefined: still resolving. null: the Worker has no such note (deleted, or never existed).
@@ -398,9 +350,8 @@ function SingleNote({ id }: { id: string }) {
   const { note, error } = useSingleNote(id)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Move focus to the note once it resolves — the equivalent, for a page that
-  // is now just this one note, of the scroll-and-focus a permalink used to do
-  // inside the full list.
+  // Focus the note once it resolves — equivalent of the scroll-and-focus a
+  // permalink used to do inside the full list.
   useEffect(() => {
     if (note) ref.current?.focus()
   }, [note])
@@ -434,8 +385,6 @@ function SingleNote({ id }: { id: string }) {
   )
 }
 
-// ---- page -------------------------------------------------------------------
-
 function useNoteId(): string | null {
   const { hash } = useLocation()
   return hash.replace(/^#/, '') || null
@@ -463,8 +412,8 @@ export function Component() {
       <section className="notes">
         {id ? (
           // Stands in for the site header, which Layout.tsx omits on this
-          // route — see the comment on `minimal` there. Without it there is
-          // otherwise no way off this page but the browser's back button.
+          // route (see `minimal` there) — otherwise there's no way off the
+          // page but the back button.
           <p className="notes-back">
             <Link to="/" className="notes-back-home">
               Cailin Pitt

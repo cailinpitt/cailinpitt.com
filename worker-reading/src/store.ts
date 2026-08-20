@@ -1,21 +1,10 @@
-// D1 reads for the /reading API.
-//
-// Unlike the listening worker there are no precomputed KV blobs here. That
-// worker needs them because it has ~100k scrobbles and a per-minute cron;
-// this one has a few hundred books and a few thousand articles, so every
-// query below is a small indexed scan. Building the bundle straight from D1
-// behind the 5-minute edge cache is both simpler and comfortably inside the
-// free tier — and it means there is no staleness ladder to reason about.
+// D1 reads for the /reading API. No precomputed KV blobs, unlike the listening
+// worker: at a few hundred books and a few thousand articles every query below
+// is a small indexed scan, so building the bundle straight from D1 behind the
+// edge cache is simpler and comfortably inside the free tier.
 
-/**
- * Finished books per page, and the ceiling on what a caller may ask for.
- *
- * Paged rather than sent whole, for the same reason /listening pages its daily
- * log: the bundle is rebuilt per edge colo per TTL, so its size is multiplied by
- * however many colos see traffic. Keeping the first page small is what keeps D1
- * row reads flat as the archive grows — the history is unbounded, the bundle is
- * not.
- */
+// Paged, not sent whole: the bundle is rebuilt per colo per TTL, so a small
+// first page keeps D1 row reads flat as the archive grows.
 export const BOOK_PAGE = 24
 const MAX_BOOK_PAGE = 100
 
@@ -123,12 +112,8 @@ const toArticle = (r: ArticleRow): Article => ({
   readAt: r.read_at,
 })
 
-// ---- pagination ----------------------------------------------------------
-//
-// The cursor is composite — `<read_at>:<id>` — rather than a bare timestamp.
-// Two articles mailed in the same second are entirely possible, and a `read_at <
-// ?` cursor would silently drop one of them at the page boundary.
-
+// Cursor is composite (`<read_at>:<id>`), not a bare timestamp: two articles
+// can share a second, and a `read_at < ?` cursor alone would drop one.
 const encodeCursor = (a: Article): string => `${a.readAt}:${a.id}`
 
 function decodeCursor(raw: string | null): { readAt: number; id: string } | null {
@@ -140,12 +125,8 @@ function decodeCursor(raw: string | null): { readAt: number; id: string } | null
   return Number.isFinite(readAt) && id ? { readAt, id } : null
 }
 
-/**
- * Books are ordered by (finished_at, user_book_id, read_id) and the cursor
- * carries all three. `finished_at` alone is a date, not a timestamp, so several
- * books routinely share one — a bare date cursor would drop every book but one
- * at each page boundary. The trailing two make the ordering total.
- */
+// Cursor carries all three sort columns: finished_at is a date, so several
+// books routinely share one, and a bare date cursor would drop the rest.
 const encodeBookCursor = (b: Book): string => `${b.finishedAt}:${b.userBookId}:${b.readId}`
 
 function decodeBookCursor(raw: string | null): [string, number, number] | null {
@@ -225,8 +206,6 @@ export async function fetchArticles(
   }
 }
 
-// ---- the homepage strip --------------------------------------------------
-
 export interface ReadingNow {
   currentlyReading: Book[]
   /** Shown when nothing is in progress, so the strip is never empty. */
@@ -241,13 +220,8 @@ export interface ReadingNow {
   updatedAt: number
 }
 
-/**
- * Four rows, for the homepage bar.
- *
- * Deliberately not the full bundle: this is the most-requested endpoint on the
- * site (every homepage visit) and has no business reading 49 rows to render one
- * book — the same reasoning behind the listening Worker's /now.json.
- */
+// Four rows for the homepage bar — not the full bundle, since this is hit on
+// every homepage visit and has no business reading 49 rows to render one book.
 export async function buildNow(db: D1Database, offsetSeconds: number): Promise<ReadingNow> {
   const now = Math.floor(Date.now() / 1000)
   const startOfToday = Math.floor((now + offsetSeconds) / 86400) * 86400 - offsetSeconds
@@ -282,8 +256,6 @@ export async function buildNow(db: D1Database, offsetSeconds: number): Promise<R
     updatedAt: now,
   }
 }
-
-// ---- the bundle ----------------------------------------------------------
 
 interface YearTotals {
   books: number

@@ -30,15 +30,8 @@ export interface AtprotoData {
   documents: Record<string, string>
 }
 
-/**
- * Prose words in a markdown body, for the reading-time estimate.
- *
- * Everything that isn't read aloud comes out first: code (which nobody reads at
- * prose speed), embedded HTML (a Spotify iframe is not 40 words), image syntax,
- * and link targets — though link *text* stays, since it's part of the sentence.
- * What survives is split on whitespace and filtered to tokens carrying at least
- * one letter or digit, which drops the punctuation left behind by the stripping.
- */
+// Prose words for the reading-time estimate. Strips code, embedded HTML, image syntax, and
+// link targets first (link *text* stays); what survives is filtered to tokens with a letter or digit.
 export function countWords(body: string): number {
   const prose = body
     .replace(/```[\s\S]*?```/g, ' ')
@@ -60,14 +53,8 @@ export function countWords(body: string): number {
 /** Words per minute. The usual figure for adult reading of general prose. */
 const WPM = 200
 
-/**
- * Below this, there is no estimate worth showing.
- *
- * Several posts are photo essays or embed lists with almost no prose — the
- * travel posts carry none at all. Rounding those up to "1 min read" states
- * something untrue about a page you can take in at a glance, so they get no
- * label instead. 100 words is half a minute at the rate above.
- */
+// Below this, no estimate is shown — photo essays and travel posts with near-zero prose
+// shouldn't get rounded up to a dishonest "1 min read".
 const MIN_ESTIMATE_WORDS = 100
 
 /** Whether a post has enough prose for a reading estimate to mean anything. */
@@ -94,8 +81,7 @@ export function toPost(filePath: string, raw: string, atproto?: AtprotoData): Po
     image: data.image as string | undefined,
     description: data.description as string | undefined,
     atUri: atproto?.documents[path],
-    // Counted here so it rides along on PostSummary, which drops the body: the
-    // listings and the JSON-LD would otherwise have no way to get at it.
+    // Counted here so it rides along on PostSummary (which drops the body) for listings/JSON-LD.
     words: countWords(body),
     body,
   }
@@ -108,11 +94,8 @@ export function formatDate(iso: string): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-/**
- * "March 3" — the same date with the year dropped, for lists that already carry
- * the year in a heading above the row (see /blog). Falls back to the full date
- * if the string won't parse, so a row never renders empty.
- */
+// Same date with the year dropped, for lists that carry the year in a heading above (/blog).
+// Falls back to the full date if unparsable.
 export function formatMonthDay(iso: string): string {
   if (!iso) return ''
   const d = new Date(iso.includes('T') ? iso : `${iso}T00:00:00`)
@@ -123,12 +106,8 @@ export function formatMonthDay(iso: string): string {
 /** The calendar year of a post, from the ISO date. Empty when it has none. */
 export const postYear = (iso: string): string => iso.slice(0, 4)
 
-/**
- * Posts split into year sections, keeping the order they arrive in (newest
- * first). Posts with no parsable year land in an "Undated" group rather than
- * being dropped — the archive is old enough to have one, and the newest-first
- * sort puts an empty date last, so that group falls at the end on its own.
- */
+// Posts with no parsable year land in "Undated" rather than being dropped; the newest-first
+// sort naturally puts that group last.
 export function postsByYear<T extends PostSummary>(posts: T[]): { year: string; posts: T[] }[] {
   const groups: { year: string; posts: T[] }[] = []
   for (const post of posts) {

@@ -64,14 +64,9 @@ export function Component() {
     }
   }, [page?.nextCursor, loadingMore])
 
-  /**
-   * Put a just-signed entry at the top without refetching.
-   *
-   * The read endpoint sits behind a 30-second edge cache, so a refetch here
-   * would very often come back without the entry that was just written — which
-   * reads as "it didn't work". The POST response carries the stored row, so the
-   * list can show the real thing rather than an optimistic guess.
-   */
+  // Puts a just-signed entry at the top without refetching: the read endpoint's
+  // 30s edge cache would often hide it, reading as "it didn't work". The POST
+  // response carries the stored row, so this shows the real thing, not a guess.
   const onSigned = useCallback((entry: Entry) => {
     setPage((prev) =>
       prev
@@ -142,10 +137,8 @@ function GuestbookEntry({ entry }: { entry: Entry }) {
   return (
     <li className="guestbook-entry">
       <div className="guestbook-byline">
-        {/* Rendered as a text node, never as markup, so a message is only ever
-            the characters someone typed. `ugc` and `nofollow` are what remove
-            the reason to spam a guestbook in the first place: a link here passes
-            no ranking signal anywhere. */}
+        {/* Rendered as a text node, never markup — a message is only ever what
+            was typed. `ugc`/`nofollow` mean the link passes no ranking signal. */}
         {entry.website ? (
           <a
             className="guestbook-name"

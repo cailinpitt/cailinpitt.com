@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { aggregate } from '../worker-listening/src/aggregate'
 import { parsePeriod } from '../worker-listening/src/periods'
 
-// The aggregator makes one pass over a period's rows and fills every counter, so
-// the risk is that two counters disagree about the same play. These tests build
-// timelines where the right answer is countable by hand.
+// One pass fills every counter, so the risk is two counters disagreeing about the same play.
 
 const OFFSET = -18000 // US Central, matching TZ_OFFSET_SECONDS
 
@@ -209,8 +207,7 @@ describe('milestones', () => {
     const rows = Array.from({ length: 3 }, (_, i) =>
       scrobble(`2026-08-03T09:0${i}:00`, `T${i}`, 'Alpha'),
     )
-    // Starting at 4,999 means the second row is number 5,001 — only the first
-    // crosses a milestone.
+    // Starting at 4,999 means only the first row (5,000) crosses a milestone.
     const s = run(rows, 4_998)
     expect(s.milestones).toHaveLength(1)
     expect(s.milestones[0]).toMatchObject({ n: 5_000, track: 'T1' })
@@ -323,9 +320,7 @@ describe('the trend series', () => {
 })
 
 describe('chart movement vs genuinely new', () => {
-  // The label has to distinguish "first time I ever heard this" from "wasn't on
-  // last period's chart". They are different questions, and the second one
-  // labelled long-standing artists "new" the moment they dropped out of a top 25.
+  // "First time I ever heard this" and "wasn't on last period's chart" are different questions.
   const previous = run([
     scrobble('2026-08-03T09:00:00', 'A', 'Alpha'),
     scrobble('2026-08-03T09:05:00', 'B', 'Beta'),
@@ -348,8 +343,7 @@ describe('chart movement vs genuinely new', () => {
     )
     const alpha = s.top.artists.find((a) => a.name === 'Alpha')!
     const newcomer = s.top.artists.find((a) => a.name === 'Newcomer')!
-    // Alpha charted last period; Newcomer did not. Neither fact says anything
-    // about whether they had ever been played before.
+    // Charting last period says nothing about whether they'd ever been played before.
     expect(alpha.prevRank).toBe(1)
     expect(newcomer.prevRank).toBeNull()
   })

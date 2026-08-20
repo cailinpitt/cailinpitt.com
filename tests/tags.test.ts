@@ -19,8 +19,7 @@ describe('tagSlug', () => {
   })
 
   it('is empty for a tag with nothing url-safe in it', () => {
-    // collectTags and the palette both skip these; a `/blog/tag/` page with no
-    // slug would be the blog index wearing a hat.
+    // collectTags and the palette both skip these; a slugless `/blog/tag/` would be the blog index in disguise.
     expect(tagSlug('...')).toBe('')
   })
 })

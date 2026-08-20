@@ -11,12 +11,9 @@ import { formatDate } from '../lib/posts'
 import { pageSchema } from '../lib/structuredData'
 import { usesPage } from '../lib/uses'
 
-// A /uses page (uses.tech): the hardware, software, and services I actually
-// reach for. Prose lives in content/uses.md — edit that, not this file.
-//
-// Like /now it leads with an "Updated" date read from git rather than a
-// frontmatter field, because a gear list is only worth anything with one, and
-// a hand-maintained date is exactly what goes stale first.
+// A /uses page (uses.tech). Prose lives in content/uses.md — edit that, not
+// this file. Like /now, the "Updated" date comes from git rather than
+// frontmatter, since a hand-maintained date is what goes stale first.
 
 /** Where this page's own source is published — see scripts/generate-markdown.mjs. */
 const SOURCE_FILE = '/uses.md'
@@ -30,8 +27,7 @@ interface UsesData {
 
 export async function loader(): Promise<UsesData | null> {
   if (!import.meta.env.SSR && !import.meta.env.DEV) return null
-  // Imported here rather than at the top of the file so it lands in its own
-  // chunk: the production client returns above without ever loading it.
+  // Imported here, not at the top, so it lands in its own chunk.
   const { history, repo } = await import('virtual:post-history')
   return { history: history['/uses'] ?? null, repo }
 }

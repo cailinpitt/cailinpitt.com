@@ -7,18 +7,11 @@ import { fetchNotesNow, notePath, type Note } from '../lib/notes'
 import { resolveContext } from '../lib/notesContext'
 
 /**
- * The newest note, for the homepage — the counterpart to NowPlayingBar and
- * ReadingBar, and read from the same kind of lightweight `/now.json` endpoint.
- *
- * Renders nothing until it has data, so the prerendered shell and any Worker
- * hiccup just leave the homepage clean. No polling: unlike now-playing, a note
- * appears because Cailin typed it, and someone sitting on the homepage waiting
- * for one is not a case worth a request every sixty seconds.
- *
- * The note is shown in full rather than clipped. A note is at most 480
- * characters by construction, which is shorter than the paragraph above it —
- * there is nothing to truncate, and truncating would make the strip a teaser for
- * something the reader could already have finished.
+ * The newest note, for the homepage — counterpart to NowPlayingBar/ReadingBar,
+ * same lightweight `/now.json` endpoint. Renders nothing until it has data, so
+ * a Worker hiccup leaves the homepage clean. No polling: a note appears
+ * because Cailin typed it, not on a timer. Shown in full — at most 480 chars
+ * by construction, so there's nothing worth truncating.
  */
 export function NotesBar() {
   const [note, setNote] = useState<Note | null>(null)
@@ -35,8 +28,7 @@ export function NotesBar() {
 
   if (!note) return null
 
-  // The homepage doesn't load photos/activities/posts either, so this is the
-  // same generic-label fallback /notes uses — see notesContext.ts.
+  // Same generic-label fallback /notes uses, since the homepage doesn't load photos/activities/posts either — see notesContext.ts.
   const context = resolveContext(note.contextType, note.contextRef)
 
   return (

@@ -38,38 +38,20 @@ export async function loader(): Promise<PostSummary[] | null> {
   return loadPostSummaries()
 }
 
-// Writing a note from a computer.
-//
-// The iOS Shortcut covers the phone, which is where most notes get written. This
-// covers everywhere else — and, because it is a page rather than an app, it also
-// covers the phone when the Shortcut breaks, a new laptop, or someone else's
-// machine. Nothing to install and nothing to keep updated.
-//
-// ## Why a page on the public site, and what that costs
-//
-// The alternative was a CLI, which would be safer by construction (a token in
-// .env, no browser involved) and useless for the actual problem: not having the
-// repo to hand is the whole reason this feature exists. So the compose box is
-// here, gated by the same PUBLISH_TOKEN the Shortcut uses, kept in localStorage
-// so it is pasted once per device. Anyone can load this page; nobody without the
-// token can do anything with it, and the Worker is the thing enforcing that —
-// the UI below is a convenience, never the check.
-//
-// The page is `noindex` and absent from the sitemap. That is tidiness, not
-// security: it keeps a compose box out of search results, and nothing more.
+// Compose page for writing notes from a computer — the iOS Shortcut covers the
+// phone. A CLI would be safer (token in .env, no browser) but useless here,
+// since not having the repo to hand is the whole reason this exists. Gated by
+// the same PUBLISH_TOKEN as the Shortcut; the Worker enforces it, this UI is
+// just convenience. noindex to keep a compose box out of search, nothing more.
 
-/** How many recent notes the page offers for editing. A typo is found fast or not at all. */
 const RECENT = 10
 
-/** Under this many characters left, the counter starts saying so. */
 const WARN_AT = 60
 
 /**
- * The live, compose-time card — same classes as LinkCard.tsx so it looks
- * identical to what publishing will eventually persist, but built from a raw
- * `fetchLinkPreview` result rather than a Note (no id yet, nothing to
- * re-host until this is actually published). A `<div>`, not an `<a>`, since
- * clicking through mid-draft would lose whatever's been typed.
+ * Same classes as LinkCard.tsx so it matches what publishing will persist,
+ * but built from a raw `fetchLinkPreview` result (no id yet). A `<div>`, not
+ * an `<a>`, since clicking through mid-draft would lose the typed text.
  */
 function ComposeLinkPreview({ preview, loading }: { preview: LinkPreview | null; loading: boolean }) {
   if (loading) return <p className="compose-link-loading">Loading preview…</p>
@@ -101,12 +83,10 @@ export function Component() {
   const contextTypeId = useId()
   const contextRefId = useId()
 
-  // The optional "attach this note to something" picker. Posts come free from
-  // the loader above (build-time data, already in the bundle); photos and
-  // activities are loaded only once their type is actually picked — a 182KB
-  // manifest and a Worker call respectively, neither worth paying for on every
-  // visit to this page. See notesContext.ts for how the reference renders once
-  // published.
+  // Optional "attach to" picker. Posts come free from the loader (build-time,
+  // already in the bundle); photos/activities load lazily only once picked —
+  // a 182KB manifest and a Worker call respectively. See notesContext.ts for
+  // how the reference renders once published.
   const [contextType, setContextType] = useState<ContextType | ''>('')
   const [contextRef, setContextRef] = useState('')
   const [photos, setPhotos] = useState<Photo[] | null>(null)
@@ -114,12 +94,10 @@ export function Component() {
   const [activities, setActivities] = useState<Activity[] | null>(null)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
 
-  // The link card. `attachCard`/`hideLink` are the two checkboxes; `preview`
-  // is the live, unstored scrape shown while composing (see
-  // fetchLinkPreview's own comment) — display only, never sent on submit.
-  // `seededUrl` covers editing a note whose link was already hidden: its
-  // text no longer contains the URL to re-detect, so the url has to come
-  // from the note itself rather than from scanning the textarea.
+  // `preview` is the live, unstored scrape shown while composing — display
+  // only, never sent on submit. `seededUrl` covers editing a note whose link
+  // was already hidden: no URL left in the text to re-detect, so it comes
+  // from the note itself.
   const [attachCard, setAttachCard] = useState(true)
   const [hideLink, setHideLink] = useState(false)
   const [seededUrl, setSeededUrl] = useState<string | null>(null)
@@ -177,9 +155,8 @@ export function Component() {
     if (value) ensureContextList(value)
   }
 
-  // localStorage is not available while prerendering, so the token is read after
-  // mount. `tokenLoaded` keeps the page from flashing the "paste your token"
-  // state to someone who has already pasted it.
+  // localStorage isn't available while prerendering, so the token is read
+  // after mount; `tokenLoaded` avoids flashing the "paste your token" state.
   useEffect(() => {
     setToken(loadToken())
     setTokenLoaded(true)
@@ -189,8 +166,7 @@ export function Component() {
     fetchNotes(signal)
       .then((page) => setRecent(page.notes.slice(0, RECENT)))
       .catch(() => {
-        // The feed failing to load is not a reason to block writing. The box
-        // above works; only the edit list below is missing.
+        // Feed failing to load shouldn't block writing — only the edit list is missing.
       })
   }, [])
 
@@ -224,16 +200,14 @@ export function Component() {
       setHideLink(false)
       setSeededUrl(null)
       setPublished(note)
-      // Prepend locally as well as refetching: the read endpoint sits behind a
-      // 30-second edge cache which the Worker purges on write, but the purge is
-      // eventually consistent across colos and the author is the one person
-      // guaranteed to look immediately.
+      // Prepend locally too: the read endpoint's edge cache purge is eventually
+      // consistent across colos, and the author is guaranteed to look immediately.
       setRecent((current) => [note, ...current.filter((n) => n.id !== note.id)].slice(0, RECENT))
       refresh()
     } catch (err) {
       setError(err instanceof NoteError ? err.message : 'Something went wrong.')
-      // A rejected token is almost always a mistyped paste, so drop it and ask
-      // again rather than leaving the page in a state where every publish fails.
+      // A rejected token is almost always a mistyped paste, so drop it rather
+      // than leave the page in a state where every publish fails.
       if (err instanceof NoteError && err.status === 401) {
         forgetToken()
         setToken('')
@@ -249,9 +223,8 @@ export function Component() {
     setContextType(note.contextType ?? '')
     setContextRef(note.contextRef ?? '')
     if (note.contextType) ensureContextList(note.contextType)
-    // Seeded rather than re-detected: a note whose link was already hidden
-    // has no URL left in its own text to scan for (see stripLink() in
-    // worker-notes/src/index.ts).
+    // Seeded rather than re-detected: no URL left in the text once hidden
+    // (see stripLink() in worker-notes/src/index.ts).
     setAttachCard(!!note.linkUrl)
     setHideLink(note.linkHidden)
     setSeededUrl(note.linkHidden ? note.linkUrl : null)
@@ -271,8 +244,7 @@ export function Component() {
   }
 
   const onDelete = async (note: Note) => {
-    // Deleting is immediate and permanent, like `guestbook:rm`, so it asks —
-    // this is the one destructive control on the page and it sits next to Edit.
+    // Immediate and permanent, like `guestbook:rm`, so it confirms.
     if (!window.confirm('Delete this note? This cannot be undone.')) return
     setBusy(true)
     setError(null)
@@ -287,8 +259,7 @@ export function Component() {
     }
   }
 
-  // ⌘↵ / Ctrl-↵ publishes, which is the one keyboard convention every compose
-  // box has and the only way this is faster than the Shortcut on a laptop.
+  // ⌘↵ / Ctrl-↵ publishes — the usual compose-box convention.
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
       event.preventDefault()

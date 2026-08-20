@@ -1,5 +1,4 @@
-// Shared presentation for /listening and /listening/<year>. Extracted so the two
-// pages cannot drift into rendering the same stats differently.
+// Shared presentation for /listening and /listening/<year>, so the two can't drift apart.
 
 import { ListenLinks } from './ListenLinks'
 import {
@@ -25,8 +24,7 @@ export function StatTile({ label, value }: { label: string; value: number | stri
   )
 }
 
-// Single-series magnitude → horizontal bars in the accent hue, baseline-anchored,
-// counts direct-labeled (no legend needed for one series).
+// Single series, so counts are direct-labeled instead of needing a legend.
 export function TopArtists({ artists }: { artists: ArtistStat[] }) {
   const max = artists[0]?.count ?? 1
   return (

@@ -1,13 +1,7 @@
-// Period keys, bounds and labels.
-//
-// Every calendar operation here works on "local" time via the fixed TZ offset,
-// the same one localDay() in stats.ts uses, so a period's bounds and the days it
-// contains can never disagree.
-//
-// Weeks are ISO weeks (Monday-start, `2026-W32`). That differs from the /listening
-// heatmap, which is Sunday-start because it mimics a GitHub contribution calendar;
-// the heatmap is a picture of a year, not an addressable period, so the two never
-// need to line up.
+// Period keys, bounds and labels. Every calendar op here uses the same fixed TZ
+// offset as localDay() in stats.ts, so bounds and days never disagree. Weeks are
+// ISO (Monday-start, `2026-W32`) — the /listening heatmap is Sunday-start
+// instead since it's a picture of a year, not an addressable period.
 
 const DAY = 86_400
 
@@ -41,11 +35,8 @@ function isoWeekStart(d: Date): Date {
   return monday
 }
 
-/**
- * ISO week key for a local date. The ISO year is the year of that week's
- * Thursday, which is why this can't just read getUTCFullYear() — the last days
- * of December often belong to week 1 of the next year.
- */
+// ISO year is the year of the week's Thursday, not getUTCFullYear() — late
+// December often belongs to week 1 of the next year.
 function isoWeekKeyOf(d: Date): string {
   const thursday = isoWeekStart(d)
   thursday.setUTCDate(thursday.getUTCDate() + 3)
@@ -159,12 +150,8 @@ export function yearAgoPeriod(period: Period, offset: number): Period | null {
   return periodContaining(period.kind, shifted, offset)
 }
 
-/**
- * Every period of `kind` covering [from, to], oldest first.
- *
- * Walks by stepping past the end of each period rather than by adding a fixed
- * number of days, so month lengths and the 52/53-week year need no special case.
- */
+// Steps past the end of each period rather than adding a fixed number of days,
+// so month lengths and 52/53-week years need no special case.
 export function enumeratePeriods(
   kind: Exclude<PeriodKind, 'all'>,
   from: number,

@@ -4,21 +4,14 @@ import { jumpToAnchor } from '../lib/anchor'
 import { BULK_POSTS, editedLabel, type PostHistory as History } from '../lib/history'
 import type { DiffRow } from '../lib/diff'
 
-/**
- * Open state for the panel, shared by every page that has one.
- *
- * It lives above <PostHistory> because the link at the top of the page opens
- * it: arriving at #history should land on something expanded rather than on a
- * collapsed line the reader then has to click.
- */
+/** Open state for the panel, lifted above <PostHistory> so #history lands expanded rather than on a collapsed line. */
 export function useHistoryPanel() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     if (window.location.hash !== '#history') return
     setOpen(true)
-    // The browser has already tried to jump here and, on a cold load, will have
-    // been wrong about where "here" is — see src/lib/anchor.ts.
+    // Browser's own jump-to-#history was likely wrong on a cold load — see lib/anchor.ts.
     jumpToAnchor('history')
   }, [])
 
@@ -28,8 +21,7 @@ export function useHistoryPanel() {
     // Next frame, so the panel is expanded before anything is measured.
     requestAnimationFrame(() => {
       jumpToAnchor('history')
-      // Still updates the URL the way an anchor would, so the position can be
-      // shared and Back returns to where the reader was.
+      // Updates the URL the way an anchor would, so it's shareable and Back works.
       window.history.pushState(null, '', '#history')
     })
   }
@@ -38,27 +30,10 @@ export function useHistoryPanel() {
 }
 
 /**
- * What happened to this post after it was published, from git.
- *
- * It sits at the foot of the article, where a newspaper prints its corrections,
- * and stays a single quiet line until asked — the point is that the record
- * exists and can be checked, not that anyone has to read it.
- *
- * The summary counts only commits that changed this post alone; the expanded
- * list shows every commit that touched the file, with the wide ones marked as
- * what they were. That split is the whole design: see src/lib/history.ts for
- * why a count on its own would be misleading here.
- */
-/**
- * One commit's changes as track-changes prose: the paragraph as it stands, with
- * what was taken out struck through and what went in marked.
- *
- * `<ins>`/`<del>` rather than colored spans, so the change is in the markup and
- * not only in the styling — a screen reader announces it, and a reader with a
- * different palette still sees the strike. Rows are the post's source lines, so
- * `*asterisks*` and link syntax show through; that's the same text the Markdown
- * view at the top of the page shows, and hiding it would mean re-rendering
- * markdown that has been cut in half.
+ * One commit's diff as track-changes prose. `<ins>`/`<del>` rather than
+ * colored spans, so a screen reader announces the change and it survives a
+ * different palette. Rows are the post's raw source lines (not rendered
+ * markdown), matching the Markdown view at the top of the page.
  */
 function Diff({ rows, truncated }: { rows: DiffRow[]; truncated?: boolean }) {
   return (
@@ -93,6 +68,11 @@ function Diff({ rows, truncated }: { rows: DiffRow[]; truncated?: boolean }) {
   )
 }
 
+/**
+ * What happened to this post after publishing, from git — a quiet line at the
+ * foot of the article until expanded. Summary counts commits touching only
+ * this post; expanded list shows every commit, bulk ones flagged (see lib/history.ts).
+ */
 export function PostHistory({
   history,
   repo,
@@ -113,9 +93,7 @@ export function PostHistory({
   const edited = editedLabel(history.revisions)
   const summary = edited
     ? `${edited} since ${formatDate(history.added ?? '')}`
-    : // Nothing post-specific in the record, so the only honest thing to say
-      // is when the file turned up — for most posts that's the migration,
-      // years after the date printed at the top of the page.
+    : // No post-specific record, so just say when the file turned up (often the migration, years after the printed date).
       `${history.imported ? 'Imported' : 'Added'} ${formatDate(history.added ?? '')}`
 
   return (
@@ -138,9 +116,7 @@ export function PostHistory({
             {history.commits.map((commit) => (
               <li key={commit.sha}>
                 <time dateTime={commit.date}>{formatDate(commit.date.slice(0, 10))}</time>
-                {/* The subject opens the diff when there is one to open, and is
-                    plain text when there isn't — the commit that added the post
-                    has no diff worth showing, since the diff is the post. */}
+                {/* Plain text when there's no diff to open — the commit that added the post has no diff worth showing. */}
                 {commit.diff ? (
                   <button
                     type="button"
@@ -154,9 +130,7 @@ export function PostHistory({
                   <span className="post-history-subject">{commit.subject}</span>
                 )}
                 <span className="post-history-meta">
-                  {/* A commit that swept through the whole archive says nothing
-                      about this post in particular, and shouldn't read as though
-                      it does. */}
+                  {/* A commit that swept the whole archive says nothing about this post specifically. */}
                   {commit.posts >= BULK_POSTS && (
                     <span className="post-history-bulk">{commit.posts} posts</span>
                   )}

@@ -1,10 +1,6 @@
-// Period keys, URLs and navigation for /listening.
-//
-// Mirrors worker-listening/src/periods.ts, minus the timezone offset: the Worker
-// decides which local day a scrobble belongs to, and by the time a key reaches
-// the browser it is already a plain calendar label. Everything here is string
-// and UTC-date arithmetic, so it produces identical output in a Node build and
-// in a browser in any timezone.
+// Period keys, URLs and navigation for /listening. Mirrors worker-listening/src/periods.ts
+// minus the timezone offset — by the time a key reaches here it's already a plain calendar
+// label, so string/UTC-date arithmetic gives identical output in Node and any browser timezone.
 
 import { FIRST_LISTENING_YEAR } from './listeningYears'
 
@@ -84,12 +80,8 @@ export function urlFor(kind: PeriodKind, key: string): string {
   return `/listening/${key.slice(0, 4)}/${key.slice(5)}`
 }
 
-/**
- * Turn route params back into a period.
- *
- * `/listening/2026/08` is a month and `/listening/2026/W32` is a week — the `W`
- * is what separates them, which is also why week keys keep it in the URL.
- */
+// `/listening/2026/08` is a month, `/listening/2026/W32` is a week — the `W` is what
+// separates them, which is why week keys keep it in the URL.
 export function parseRoute(a?: string, b?: string): { kind: PeriodKind; key: string } | null {
   if (!a) return null
   if (a === 'all') return { kind: 'all', key: 'all' }
@@ -157,10 +149,8 @@ export function currentKey(kind: PeriodKind, now = new Date()): string {
   return weekKeyOf(d)
 }
 
-/**
- * The equivalent period at another granularity, so switching week → month keeps
- * you roughly where you were instead of jumping to today.
- */
+// The equivalent period at another granularity, so switching week → month keeps you roughly
+// where you were instead of jumping to today.
 export function convertKey(from: PeriodKind, key: string, to: PeriodKind): string {
   if (to === 'all') return 'all'
   if (from === 'all') return currentKey(to)

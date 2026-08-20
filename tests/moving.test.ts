@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { heartRate, soundtrackWindow, type Activity } from '../src/lib/moving'
 
-// Heart rate is the one activity field that is genuinely absent most of the
-// time: it exists only when a monitor was worn, and every row predating the
-// column is null. The rules below are what keep "no reading" from rendering as
-// a reading of zero.
+// Heart rate exists only when a monitor was worn; these rules keep "no reading" from rendering as zero.
 
 const activity = (over: Partial<Activity> = {}): Activity => ({
   id: '1',
@@ -48,9 +45,7 @@ describe('heartRate', () => {
   })
 })
 
-// The soundtrack expander asks about the whole recording, not the movement
-// window. Getting this wrong is silent: one 5h41m ride showed 5 of its 37
-// tracks, because the tight window closed while the music kept going.
+// Asks about the whole recording, not the movement window — getting this wrong is silent (a real ride once showed 5 of 37 tracks).
 
 describe('soundtrackWindow', () => {
   const ride = (over: Partial<Activity> = {}) =>

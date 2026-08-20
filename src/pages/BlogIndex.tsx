@@ -14,21 +14,16 @@ export async function loader(): Promise<PostSummary[] | null> {
   return loadPostSummaries()
 }
 
-/**
- * What a query is matched against, per post: title, summary, tags, and the date
- * in both its ISO and written forms — so "2019", "march", and "music" all find
- * something without anyone having to think about which field they're searching.
- */
+// Matched fields: title, summary, tags, and the date in both ISO and written
+// form — so "2019", "march", and "music" all find something.
 const haystack = (post: PostSummary): string =>
   [post.title, post.description ?? '', post.tags.join(' '), post.date, formatMonthDay(post.date)]
     .join(' ')
     .toLowerCase()
 
-/**
- * Every whitespace-separated term has to appear somewhere, in any order — so
- * "music 2019" narrows rather than widening the way an OR would. Substring
- * rather than prefix matching, since "york" should find "New York".
- */
+// Every term must appear somewhere, any order — "music 2019" narrows rather
+// than widening like an OR would. Substring, not prefix, so "york" finds
+// "New York".
 function filterPosts(posts: PostSummary[], index: Map<string, string>, query: string) {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
   if (!terms.length) return posts
@@ -44,10 +39,9 @@ export function Component() {
   const [query, setQuery] = useState('')
   const inputId = useId()
 
-  // The archive is ~35 posts, so filtering is a substring scan over a map built
-  // once — no index to generate, no dependency, and nothing to fetch. It also
-  // means the page works exactly as before with JS off: the input goes inert and
-  // the full list is already in the prerendered HTML.
+  // ~35 posts, so filtering is a substring scan over a map built once — no
+  // index, no dependency, nothing to fetch. Also works with JS off: the input
+  // goes inert and the full list is already in the prerendered HTML.
   const index = useMemo(() => new Map(posts.map((post) => [post.path, haystack(post)])), [posts])
   const matches = useMemo(() => filterPosts(posts, index, query), [posts, index, query])
   const years = useMemo(() => postsByYear(matches), [matches])
@@ -77,14 +71,13 @@ export function Component() {
               autoComplete="off"
               spellCheck={false}
             />
-            {/* Announced on change, so a filter that empties the list says so to a
-                screen reader rather than silently removing everything. */}
+            {/* Announced on change, so an emptied list says so to a screen
+                reader rather than silently removing everything. */}
             <p className="post-count" role="status">
               {filtering ? `${matches.length} of ${posts.length} posts` : `${posts.length} posts`}
             </p>
           </div>
-          {/* A plain <a>, not a <Link>: /feed.xml is a static file in dist/, not a
-              route the router knows about. */}
+          {/* Plain <a>: /feed.xml is a static file in dist/, not a route. */}
           <p className="post-subscribe">
             <a href="/feed.xml" type="application/rss+xml">
               Subscribe via RSS
@@ -110,12 +103,12 @@ export function Component() {
                 {group.posts.map((p) => (
                   <li key={p.path}>
                     <p className="post-list-meta">
-                      {/* The year lives in the heading above, so the row shows only
-                          the month and day — but the machine-readable date is whole. */}
+                      {/* Year is in the heading above, so the row shows only
+                          month/day — dateTime stays the full date. */}
                       <time dateTime={p.date}>{formatMonthDay(p.date)}</time>
-                      {/* Absent for the posts with almost no prose — the travel
-                          posts are photographs, and "1 min read" would be a claim
-                          about them rather than a description. */}
+                      {/* Absent for posts with almost no prose — the travel
+                          posts are photographs, and "1 min read" would
+                          misdescribe them. */}
                       {formatReadingTime(p.words) && (
                         <span className="post-list-time">{formatReadingTime(p.words)}</span>
                       )}
@@ -129,8 +122,8 @@ export function Component() {
         )}
       </section>
 
-      {/* Below the list rather than above it: the posts are what someone came
-          for, and 40-odd chips would push them off the first screen. */}
+      {/* Below the list: the posts are what someone came for, and 40-odd
+          chips would push them off the first screen. */}
       {tags.length > 0 && (
         <section className="post tag-index" aria-labelledby="tags-heading">
           <h2 id="tags-heading" className="eyebrow">

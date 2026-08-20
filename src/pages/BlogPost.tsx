@@ -14,20 +14,10 @@ import { formatDate, formatReadingTime, type Post, type PostSummary } from '../l
 import { relatedPosts, tagPath } from '../lib/tags'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
 
-/**
- * A heading that links to itself, so a section of a long post can be pointed at.
- *
- * The `id` comes from rehype-slug rather than from anything here: it dedupes
- * repeated headings (`#background`, `#background-1`) and derives the slug from
- * the heading's text after the markdown is parsed, which a `components` override
- * can't do without re-walking React children.
- *
- * The "#" is real, focusable text rather than a hover-only decoration, so it can
- * be reached by keyboard; the stylesheet keeps it out of the way until the
- * heading is hovered or the link is focused. It carries a class so
- * scripts/generate-rss.mjs can strip it back out — a feed reader has no use for
- * a link into a page it isn't showing.
- */
+// A heading that links to itself. `id` comes from rehype-slug (dedupes, derives
+// the slug from parsed text — a `components` override can't do that without
+// re-walking children). The "#" is real focusable text for keyboard reach, and
+// carries a class so generate-rss.mjs can strip it from feed output.
 const anchored = (Tag: 'h2' | 'h3' | 'h4') =>
   function Heading({ children, id }: { node?: unknown; children?: ReactNode; id?: string }) {
     return (
@@ -80,9 +70,9 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
   const index = posts.findIndex((post) => post.path === path)
   if (index === -1) throw new Response('Not found', { status: 404 })
   const summary = ({ body: _body, ...post }: Post): PostSummary => post
-  // Imported here rather than at the top of the file so it lands in its own
-  // chunk: the production client returns above without ever loading it, and the
-  // history of all 32 posts has no business in the page's own bundle.
+  // Dynamic import so this lands in its own chunk: the production client
+  // returns above without loading it, and full post history shouldn't bloat
+  // the page's own bundle.
   const { history, repo } = await import('virtual:post-history')
   return {
     post: posts[index],
@@ -134,10 +124,8 @@ export function Component() {
                 </time>
               )}
               {readingTime && <span className="post-reading-time">{readingTime}</span>}
-              {/* Only set for a substantive revision, so it's worth saying out
-                  loud: the date above is when this was written, not when it last
-                  said what it says now. It already reaches machines as JSON-LD
-                  dateModified; this is the same fact for people. */}
+              {/* Only set for a substantive revision — same fact as JSON-LD
+                  dateModified, surfaced here for people. */}
               {post.updated && (
                 <time dateTime={post.updated} className="post-updated">
                   Updated {formatDate(post.updated)}
@@ -162,10 +150,8 @@ export function Component() {
             open={showSource}
             onToggle={setShowSource}
           />
-          {/* Jumps to the record at the foot of the page and opens it on the
-              way, so the click lands on the list rather than on a collapsed
-              line the reader then has to expand. A plain hash link, so it goes
-              somewhere useful before hydration and can be shared. */}
+          {/* Plain hash link (works pre-hydration, shareable) that also opens
+              the panel, so it lands on the list, not a collapsed line. */}
           {history && (
             <a href="#history" onClick={panel.openFromLink}>
               History
@@ -188,9 +174,8 @@ export function Component() {
           </div>
         )}
       </article>
-      {/* Outside the <article>: this is a record *about* the post, which is also
-          why the reading-progress bar (measured on the article) completes at the
-          end of the prose rather than at the end of a commit list. */}
+      {/* Outside <article>: this is a record about the post, so the reading
+          progress bar (measured on the article) completes at end of prose. */}
       {history && (
         <PostHistory history={history} repo={repo} open={panel.open} onToggle={panel.setOpen} />
       )}

@@ -1,27 +1,14 @@
 // Mirror remote artwork (film posters from Letterboxd, show posters from TMDB)
 // into the site's own R2 bucket, so /watching serves them from
-// images.cailinpitt.com like everything else — no hotlinking someone else's
-// CDN, no broken art when a host reorganizes, and no third party seeing every
-// visitor to the page.
+// images.cailinpitt.com — no hotlinking, no broken art on a host reorg, no
+// third party seeing visitors. Deliberate copy of worker-reading/src/images.ts
+// with a different prefix — the packages share no module.
 //
-// This is worker-reading/src/images.ts with a different prefix. The two are
-// separate packages with no shared module, so it is a deliberate copy rather
-// than an accident; the reasoning below is worth having in both places.
-//
-// Keys are content-addressed *by source url*, so a re-sync never re-uploads and
-// changed art lands on a new key instead of being replaced at the old one. That
-// is the same cache-busting rule as the gallery renditions: objects go up
-// `immutable`, so the bytes at a given key must never change.
-//
-// ## Subrequest budget
-//
-// On the Workers **free plan** an invocation gets 50 subrequests, and R2/KV/D1
-// binding calls count toward it alongside `fetch()`. So this makes exactly
-// **two** per image (one fetch, one put) and never calls `head()` to test for
-// an existing key — callers avoid redundant work by tracking what they have
-// already mirrored instead (see MIRROR_BUDGET in sync.ts). Re-putting an
-// identical key is harmless: the key is a hash of the source url, so the bytes
-// are the same.
+// Keys are content-addressed by source url (immutable, same as gallery
+// renditions), so a re-sync never re-uploads. Free-plan Workers get 50
+// subrequests per invocation, so this spends exactly 2 per image (fetch + put)
+// and never calls head() — callers track what's already mirrored instead (see
+// MIRROR_BUDGET in sync.ts).
 
 import { sha256Hex } from './hash'
 
@@ -49,14 +36,9 @@ const EXTENSIONS: Record<string, string> = {
 /** Key length. 12 hex chars is 48 bits — ample for a few thousand images. */
 const KEY_HASH_LENGTH = 12
 
-/**
- * Copy `source` into R2.
- *
- * Returns the root-relative `/images/watching/…` path to store in D1 (the
- * site's `imageUrl()` rewrites it to the R2 domain at render time), or null if
- * it could not be mirrored. Callers must treat null as non-fatal: an entry with
- * no art still belongs in the log.
- */
+// Copy `source` into R2. Returns the root-relative /images/watching/… path to
+// store in D1, or null if it couldn't be mirrored — non-fatal, an entry with
+// no art still belongs in the log.
 export async function mirrorImage(env: Env, source: string | null): Promise<string | null> {
   if (!source) return null
 
