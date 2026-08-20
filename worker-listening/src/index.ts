@@ -9,7 +9,7 @@
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
 import type { PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
-import { blobKey, computePeriod, listPeriods, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
+import { blobKey, computePeriod, getPeriodIndex, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
 import { countInWindows, fetchPeriodRows, priorLastPlay, summaryStatements } from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
@@ -253,7 +253,7 @@ async function refreshHeatmap(env: Env): Promise<void> {
  * BACKFILL_PER_TICK is sized against D1's per-invocation query ceiling.
  */
 async function runPeriodWork(env: Env, now: number): Promise<void> {
-  const [index, bounds] = await Promise.all([listPeriods(env), archiveBounds(env)])
+  const [index, bounds] = await Promise.all([getPeriodIndex(env, now), archiveBounds(env)])
   const unit = await pickWork(env, index, bounds.firstDay, now)
   if (!unit) return
 
@@ -763,8 +763,12 @@ export default {
       if (url.pathname === '/periods.json') {
         // Short TTL, unlike the other archival endpoints: this list grows every
         // few minutes while the backfill walks history, and an hour-long cache
-        // pins an early, near-empty copy for the whole of it.
-        return cached(url, 'periods', ctx, cors, async () => json(await listPeriods(env), EDGE_TTL))
+        // pins an early, near-empty copy for the whole of it. Goes through the
+        // same cached index as the cron — see getPeriodIndex() — so a cold edge
+        // cache can't force a real KV list() beyond one per INDEX_CACHE_INTERVAL.
+        return cached(url, 'periods', ctx, cors, async () =>
+          json(await getPeriodIndex(env, Math.floor(Date.now() / 1000)), EDGE_TTL),
+        )
       }
 
       if (url.pathname === '/years.json') {

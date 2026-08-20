@@ -101,6 +101,38 @@ export async function listPeriods(env: Env): Promise<PeriodIndex> {
   return out
 }
 
+/** Where the cached period index is stored between re-lists. */
+const INDEX_CACHE_KEY = 'meta:v1:period-index'
+
+/** How stale the cached index may get before listPeriods() runs again. */
+const INDEX_CACHE_INTERVAL = 30 * 60
+
+interface IndexCache {
+  index: PeriodIndex
+  computedAt: number
+}
+
+/**
+ * Cached wrapper around listPeriods().
+ *
+ * KV list() is capped at 1,000/day account-wide. Called from every cron tick
+ * that reaches runPeriodWork, that alone blows the budget once the backfill
+ * finishes and enrichment stops finding new work to short-circuit on first —
+ * both leave nothing standing between the tick and this call, ~1,300 times a
+ * day. A get() is effectively free (100k/day), so pay for a real list() once
+ * per INDEX_CACHE_INTERVAL and serve every tick in between off one cheap read.
+ * The archive only grows a few periods a day, so a half-hour-stale index costs
+ * nothing but, at worst, one redundant period build that self-corrects next tick.
+ */
+export async function getPeriodIndex(env: Env, now: number): Promise<PeriodIndex> {
+  const cached = await env.KV.get<IndexCache>(INDEX_CACHE_KEY, 'json')
+  if (cached && now - cached.computedAt < INDEX_CACHE_INTERVAL) return cached.index
+
+  const index = await listPeriods(env)
+  await env.KV.put(INDEX_CACHE_KEY, JSON.stringify({ index, computedAt: now } satisfies IndexCache))
+  return index
+}
+
 /**
  * Build one period's stats.
  *
