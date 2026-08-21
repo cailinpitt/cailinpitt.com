@@ -1,6 +1,6 @@
 ---
 title: "Atlanta has grown up"
-date: 2026-08-20
+date: 2026-08-21
 path: /blog/2026/8/21/atlanta-has-grown-up
 slug: atlanta-has-grown-up
 tags: ["Atlanta", "Transportation"]
