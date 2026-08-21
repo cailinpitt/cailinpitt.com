@@ -54,8 +54,10 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 **Publishing checklist**
 
 1. Write `content/blog/<slug>.md`.
-2. Put inline images in `originals/<slug>/`, run `npm run images:publish`, and reference them as
-   `/images/<slug>/<name>.webp` (note: extension changes to `.webp`).
+2. Put the blog's images in `originals/<blog-slug>/`, run `npm run images:publish`, and reference them as
+   `/images/<blog-slug>/<name>.webp`. A **slug** folder is an inline
+   post image; a **four-digit year** folder (`originals/2026/`) is a `/photos` gallery photo instead
+   — see [Photos](#photos).
 3. Preview with `npm run dev`.
 4. `npm run publish:atproto`, then commit `content/atproto.json`.
 5. Commit the post and push `main`.
