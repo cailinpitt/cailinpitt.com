@@ -12,6 +12,17 @@ import {
   type Book,
 } from '../lib/reading'
 
+function BookCoverArt({ src }: { src: string | null }) {
+  if (!src) {
+    return (
+      <span className="book-cover book-cover-placeholder" aria-hidden="true">
+        📖
+      </span>
+    )
+  }
+  return <img src={src} alt="" className="book-cover" loading="lazy" decoding="async" />
+}
+
 export function BookCard({ book, dateLabel }: { book: Book; dateLabel: 'started' | 'finished' }) {
   const href = hardcoverUrl(book)
   const rating = stars(book.rating)
@@ -20,7 +31,7 @@ export function BookCard({ book, dateLabel }: { book: Book; dateLabel: 'started'
   const inner = (
     <>
       {/* alt="": title is right beside it, no need to announce the book twice. */}
-      <Art src={readingImage(book.cover)} alt="" className="book-cover" />
+      <BookCoverArt src={readingImage(book.cover)} />
       <span className="book-meta">
         <span className="book-title">{book.title}</span>
         {book.authors && <span className="book-author">{book.authors}</span>}
