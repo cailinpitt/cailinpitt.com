@@ -112,25 +112,6 @@ export function Component() {
         </p>
       </section>
 
-      <section className="home-section recent-projects" aria-labelledby="projects-heading">
-        <h2 id="projects-heading" className="eyebrow">
-          🧑‍💻 Current projects
-        </h2>
-        <ul className="project-previews">
-          {featuredProjects.map((project) => (
-            <li key={project.name}>
-              <h3>
-                <a href={project.href}>{project.name}</a>
-              </h3>
-              <p>{project.description}</p>
-            </li>
-          ))}
-        </ul>
-        <p className="more">
-          <Link to="/projects">All projects →</Link>
-        </p>
-      </section>
-
       {recent.length > 0 && (
         <section className="home-section recent" aria-labelledby="recent-heading">
           <h2 id="recent-heading" className="eyebrow">
@@ -149,6 +130,25 @@ export function Component() {
           </p>
         </section>
       )}
+
+      <section className="home-section recent-projects" aria-labelledby="projects-heading">
+        <h2 id="projects-heading" className="eyebrow">
+          🧑‍💻 Current projects
+        </h2>
+        <ul className="project-previews">
+          {featuredProjects.map((project) => (
+            <li key={project.name}>
+              <h3>
+                <a href={project.href}>{project.name}</a>
+              </h3>
+              <p>{project.description}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="more">
+          <Link to="/projects">All projects →</Link>
+        </p>
+      </section>
 
       {recentPhotos.length > 0 && (
         <section className="home-section recent-photos" aria-labelledby="photos-heading">
