@@ -2,7 +2,7 @@
 // straight from D1 behind the edge cache, no precomputed blobs.
 
 /** Kinds a caller may filter on; mirrors ActivityKind in strava.ts. */
-const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'other'])
+const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'dance', 'other'])
 
 export const ACTIVITY_PAGE = 30
 const MAX_ACTIVITY_PAGE = 100

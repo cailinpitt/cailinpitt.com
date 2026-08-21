@@ -56,6 +56,7 @@ const KINDS = {
   Yoga: 'yoga',
   'Rock Climb': 'climb',
   'Rock Climbing': 'climb',
+  Dance: 'dance',
 }
 
 const kindOf = (type) => KINDS[type] ?? 'other'

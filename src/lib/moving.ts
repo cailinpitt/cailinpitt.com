@@ -3,7 +3,16 @@
 
 const API_BASE = import.meta.env.VITE_MOVING_API ?? 'https://moving.cailinpitt.com'
 
-export type ActivityKind = 'ride' | 'ebike' | 'lift' | 'walk' | 'run' | 'yoga' | 'climb' | 'other'
+export type ActivityKind =
+  | 'ride'
+  | 'ebike'
+  | 'lift'
+  | 'walk'
+  | 'run'
+  | 'yoga'
+  | 'climb'
+  | 'dance'
+  | 'other'
 
 export interface Activity {
   id: string
@@ -118,6 +127,7 @@ const KIND_LABELS: Record<ActivityKind, string> = {
   run: 'Run',
   yoga: 'Yoga',
   climb: 'Climb',
+  dance: 'Dance',
   other: 'Activity',
 }
 
@@ -132,6 +142,7 @@ const KIND_ICONS: Record<ActivityKind, string> = {
   run: '🏃',
   yoga: '🧘',
   climb: '🧗',
+  dance: '💃',
   other: '•',
 }
 
@@ -149,6 +160,7 @@ const VERBS: Record<ActivityKind, string> = {
   run: 'Ran',
   yoga: 'Yoga',
   climb: 'Climbed',
+  dance: 'Danced',
   other: 'Moved',
 }
 

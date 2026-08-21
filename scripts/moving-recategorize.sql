@@ -26,5 +26,6 @@ UPDATE activities SET kind = CASE sport_type
   WHEN 'Yoga'                 THEN 'yoga'
   WHEN 'RockClimbing'         THEN 'climb'
   WHEN 'RockClimb'            THEN 'climb'
+  WHEN 'Dance'                THEN 'dance'
   ELSE 'other'
 END;

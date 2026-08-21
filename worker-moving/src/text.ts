@@ -79,6 +79,7 @@ const MARKS: Record<string, string> = {
   run: 'run',
   yoga: 'yoga',
   climb: 'climb',
+  dance: 'dance',
   other: '—',
 }
 
@@ -90,6 +91,7 @@ const VERBS: Record<string, string> = {
   run: 'Ran',
   yoga: 'Yoga',
   climb: 'Climbed',
+  dance: 'Danced',
   other: 'Moved',
 }
 

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS activities (
   -- Strava's sport_type: Ride, EBikeRide, VirtualRide, WeightTraining, Workout…
   sport_type    TEXT    NOT NULL,
   -- Coarse bucket the page groups on, derived from sport_type: ride | ebike |
-  -- lift | walk | run | yoga | climb | other. Re-derive with
+  -- lift | walk | run | yoga | climb | dance | other. Re-derive with
   -- scripts/moving-recategorize.sql after changing the mapping.
   kind          TEXT    NOT NULL,
   start_date    TEXT    NOT NULL,     -- YYYY-MM-DD, athlete-local

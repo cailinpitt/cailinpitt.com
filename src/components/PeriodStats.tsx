@@ -567,6 +567,7 @@ const KIND_LABELS: Record<string, string> = {
   run: 'running',
   yoga: 'yoga',
   climb: 'climbing',
+  dance: 'dancing',
   other: 'other',
 }
 

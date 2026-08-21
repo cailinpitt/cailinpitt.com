@@ -7,7 +7,16 @@ const API = 'https://www.strava.com/api/v3'
 const EXPIRY_SKEW = 300
 
 /** Coarse bucket the page groups on. `ride`/`ebike` split — different efforts. */
-export type ActivityKind = 'ride' | 'ebike' | 'lift' | 'walk' | 'run' | 'yoga' | 'climb' | 'other'
+export type ActivityKind =
+  | 'ride'
+  | 'ebike'
+  | 'lift'
+  | 'walk'
+  | 'run'
+  | 'yoga'
+  | 'climb'
+  | 'dance'
+  | 'other'
 
 export interface SummaryActivity {
   id: string
@@ -50,6 +59,7 @@ const KINDS: Record<string, ActivityKind> = {
   Yoga: 'yoga',
   RockClimbing: 'climb',
   RockClimb: 'climb',
+  Dance: 'dance',
 }
 
 const kindOf = (sportType: string): ActivityKind => KINDS[sportType] ?? 'other'
