@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
+import { CommentsSection } from '../components/CommentsSection'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
@@ -213,6 +214,8 @@ export function Component() {
           )}
         </nav>
       )}
+
+      <CommentsSection postPath={post.path} />
     </>
   )
 }

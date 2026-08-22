@@ -33,6 +33,8 @@
     "moving:backfill": "node scripts/moving-backfill.mjs",
     "guestbook:list": "node scripts/guestbook.mjs list",
     "guestbook:rm": "node scripts/guestbook.mjs rm",
+    "comments:list": "node scripts/comments.mjs list",
+    "comments:rm": "node scripts/comments.mjs rm",
     "md": "node scripts/generate-markdown.mjs",
     "og": "node scripts/generate-og.mjs",
     "rss": "node scripts/generate-rss.mjs"

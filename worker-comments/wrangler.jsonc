@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cailinpitt-comments",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+
+  "routes": [{ "pattern": "comments.cailinpitt.com", "custom_domain": true }],
+
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+
+  "vars": {
+    // POST /comments rejects any other origin. Not a real security boundary
+    // (Turnstile is) but keeps the form from being embedded elsewhere.
+    "ALLOWED_ORIGIN": "https://cailinpitt.com",
+    // Same Turnstile widget as worker-guestbook. Informational only — kept in
+    // sync by hand with src/lib/comments.ts.
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAEEBNcQ83mO9Fcud"
+  },
+
+  // Fill in the id after: wrangler d1 create cailinpitt-comments
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cailinpitt-comments",
+      "database_id": "2b7d3895-f13f-4099-8723-e8920e5ded79"
+    }
+  ]
+
+  // Secrets: wrangler secret put TURNSTILE_SECRET / ADMIN_TOKEN / IP_SALT
+}

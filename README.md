@@ -27,7 +27,7 @@ file explains how things work.
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
   [home screen](#home-screen--installing) ·
   [header nav](#header-nav) · [theme](#color-theme) · [markdown source](#markdown-source) ·
-  [provenance](#provenance)
+  [provenance](#provenance) · [comments](#comments)
 - [Phone photo publishing](#publishing-a-photo-from-your-phone) · [Tests](#tests) ·
   [Caching](#caching) · [Deploy](#deploy)
 
@@ -516,6 +516,18 @@ accepts **public writes**.
   `worker-guestbook/wrangler.jsonc` — keep them in sync.
 - Full write path and privacy design: [`worker-guestbook/README.md`](worker-guestbook/README.md)
 
+## Comments
+
+Every post has a comment thread at the bottom: name and message required, website optional.
+Owned by `worker-comments/` — same write gauntlet and instant-publish design as the guestbook,
+scoped by `post_path` instead of sitewide.
+
+- **Moderation:** `npm run comments:list` / `comments:rm -- <id>` (needs `COMMENTS_ADMIN_TOKEN`
+  in `.env`), same shape as guestbook's.
+- **Reuses the guestbook's Turnstile widget** — one site key covers the whole domain.
+- API base: `VITE_COMMENTS_API` (default `https://comments.cailinpitt.com`).
+- Full design: [`worker-comments/README.md`](worker-comments/README.md)
+
 ## Photos page
 
 One Instagram-style feed: every photograph in a three-column grid of squares, newest first, no
@@ -927,7 +939,7 @@ blog image as missing). Run it locally.
 |---|---|
 | `frontmatter`, `posts`, `tags`, `colophon` | Silent failures in the pure functions: a tag slug that stops collapsing casing splits one tag into two pages; a broken `{{#located}}` publishes "0 of them carry a location"; a word counter that counts iframes calls a photo essay a 12 minute read |
 | `content` | Frontmatter facts the build trusts: duplicate `path` (posts prerender over each other), a `path` whose date disagrees with `date:`, a mistyped `tags:` arriving as a string. Padding-agnostic, since one post is at `/blog/2026/8/01/…` |
-| `guestbook-validate` | The one piece of code deciding what a stranger may store. Lives in `worker-guestbook/`, which has no test setup, but it's pure |
+| `guestbook-validate`, `comments-validate` | The one piece of code deciding what a stranger may store. Live in `worker-guestbook/` / `worker-comments/`, which have no test setup, but they're pure |
 | `command-palette` | The hand-written page list vs. the router, both directions |
 | `photos` | The two rules the feed can't get wrong: ids are permanent public URLs (slugging + collision suffix pinned), and order is year then date. Tests `scripts/photo-manifest.mjs` against the site's own sort and checks they agree. Also pins what `photos:rm` considers part of a photo |
 
@@ -958,7 +970,7 @@ way and is unchanged.
 Push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages. Repo settings
 need **Settings → Pages → Source = GitHub Actions**; the custom domain comes from `public/CNAME`.
 
-The seven Workers deploy **separately** — a push to `main` never touches them:
+The eight Workers deploy **separately** — a push to `main` never touches them:
 
 ```sh
 cd worker-listening && npm run deploy  # listening.cailinpitt.com
@@ -968,6 +980,7 @@ cd worker-moving && npm run deploy     # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy  # guestbook.cailinpitt.com
 cd worker-photos && npm run deploy     # photos.cailinpitt.com
 cd worker-notes && npm run deploy      # notes.cailinpitt.com
+cd worker-comments && npm run deploy   # comments.cailinpitt.com
 ```
 
 `.github/workflows/ingest-photos.yml` commits photos sent from the phone and pushes to `main`,

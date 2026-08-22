@@ -116,6 +116,7 @@ cd worker-moving    && npm run deploy   # moving.cailinpitt.com
 cd worker-guestbook && npm run deploy   # guestbook.cailinpitt.com
 cd worker-photos    && npm run deploy   # photos.cailinpitt.com
 cd worker-notes     && npm run deploy   # notes.cailinpitt.com
+cd worker-comments  && npm run deploy   # comments.cailinpitt.com
 ```
 
 Workers are **not** part of the site pipeline — a push to `main` never touches them.
@@ -524,6 +525,16 @@ curl guestbook.cailinpitt.com             # terminal view
 
 Needs `GUESTBOOK_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 
+## Comments — moderation
+
+```bash
+npm run comments:list                    # 50 newest, with ids and post paths
+npm run comments:list -- --limit 200
+npm run comments:rm -- <id> [<id> ...]   # immediate and permanent
+```
+
+Needs `COMMENTS_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
+
 ## Credentials
 
 `.env` at the repo root (gitignored):
@@ -541,13 +552,15 @@ Needs `GUESTBOOK_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` | `moving:auth` |
 | `INGEST_TOKEN` | saving articles |
 | `GUESTBOOK_ADMIN_TOKEN`, `GUESTBOOK_IP_SALT` | `guestbook:list` / `rm` |
-| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook form |
+| `COMMENTS_ADMIN_TOKEN`, `COMMENTS_IP_SALT` | `comments:list` / `rm` |
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook and comment forms (same widget) |
 | `WORKER_PHOTOS_INGEST_TOKEN`, `WORKER_PHOTOS_GITHUB_TOKEN` | phone uploads |
 | `NOTES_PUBLISH_TOKEN` | notes — the Worker's `PUBLISH_TOKEN`, kept here as the copy of record |
 
 Overrides for pointing a script at a non-default Worker: `READING_API`, `WATCHING_API`,
-`MOVING_API`, `GUESTBOOK_API`, or `--api <url>` on `reading:sync` / `watching:sync` /
-`moving:sync` / `guestbook:list` / `guestbook:rm`.
+`MOVING_API`, `GUESTBOOK_API`, `COMMENTS_API`, or `--api <url>` on `reading:sync` /
+`watching:sync` / `moving:sync` / `guestbook:list` / `guestbook:rm` / `comments:list` /
+`comments:rm`.
 
 Worker secrets (`npx wrangler secret put`, per directory):
 
@@ -558,6 +571,7 @@ Worker secrets (`npx wrangler secret put`, per directory):
 | `worker-watching` | `ADMIN_TOKEN` |
 | `worker-moving` | `ADMIN_TOKEN`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` |
 | `worker-guestbook` | `TURNSTILE_SECRET`, `ADMIN_TOKEN`, `IP_SALT` |
+| `worker-comments` | `TURNSTILE_SECRET`, `ADMIN_TOKEN`, `IP_SALT` |
 | `worker-photos` | `INGEST_TOKEN`, `GITHUB_TOKEN` |
 
 GitHub Actions secrets (for `ingest-photos.yml`): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
@@ -574,6 +588,7 @@ Cloudflare secrets are write-only — `.env` is the only place a token can be re
 | `VITE_WATCHING_API` | `https://watching.cailinpitt.com` |
 | `VITE_MOVING_API` | `https://moving.cailinpitt.com` |
 | `VITE_GUESTBOOK_API` | `https://guestbook.cailinpitt.com` |
+| `VITE_COMMENTS_API` | `https://comments.cailinpitt.com` |
 
 ## First-time setup
 
@@ -583,7 +598,8 @@ Per-worker setup (create D1/KV/R2, apply schema, put secrets) is in each worker'
 [watching](worker-watching/README.md#setup) ·
 [moving](worker-moving/README.md#setup) ·
 [guestbook](worker-guestbook/README.md#setup) ·
-[photos](worker-photos/README.md#setup)
+[photos](worker-photos/README.md#setup) ·
+[comments](worker-comments/README.md#setup)
 
 Repo settings: **Settings → Pages → Source = GitHub Actions**. Custom domain from `public/CNAME`.
 
