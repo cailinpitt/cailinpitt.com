@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { CurlHint } from '../components/CurlHint'
 import { StatTile } from '../components/ListeningBits'
