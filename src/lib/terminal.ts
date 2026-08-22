@@ -160,7 +160,16 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
       // still the command, which answers roughly the same question anyway.
       { name: 'now', kind: 'page', to: '/now', source: '/now.md', meta: 'what I am up to', keywords: 'currently today' },
       { name: 'listening', kind: 'page', to: '/listening', meta: 'music, from Last.fm', keywords: 'scrobbles now playing' },
-      { name: 'reading', kind: 'page', to: '/reading', meta: 'books and articles', keywords: 'hardcover' },
+      {
+        name: 'reading',
+        kind: 'dir',
+        to: '/reading',
+        meta: 'books, from Hardcover',
+        keywords: 'hardcover',
+        children: [
+          { name: 'articles', kind: 'page', to: '/reading/articles', meta: 'saved articles', keywords: 'links saved bookmarks' },
+        ],
+      },
       { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
       { name: 'moving', kind: 'page', to: '/moving', meta: 'exercise', keywords: 'bike cycling ebike lifting gym exercise' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
@@ -585,7 +594,14 @@ export async function run(
         }
         if (!lines.length) lines.push(muted('Nothing in progress.'))
         if (todaysArticle) lines.push(blank(), ...articleLines(todaysArticle))
-        return { lines: [...lines, blank(), link('The whole shelf → /reading', '/reading')] }
+        return {
+          lines: [
+            ...lines,
+            blank(),
+            link('The whole shelf → /reading', '/reading'),
+            link('Saved articles → /reading/articles', '/reading/articles'),
+          ],
+        }
       } catch {
         return { lines: [err('reading: the reading Worker did not answer')] }
       }

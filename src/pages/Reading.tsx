@@ -1,35 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { CurlHint } from '../components/CurlHint'
 import { StatTile } from '../components/ListeningBits'
-import { ArticleCard, BookCard } from '../components/ReadingBits'
-import { dayKey, formatDayLabel } from '../lib/datetime'
+import { BookCard } from '../components/ReadingBits'
 import { pageSchema } from '../lib/structuredData'
-import {
-  booksByYear,
-  fetchOlderArticles,
-  fetchOlderBooks,
-  fetchReading,
-  type Article,
-  type Book,
-  type ReadingBundle,
-} from '../lib/reading'
-
-type Tab = 'books' | 'articles'
+import { booksByYear, fetchOlderBooks, fetchReading, type Book, type ReadingBundle } from '../lib/reading'
 
 export function Component() {
   const [bundle, setBundle] = useState<ReadingBundle | null>(null)
   const [error, setError] = useState(false)
 
-  // Tab lives in the url so a link can point straight at articles. Safe against
-  // hydration mismatches since tabs only render once `bundle` is set (never during prerender).
-  const [params, setParams] = useSearchParams()
-  const tab: Tab = params.get('tab') === 'articles' ? 'articles' : 'books'
-  const setTab = (next: Tab) =>
-    setParams(next === 'books' ? {} : { tab: next }, { replace: true })
-
-  // Unlike /listening, no polling: books sync once a day and articles arrive by email.
+  // No polling: books sync once a day.
   useEffect(() => {
     const controller = new AbortController()
     fetchReading(controller.signal)
@@ -44,23 +26,23 @@ export function Component() {
     <div className="reading">
       <Seo
         title="Reading"
-        description="Books and articles Cailin Pitt has been reading, and when."
+        description="Books Cailin Pitt has been reading, and when."
         path="/reading"
         jsonLd={pageSchema({
           path: '/reading',
           title: 'Reading',
-          description: 'Books and articles Cailin Pitt has been reading, and when.',
+          description: 'Books Cailin Pitt has been reading, and when.',
           type: 'CollectionPage',
         })}
       />
 
       <h1>Reading</h1>
       <p>
-        Books come from{' '}
+        Books come from my{' '}
         <a href="https://hardcover.app" target="_blank" rel="noopener noreferrer">
           Hardcover
         </a>
-        . Articles are ones I saved as I read them.
+        {' '}account.
       </p>
       <CurlHint command="curl reading.cailinpitt.com" />
 
@@ -78,121 +60,33 @@ export function Component() {
               <StatTile label="Books read" value={bundle.counts.booksRead} />
               <StatTile label="This year" value={bundle.counts.booksThisYear} />
               <StatTile label="Pages this year" value={bundle.counts.pagesThisYear} />
-              <StatTile label="Articles saved" value={bundle.counts.articles} />
             </dl>
           </section>
 
-          {/* Peers, not stacked — articles used to sit below the whole book
-              history where nobody scrolled to find them. */}
-          <div className="segmented reading-tabs" role="tablist" aria-label="Reading">
-            {(['books', 'articles'] as Tab[]).map((key) => (
-              <button
-                key={key}
-                role="tab"
-                id={`reading-tab-${key}`}
-                aria-selected={tab === key}
-                aria-controls={`reading-panel-${key}`}
-                className={tab === key ? 'active' : undefined}
-                onClick={() => setTab(key)}
-              >
-                {key === 'books' ? '📚 Books' : '🔗 Articles'}
-                <span className="segmented-count">
-                  {key === 'books' ? bundle.counts.booksRead : bundle.counts.articles}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div
-            role="tabpanel"
-            id={`reading-panel-${tab}`}
-            aria-labelledby={`reading-tab-${tab}`}
-            // Remount on tab change so each panel's pagination starts fresh
-            // rather than restoring a half-loaded list from last time.
-            key={tab}
-          >
-            {tab === 'books' ? (
-              <>
-                {bundle.currentlyReading.length > 0 && (
-                  <section className="reading-now" aria-labelledby="reading-now-heading">
-                    <h2 id="reading-now-heading" className="eyebrow">
-                      📖 Currently reading
-                    </h2>
-                    <ul className="book-grid">
-                      {bundle.currentlyReading.map((book) => (
-                        <BookCard
-                          key={`${book.userBookId}-${book.readId}`}
-                          book={book}
-                          dateLabel="started"
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                <FinishedBooks
-                  initial={bundle.finishedBooks}
-                  initialCursor={bundle.nextBookCursor}
-                  total={bundle.counts.booksRead}
-                />
-              </>
-            ) : (
-              <ArticleLog initial={bundle.articles} initialCursor={bundle.nextCursor} />
-            )}
-          </div>
+          {bundle.currentlyReading.length > 0 && (
+            <section className="reading-now" aria-labelledby="reading-now-heading">
+              <h2 id="reading-now-heading" className="eyebrow">
+                📖 Currently reading
+              </h2>
+              <ul className="book-grid">
+                {bundle.currentlyReading.map((book) => (
+                  <BookCard key={`${book.userBookId}-${book.readId}`} book={book} dateLabel="started" />
+                ))}
+              </ul>
+            </section>
+          )}
+          <FinishedBooks
+            initial={bundle.finishedBooks}
+            initialCursor={bundle.nextBookCursor}
+            total={bundle.counts.booksRead}
+          />
         </>
       )}
     </div>
   )
 }
 
-// Shared "load older" behavior: both lists are newest-first behind an opaque
-// cursor, so only the endpoint and the dedupe key differ.
-function usePaginated<T>(
-  initial: T[],
-  initialCursor: string | null,
-  load: (cursor: string, signal: AbortSignal) => Promise<{ items: T[]; nextCursor: string | null }>,
-  keyOf: (item: T) => string,
-) {
-  const [items, setItems] = useState(initial)
-  const [cursor, setCursor] = useState(initialCursor)
-  const [loading, setLoading] = useState(false)
-  const controllerRef = useRef<AbortController | null>(null)
-
-  // Held in a ref so an inline `load` closure doesn't re-create loadMore.
-  const loadRef = useRef(load)
-  loadRef.current = load
-
-  useEffect(() => () => controllerRef.current?.abort(), [])
-
-  const loadMore = useCallback(async () => {
-    if (cursor == null || loading) return
-    setLoading(true)
-    controllerRef.current?.abort()
-    const controller = new AbortController()
-    controllerRef.current = controller
-    try {
-      const page = await loadRef.current(cursor, controller.signal)
-      setItems((prev) => {
-        // The cursor is exclusive, but dedupe anyway — something added between
-        // two requests could otherwise land on both pages.
-        const seen = new Set(prev.map(keyOf))
-        return [...prev, ...page.items.filter((item) => !seen.has(keyOf(item)))]
-      })
-      setCursor(page.nextCursor)
-    } catch (err) {
-      // Stop offering the button rather than looping on a broken endpoint.
-      if ((err as Error)?.name !== 'AbortError') setCursor(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [cursor, loading, keyOf])
-
-  return { items, cursor, loading, loadMore }
-}
-
-// Module-level so they're referentially stable across renders.
 const bookKey = (book: Book) => `${book.userBookId}-${book.readId}`
-const articleKey = (article: Article) => article.id
 
 function FinishedBooks({
   initial,
@@ -203,15 +97,35 @@ function FinishedBooks({
   initialCursor: string | null
   total: number
 }) {
-  const { items, cursor, loading, loadMore } = usePaginated(
-    initial,
-    initialCursor,
-    async (cursor, signal) => {
-      const page = await fetchOlderBooks(cursor, 24, signal)
-      return { items: page.books, nextCursor: page.nextCursor }
-    },
-    bookKey,
-  )
+  const [items, setItems] = useState(initial)
+  const [cursor, setCursor] = useState(initialCursor)
+  const [loading, setLoading] = useState(false)
+  const controllerRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => controllerRef.current?.abort(), [])
+
+  const loadMore = useCallback(async () => {
+    if (cursor == null || loading) return
+    setLoading(true)
+    controllerRef.current?.abort()
+    const controller = new AbortController()
+    controllerRef.current = controller
+    try {
+      const page = await fetchOlderBooks(cursor, 24, controller.signal)
+      setItems((prev) => {
+        // The cursor is exclusive, but dedupe anyway — something added between
+        // two requests could otherwise land on both pages.
+        const seen = new Set(prev.map(bookKey))
+        return [...prev, ...page.books.filter((book) => !seen.has(bookKey(book)))]
+      })
+      setCursor(page.nextCursor)
+    } catch (err) {
+      // Stop offering the button rather than looping on a broken endpoint.
+      if ((err as Error)?.name !== 'AbortError') setCursor(null)
+    } finally {
+      setLoading(false)
+    }
+  }, [cursor, loading])
 
   const years = useMemo(() => booksByYear(items), [items])
   if (!items.length) return null
@@ -251,75 +165,10 @@ function FinishedBooks({
   )
 }
 
-function ArticleLog({
-  initial,
-  initialCursor,
-}: {
-  initial: Article[]
-  initialCursor: string | null
-}) {
-  const { items, cursor, loading, loadMore } = usePaginated(
-    initial,
-    initialCursor,
-    async (cursor, signal) => {
-      const page = await fetchOlderArticles(cursor, 20, signal)
-      return { items: page.articles, nextCursor: page.nextCursor }
-    },
-    articleKey,
-  )
-
-  // Group into local calendar days, preserving the API's newest-first order.
-  const days = useMemo(() => {
-    const grouped: { date: string; articles: Article[] }[] = []
-    for (const article of items) {
-      const date = dayKey(article.readAt)
-      const last = grouped[grouped.length - 1]
-      if (last?.date === date) last.articles.push(article)
-      else grouped.push({ date, articles: [article] })
-    }
-    return grouped
-  }, [items])
-
-  return (
-    <section className="reading-articles" aria-labelledby="reading-articles-heading">
-      <h2 id="reading-articles-heading" className="eyebrow">
-        🔗 Articles
-      </h2>
-
-      {days.length === 0 ? (
-        <p className="reading-empty">Nothing saved yet.</p>
-      ) : (
-        days.map((day) => (
-          <div className="article-day" key={day.date}>
-            <h3 className="article-day-label">
-              {formatDayLabel(day.date)}
-              <span className="article-day-count">
-                {day.articles.length} {day.articles.length === 1 ? 'article' : 'articles'}
-              </span>
-            </h3>
-            <ul className="article-list">
-              {day.articles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
-              ))}
-            </ul>
-          </div>
-        ))
-      )}
-
-      {cursor != null && (
-        <button className="load-more" onClick={loadMore} disabled={loading}>
-          {loading ? 'Loading…' : 'Load older articles'}
-        </button>
-      )}
-    </section>
-  )
-}
-
 function ReadingSkeleton() {
   return (
     <div className="reading-skeleton" aria-hidden="true">
       <div className="sk-tiles">
-        <div className="sk-tile" />
         <div className="sk-tile" />
         <div className="sk-tile" />
         <div className="sk-tile" />

@@ -55,7 +55,8 @@ export const PAGES: Entry[] = [
   { id: 'page:/projects', label: 'Projects', kind: 'Page', to: '/projects', keywords: 'software code apps' },
   { id: 'page:/listening', label: 'Listening', kind: 'Page', to: '/listening', keywords: 'music scrobbles last.fm now playing' },
   { id: 'page:/listening/wrapped', label: 'Listening · Wrapped', kind: 'Page', to: '/listening/wrapped', keywords: 'music year in review wrapped stats recap top artists' },
-  { id: 'page:/reading', label: 'Reading', kind: 'Page', to: '/reading', keywords: 'books articles hardcover' },
+  { id: 'page:/reading', label: 'Reading · Books', kind: 'Page', to: '/reading', keywords: 'books hardcover' },
+  { id: 'page:/reading/articles', label: 'Reading · Articles', kind: 'Page', to: '/reading/articles', keywords: 'links saved bookmarks' },
   { id: 'page:/watching', label: 'Watching', kind: 'Page', to: '/watching', keywords: 'films movies letterboxd cinema' },
   { id: 'page:/moving', label: 'Moving', kind: 'Page', to: '/moving', keywords: 'bike cycling ebike rides lifting gym workouts miles' },
   {

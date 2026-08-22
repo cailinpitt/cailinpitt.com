@@ -55,9 +55,15 @@ export function Layout() {
                 label="Logs"
                 items={[
                   { to: '/listening', label: 'Listening' },
-                  { to: '/reading', label: 'Reading' },
                   { to: '/watching', label: 'Watching' },
                   { to: '/moving', label: 'Moving' },
+                ]}
+              />
+              <NavMenu
+                label="Reading"
+                items={[
+                  { to: '/reading', label: 'Books' },
+                  { to: '/reading/articles', label: 'Articles' },
                 ]}
               />
               <li>
