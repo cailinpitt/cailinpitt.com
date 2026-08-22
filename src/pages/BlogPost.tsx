@@ -6,6 +6,7 @@ import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { CommentsSection } from '../components/CommentsSection'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
+import { PostShare } from '../components/PostShare'
 import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
@@ -145,6 +146,7 @@ export function Component() {
           )}
         </header>
         <div className="post-source-bar">
+          <PostShare path={post.path} title={post.title} />
           <PostSource
             body={post.body}
             file={`${post.path}.md`}
