@@ -147,6 +147,9 @@ export function Component() {
         </header>
         <div className="post-source-bar">
           <PostShare path={post.path} title={post.title} />
+          <a href={`mailto:hello@cailinpitt.com?subject=${encodeURIComponent(`Re: "${post.title}"`)}`}>
+            Reply by email
+          </a>
           <PostSource
             body={post.body}
             file={`${post.path}.md`}

@@ -162,6 +162,12 @@ async function main() {
     } else {
       console.warn(`  ! no prerendered page for ${post.path}`)
     }
+    // Mirrors the "Reply by email" link in BlogPost.tsx's post-source-bar,
+    // which lives outside .post-body and so isn't picked up by extractBody.
+    if (content) {
+      const subject = encodeURIComponent(`Re: "${post.title}"`)
+      content += `<p><a href="mailto:hello@cailinpitt.com?subject=${subject}">Reply by email</a></p>`
+    }
 
     const pubDate = rfc822(post.date)
     // Falls back to the summary so an item is never empty, even if the page it
