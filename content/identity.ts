@@ -18,16 +18,18 @@ export const identities = [
   'a Midwesterner',
   'a public transit lover',
   'a he/they',
+  'an Atlantan',
+  'a former runner',
 ]
 
 export const descriptions = [
   'builds tools that make it easier to use public transit',
   'maps out the bus routes they have not ridden yet',
-  'photographs the places they pass through',
-  'writes about music and everything around it',
-  'keeps a public log of everything they listen to',
+  'photographs places they pass through',
+  'writes about music',
+  'keeps a log of the music they listen to',
   'is trying to bike every street in Atlanta',
   'loves taking roadtrips',
   'wants to visit every state',
-  'is helping empower people to efficiently operate their restaurants',
+  'is empowering people to efficiently operate their restaurants',
 ]
