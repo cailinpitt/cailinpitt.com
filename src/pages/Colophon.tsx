@@ -38,7 +38,8 @@ interface ColophonData {
 export async function loader(): Promise<ColophonData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadPhotos, loadPostSummaries } = await import('../lib/content.client')
+    const { loadPhotos } = await import('../lib/content.client')
+    const { loadPostSummaries } = await import('../lib/blogPosts.client')
     return { ...summarize(loadPostSummaries(), loadPhotos()), ...(await provenance()) }
   }
   const { loadPhotos, loadPostSummaries } = await import('../lib/content.server')

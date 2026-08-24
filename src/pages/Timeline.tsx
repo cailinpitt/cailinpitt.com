@@ -51,7 +51,8 @@ const TOP_UP_LIMIT = 10
 export async function loader(): Promise<TimelineData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadDatedPhotos, loadPostSummaries, loadConcerts } = await import('../lib/content.client')
+    const { loadDatedPhotos, loadConcerts } = await import('../lib/content.client')
+    const { loadPostSummaries } = await import('../lib/blogPosts.client')
     return { posts: loadPostSummaries(), photos: loadDatedPhotos(), concerts: loadConcerts() }
   }
   const { loadDatedPhotos, loadPostSummaries, loadConcerts } = await import('../lib/content.server')

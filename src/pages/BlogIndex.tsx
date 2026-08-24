@@ -8,7 +8,7 @@ import { blogIndexSchema } from '../lib/structuredData'
 export async function loader(): Promise<PostSummary[] | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    return (await import('../lib/content.client')).loadPostSummaries()
+    return (await import('../lib/blogPosts.client')).loadPostSummaries()
   }
   const { loadPostSummaries } = await import('../lib/content.server')
   return loadPostSummaries()

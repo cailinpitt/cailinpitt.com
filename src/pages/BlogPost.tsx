@@ -62,12 +62,22 @@ export async function getStaticPaths(): Promise<string[]> {
   return (await loadPostSummaries()).map((post) => post.path.replace(/^\//, ''))
 }
 
+// publicationUri lives apart from loadPosts (content.server / content.client vs.
+// blogPosts.client), so the two sources are fetched independently rather than through
+// one shared module reference.
+async function loadPostsAndPublicationUri(): Promise<[Post[], string | null]> {
+  if (import.meta.env.SSR) {
+    const { loadPosts, loadPublicationUri } = await import('../lib/content.server')
+    return Promise.all([loadPosts(), loadPublicationUri()])
+  }
+  const { loadPosts } = await import('../lib/blogPosts.client')
+  const { loadPublicationUri } = await import('../lib/content.client')
+  return [loadPosts(), loadPublicationUri()]
+}
+
 export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostData | null> {
   if (!import.meta.env.SSR && !import.meta.env.DEV) return null
-  const source = import.meta.env.SSR
-    ? await import('../lib/content.server')
-    : await import('../lib/content.client')
-  const posts = await source.loadPosts()
+  const [posts, publicationUri] = await loadPostsAndPublicationUri()
   const path = `/blog/${params.year}/${params.month}/${params.day}/${params.slug}`
   const index = posts.findIndex((post) => post.path === path)
   if (index === -1) throw new Response('Not found', { status: 404 })
@@ -81,7 +91,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
     newer: posts[index - 1] ? summary(posts[index - 1]) : undefined,
     older: posts[index + 1] ? summary(posts[index + 1]) : undefined,
     related: relatedPosts(posts.map(summary), posts[index]),
-    publicationUri: await source.loadPublicationUri(),
+    publicationUri,
     history: history[path] ?? null,
     repo,
   }

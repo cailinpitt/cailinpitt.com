@@ -1,4 +1,5 @@
 import { Link, useLoaderData } from 'react-router-dom'
+import { posts as indexedPosts } from 'virtual:site-index'
 import { Seo } from '../components/Seo'
 import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
@@ -9,15 +10,21 @@ import { ConcertBar } from '../components/ConcertBar'
 import { MovingBar } from '../components/MovingBar'
 import { NotesBar } from '../components/NotesBar'
 import { PhotoStrip } from '../components/PhotoStrip'
-import { formatDate, type PostSummary } from '../lib/posts'
+import { formatDate } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
 import type { Concert } from '../lib/concerts'
 import { homeSchema } from '../lib/structuredData'
 
 const RECENT_PHOTOS = 4
+const RECENT_POSTS = 5
+
+// Frontmatter only (title/date/path/tags), already bundled into every page via the command
+// palette — reading it here means the homepage never has to load every post's full body just
+// to show links to the newest 5.
+type RecentPost = (typeof indexedPosts)[number]
 
 interface HomeData {
-  recent: PostSummary[]
+  recent: RecentPost[]
   recentPhotos: PhotoPreview[]
   publicationUri: string | null
   lastConcert: Concert | null
@@ -42,27 +49,25 @@ const featuredProjects = [
 ]
 
 export async function loader(): Promise<HomeData | null> {
+  const recent = indexedPosts.slice(0, RECENT_POSTS)
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadPhotos, loadPostSummaries, loadPublicationUri, loadConcerts } =
-      await import('../lib/content.client')
+    const { loadPhotos, loadPublicationUri, loadConcerts } = await import('../lib/content.client')
     return {
-      recent: loadPostSummaries().slice(0, 5),
+      recent,
       recentPhotos: toPreviews(loadPhotos(), RECENT_PHOTOS),
       publicationUri: loadPublicationUri(),
       lastConcert: loadConcerts()[0] ?? null,
     }
   }
-  const { loadPhotos, loadPostSummaries, loadPublicationUri, loadConcerts } =
-    await import('../lib/content.server')
-  const [posts, photos, publicationUri, concerts] = await Promise.all([
-    loadPostSummaries(),
+  const { loadPhotos, loadPublicationUri, loadConcerts } = await import('../lib/content.server')
+  const [photos, publicationUri, concerts] = await Promise.all([
     loadPhotos(),
     loadPublicationUri(),
     loadConcerts(),
   ])
   return {
-    recent: posts.slice(0, 5),
+    recent,
     recentPhotos: toPreviews(photos, RECENT_PHOTOS),
     publicationUri,
     lastConcert: concerts[0] ?? null,

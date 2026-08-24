@@ -21,7 +21,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogTagDat
   if (!import.meta.env.SSR && !import.meta.env.DEV) return null
   const source = import.meta.env.SSR
     ? await import('../lib/content.server')
-    : await import('../lib/content.client')
+    : await import('../lib/blogPosts.client')
   const all = await source.loadPostSummaries()
   const slug = params.tag ?? ''
   // Resolve through collectTags so the heading shows the tag's real spelling
