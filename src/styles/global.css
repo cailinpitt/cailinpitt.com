@@ -2475,6 +2475,16 @@ a.concert-link:hover .concert-title {
   height: 34px;
   border-radius: 3px;
 }
+/* Coverless books get an emoji instead of a hidden box — unlike an album
+   or article, a book with no cover art is still worth flagging as a book. */
+.now-bar-art.book-emoji-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+}
 /* Stacked bars sit close together, not a full 1.5rem apart. */
 .now-bar + .now-bar {
   margin-top: 0.6rem;

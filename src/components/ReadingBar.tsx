@@ -5,7 +5,7 @@ import { fetchReadingNow, formatBookDate, readingImage, type ReadingNow } from '
 
 // Currently-reading strip, counterpart to NowPlayingBar. No polling, unlike
 // that bar: books sync once a day, so there's nothing to refresh mid-visit.
-export function ReadingBar() {
+export function ReadingBar({ showLogLinks = true }: { showLogLinks?: boolean } = {}) {
   const [now, setNow] = useState<ReadingNow | null>(null)
 
   useEffect(() => {
@@ -40,7 +40,9 @@ export function ReadingBar() {
                   decoding="async"
                 />
               ) : (
-                <span className="now-bar-art is-cover art-placeholder" aria-hidden="true" />
+                <span className="now-bar-art is-cover book-emoji-placeholder" aria-hidden="true">
+                  📖
+                </span>
               )}
               <span className="now-bar-text">
                 <span className="now-bar-label">
@@ -57,9 +59,11 @@ export function ReadingBar() {
               </span>
             </Link>
           </div>
-          <p className="more">
-            <Link to="/reading">Book log →</Link>
-          </p>
+          {showLogLinks && (
+            <p className="more">
+              <Link to="/reading">Book log →</Link>
+            </p>
+          )}
         </>
       )}
 
@@ -93,9 +97,11 @@ export function ReadingBar() {
               </span>
             </a>
           </div>
-          <p className="more">
-            <Link to="/reading/articles">Article log →</Link>
-          </p>
+          {showLogLinks && (
+            <p className="more">
+              <Link to="/reading/articles">Article log →</Link>
+            </p>
+          )}
         </>
       )}
     </>

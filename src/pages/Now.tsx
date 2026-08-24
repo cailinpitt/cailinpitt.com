@@ -118,7 +118,7 @@ export function Component() {
             lands, and a section would announce an empty region meanwhile. */}
         <div className="now-live">
           <NowPlayingBar />
-          <ReadingBar />
+          <ReadingBar showLogLinks={false} />
           <WatchingBar />
           <ConcertBar concert={lastConcert} />
           <MovingBar />
