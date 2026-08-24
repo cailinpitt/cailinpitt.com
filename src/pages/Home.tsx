@@ -95,9 +95,6 @@ export function Component() {
 
         <h2 className="eyebrow">📖 Reading</h2>
         <ReadingBar />
-        <p className="more">
-          <Link to="/reading">Reading log →</Link>
-        </p>
 
         <h2 className="eyebrow">🎬 Watching</h2>
         <WatchingBar />

@@ -28,65 +28,75 @@ export function ReadingBar() {
   return (
     <>
       {book && (
-        <div className="now-bar">
-          <Link className="now-bar-main" to="/reading" aria-label="Reading">
-            {book.cover ? (
-              <img
-                className="now-bar-art is-cover"
-                src={readingImage(book.cover) ?? undefined}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span className="now-bar-art is-cover art-placeholder" aria-hidden="true" />
-            )}
-            <span className="now-bar-text">
-              <span className="now-bar-label">
-                {reading
-                  ? `Currently reading${others > 0 ? ` · +${others} more` : ''}`
-                  : finishedOn
-                    ? `Last finished · ${finishedOn}`
-                    : 'Last finished'}
+        <>
+          <div className="now-bar">
+            <Link className="now-bar-main" to="/reading" aria-label="Reading">
+              {book.cover ? (
+                <img
+                  className="now-bar-art is-cover"
+                  src={readingImage(book.cover) ?? undefined}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span className="now-bar-art is-cover art-placeholder" aria-hidden="true" />
+              )}
+              <span className="now-bar-text">
+                <span className="now-bar-label">
+                  {reading
+                    ? `Currently reading${others > 0 ? ` · +${others} more` : ''}`
+                    : finishedOn
+                      ? `Last finished · ${finishedOn}`
+                      : 'Last finished'}
+                </span>
+                <span className="now-bar-track">
+                  <span className="now-bar-title">{book.title}</span>
+                  {book.authors && <span className="now-bar-artist">{book.authors}</span>}
+                </span>
               </span>
-              <span className="now-bar-track">
-                <span className="now-bar-title">{book.title}</span>
-                {book.authors && <span className="now-bar-artist">{book.authors}</span>}
-              </span>
-            </span>
-          </Link>
-        </div>
+            </Link>
+          </div>
+          <p className="more">
+            <Link to="/reading">Book log →</Link>
+          </p>
+        </>
       )}
 
       {/* Endpoint returns null when nothing was saved today, rather than a stale link. */}
       {article && (
-        <div className="now-bar">
-          <a
-            className="now-bar-main"
-            href={article.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {article.image ? (
-              <img
-                className="now-bar-art is-card"
-                src={readingImage(article.image) ?? undefined}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
-            )}
-            <span className="now-bar-text">
-              <span className="now-bar-label">Read today · {formatTime(article.readAt)}</span>
-              <span className="now-bar-track">
-                <span className="now-bar-title">{article.title ?? article.url}</span>
-                {article.site && <span className="now-bar-artist">{article.site}</span>}
+        <>
+          <div className="now-bar">
+            <a
+              className="now-bar-main"
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {article.image ? (
+                <img
+                  className="now-bar-art is-card"
+                  src={readingImage(article.image) ?? undefined}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
+              )}
+              <span className="now-bar-text">
+                <span className="now-bar-label">Read today · {formatTime(article.readAt)}</span>
+                <span className="now-bar-track">
+                  <span className="now-bar-title">{article.title ?? article.url}</span>
+                  {article.site && <span className="now-bar-artist">{article.site}</span>}
+                </span>
               </span>
-            </span>
-          </a>
-        </div>
+            </a>
+          </div>
+          <p className="more">
+            <Link to="/reading/articles">Article log →</Link>
+          </p>
+        </>
       )}
     </>
   )

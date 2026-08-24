@@ -2413,6 +2413,14 @@ a.film-link:hover .film-title {
 .now-bar + .now-bar {
   margin-top: 0.6rem;
 }
+/* A log link directly under its bar reads as attached to it; the next bar
+   then stacks close after the link, same rhythm as two bars back to back. */
+.now-bar + .more {
+  margin-top: 0.6rem;
+}
+.more + .now-bar {
+  margin-top: 0.6rem;
+}
 
 /* On /now the bars stack four deep, where shrink-to-fit widths leave a ragged
    right edge that reads as clutter. One width turns them into a column.
