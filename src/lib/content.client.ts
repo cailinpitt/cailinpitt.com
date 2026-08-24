@@ -3,9 +3,11 @@
 
 import atprotoData from '../../content/atproto.json'
 import photoManifest from './photos.json'
+import concertManifest from './concerts.json'
 import { byNewest, type Photo } from './photos'
 import { datedPhotos } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
+import type { Concert } from './concerts'
 
 const rawPosts = import.meta.glob('/content/blog/*.md', {
   query: '?raw',
@@ -35,4 +37,8 @@ export function loadPhotos(): Photo[] {
 
 export function loadDatedPhotos(): Photo[] {
   return datedPhotos(loadPhotos())
+}
+
+export function loadConcerts(): Concert[] {
+  return concertManifest as Concert[]
 }

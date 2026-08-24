@@ -5,11 +5,13 @@ import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
 import { WatchingBar } from '../components/WatchingBar'
+import { ConcertBar } from '../components/ConcertBar'
 import { MovingBar } from '../components/MovingBar'
 import { NotesBar } from '../components/NotesBar'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { formatDate, type PostSummary } from '../lib/posts'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
+import type { Concert } from '../lib/concerts'
 import { homeSchema } from '../lib/structuredData'
 
 const RECENT_PHOTOS = 4
@@ -18,6 +20,7 @@ interface HomeData {
   recent: PostSummary[]
   recentPhotos: PhotoPreview[]
   publicationUri: string | null
+  lastConcert: Concert | null
 }
 
 const featuredProjects = [
@@ -41,30 +44,33 @@ const featuredProjects = [
 export async function loader(): Promise<HomeData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadPhotos, loadPostSummaries, loadPublicationUri } =
+    const { loadPhotos, loadPostSummaries, loadPublicationUri, loadConcerts } =
       await import('../lib/content.client')
     return {
       recent: loadPostSummaries().slice(0, 5),
       recentPhotos: toPreviews(loadPhotos(), RECENT_PHOTOS),
       publicationUri: loadPublicationUri(),
+      lastConcert: loadConcerts()[0] ?? null,
     }
   }
-  const { loadPhotos, loadPostSummaries, loadPublicationUri } =
+  const { loadPhotos, loadPostSummaries, loadPublicationUri, loadConcerts } =
     await import('../lib/content.server')
-  const [posts, photos, publicationUri] = await Promise.all([
+  const [posts, photos, publicationUri, concerts] = await Promise.all([
     loadPostSummaries(),
     loadPhotos(),
     loadPublicationUri(),
+    loadConcerts(),
   ])
   return {
     recent: posts.slice(0, 5),
     recentPhotos: toPreviews(photos, RECENT_PHOTOS),
     publicationUri,
+    lastConcert: concerts[0] ?? null,
   }
 }
 
 export function Component() {
-  const { recent, recentPhotos, publicationUri } = useLoaderData() as HomeData
+  const { recent, recentPhotos, publicationUri, lastConcert } = useLoaderData() as HomeData
   return (
     <>
       <Seo
@@ -101,6 +107,16 @@ export function Component() {
         <p className="more">
           <Link to="/watching">Watching log →</Link>
         </p>
+
+        {lastConcert && (
+          <>
+            <h2 className="eyebrow">🎤 Concerts</h2>
+            <ConcertBar concert={lastConcert} />
+            <p className="more">
+              <Link to="/concerts">Concert log →</Link>
+            </p>
+          </>
+        )}
 
         <h2 className="eyebrow">🚲 Moving</h2>
         <MovingBar />

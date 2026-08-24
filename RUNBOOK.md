@@ -393,6 +393,17 @@ npm run schema:remote                  # from worker-watching/
 curl watching.cailinpitt.com           # terminal view; ?T for no color
 ```
 
+## Concerts
+
+No Worker or D1, backed by JSON:
+
+```bash
+node scripts/concerts-import.mjs ~/Downloads/"<name> - Concert Archives Export - <date>.csv"
+git add src/lib/concerts.json && git commit -m "concerts: import"
+```
+
+Safe to re-run against any export including the same one twice, because concerts are merged by id.
+
 ## Moving
 
 ```bash
@@ -600,6 +611,8 @@ Per-worker setup (create D1/KV/R2, apply schema, put secrets) is in each worker'
 [guestbook](worker-guestbook/README.md#setup) ·
 [photos](worker-photos/README.md#setup) ·
 [comments](worker-comments/README.md#setup)
+
+Concerts needs none of that — `src/lib/concerts.json` ships in the repo.
 
 Repo settings: **Settings → Pages → Source = GitHub Actions**. Custom domain from `public/CNAME`.
 

@@ -9,12 +9,14 @@ import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingBar } from '../components/ReadingBar'
 import { WatchingBar } from '../components/WatchingBar'
+import { ConcertBar } from '../components/ConcertBar'
 import { MovingBar } from '../components/MovingBar'
 import { Seo } from '../components/Seo'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { nowPage } from '../lib/now'
 import { toPreviews, type PhotoPreview } from '../lib/photos'
 import { formatDate } from '../lib/posts'
+import type { Concert } from '../lib/concerts'
 import { pageSchema } from '../lib/structuredData'
 
 // A /now page (nownownow.org). Prose lives in content/now.md — edit that, not
@@ -33,20 +35,23 @@ interface NowData {
   history: (PostHistoryData & { file: string }) | null
   /** Repo web URL, for linking commits. */
   repo: string | null
+  lastConcert: Concert | null
 }
 
 export async function loader(): Promise<NowData | null> {
   if (!import.meta.env.SSR && !import.meta.env.DEV) return null
-  const { loadPhotos } = import.meta.env.SSR
+  const { loadPhotos, loadConcerts } = import.meta.env.SSR
     ? await import('../lib/content.server')
     : await import('../lib/content.client')
   // Imported here rather than at the top of the file so it lands in its own
   // chunk: the production client returns above without ever loading it.
   const { history, repo } = await import('virtual:post-history')
+  const [photos, concerts] = await Promise.all([loadPhotos(), loadConcerts()])
   return {
-    photos: toPreviews(await loadPhotos(), RECENT_PHOTOS),
+    photos: toPreviews(photos, RECENT_PHOTOS),
     history: history['/now'] ?? null,
     repo,
+    lastConcert: concerts[0] ?? null,
   }
 }
 
@@ -74,7 +79,7 @@ const markdownComponents = {
 }
 
 export function Component() {
-  const { photos, history, repo } = useLoaderData() as NowData
+  const { photos, history, repo, lastConcert } = useLoaderData() as NowData
   const [showSource, setShowSource] = useState(false)
   const panel = useHistoryPanel()
 
@@ -115,6 +120,7 @@ export function Component() {
           <NowPlayingBar />
           <ReadingBar />
           <WatchingBar />
+          <ConcertBar concert={lastConcert} />
           <MovingBar />
           {/* Prerendered from the build, unlike the bars above (Worker-fetched). */}
           <PhotoStrip photos={photos} />

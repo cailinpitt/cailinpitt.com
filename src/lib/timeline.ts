@@ -12,6 +12,7 @@ import type { Film } from './watching'
 import type { Activity } from './moving'
 import type { Note } from './notes'
 import type { CompactDay } from './listening'
+import type { Concert } from './concerts'
 
 export interface TimelineDay {
   date: string
@@ -26,6 +27,7 @@ export interface TimelineDay {
   posts: PostSummary[]
   photos: Photo[]
   notes: Note[]
+  concerts: Concert[]
 }
 
 // Photos with a real capture time only — pre-2026 Squarespace photos carry an approximate,
@@ -43,6 +45,7 @@ export interface TimelineSources {
   posts: PostSummary[]
   photos: Photo[]
   notes: Note[]
+  concerts: Concert[]
   /** Oldest day to include; older streams are only partly loaded so a row would understate what happened. Null once listening is exhausted. */
   floor: string | null
 }
@@ -60,6 +63,7 @@ export function buildTimeline({
   posts,
   photos,
   notes,
+  concerts,
   floor,
 }: TimelineSources): TimelineDay[] {
   const byDate = new Map<string, TimelineDay>()
@@ -80,6 +84,7 @@ export function buildTimeline({
         posts: [],
         photos: [],
         notes: [],
+        concerts: [],
       }
       byDate.set(date, entry)
     }
@@ -114,6 +119,8 @@ export function buildTimeline({
   // just before midnight Central can land on the previous day for a reader in Tokyo.
   for (const note of notes) dayFor(dayKey(note.createdAt))?.notes.push(note)
 
+  for (const concert of concerts) dayFor(concert.date)?.concerts.push(concert)
+
   return [...byDate.values()]
     .filter(
       (day) =>
@@ -125,7 +132,8 @@ export function buildTimeline({
         day.activities.length > 0 ||
         day.posts.length > 0 ||
         day.photos.length > 0 ||
-        day.notes.length > 0,
+        day.notes.length > 0 ||
+        day.concerts.length > 0,
     )
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }

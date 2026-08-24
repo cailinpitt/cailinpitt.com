@@ -1,6 +1,7 @@
 import { byNewest, type Photo } from './photos'
 import { datedPhotos } from './timeline'
 import { toPost, type AtprotoData, type Post, type PostSummary } from './posts'
+import type { Concert } from './concerts'
 
 async function loadAtproto(): Promise<AtprotoData> {
   const path = await import('node:path')
@@ -45,4 +46,12 @@ export async function loadPhotos(): Promise<Photo[]> {
 
 export async function loadDatedPhotos(): Promise<Photo[]> {
   return datedPhotos(await loadPhotos())
+}
+
+export async function loadConcerts(): Promise<Concert[]> {
+  const path = await import('node:path')
+  const { readFile } = await import('node:fs/promises')
+  return JSON.parse(
+    await readFile(path.join(process.cwd(), 'src', 'lib', 'concerts.json'), 'utf8'),
+  ) as Concert[]
 }

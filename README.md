@@ -20,7 +20,8 @@ file explains how things work.
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
 - Pages: [/now](#now) · [/uses](#uses) · [/notes](#notes) · [/listening](#listening) · [/reading](#reading) ·
-  [/watching](#watching) · [/moving](#moving) · [/guestbook](#guestbook) · [/timeline](#timeline) ·
+  [/watching](#watching) · [/concerts](#concerts) · [/moving](#moving) · [/guestbook](#guestbook) ·
+  [/timeline](#timeline) ·
   [/photos](#photos-page) ·
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
   [/terminal](#terminal)
@@ -450,6 +451,24 @@ watched. Owned by `worker-watching/`.
 - API base: `VITE_WATCHING_API` (default `https://watching.cailinpitt.com`).
 - Setup and testing: [`worker-watching/README.md`](worker-watching/README.md)
 
+## Concerts
+
+`/concerts` lists past shows, grouped by year, from a Concert Archives export. **No Worker, no
+API, no D1** — Concert Archives has nothing to sync from, so this is static data: `src/lib/concerts.json`,
+committed to the repo and loaded like `photos.json` (see `src/lib/content.server.ts` /
+`content.client.ts`).
+
+- **Import:** export your account from concertarchives.org (or open the periodic email export),
+  then `npm run concerts:import <export.csv>`. Only `Status: Past` rows are kept — the export also
+  lists shows you're planning to go to. Writes/merges into `src/lib/concerts.json`; commit it.
+- **Merges by id** rather than overwriting, so a partial export can only add rows, never drop one.
+  The id is the concertarchives.org URL slug, or a slugified fallback when a row has no URL.
+- **On `/timeline` the artist lineup is the prominent text**, not the show name — "Modest Mouse /
+  Califone", not "An Eraser and a Maze". `/concerts` itself leads with the show name when Concert
+  Archives has one, falling back to the lineup.
+- The homepage and `/now` show a **last-seen card** (`ConcertBar`), built from the same static data
+  — unlike the other `now-bar`s on those pages, it isn't a Worker `/now.json` fetch.
+
 ## Moving
 
 `/moving` is a day-by-day log of bike rides and lifting sessions, one line each — "Biked 10.1
@@ -573,11 +592,11 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 ## Timeline
 
-`/timeline` is one row per day merging eight streams: scrobbles, saved articles, books
-started/finished, films watched, rides and lifts, published posts, notes, photos taken. Nothing new is
-stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching.json`, and
-`/moving.json` bundles the other pages read, and merges them against build-time posts and photos
-(`src/lib/timeline.ts`).
+`/timeline` is one row per day merging nine streams: scrobbles, saved articles, books
+started/finished, films watched, concerts seen, rides and lifts, published posts, notes, photos
+taken. Nothing new is stored — it fetches `/timeline.json` plus the same `/reading.json`,
+`/watching.json`, and `/moving.json` bundles the other pages read, and merges them against
+build-time posts, photos, and concerts (`src/lib/timeline.ts`).
 
 - **It reads a projection, not the bundle.** The page shows a count and the day's most-played artist
   and renders no individual track — but the daily track logs are ~93% of `/listening.json` (ten days
@@ -592,6 +611,10 @@ stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching
 - **Films sit on their Letterboxd watched date**, a date not a timestamp, so that stream needs no
   bucketing. CSV-imported films are in here too, so the timeline reaches further back for watching
   than the 50-entry feed alone would allow.
+- **Concerts are the one stream not fetched at all** — they ride in from build-time static data
+  (`src/lib/concerts.json`) alongside posts and photos, unlike every other stream here, which is
+  client-fetched from a Worker. The full archive loads at once, so there's no cursor to page — the
+  same `floor` filter as posts/photos still applies, it just never has more to top up.
 - **Activities sit on their stored local date**, the one the Worker took from the API, so like films
   they need no bucketing.
 - **One stream failing costs that stream and nothing else.** This is the only page that reads every
@@ -612,7 +635,7 @@ stored — it fetches `/timeline.json` plus the same `/reading.json`, `/watching
   US Central days while articles bucket in the viewer's zone, so the two disagree at the margins far
   from Central. See the note in `src/lib/datetime.ts`; it's a property of the data.
 - **Each stream gets a quiet left-border accent** (`data-stream` on `.timeline-event`, `--stream-*`
-  tokens in `global.css`). All seven are tints of the one `--accent` color mixed toward `--fg`, not
+  tokens in `global.css`). All eight are tints of the one `--accent` color mixed toward `--fg`, not
   new hues, keeping the site's single restrained accent.
 - **"On this day"** surfaces days already loaded that share today's month and day across past years,
   above the main list (`onThisDay()` in `src/lib/timeline.ts`). It never fetches anything of its own
@@ -763,8 +786,9 @@ Static except for three things: the now-playing bar (polls `/now.json` every 60s
 sparkline, and an "on this day" line from `/on-this-day.json`. A link to [/now](#now) sits under the
 rotating identity line, answering the question that line raises. All three render nothing until
 their fetch lands, and nothing at all if it fails. Under those, currently-reading, last-watched, and
-last-moved strips, all from their Workers' `/now.json`. Below that, the four newest photographs,
-labeled with capture day or year.
+last-moved strips, all from their Workers' `/now.json` — plus a last-seen concert strip
+(`ConcertBar`), the one card here built from static build-time data rather than a Worker fetch.
+Below that, the four newest photographs, labeled with capture day or year.
 
 ## Social cards
 
@@ -852,10 +876,10 @@ the buttons.
 
 Two disclosures group the links that belong together: **Me** (`/about`, `/now`, `/uses` — pages
 about the person rather than the work) and **Logs** (`/listening`, `/reading`, `/watching`,
-`/moving` — the Worker-backed activity logs). "Logs" rather than "Doing" because it's the word the
-rest of the site already uses (the homepage links read "Listening log →") and because it explains
-why those four are grouped and Projects/Blog aren't. Grouping also keeps the row from growing a link
-every time a new one is added.
+`/concerts`, `/moving` — the activity logs, though `/concerts` alone is static data rather than
+Worker-backed). "Logs" rather than "Doing" because it's the word the rest of the site already uses
+(the homepage links read "Listening log →") and because it explains why those five are grouped and
+Projects/Blog aren't. Grouping also keeps the row from growing a link every time a new one is added.
 
 Each is a `<details>`/`<summary>`, so it opens with no JavaScript, which matters since the nav is in
 the prerendered HTML of every page. `<summary>` also brings the button role, expanded/collapsed

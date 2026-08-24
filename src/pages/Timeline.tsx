@@ -33,12 +33,14 @@ import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
+import { concertPlace, type Concert } from '../lib/concerts'
 import { buildTimeline, onThisDay, type TimelineDay } from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
 
 interface TimelineData {
   posts: PostSummary[]
   photos: Photo[]
+  concerts: Concert[]
 }
 
 /** Listening days pulled per page. The Worker caps /days at 14. */
@@ -49,12 +51,16 @@ const TOP_UP_LIMIT = 10
 export async function loader(): Promise<TimelineData | null> {
   if (!import.meta.env.SSR) {
     if (!import.meta.env.DEV) return null
-    const { loadDatedPhotos, loadPostSummaries } = await import('../lib/content.client')
-    return { posts: loadPostSummaries(), photos: loadDatedPhotos() }
+    const { loadDatedPhotos, loadPostSummaries, loadConcerts } = await import('../lib/content.client')
+    return { posts: loadPostSummaries(), photos: loadDatedPhotos(), concerts: loadConcerts() }
   }
-  const { loadDatedPhotos, loadPostSummaries } = await import('../lib/content.server')
-  const [posts, photos] = await Promise.all([loadPostSummaries(), loadDatedPhotos()])
-  return { posts, photos }
+  const { loadDatedPhotos, loadPostSummaries, loadConcerts } = await import('../lib/content.server')
+  const [posts, photos, concerts] = await Promise.all([
+    loadPostSummaries(),
+    loadDatedPhotos(),
+    loadConcerts(),
+  ])
+  return { posts, photos, concerts }
 }
 
 /**
@@ -92,7 +98,7 @@ const bookDate = (book: Book) => book.finishedAt?.slice(0, 10) ?? book.startedAt
 const filmDate = (film: Film) => film.watchedDate.slice(0, 10)
 const activityDate = (activity: Activity) => activity.startDate
 
-function useTimeline(posts: PostSummary[], photos: Photo[]) {
+function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[]) {
   const [days, setDays] = useState<CompactDay[]>([])
   const [articles, setArticles] = useState<Article[]>([])
   const [books, setBooks] = useState<Book[]>([])
@@ -339,16 +345,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[]) {
   ])
 
   const timeline = useMemo(
-    () => buildTimeline({ days, articles, books, films, activities, posts, photos, notes, floor }),
-    [activities, articles, books, days, films, floor, notes, photos, posts],
+    () =>
+      buildTimeline({ days, articles, books, films, activities, posts, photos, notes, concerts, floor }),
+    [activities, articles, books, concerts, days, films, floor, notes, photos, posts],
   )
 
   return { timeline, ready, error, loading, hasMore: before != null, loadMore }
 }
 
 export function Component() {
-  const { posts, photos } = useLoaderData() as TimelineData
-  const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos)
+  const { posts, photos, concerts } = useLoaderData() as TimelineData
+  const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos, concerts)
 
   // Already-loaded activities, for resolveContext() to search when a note
   // references one (see notesContext.ts).
@@ -367,13 +374,13 @@ export function Component() {
     <div className="timeline">
       <Seo
         title="Timeline"
-        description="Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, noted, and photographed, day by day."
+        description="Everything Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed, day by day."
         path="/timeline"
         jsonLd={pageSchema({
           path: '/timeline',
           title: 'Timeline',
           description:
-            'Everything Cailin Pitt listened to, read, watched, rode, lifted, wrote, noted, and photographed, day by day.',
+            'Everything Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
@@ -381,8 +388,9 @@ export function Component() {
       <p>
         One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
         <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
-        <Link to="/moving">moving</Link>, <Link to="/blog">blog</Link>,{' '}
-        <Link to="/notes">notes</Link>, and <Link to="/photos">photos</Link>.
+        <Link to="/concerts">concerts</Link>, <Link to="/moving">moving</Link>,{' '}
+        <Link to="/blog">blog</Link>, <Link to="/notes">notes</Link>, and{' '}
+        <Link to="/photos">photos</Link>.
       </p>
 
       {/* error means every stream failed; set alongside ready, not instead of it. */}
@@ -495,6 +503,10 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
 
         {day.films.map((film) => (
           <FilmEvent key={film.id} film={film} />
+        ))}
+
+        {day.concerts.map((concert) => (
+          <ConcertEvent key={concert.id} concert={concert} />
         ))}
 
         {day.activities.map((activity) => (
@@ -610,6 +622,31 @@ function FilmEvent({ film }: { film: Film }) {
           name
         )}
         {detail && <span className="timeline-detail"> · {detail}</span>}
+      </span>
+    </li>
+  )
+}
+
+function ConcertEvent({ concert }: { concert: Concert }) {
+  const lineup = concert.artists.join(' / ')
+  const place = concertPlace(concert)
+
+  return (
+    <li className="timeline-event" data-stream="concerts">
+      <span className="timeline-icon" aria-hidden="true">
+        🎤
+      </span>
+      <span>
+        <span className="timeline-label">Saw</span>{' '}
+        {concert.url ? (
+          <a href={concert.url} target="_blank" rel="noopener noreferrer">
+            {lineup}
+          </a>
+        ) : (
+          lineup
+        )}
+        {place && <span className="timeline-detail"> · {place}</span>}
+        {concert.name && <span className="timeline-detail"> · {concert.name}</span>}
       </span>
     </li>
   )

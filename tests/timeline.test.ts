@@ -15,6 +15,7 @@ const day = (date: string): TimelineDay => ({
   posts: [],
   photos: [],
   notes: [],
+  concerts: [],
 })
 
 describe('onThisDay', () => {
