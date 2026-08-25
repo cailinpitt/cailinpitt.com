@@ -2612,6 +2612,47 @@ a.concert-link:hover .concert-title {
   color: var(--accent);
 }
 
+.timeline-jump {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: -0.5rem 0 2rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.timeline-jump input {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.timeline-jump input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.timeline-jump button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  cursor: pointer;
+}
+.timeline-jump button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.timeline-jump button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
 .timeline-events {
   list-style: none;
   margin: 0;

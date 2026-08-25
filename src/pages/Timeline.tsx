@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLoaderData, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Link, useLoaderData, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
@@ -490,6 +490,34 @@ function TimelineDayView({
   )
 }
 
+function TimelineJump() {
+  const navigate = useNavigate()
+  const id = useId()
+  const [date, setDate] = useState('')
+
+  return (
+    <form
+      className="timeline-jump"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (date) navigate(timelineDayPath(date))
+      }}
+    >
+      <label htmlFor={id}>Jump to a day</label>
+      <input
+        id={id}
+        type="date"
+        max={keyForOffset(0)}
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+      />
+      <button type="submit" disabled={!date}>
+        Go
+      </button>
+    </form>
+  )
+}
+
 function TimelineFeed({ posts, photos, concerts }: TimelineData) {
   const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos, concerts)
 
@@ -528,6 +556,8 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
         <Link to="/blog">blog</Link>, <Link to="/notes">notes</Link>, and{' '}
         <Link to="/photos">photos</Link>.
       </p>
+
+      <TimelineJump />
 
       {/* error means every stream failed; set alongside ready, not instead of it. */}
       {error ? (
