@@ -465,7 +465,7 @@ function TimelineDayView({
     <div className="timeline">
       <Seo
         title={label}
-        description={`What Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed on ${label}.`}
+        description={`What Cailin Pitt listened to, read, watched, saw, moved, wrote, noted, and photographed on ${label}.`}
         path={timelineDayPath(date)}
         image={TIMELINE_OG_CARD}
       />
@@ -540,13 +540,13 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
     <div className="timeline">
       <Seo
         title="Timeline"
-        description="Everything Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed, day by day."
+        description="Everything Cailin Pitt listened to, read, watched, saw, moved, wrote, noted, and photographed, day by day."
         path="/timeline"
         jsonLd={pageSchema({
           path: '/timeline',
           title: 'Timeline',
           description:
-            'Everything Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed, day by day.',
+            'Everything Cailin Pitt listened to, read, watched, saw, moved, wrote, noted, and photographed, day by day.',
           type: 'CollectionPage',
         })}
       />
