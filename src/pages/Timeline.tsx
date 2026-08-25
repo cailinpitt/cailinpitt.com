@@ -377,14 +377,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
 }
 
 export function Component() {
-  const { posts, photos, concerts } = useLoaderData() as TimelineData
   const { date } = useParams<{ date?: string }>()
+  // /timeline itself is prerendered, so useLoaderData() reads real data there — but
+  // vite-react-ssg's client router only ever serves loader data it precomputed at build
+  // time, and /timeline/:date has none (dates aren't known then), so this is always null
+  // on that route; TimelineDayView loads its own content instead of reading this.
+  const data = useLoaderData() as TimelineData | null
 
-  return date ? (
-    <TimelineDayView date={date} posts={posts} photos={photos} concerts={concerts} />
-  ) : (
-    <TimelineFeed posts={posts} photos={photos} concerts={concerts} />
-  )
+  if (date) return <TimelineDayView date={date} />
+
+  const { posts, photos, concerts } = data as TimelineData
+  return <TimelineFeed posts={posts} photos={photos} concerts={concerts} />
 }
 
 // `new Date('YYYY-MM-DD')` parses as UTC midnight, not local — go through the
@@ -398,19 +401,25 @@ function localDayRange(date: string): [number, number] {
 interface DayFetchState {
   day: TimelineDay | null
   highlights: DayHighlights | null
+  posts: PostSummary[]
+  photos: Photo[]
   ready: boolean
   error: boolean
 }
 
-const EMPTY_STATE: DayFetchState = { day: null, highlights: null, ready: false, error: false }
+const EMPTY_STATE: DayFetchState = {
+  day: null,
+  highlights: null,
+  posts: [],
+  photos: [],
+  ready: false,
+  error: false,
+}
 
-// One indexed request per stream, scoped to `date` — unlike useTimeline, no paging.
-function useTimelineDay(
-  date: string,
-  posts: PostSummary[],
-  photos: Photo[],
-  concerts: Concert[],
-): DayFetchState {
+// One indexed request per stream, scoped to `date` — unlike useTimeline, no paging. Also
+// loads posts/photos/concerts itself (see the note in Component()) rather than taking them
+// as props, since useLoaderData() never has real data for this route.
+function useTimelineDay(date: string): DayFetchState {
   const [state, setState] = useState<DayFetchState>(EMPTY_STATE)
 
   useEffect(() => {
@@ -418,18 +427,35 @@ function useTimelineDay(
     const controller = new AbortController()
     const [from, to] = localDayRange(date)
 
+    const staticContent = Promise.all([
+      import('../lib/content.client'),
+      import('../lib/blogPosts.client'),
+    ]).then(([content, blog]) => ({
+      posts: blog.loadPostSummaries(),
+      photos: content.loadDatedPhotos(),
+      concerts: content.loadConcerts(),
+    }))
+
     Promise.allSettled([
+      staticContent,
       fetchTimelineDay(date, controller.signal),
       fetchArticlesOnDate(from, to, controller.signal),
       fetchBooksOnDate(date, controller.signal),
       fetchFilmsOnDate(date, controller.signal),
       fetchActivitiesOnDate(date, controller.signal),
       fetchNotesOnDate(from, to, controller.signal),
-    ]).then(([listening, articles, books, films, activities, notes]) => {
+    ]).then(([staticRes, listening, articles, books, films, activities, notes]) => {
       if (controller.signal.aborted) return
+
+      const posts = staticRes.status === 'fulfilled' ? staticRes.value.posts : []
+      const photos = staticRes.status === 'fulfilled' ? staticRes.value.photos : []
+      const concerts = staticRes.status === 'fulfilled' ? staticRes.value.concerts : []
+
+      // Error only when every day-scoped stream failed; a lost static-content fetch just
+      // means posts/photos/concerts read empty for the day, not a page-wide failure.
       const results = [listening, articles, books, films, activities, notes]
       if (results.every((r) => r.status === 'rejected')) {
-        setState({ day: null, highlights: null, ready: true, error: true })
+        setState({ ...EMPTY_STATE, ready: true, error: true })
         return
       }
 
@@ -448,13 +474,15 @@ function useTimelineDay(
       setState({
         day: timeline[0] ?? null,
         highlights: listening.status === 'fulfilled' ? listening.value : null,
+        posts,
+        photos,
         ready: true,
         error: false,
       })
     })
 
     return () => controller.abort()
-  }, [date, posts, photos, concerts])
+  }, [date])
 
   return state
 }
@@ -490,18 +518,8 @@ function TimelineDayNav({ date }: { date: string }) {
   )
 }
 
-function TimelineDayView({
-  date,
-  posts,
-  photos,
-  concerts,
-}: {
-  date: string
-  posts: PostSummary[]
-  photos: Photo[]
-  concerts: Concert[]
-}) {
-  const { day, highlights, ready, error } = useTimelineDay(date, posts, photos, concerts)
+function TimelineDayView({ date }: { date: string }) {
+  const { day, highlights, posts, photos, ready, error } = useTimelineDay(date)
   const contextSources: ContextSources = { posts, photos, activities: day?.activities ?? [] }
   const label = formatDayLabel(date)
 
