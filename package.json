@@ -8,7 +8,7 @@
     "prebuild": "node scripts/bake-listening.mjs",
     "build": "vite-react-ssg build",
     "listening:bake": "node scripts/bake-listening.mjs",
-    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-markdown.mjs && node scripts/generate-rss.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs",
+    "postbuild": "node scripts/generate-sitemap.mjs && node scripts/generate-llms.mjs && node scripts/generate-markdown.mjs && node scripts/generate-rss.mjs && node scripts/generate-atproto.mjs && node scripts/generate-og.mjs && node scripts/generate-spa-fallback.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
