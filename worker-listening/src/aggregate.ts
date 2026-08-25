@@ -20,7 +20,7 @@ const ALBUM_RUN_MIN = 6
 const BINGE_MIN = 5
 
 /** Milestones are celebrated every this many scrobbles. */
-const MILESTONE_STEP = 5_000
+export const MILESTONE_STEP = 5_000
 
 /** Hours counted as "late night" for the night-owl index. */
 const LATE_NIGHT = [0, 1, 2, 3, 4]
@@ -70,6 +70,18 @@ export interface Milestone {
   uts: number
   track: string
   artist: string
+}
+
+/** The one round-number scrobble in `tracks` (chronological, ascending), if any —
+ * for /timeline's day highlights. Mirrors the milestone rule in computePeriod(). */
+export function findMilestone(tracks: Scrobble[], playsBefore: number): Milestone | null {
+  for (let i = 0; i < tracks.length; i++) {
+    const n = playsBefore + i + 1
+    if (n === 1 || n % MILESTONE_STEP === 0) {
+      return { n, uts: tracks[i].uts, track: tracks[i].track, artist: tracks[i].artist }
+    }
+  }
+  return null
 }
 
 export interface Delta {

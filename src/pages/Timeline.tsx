@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link, useLoaderData, useNavigate, useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
-import { dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '../lib/datetime'
+import { addDays, dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
+import { FIRST_LISTENING_YEAR } from '../lib/listeningYears'
 import {
   fetchOlderCompactDays,
   fetchTimelineDay,
   fetchTimelineDays,
   type CompactDay,
+  type DayHighlights,
 } from '../lib/listening'
 import {
   faviconUrl,
@@ -45,6 +47,7 @@ import type { PostSummary } from '../lib/posts'
 import { concertPlace, type Concert } from '../lib/concerts'
 import {
   buildTimeline,
+  currentStreak,
   datedPhotos,
   onThisDay,
   TIMELINE_OG_CARD,
@@ -392,9 +395,12 @@ function localDayRange(date: string): [number, number] {
 
 interface DayFetchState {
   day: TimelineDay | null
+  highlights: DayHighlights | null
   ready: boolean
   error: boolean
 }
+
+const EMPTY_STATE: DayFetchState = { day: null, highlights: null, ready: false, error: false }
 
 // One indexed request per stream, scoped to `date` — unlike useTimeline, no paging.
 function useTimelineDay(
@@ -403,10 +409,10 @@ function useTimelineDay(
   photos: Photo[],
   concerts: Concert[],
 ): DayFetchState {
-  const [state, setState] = useState<DayFetchState>({ day: null, ready: false, error: false })
+  const [state, setState] = useState<DayFetchState>(EMPTY_STATE)
 
   useEffect(() => {
-    setState({ day: null, ready: false, error: false })
+    setState(EMPTY_STATE)
     const controller = new AbortController()
     const [from, to] = localDayRange(date)
 
@@ -421,7 +427,7 @@ function useTimelineDay(
       if (controller.signal.aborted) return
       const results = [listening, articles, books, films, activities, notes]
       if (results.every((r) => r.status === 'rejected')) {
-        setState({ day: null, ready: true, error: true })
+        setState({ day: null, highlights: null, ready: true, error: true })
         return
       }
 
@@ -437,13 +443,49 @@ function useTimelineDay(
         concerts: concerts.filter((c) => c.date === date),
         floor: null,
       })
-      setState({ day: timeline[0] ?? null, ready: true, error: false })
+      setState({
+        day: timeline[0] ?? null,
+        highlights: listening.status === 'fulfilled' ? listening.value : null,
+        ready: true,
+        error: false,
+      })
     })
 
     return () => controller.abort()
   }, [date, posts, photos, concerts])
 
   return state
+}
+
+// Random day picks anywhere from the first year listening was archived to today — see
+// FIRST_LISTENING_YEAR in lib/listeningYears.ts (also what /listening/<year>'s static
+// paths are built from, so it's the same "how far back does this site's data go" answer).
+function randomDate(): string {
+  const start = Date.UTC(FIRST_LISTENING_YEAR, 0, 1)
+  const uts = start + Math.random() * (Date.now() - start)
+  return new Date(uts).toISOString().slice(0, 10)
+}
+
+function RandomDayLink({ className }: { className?: string }) {
+  const navigate = useNavigate()
+  return (
+    <button type="button" className={className} onClick={() => navigate(timelineDayPath(randomDate()))}>
+      🎲 Random day
+    </button>
+  )
+}
+
+function TimelineDayNav({ date }: { date: string }) {
+  const prev = addDays(date, -1)
+  const next = addDays(date, 1)
+
+  return (
+    <nav className="timeline-day-nav" aria-label="Day">
+      <Link to={timelineDayPath(prev)}>← {formatDayLabel(prev)}</Link>
+      <RandomDayLink className="timeline-day-nav-random" />
+      {next <= keyForOffset(0) && <Link to={timelineDayPath(next)}>{formatDayLabel(next)} →</Link>}
+    </nav>
+  )
 }
 
 function TimelineDayView({
@@ -457,7 +499,7 @@ function TimelineDayView({
   photos: Photo[]
   concerts: Concert[]
 }) {
-  const { day, ready, error } = useTimelineDay(date, posts, photos, concerts)
+  const { day, highlights, ready, error } = useTimelineDay(date, posts, photos, concerts)
   const contextSources: ContextSources = { posts, photos, activities: day?.activities ?? [] }
   const label = formatDayLabel(date)
 
@@ -472,6 +514,7 @@ function TimelineDayView({
       <p className="timeline-back">
         <Link to="/timeline">← Timeline</Link>
       </p>
+      <TimelineDayNav date={date} />
 
       {error ? (
         <p className="timeline-error">Could not load the timeline right now. Try again later.</p>
@@ -480,13 +523,29 @@ function TimelineDayView({
           <div className="sk-block" />
         </div>
       ) : day ? (
-        <ol className="timeline-days">
-          <TimelineRow day={day} context={contextSources} />
-        </ol>
+        <>
+          {(highlights?.milestone || highlights?.returning) && (
+            <ul className="timeline-highlights">
+              {highlights.milestone && (
+                <li>
+                  🎉 Scrobble #{formatNumber(highlights.milestone.n)} — {highlights.milestone.track},{' '}
+                  {highlights.milestone.artist}
+                </li>
+              )}
+              {highlights.returning && (
+                <li>
+                  🔁 First {highlights.returning.name} play in{' '}
+                  {formatNumber(highlights.returning.gapDays)} days
+                </li>
+              )}
+            </ul>
+          )}
+          <ol className="timeline-days">
+            <TimelineRow day={day} context={contextSources} />
+          </ol>
+        </>
       ) : (
-        <p className="timeline-error">
-          Nothing logged for this day. <Link to="/timeline">Back to the timeline</Link>.
-        </p>
+        <p className="timeline-error">Nothing logged for this day.</p>
       )}
     </div>
   )
@@ -516,6 +575,7 @@ function TimelineJump() {
       <button type="submit" disabled={!date}>
         Go
       </button>
+      <RandomDayLink className="timeline-jump-random" />
     </form>
   )
 }
@@ -535,6 +595,8 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
     () => onThisDay(timeline, monthDay).filter((day) => day.date !== keyForOffset(0)),
     [timeline, monthDay],
   )
+
+  const streak = useMemo(() => currentStreak(timeline), [timeline])
 
   return (
     <div className="timeline">
@@ -558,6 +620,8 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
         <Link to="/blog">blog</Link>, <Link to="/notes">notes</Link>, and{' '}
         <Link to="/photos">photos</Link>.
       </p>
+
+      {streak >= 2 && <p className="timeline-streak">🔥 {streak}-day streak</p>}
 
       <TimelineJump />
 

@@ -55,6 +55,21 @@ export interface CompactDay {
   count: number
   topArtist: string | null
 }
+
+/** The round-number scrobble that landed this day, if one did — every 5,000th play, all-time. */
+export interface Milestone {
+  n: number
+  uts: number
+  track: string
+  artist: string
+}
+
+/** CompactDay plus the day's own highlights — what /timeline's permalink reads. */
+export interface DayHighlights extends CompactDay {
+  milestone: Milestone | null
+  /** The longest-silent artist heard again this day, if any (365+ day gap). */
+  returning: { name: string; gapDays: number } | null
+}
 export interface Heatmap {
   from: string
   to: string
@@ -398,10 +413,10 @@ export async function fetchTimelineDays(
 export async function fetchTimelineDay(
   date: string,
   signal?: AbortSignal,
-): Promise<CompactDay | null> {
+): Promise<DayHighlights | null> {
   const res = await fetch(`${API_BASE}/day.json?date=${date}`, { signal })
   if (!res.ok) throw new Error(`Listening API ${res.status}`)
-  return res.json() as Promise<CompactDay | null>
+  return res.json() as Promise<DayHighlights | null>
 }
 
 /** Older pages of the same, for "load older" on /timeline. */

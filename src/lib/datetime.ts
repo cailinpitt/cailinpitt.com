@@ -34,6 +34,12 @@ export const dayKey = (uts: number): string => keyFmt.format(uts * 1000)
 /** The local YYYY-MM-DD key `days` away from today. */
 export const keyForOffset = (days: number): string => keyFmt.format(Date.now() + days * 86_400_000)
 
+/** `date` shifted by `delta` calendar days (negative goes back) — pure date-string math. */
+export function addDays(date: string, delta: number): string {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10)
+}
+
 /** "Today" / "Yesterday" / "Monday, June 9" from a YYYY-MM-DD key. */
 export function formatDayLabel(date: string): string {
   if (date === keyForOffset(0)) return 'Today'

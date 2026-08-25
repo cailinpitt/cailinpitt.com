@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aggregate } from '../worker-listening/src/aggregate'
+import { aggregate, findMilestone } from '../worker-listening/src/aggregate'
 import { parsePeriod } from '../worker-listening/src/periods'
 
 // One pass fills every counter, so the risk is two counters disagreeing about the same play.
@@ -231,6 +231,23 @@ describe('milestones', () => {
 
     // Any later period starts past it and reports nothing.
     expect(run([scrobble('2026-08-03T09:00:00', 'A', 'Alpha')], 500).milestones).toHaveLength(0)
+  })
+})
+
+// The single-day version /timeline's permalink reads — same rule as above, own entry point.
+describe('findMilestone', () => {
+  it('finds the one round-number scrobble in a day', () => {
+    const rows = [scrobble('2026-08-03T09:00:00', 'A', 'Alpha'), scrobble('2026-08-03T09:05:00', 'B', 'Beta')]
+    expect(findMilestone(rows, 4_998)).toMatchObject({ n: 5_000, track: 'B' })
+  })
+
+  it('is null when the day crosses no milestone', () => {
+    expect(findMilestone([scrobble('2026-08-03T09:00:00', 'A', 'Alpha')], 10)).toBeNull()
+  })
+
+  it('treats the very first scrobble ever as milestone 1', () => {
+    const first = scrobble('2026-08-03T09:00:00', 'Opener', 'Alpha')
+    expect(findMilestone([first], 0)).toMatchObject({ n: 1, track: 'Opener' })
   })
 })
 

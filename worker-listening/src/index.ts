@@ -6,10 +6,17 @@
 // older daily logs from D1.
 
 import { fetchRecentTracks, type NowPlaying, type Scrobble } from './lastfm'
-import type { PeriodStats } from './aggregate'
+import { findMilestone, type PeriodStats } from './aggregate'
 import { parsePeriod } from './periods'
 import { blobKey, computePeriod, getPeriodIndex, pickWork, PREFIX, YEARS_TOUCHED_KEY } from './period'
-import { countInWindows, fetchPeriodRows, priorLastPlay, summaryStatements } from './summary'
+import {
+  countInWindows,
+  fetchPeriodRows,
+  playsBefore,
+  priorLastPlay,
+  returnsIn,
+  summaryStatements,
+} from './summary'
 import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
 import { renderText, renderYear } from './text'
 import { computeOnThisDay, listYears, type OnThisDay } from './year'
@@ -17,6 +24,7 @@ import {
   computeHeatmap,
   computeStats,
   countScrobbles,
+  dayRange,
   fetchDay,
   fetchLastPlayed,
   fetchOlderDays,
@@ -750,7 +758,20 @@ export default {
         return cached(url, 'day', ctx, cors, async () => {
           const offset = Number(env.TZ_OFFSET_SECONDS) || 0
           const day = await fetchDay(env.DB, offset, date)
-          return json(day ? compactDays([day])[0] : null, 300)
+          if (!day) return json(null, 300)
+
+          const [start, end] = dayRange(date, offset)
+          const [before, returning] = await Promise.all([
+            playsBefore(env.DB, date),
+            returnsIn(env.DB, start, end, 1),
+          ])
+          // fetchDay's tracks are newest-first; milestone numbering needs chronological order.
+          const milestone = findMilestone([...day.tracks].reverse(), before)
+
+          return json(
+            { ...compactDays([day])[0], milestone, returning: returning[0] ?? null },
+            300,
+          )
         })
       }
       if (url.pathname === '/days') {

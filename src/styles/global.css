@@ -2652,6 +2652,62 @@ a.concert-link:hover .concert-title {
   color: var(--muted);
   cursor: default;
 }
+.timeline-jump-random {
+  margin-left: 0.2rem;
+  border-color: transparent !important;
+  background: none !important;
+}
+
+.timeline-streak {
+  margin: -0.5rem 0 1.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.timeline-day-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 2rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.timeline-day-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+/* Only the "next day" link (when present) is last, so this is the one pushed
+   to the far side — prev and the random button stay grouped on the left. */
+.timeline-day-nav a:last-child {
+  margin-left: auto;
+}
+.timeline-day-nav a:hover {
+  color: var(--accent);
+}
+.timeline-day-nav-random {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.timeline-day-nav-random:hover {
+  color: var(--accent);
+}
+
+.timeline-highlights {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
 
 .timeline-events {
   list-style: none;
