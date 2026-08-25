@@ -67,9 +67,12 @@ const DAY_PAGE = 14
 /** Stops a runaway top-up if a cursor never drains. 10 pages is ~200 items. */
 const TOP_UP_LIMIT = 10
 
-export async function loader(): Promise<TimelineData | null> {
+export async function loader(): Promise<TimelineData> {
   if (!import.meta.env.SSR) {
-    if (!import.meta.env.DEV) return null
+    // /timeline itself is prerendered, so a client nav there reads the baked-in static
+    // loader data instead of re-running this — this branch only actually executes for
+    // /timeline/:date, which isn't prerendered (dates aren't known at build time) and so
+    // has no static data to read, whether hydrating a direct hit or navigating client-side.
     const { loadDatedPhotos, loadConcerts } = await import('../lib/content.client')
     const { loadPostSummaries } = await import('../lib/blogPosts.client')
     return { posts: loadPostSummaries(), photos: loadDatedPhotos(), concerts: loadConcerts() }
