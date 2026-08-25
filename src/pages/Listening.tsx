@@ -599,7 +599,9 @@ function DailyLog({
         <div className="log-day" key={day.date}>
           <div className="log-day-head">
             <h3>{formatDayLabel(day.date)}</h3>
-            <span className="log-day-count">{formatNumber(day.count)} scrobbles</span>
+            <span className="log-day-count">
+              {formatNumber(day.count)} {day.count === 1 ? 'scrobble' : 'scrobbles'}
+            </span>
           </div>
           <ol className="log-tracks">
             {day.tracks.map((t) => (

@@ -717,7 +717,9 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
               🎧
             </span>
             <span>
-              <Link to="/listening">{formatNumber(day.scrobbles)} scrobbles</Link>
+              <Link to="/listening">
+                {formatNumber(day.scrobbles)} {day.scrobbles === 1 ? 'scrobble' : 'scrobbles'}
+              </Link>
               {day.topArtist && <span className="timeline-detail"> · top: {day.topArtist}</span>}
             </span>
           </li>
