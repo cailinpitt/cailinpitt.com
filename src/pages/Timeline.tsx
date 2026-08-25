@@ -717,12 +717,15 @@ function TimelineDayLink({ date }: { date: string }) {
 }
 
 function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSources }) {
+  // "Today 2026"/"Yesterday 2026" reads oddly — the year only earns its place next to an
+  // actual weekday/date.
+  const relative = day.date === keyForOffset(0) || day.date === keyForOffset(-1)
+  const label = relative ? formatDayLabel(day.date) : `${formatDayLabel(day.date)} ${day.date.slice(0, 4)}`
+
   return (
     <li className="timeline-day">
       <h2 className="timeline-date">
-        <span className="timeline-date-label">
-          {formatDayLabel(day.date)} {day.date.slice(0, 4)}
-        </span>
+        <span className="timeline-date-label">{label}</span>
         <TimelineDayLink date={day.date} />
       </h2>
       <ul className="timeline-events">
