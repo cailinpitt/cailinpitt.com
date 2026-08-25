@@ -138,6 +138,10 @@ export function buildTimeline({
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
+// Not per-day: /timeline/:date isn't prerendered, so generate-og.mjs never renders one —
+// same reasoning as LISTENING_OG_CARD in lib/listening.ts.
+export const TIMELINE_OG_CARD = '/og/timeline.jpg'
+
 export const timelineDayPath = (date: string): string => `/timeline/${date}`
 
 export function timelineDayUrl(date: string, origin?: string): string {

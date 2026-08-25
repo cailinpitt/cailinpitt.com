@@ -47,6 +47,7 @@ import {
   buildTimeline,
   datedPhotos,
   onThisDay,
+  TIMELINE_OG_CARD,
   timelineDayPath,
   timelineDayUrl,
   type TimelineDay,
@@ -466,6 +467,7 @@ function TimelineDayView({
         title={label}
         description={`What Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed on ${label}.`}
         path={timelineDayPath(date)}
+        image={TIMELINE_OG_CARD}
       />
       <p className="timeline-back">
         <Link to="/timeline">← Timeline</Link>
