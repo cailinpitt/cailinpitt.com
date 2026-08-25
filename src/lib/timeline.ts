@@ -4,7 +4,7 @@
 // match. Each stream keeps its own page's day-bucketing (see datetime.ts) rather than
 // re-deriving one, so results can disagree slightly at timezone margins.
 
-import { dayKey, keyForOffset } from './datetime'
+import { dayKey } from './datetime'
 import type { Photo } from './photos'
 import type { PostSummary } from './posts'
 import type { Article, Book } from './reading'
@@ -154,24 +154,4 @@ export function timelineDayUrl(date: string, origin?: string): string {
 // endpoint), so a fresh visit with little history can turn up nothing until "Load older days".
 export function onThisDay(days: TimelineDay[], monthDay: string): TimelineDay[] {
   return days.filter((day) => day.date.slice(5) === monthDay)
-}
-
-const toEpochDay = (date: string): number => {
-  const [y, m, d] = date.split('-').map(Number)
-  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000)
-}
-
-// Consecutive logged days (any stream) ending at today or yesterday — same "only what's
-// loaded" limitation as onThisDay, and stale once the newest entry falls further behind.
-export function currentStreak(days: TimelineDay[]): number {
-  if (!days.length) return 0
-  const newest = toEpochDay(days[0].date)
-  if (toEpochDay(keyForOffset(0)) - newest > 1) return 0
-
-  let streak = 1
-  for (let i = 1; i < days.length; i++) {
-    if (toEpochDay(days[i - 1].date) - toEpochDay(days[i].date) !== 1) break
-    streak++
-  }
-  return streak
 }

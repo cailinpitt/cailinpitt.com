@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { currentStreak, onThisDay, type TimelineDay } from '../src/lib/timeline'
-import { addDays, keyForOffset } from '../src/lib/datetime'
+import { onThisDay, type TimelineDay } from '../src/lib/timeline'
 
 // Pins that onThisDay filters on month+day alone, ignoring the year (see lib/timeline.ts).
 
@@ -36,33 +35,5 @@ describe('onThisDay', () => {
 
   it('does not match a different day in the same month', () => {
     expect(onThisDay([day('2026-08-12')], '08-11')).toEqual([])
-  })
-})
-
-describe('currentStreak', () => {
-  const today = keyForOffset(0)
-
-  it('counts consecutive days ending today', () => {
-    const days = [today, addDays(today, -1), addDays(today, -2)].map(day)
-    expect(currentStreak(days)).toBe(3)
-  })
-
-  it('still counts when the newest day is yesterday', () => {
-    const yesterday = addDays(today, -1)
-    const days = [yesterday, addDays(yesterday, -1)].map(day)
-    expect(currentStreak(days)).toBe(2)
-  })
-
-  it('stops at a gap', () => {
-    const days = [today, addDays(today, -1), addDays(today, -3)].map(day)
-    expect(currentStreak(days)).toBe(2)
-  })
-
-  it('is 0 when the newest day is stale', () => {
-    expect(currentStreak([day(addDays(today, -5))])).toBe(0)
-  })
-
-  it('is 0 with no days', () => {
-    expect(currentStreak([])).toBe(0)
   })
 })

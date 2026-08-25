@@ -47,7 +47,6 @@ import type { PostSummary } from '../lib/posts'
 import { concertPlace, type Concert } from '../lib/concerts'
 import {
   buildTimeline,
-  currentStreak,
   datedPhotos,
   onThisDay,
   TIMELINE_OG_CARD,
@@ -596,8 +595,6 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
     [timeline, monthDay],
   )
 
-  const streak = useMemo(() => currentStreak(timeline), [timeline])
-
   return (
     <div className="timeline">
       <Seo
@@ -620,8 +617,6 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
         <Link to="/blog">blog</Link>, <Link to="/notes">notes</Link>, and{' '}
         <Link to="/photos">photos</Link>.
       </p>
-
-      {streak >= 2 && <p className="timeline-streak">🔥 {streak}-day streak</p>}
 
       <TimelineJump />
 
