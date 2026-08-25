@@ -2630,6 +2630,17 @@ a.concert-link:hover .concert-title {
   font-family: var(--font-sans);
   font-size: var(--step--1);
 }
+/* Mobile Safari doesn't reliably inherit `color` into the mm/dd/yyyy segments
+   of an empty date input when the field has a custom background — they can
+   render in the browser's own default text color, which reads as blank
+   against --surface in dark mode. Set it explicitly on each part. */
+.timeline-jump input::-webkit-datetime-edit-fields-wrapper,
+.timeline-jump input::-webkit-datetime-edit-text,
+.timeline-jump input::-webkit-datetime-edit-month-field,
+.timeline-jump input::-webkit-datetime-edit-day-field,
+.timeline-jump input::-webkit-datetime-edit-year-field {
+  color: var(--fg);
+}
 .timeline-jump input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
