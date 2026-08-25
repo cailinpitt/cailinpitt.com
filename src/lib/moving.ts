@@ -101,6 +101,16 @@ export async function fetchOlderActivities(
   return res.json() as Promise<ActivityPage>
 }
 
+export async function fetchActivitiesOnDate(
+  date: string,
+  signal?: AbortSignal,
+): Promise<Activity[]> {
+  const res = await fetch(`${API_BASE}/activities?date=${date}`, { signal })
+  if (!res.ok) throw new Error(`Activity API ${res.status}`)
+  const data = (await res.json()) as { activities: Activity[] }
+  return data.activities
+}
+
 // Nothing here names where the data comes from — the provider is a Worker implementation
 // detail and stays out of anything rendered.
 

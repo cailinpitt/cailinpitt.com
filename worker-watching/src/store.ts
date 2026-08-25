@@ -109,6 +109,15 @@ export async function fetchFilms(
   }
 }
 
+/** Films watched on `date` — an index seek, for /timeline's permalink. */
+export async function fetchFilmsOnDate(db: D1Database, date: string): Promise<Film[]> {
+  const { results } = await db
+    .prepare(`SELECT ${FILM_COLS} FROM films WHERE watched_date = ?1 ORDER BY id DESC`)
+    .bind(date)
+    .all<FilmRow>()
+  return (results ?? []).map(toFilm)
+}
+
 export interface WatchingNow {
   lastFilm: Film | null
   updatedAt: number

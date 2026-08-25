@@ -12,6 +12,8 @@ import {
   buildBundle,
   buildNow,
   fetchArticles,
+  fetchArticlesBetween,
+  fetchBooksOnDate,
   fetchFinishedBooks,
 } from './store'
 import { syncBooks } from './sync'
@@ -288,6 +290,13 @@ export default {
       }
 
       if (url.pathname === '/books') {
+        const date = url.searchParams.get('date')
+        if (date) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Response('Bad date', { status: 400, headers: cors })
+          return cached(url, 'books-on', ctx, cors, async () =>
+            json({ books: await fetchBooksOnDate(env.DB, date) }, LIVE_TTL),
+          )
+        }
         return cached(url, 'books', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || BOOK_PAGE
@@ -296,6 +305,16 @@ export default {
       }
 
       if (url.pathname === '/articles') {
+        if (url.searchParams.has('from') && url.searchParams.has('to')) {
+          const from = Number(url.searchParams.get('from'))
+          const to = Number(url.searchParams.get('to'))
+          if (!Number.isFinite(from) || !Number.isFinite(to)) {
+            return new Response('Bad range', { status: 400, headers: cors })
+          }
+          return cached(url, 'articles-between', ctx, cors, async () =>
+            json({ articles: await fetchArticlesBetween(env.DB, from, to) }, LIVE_TTL),
+          )
+        }
         return cached(url, 'articles', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || ARTICLE_PAGE

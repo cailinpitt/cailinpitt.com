@@ -13,6 +13,7 @@ import {
   insertNote,
   listAllHashtags,
   listNotes,
+  listNotesBetween,
   listNotesByTag,
   setLinkCard,
   updateNote,
@@ -563,6 +564,16 @@ export default {
 
       // Reads (public, edge-cached).
       if (url.pathname === '/notes.json') {
+        if (url.searchParams.has('from') && url.searchParams.has('to')) {
+          const from = Number(url.searchParams.get('from'))
+          const to = Number(url.searchParams.get('to'))
+          if (!Number.isFinite(from) || !Number.isFinite(to)) {
+            return new Response('Bad range', { status: 400, headers: cors })
+          }
+          return await cached(url, 'between', ctx, cors, async () =>
+            json({ notes: await listNotesBetween(env.DB, from, to) }, EDGE_TTL),
+          )
+        }
         return await cached(url, 'json', ctx, cors, async () =>
           json(
             await listNotes(env.DB, {

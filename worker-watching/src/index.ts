@@ -6,7 +6,7 @@
 //    the feed is pulled, never pushed. No KV — see store.ts.
 
 import { sync } from './sync'
-import { FILM_PAGE, buildBundle, buildNow, fetchFilms } from './store'
+import { FILM_PAGE, buildBundle, buildNow, fetchFilms, fetchFilmsOnDate } from './store'
 import { renderText } from './text'
 
 /** Edge-cache lifetime. The underlying data changes daily at most. */
@@ -196,6 +196,13 @@ export default {
       }
 
       if (url.pathname === '/films') {
+        const date = url.searchParams.get('date')
+        if (date) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Response('Bad date', { status: 400, headers: cors })
+          return cached(url, 'films-on', ctx, cors, async () =>
+            json({ films: await fetchFilmsOnDate(env.DB, date) }, LIVE_TTL),
+          )
+        }
         return cached(url, 'films', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || FILM_PAGE

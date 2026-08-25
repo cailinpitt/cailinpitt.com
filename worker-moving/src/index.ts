@@ -5,7 +5,14 @@
 //    /sync used for the initial backfill and to pick up a ride on demand.
 
 import { sync } from './sync'
-import { ACTIVITY_PAGE, buildBundle, buildNow, fetchActivities, fetchWindows } from './store'
+import {
+  ACTIVITY_PAGE,
+  buildBundle,
+  buildNow,
+  fetchActivities,
+  fetchActivitiesOnDate,
+  fetchWindows,
+} from './store'
 import { renderText } from './text'
 
 const EDGE_TTL = 300
@@ -203,6 +210,13 @@ export default {
       }
 
       if (url.pathname === '/activities') {
+        const date = url.searchParams.get('date')
+        if (date) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Response('Bad date', { status: 400, headers: cors })
+          return cached(url, 'activities-on', ctx, cors, async () =>
+            json({ activities: await fetchActivitiesOnDate(env.DB, date) }, LIVE_TTL),
+          )
+        }
         const cursor = url.searchParams.get('cursor')
         const kind = url.searchParams.get('kind')
         const limit = Number(url.searchParams.get('limit')) || ACTIVITY_PAGE

@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useLoaderData } from 'react-router-dom'
+import { Link, useLoaderData, useParams } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { dayKey, formatDayLabel, formatNumber, formatTime, keyForOffset } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
-import { fetchOlderCompactDays, fetchTimelineDays, type CompactDay } from '../lib/listening'
+import {
+  fetchOlderCompactDays,
+  fetchTimelineDay,
+  fetchTimelineDays,
+  type CompactDay,
+} from '../lib/listening'
 import {
   faviconUrl,
+  fetchArticlesOnDate,
+  fetchBooksOnDate,
   fetchOlderArticles,
   fetchOlderBooks,
   fetchReading,
@@ -14,6 +21,7 @@ import {
   type Book,
 } from '../lib/reading'
 import {
+  fetchFilmsOnDate,
   fetchOlderFilms,
   fetchWatching,
   letterboxdUrl,
@@ -21,20 +29,28 @@ import {
   type Film,
 } from '../lib/watching'
 import {
+  fetchActivitiesOnDate,
   fetchMoving,
   fetchOlderActivities,
   kindIcon,
   summary as activitySummary,
   type Activity,
 } from '../lib/moving'
-import { fetchNotes, fetchOlderNotes, notePath, type Note } from '../lib/notes'
+import { fetchNotes, fetchNotesOnDate, fetchOlderNotes, notePath, type Note } from '../lib/notes'
 import { resolveContext, type ContextSources } from '../lib/notesContext'
 import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
 import type { Photo } from '../lib/photos'
 import type { PostSummary } from '../lib/posts'
 import { concertPlace, type Concert } from '../lib/concerts'
-import { buildTimeline, onThisDay, type TimelineDay } from '../lib/timeline'
+import {
+  buildTimeline,
+  datedPhotos,
+  onThisDay,
+  timelineDayPath,
+  timelineDayUrl,
+  type TimelineDay,
+} from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
 
 interface TimelineData {
@@ -356,6 +372,125 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
 
 export function Component() {
   const { posts, photos, concerts } = useLoaderData() as TimelineData
+  const { date } = useParams<{ date?: string }>()
+
+  return date ? (
+    <TimelineDayView date={date} posts={posts} photos={photos} concerts={concerts} />
+  ) : (
+    <TimelineFeed posts={posts} photos={photos} concerts={concerts} />
+  )
+}
+
+// `new Date('YYYY-MM-DD')` parses as UTC midnight, not local — go through the
+// numeric constructor to get the viewer's own local day, matching dayKey().
+function localDayRange(date: string): [number, number] {
+  const [y, m, d] = date.split('-').map(Number)
+  const start = new Date(y, m - 1, d).getTime() / 1000
+  return [start, start + 86_400]
+}
+
+interface DayFetchState {
+  day: TimelineDay | null
+  ready: boolean
+  error: boolean
+}
+
+// One indexed request per stream, scoped to `date` — unlike useTimeline, no paging.
+function useTimelineDay(
+  date: string,
+  posts: PostSummary[],
+  photos: Photo[],
+  concerts: Concert[],
+): DayFetchState {
+  const [state, setState] = useState<DayFetchState>({ day: null, ready: false, error: false })
+
+  useEffect(() => {
+    setState({ day: null, ready: false, error: false })
+    const controller = new AbortController()
+    const [from, to] = localDayRange(date)
+
+    Promise.allSettled([
+      fetchTimelineDay(date, controller.signal),
+      fetchArticlesOnDate(from, to, controller.signal),
+      fetchBooksOnDate(date, controller.signal),
+      fetchFilmsOnDate(date, controller.signal),
+      fetchActivitiesOnDate(date, controller.signal),
+      fetchNotesOnDate(from, to, controller.signal),
+    ]).then(([listening, articles, books, films, activities, notes]) => {
+      if (controller.signal.aborted) return
+      const results = [listening, articles, books, films, activities, notes]
+      if (results.every((r) => r.status === 'rejected')) {
+        setState({ day: null, ready: true, error: true })
+        return
+      }
+
+      const timeline = buildTimeline({
+        days: listening.status === 'fulfilled' && listening.value ? [listening.value] : [],
+        articles: articles.status === 'fulfilled' ? articles.value : [],
+        books: books.status === 'fulfilled' ? books.value : [],
+        films: films.status === 'fulfilled' ? films.value : [],
+        activities: activities.status === 'fulfilled' ? activities.value : [],
+        posts: posts.filter((p) => p.date.slice(0, 10) === date),
+        photos: datedPhotos(photos).filter((p) => p.date.slice(0, 10) === date),
+        notes: notes.status === 'fulfilled' ? notes.value : [],
+        concerts: concerts.filter((c) => c.date === date),
+        floor: null,
+      })
+      setState({ day: timeline[0] ?? null, ready: true, error: false })
+    })
+
+    return () => controller.abort()
+  }, [date, posts, photos, concerts])
+
+  return state
+}
+
+function TimelineDayView({
+  date,
+  posts,
+  photos,
+  concerts,
+}: {
+  date: string
+  posts: PostSummary[]
+  photos: Photo[]
+  concerts: Concert[]
+}) {
+  const { day, ready, error } = useTimelineDay(date, posts, photos, concerts)
+  const contextSources: ContextSources = { posts, photos, activities: day?.activities ?? [] }
+  const label = formatDayLabel(date)
+
+  return (
+    <div className="timeline">
+      <Seo
+        title={label}
+        description={`What Cailin Pitt listened to, read, watched, saw, rode, lifted, wrote, noted, and photographed on ${label}.`}
+        path={timelineDayPath(date)}
+      />
+      <p className="timeline-back">
+        <Link to="/timeline">← Timeline</Link>
+      </p>
+
+      {error ? (
+        <p className="timeline-error">Could not load the timeline right now. Try again later.</p>
+      ) : !ready ? (
+        <div className="timeline-skeleton" aria-hidden="true">
+          <div className="sk-block" />
+        </div>
+      ) : day ? (
+        <ol className="timeline-days">
+          <TimelineRow day={day} context={contextSources} />
+        </ol>
+      ) : (
+        <p className="timeline-error">
+          Nothing logged for this day. <Link to="/timeline">Back to the timeline</Link>.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function TimelineFeed({ posts, photos, concerts }: TimelineData) {
   const { timeline, ready, error, loading, hasMore, loadMore } = useTimeline(posts, photos, concerts)
 
   // Already-loaded activities, for resolveContext() to search when a note
@@ -434,11 +569,49 @@ export function Component() {
   )
 }
 
+function TimelineDayLink({ date }: { date: string }) {
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(timelineDayUrl(date))
+      setCopied(true)
+    } catch {
+      // clipboard unavailable; the link still navigates
+    }
+  }
+
+  return (
+    <Link
+      to={timelineDayPath(date)}
+      className="timeline-permalink"
+      onClick={copy}
+      aria-label={`Copy link to ${formatDayLabel(date)}`}
+    >
+      #
+      {copied && (
+        <span className="timeline-permalink-copied" role="status" aria-live="polite">
+          Copied
+        </span>
+      )}
+    </Link>
+  )
+}
+
 function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSources }) {
   return (
     <li className="timeline-day">
       <h2 className="timeline-date">
-        {formatDayLabel(day.date)}
+        <span className="timeline-date-label">
+          {formatDayLabel(day.date)}
+          <TimelineDayLink date={day.date} />
+        </span>
         <span className="timeline-year">{day.date.slice(0, 4)}</span>
       </h2>
       <ul className="timeline-events">

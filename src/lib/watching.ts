@@ -66,6 +66,13 @@ export async function fetchOlderFilms(
   return res.json() as Promise<FilmPage>
 }
 
+export async function fetchFilmsOnDate(date: string, signal?: AbortSignal): Promise<Film[]> {
+  const res = await fetch(`${API_BASE}/films?date=${date}`, { signal })
+  if (!res.ok) throw new Error(`Watching API ${res.status}`)
+  const data = (await res.json()) as { films: Film[] }
+  return data.films
+}
+
 /** Posters are R2 paths; everything else passes through. */
 export const watchingImage = (src: string | null): string | null =>
   imageUrl(src ?? undefined) ?? null

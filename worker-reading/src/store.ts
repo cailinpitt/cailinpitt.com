@@ -206,6 +206,35 @@ export async function fetchArticles(
   }
 }
 
+/** Articles read in [from, to) — a single indexed range scan, for /timeline's permalink. */
+export async function fetchArticlesBetween(
+  db: D1Database,
+  from: number,
+  to: number,
+): Promise<Article[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
+       WHERE read_at >= ?1 AND read_at < ?2 ORDER BY read_at DESC, id DESC`,
+    )
+    .bind(from, to)
+    .all<ArticleRow>()
+  return (results ?? []).map(toArticle)
+}
+
+/** Books finished, or started-and-not-finished, on `date` — matches buildTimeline()'s
+ * bucketing (frontend src/lib/timeline.ts) so a permalink day agrees with the paged view. */
+export async function fetchBooksOnDate(db: D1Database, date: string): Promise<Book[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${BOOK_COLS} FROM books
+       WHERE finished_at = ?1 OR (started_at = ?1 AND finished_at IS NULL)`,
+    )
+    .bind(date)
+    .all<BookRow>()
+  return (results ?? []).map(toBook)
+}
+
 export interface ReadingNow {
   currentlyReading: Book[]
   /** Shown when nothing is in progress, so the strip is never empty. */

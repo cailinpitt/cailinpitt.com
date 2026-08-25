@@ -146,6 +146,15 @@ export async function fetchActivities(
   }
 }
 
+/** Activities on `date` — an index seek, for /timeline's permalink. */
+export async function fetchActivitiesOnDate(db: D1Database, date: string): Promise<Activity[]> {
+  const { results } = await db
+    .prepare(`SELECT ${COLS} FROM activities WHERE start_date = ?1 ORDER BY id DESC`)
+    .bind(date)
+    .all<Row>()
+  return (results ?? []).map(toActivity)
+}
+
 export interface ActivityNow {
   lastActivity: Activity | null
   updatedAt: number

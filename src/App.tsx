@@ -60,6 +60,7 @@ export const routes: RouteRecord[] = [
       { path: 'concerts', lazy: () => import('./pages/Concerts') },
       { path: 'moving', lazy: () => import('./pages/Moving') },
       { path: 'timeline', lazy: () => import('./pages/Timeline') },
+      { path: 'timeline/:date', lazy: () => import('./pages/Timeline') },
       { path: 'guestbook', lazy: () => import('./pages/Guestbook') },
       { path: 'photos', lazy: () => import('./pages/Photos') },
       { path: 'photos/map', lazy: () => import('./pages/PhotoMap') },

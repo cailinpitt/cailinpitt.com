@@ -211,6 +211,27 @@ export async function fetchOlderDays(
   return { days, nextBefore }
 }
 
+/** Inverse of localDay(): the [start, end) uts range whose local days equal `date`. */
+export function dayRange(date: string, offsetSeconds: number): [number, number] {
+  const start = Date.parse(`${date}T00:00:00.000Z`) / 1000 - offsetSeconds
+  return [start, start + DAY]
+}
+
+/** One local day by date, for /timeline's permalink — a single indexed range scan, not a walk. */
+export async function fetchDay(
+  db: D1Database,
+  offset: number,
+  date: string,
+): Promise<DayLog | null> {
+  const [start, end] = dayRange(date, offset)
+  const rows = await db
+    .prepare(`SELECT ${ROW_COLS} FROM scrobbles WHERE uts >= ?1 AND uts < ?2 ORDER BY uts DESC`)
+    .bind(start, end)
+    .all<Scrobble>()
+  if (!rows.results.length) return null
+  return { date, count: rows.results.length, tracks: rows.results }
+}
+
 // 7d + 30d windows plus the recent logs from a single query: the 30-day window
 // (~2k rows) strictly contains both, so one fetch replaces nine queries.
 export async function computeStats(

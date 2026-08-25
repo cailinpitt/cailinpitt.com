@@ -17,6 +17,7 @@ import {
   computeHeatmap,
   computeStats,
   countScrobbles,
+  fetchDay,
   fetchLastPlayed,
   fetchOlderDays,
   groupDays,
@@ -742,6 +743,15 @@ export default {
         return cached(url, 'timeline', ctx, cors, async () =>
           json(await getTimelineDays(env), EDGE_TTL),
         )
+      }
+      if (url.pathname === '/day.json') {
+        const date = url.searchParams.get('date') ?? ''
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return new Response('Bad date', { status: 400, headers: cors })
+        return cached(url, 'day', ctx, cors, async () => {
+          const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+          const day = await fetchDay(env.DB, offset, date)
+          return json(day ? compactDays([day])[0] : null, 300)
+        })
       }
       if (url.pathname === '/days') {
         // `compact=1` is part of the cache variant: one path, two bodies.

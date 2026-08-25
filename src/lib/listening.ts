@@ -395,6 +395,15 @@ export async function fetchTimelineDays(
   return res.json() as Promise<{ days: CompactDay[]; nextBefore: number | null }>
 }
 
+export async function fetchTimelineDay(
+  date: string,
+  signal?: AbortSignal,
+): Promise<CompactDay | null> {
+  const res = await fetch(`${API_BASE}/day.json?date=${date}`, { signal })
+  if (!res.ok) throw new Error(`Listening API ${res.status}`)
+  return res.json() as Promise<CompactDay | null>
+}
+
 /** Older pages of the same, for "load older" on /timeline. */
 export async function fetchOlderCompactDays(
   before: number,

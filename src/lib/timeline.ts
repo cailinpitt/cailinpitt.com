@@ -138,6 +138,13 @@ export function buildTimeline({
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
 
+export const timelineDayPath = (date: string): string => `/timeline/${date}`
+
+export function timelineDayUrl(date: string, origin?: string): string {
+  const base = origin ?? (typeof window === 'undefined' ? '' : window.location.origin)
+  return `${base}${timelineDayPath(date)}`
+}
+
 // Days matching `monthDay` ("MM-DD") across whatever years are already loaded into `days` —
 // pure, and doesn't page anything in itself (unlike /listening's dedicated fetchOnThisDay
 // endpoint), so a fresh visit with little history can turn up nothing until "Load older days".

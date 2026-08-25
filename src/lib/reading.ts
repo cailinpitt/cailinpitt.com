@@ -111,6 +111,24 @@ export async function fetchOlderArticles(
   return res.json() as Promise<ArticlePage>
 }
 
+export async function fetchArticlesOnDate(
+  from: number,
+  to: number,
+  signal?: AbortSignal,
+): Promise<Article[]> {
+  const res = await fetch(`${API_BASE}/articles?from=${from}&to=${to}`, { signal })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  const data = (await res.json()) as { articles: Article[] }
+  return data.articles
+}
+
+export async function fetchBooksOnDate(date: string, signal?: AbortSignal): Promise<Book[]> {
+  const res = await fetch(`${API_BASE}/books?date=${date}`, { signal })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  const data = (await res.json()) as { books: Book[] }
+  return data.books
+}
+
 /** Covers and social cards are R2 paths; everything else passes through. */
 export const readingImage = (src: string | null): string | null => imageUrl(src ?? undefined) ?? null
 

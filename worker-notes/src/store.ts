@@ -130,6 +130,18 @@ export async function listNotes(
   }
 }
 
+/** Notes created in [from, to) — an index range scan, for /timeline's permalink. */
+export async function listNotesBetween(db: D1Database, from: number, to: number): Promise<Note[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${COLUMNS} FROM notes
+       WHERE created_at >= ?1 AND created_at < ?2 ORDER BY created_at DESC, id DESC`,
+    )
+    .bind(from, to)
+    .all<Row>()
+  return (results ?? []).map(toNote)
+}
+
 // LIKE prefilters cheaply before the real check, hashtagsIn() (hashtags.ts) —
 // without it, searching "tag" would also match a note whose only hashtag is
 // "tagging" since SQL LIKE has no word-boundary concept. Bounded at

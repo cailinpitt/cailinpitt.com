@@ -93,6 +93,17 @@ export async function fetchOlderNotes(
   return res.json() as Promise<NotePage>
 }
 
+export async function fetchNotesOnDate(
+  from: number,
+  to: number,
+  signal?: AbortSignal,
+): Promise<Note[]> {
+  const res = await fetch(`${API_BASE}/notes.json?from=${from}&to=${to}`, { signal })
+  if (!res.ok) throw new Error(`Notes API ${res.status}`)
+  const data = (await res.json()) as { notes: Note[] }
+  return data.notes
+}
+
 /** The newest note alone, for the homepage strip. */
 export async function fetchNotesNow(signal?: AbortSignal): Promise<NotesNow> {
   const res = await fetch(`${API_BASE}/now.json`, { signal })
