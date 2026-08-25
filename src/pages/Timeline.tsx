@@ -721,10 +721,9 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
     <li className="timeline-day">
       <h2 className="timeline-date">
         <span className="timeline-date-label">
-          {formatDayLabel(day.date)}
-          <TimelineDayLink date={day.date} />
+          {formatDayLabel(day.date)} {day.date.slice(0, 4)}
         </span>
-        <span className="timeline-year">{day.date.slice(0, 4)}</span>
+        <TimelineDayLink date={day.date} />
       </h2>
       <ul className="timeline-events">
         {day.scrobbles > 0 && (
