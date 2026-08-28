@@ -3,6 +3,7 @@
   "publication": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.publication/self",
   "publicationUrl": "https://cailinpitt.com",
   "documents": {
+    "/blog/2026/8/28/shortlinks": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/shortlinks",
     "/blog/2026/8/23/reading-rss-feeds-on-my-xteink-x4": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/reading-rss-feeds-on-my-xteink-x4",
     "/blog/2026/8/21/atlanta-has-grown-up": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/atlanta-has-grown-up",
     "/blog/2026/8/20/meta-has-ruined-smart-glasses-public-perception": "at://did:plc:ifwa4vnxncu5xnw4vu7bhloa/site.standard.document/meta-has-ruined-smart-glasses-public-perception",
