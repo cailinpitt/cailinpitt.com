@@ -29,6 +29,7 @@
   /* Color — warm paper / ink, one restrained clay accent */
   --bg: #faf8f4;
   --surface: #f2ede5;
+  --panel: #efe9df; /* ground for homepage "Lately" panels */
   --fg: #1b1a17;
   --muted: #766f64;
   --rule: #e5dfd5;
@@ -56,6 +57,7 @@
   :root {
     --bg: #141312;
     --surface: #1f1d1a;
+    --panel: #24201b;
     --fg: #ece8e1;
     --muted: #a49c90;
     --rule: #2c2a26;
@@ -71,6 +73,7 @@
   color-scheme: light;
   --bg: #faf8f4;
   --surface: #f2ede5;
+  --panel: #efe9df;
   --fg: #1b1a17;
   --muted: #766f64;
   --rule: #e5dfd5;
@@ -81,6 +84,7 @@
   color-scheme: dark;
   --bg: #141312;
   --surface: #1f1d1a;
+  --panel: #24201b;
   --fg: #ece8e1;
   --muted: #a49c90;
   --rule: #2c2a26;
@@ -457,30 +461,25 @@ h3 {
   display: block;
 }
 
-.home-section > .eyebrow,
-.intro > .eyebrow {
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--rule);
-  margin-bottom: 0.25rem;
-}
-/* The "Last played" header sits below the shuffle button, so it also needs
-   space above it (the section headers get their spacing from section margins).
-   Slightly more than the 3rem between the other status widgets below it, since
-   it's also the first one and follows the shuffle button rather than a bar. */
-.intro > .eyebrow {
-  margin-top: 2.5rem;
-}
-.intro > .eyebrow ~ .eyebrow {
-  margin-top: 3rem;
+/* One serif title per top-level homepage block, opening with a full-width rule. */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: var(--step-1);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 1.1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--rule);
 }
 .home-section .more,
-.intro .more {
+.intro .more,
+.lately .more {
   font-family: var(--font-sans);
   font-size: var(--step--1);
-  margin-top: 1.5rem;
+  margin: 1.5rem 0 0;
 }
 /* Straight under the rotating identity line, since it answers the question that
-   line raises. Sits above the first eyebrow rather than under the fold. */
+   line raises. */
 .intro-now {
   margin: 0.9rem 0 0;
   font-family: var(--font-sans);
@@ -495,12 +494,116 @@ h3 {
   border-bottom-color: var(--accent);
 }
 .home-section .more a,
-.intro .more a {
+.intro .more a,
+.lately .more a {
   text-decoration: none;
 }
 .home-section .more a:hover,
-.intro .more a:hover {
+.intro .more a:hover,
+.lately .more a:hover {
   text-decoration: underline;
+}
+
+/* ---- homepage "Lately" panels -----------------------------------------
+   One panel per activity widget: full-bleed tinted bands on a phone, a
+   two-up grid from 40rem. A panel stays hidden until its bar has data. */
+.lately {
+  margin-top: 3.5rem;
+}
+.lately:not(:has(.now-bar, .note-bar, .sparkline)) {
+  display: none;
+}
+.panel-grid {
+  display: flex;
+  flex-direction: column;
+}
+.panel {
+  display: none;
+}
+.panel:has(.now-bar),
+.panel:has(.note-bar),
+.panel:has(.sparkline) {
+  display: block;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--step-0);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.panel-ico {
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+  color: var(--accent);
+}
+.panel .now-bar,
+.panel .note-bar {
+  margin-top: 0.9rem;
+}
+.panel .now-bar + .now-bar {
+  margin-top: 0.6rem;
+}
+.panel .more {
+  margin: 1rem 0 0;
+}
+
+@media (max-width: 39.999rem) {
+  .panel-grid {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    background: var(--panel);
+    border-block: 1px solid var(--rule);
+  }
+  .panel {
+    padding: 1.5rem var(--space) 1.6rem;
+  }
+  .panel + .panel {
+    border-top: 1px solid var(--rule);
+  }
+}
+
+/* Past 40rem the homepage widens beyond the reading measure — it is an index,
+   not an article — and its grids go two-up. Header and footer widen too. */
+@media (min-width: 40rem) {
+  body:has(.lately) :is(.site-header, .site-main, .site-footer) {
+    max-width: var(--measure-wide);
+  }
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1rem;
+  }
+  .panel:has(.now-bar),
+  .panel:has(.note-bar),
+  .panel:has(.sparkline) {
+    display: flex;
+    flex-direction: column;
+  }
+  .panel {
+    padding: 1.4rem;
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+  }
+  .panel-wide {
+    grid-column: 1 / -1;
+  }
+  .recent .post-list,
+  .recent-projects .project-previews {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 3rem;
+  }
+  .recent-photos .photo-previews {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
 }
 
 /* Current projects — compact summaries that match the editorial list rhythm. */

@@ -48,6 +48,48 @@ const featuredProjects = [
   },
 ]
 
+const PANEL_ICON = {
+  music: ['M9 18V5l12-2v13', 'M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M18 19a3 3 0 1 0 0-6 3 3 0 0 0 0 6z'],
+  note: ['M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  book: ['M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'],
+  film: [
+    'M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z',
+    'M7 3v18',
+    'M17 3v18',
+    'M3 12h18',
+    'M3 7.5h4',
+    'M3 16.5h4',
+    'M17 7.5h4',
+    'M17 16.5h4',
+  ],
+  mic: ['M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z', 'M19 10v2a7 7 0 0 1-14 0v-2', 'M12 19v3'],
+  bike: [
+    'M5.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+    'M18.5 17.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+    'M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
+    'M12 17.5V14l-3-3 4-3 2 3h2',
+  ],
+} as const
+
+function PanelIcon({ paths }: { paths: readonly string[] }) {
+  return (
+    <svg
+      className="panel-ico"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  )
+}
+
 export async function loader(): Promise<HomeData | null> {
   const recent = indexedPosts.slice(0, RECENT_POSTS)
   if (!import.meta.env.SSR) {
@@ -90,50 +132,83 @@ export function Component() {
         <p className="intro-now">
           <Link to="/now">What I'm doing now →</Link>
         </p>
-        <h2 className="eyebrow">🎧 Last played</h2>
-        <NowPlayingBar />
-        <ListeningSparkline />
-        <OnThisDayLine />
-        <p className="more">
-          <Link to="/listening">Listening log →</Link>
-        </p>
+      </section>
 
-        <h2 className="eyebrow">💬 Latest note</h2>
-        <NotesBar />
-        <p className="more">
-          <Link to="/notes">All notes →</Link>
-        </p>
+      <section className="lately" aria-labelledby="lately-heading">
+        <h2 id="lately-heading" className="section-title">
+          Lately
+        </h2>
+        <div className="panel-grid">
+          <div className="panel panel-wide">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.music} /> Last played
+            </h3>
+            <NowPlayingBar />
+            <ListeningSparkline />
+            <OnThisDayLine />
+            <p className="more">
+              <Link to="/listening">Listening log →</Link>
+            </p>
+          </div>
 
-        <h2 className="eyebrow">📖 Reading</h2>
-        <ReadingBar />
+          <div className="panel">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.note} /> Latest note
+            </h3>
+            <NotesBar />
+            <p className="more">
+              <Link to="/notes">All notes →</Link>
+            </p>
+          </div>
 
-        <h2 className="eyebrow">🎬 Watching</h2>
-        <WatchingBar />
-        <p className="more">
-          <Link to="/watching">Watching log →</Link>
-        </p>
+          <div className="panel">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.book} /> Reading
+            </h3>
+            <ReadingBar showLogLinks={false} />
+            <p className="more">
+              <Link to="/reading">Book log →</Link>
+              {' · '}
+              <Link to="/reading/articles">Article log →</Link>
+            </p>
+          </div>
 
-        {lastConcert && (
-          <>
-            <h2 className="eyebrow">🎤 Concerts</h2>
+          <div className="panel">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.film} /> Watching
+            </h3>
+            <WatchingBar />
+            <p className="more">
+              <Link to="/watching">Watching log →</Link>
+            </p>
+          </div>
+
+          <div className="panel">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.mic} /> Concerts
+            </h3>
             <ConcertBar concert={lastConcert} />
             <p className="more">
               <Link to="/concerts">Concert log →</Link>
             </p>
-          </>
-        )}
+          </div>
 
-        <h2 className="eyebrow">🚲 Moving</h2>
-        <MovingBar />
-        <p className="more">
-          <Link to="/moving">Moving log →</Link>
-        </p>
+          <div className="panel">
+            <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.bike} /> Moving
+            </h3>
+            <MovingBar />
+            <p className="more">
+              <Link to="/moving">Moving log →</Link>
+            </p>
+          </div>
+        </div>
       </section>
 
       {recent.length > 0 && (
         <section className="home-section recent" aria-labelledby="recent-heading">
-          <h2 id="recent-heading" className="eyebrow">
-            ✍️ Recent writing
+          <h2 id="recent-heading" className="section-title">
+            Recent writing
           </h2>
           <ul className="post-list">
             {recent.map((p) => (
@@ -150,8 +225,8 @@ export function Component() {
       )}
 
       <section className="home-section recent-projects" aria-labelledby="projects-heading">
-        <h2 id="projects-heading" className="eyebrow">
-          🧑‍💻 Current projects
+        <h2 id="projects-heading" className="section-title">
+          Current projects
         </h2>
         <ul className="project-previews">
           {featuredProjects.map((project) => (
@@ -170,8 +245,8 @@ export function Component() {
 
       {recentPhotos.length > 0 && (
         <section className="home-section recent-photos" aria-labelledby="photos-heading">
-          <h2 id="photos-heading" className="eyebrow">
-            📸 Recent photos
+          <h2 id="photos-heading" className="section-title">
+            Recent photos
           </h2>
           <PhotoStrip photos={recentPhotos} />
           <p className="more">
