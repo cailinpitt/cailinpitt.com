@@ -14,9 +14,22 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = path.join(ROOT, 'src', 'lib', 'concerts.json')
 
+try {
+  process.loadEnvFile(path.join(ROOT, '.env'))
+} catch {
+  /* no .env — fall back to whatever is already in the environment */
+}
+
+const CONCERT_ARCHIVES_USER_NAME_SLUG = process.env.CONCERT_ARCHIVES_USER_NAME_SLUG
+
 const source = process.argv[2]
 if (!source) {
   console.error('usage: node scripts/concerts-import.mjs <export.csv>')
+  process.exit(1)
+}
+
+if (!CONCERT_ARCHIVES_USER_NAME_SLUG) {
+  console.error('✗ Missing CONCERT_ARCHIVES_USER_NAME_SLUG. Add it to .env')
   process.exit(1)
 }
 
@@ -134,7 +147,7 @@ async function main() {
       continue
     }
 
-    const url = (iUrl >= 0 ? row[iUrl] : '')?.trim() || ''
+    const url = (iUrl >= 0 ? row[iUrl] : '')?.trim().replace(CONCERT_ARCHIVES_USER_NAME_SLUG + '/', '') || ''
     const name = (iName >= 0 ? row[iName] : '')?.trim() || null
     const venue = (row[iVenue] ?? '').trim()
     const location = (iLocation >= 0 ? row[iLocation] : '')?.trim() || ''

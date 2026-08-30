@@ -28,7 +28,7 @@
     "reading:sync": "node scripts/reading-sync.mjs",
     "watching:sync": "node scripts/watching-sync.mjs",
     "watching:backfill": "node scripts/watching-backfill.mjs",
-  "concerts:import": "node scripts/concerts-import.mjs",
+    "concerts:import": "node scripts/concerts-import.mjs",
     "moving:auth": "node scripts/strava-auth.mjs",
     "moving:sync": "node scripts/moving-sync.mjs",
     "moving:backfill": "node scripts/moving-backfill.mjs",
