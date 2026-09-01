@@ -97,6 +97,7 @@ async function mapLimit(items, limit, fn) {
 // also the R2 keys, with a leading slash.
 async function allImageSrcs(dir = IMAGES_DIR) {
   const out = []
+  if (!existsSync(dir)) return out
   for (const e of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
     if (e.isDirectory()) out.push(...(await allImageSrcs(p)))
@@ -108,6 +109,11 @@ async function allImageSrcs(dir = IMAGES_DIR) {
 async function main() {
   // Every image (blog + galleries) lives under images/ and is served from R2.
   const srcs = await allImageSrcs()
+
+  if (!srcs.length) {
+    console.log('✓ no local renditions under images/ — run `npm run images:sync` first if you expected some')
+    return
+  }
   const present = FORCE ? new Set() : await remoteKeys()
   const todo = srcs.filter((src) => FORCE || !present.has(src.replace(/^\//, '')))
 
