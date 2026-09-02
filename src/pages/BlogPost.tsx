@@ -39,6 +39,14 @@ const markdownComponents = {
   img: ({ node: _node, ...props }: { node?: unknown; src?: string }) => (
     <img {...props} src={imageUrl(props.src)} />
   ),
+  // Same rewrite for links that point straight at an image (e.g. a thumbnail
+  // grid linking to the full-size rendition).
+  a: ({ node: _node, ...props }: { node?: unknown; href?: string }) =>
+    props.href?.startsWith('/images/') ? (
+      <a {...props} href={imageUrl(props.href)} />
+    ) : (
+      <a {...props} />
+    ),
   h2: anchored('h2'),
   h3: anchored('h3'),
   h4: anchored('h4'),
