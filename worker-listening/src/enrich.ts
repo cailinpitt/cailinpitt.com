@@ -18,6 +18,26 @@ export const META_KEY = {
   origins: 'meta:v1:origins',
 } as const
 
+// Timestamp; while now is below it runEnrichment() skips the queue scans (~35k
+// D1 rows/tick for nothing once drained). ingest() clears it on a new artist.
+export const ENRICH_IDLE_KEY = 'meta:v1:enrich-idle'
+export const ENRICH_IDLE_TTL = 3 * 60 * 60
+
+export async function enrichIsIdle(env: Env, now: number): Promise<boolean> {
+  const until = Number(await env.KV.get(ENRICH_IDLE_KEY)) || 0
+  return now < until
+}
+
+export async function parkEnrichment(env: Env, now: number): Promise<void> {
+  await env.KV.put(ENRICH_IDLE_KEY, String(now + ENRICH_IDLE_TTL), {
+    expirationTtl: ENRICH_IDLE_TTL + 60,
+  })
+}
+
+export async function wakeEnrichment(env: Env): Promise<void> {
+  await env.KV.delete(ENRICH_IDLE_KEY)
+}
+
 /** artist → canonical genre. */
 export type GenreMap = Record<string, string>
 
@@ -87,8 +107,13 @@ export async function enrichmentBacklog(db: D1Database): Promise<{ artists: numb
 
 // Failures are recorded (a `missing = 1` meta row) rather than retried
 // immediately, so one permanently unresolvable artist can't block the queue.
-export async function enrichSome(env: Env, now: number): Promise<number> {
+export async function enrichSome(
+  env: Env,
+  now: number,
+): Promise<{ handled: number; drained: boolean }> {
   const work = await pending(env.DB, PER_TICK)
+  // Empty queue, not just "made no progress" (Last.fm down) — gates parking.
+  const drained = work.artists.length === 0 && work.albums.length === 0
   const statements: D1PreparedStatement[] = []
   let handled = 0
 
@@ -157,7 +182,7 @@ export async function enrichSome(env: Env, now: number): Promise<number> {
   for (let i = 0; i < statements.length; i += 40) {
     await env.DB.batch(statements.slice(i, i + 40))
   }
-  return handled
+  return { handled, drained }
 }
 
 // Normalization happens here, not at fetch time, so revising the taxonomy in

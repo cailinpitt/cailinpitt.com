@@ -52,8 +52,10 @@ export async function sync(
 ): Promise<SyncResult> {
   const token = await accessToken(env)
   const budget = pageBudget(env)
+  // Split subqueries: SQLite indexes a lone min/max only, not MIN(x),MAX(x) together.
   const bounds = await env.DB.prepare(
-    'SELECT MIN(started_at) AS oldest, MAX(started_at) AS newest FROM activities',
+    `SELECT (SELECT MIN(started_at) FROM activities) AS oldest,
+            (SELECT MAX(started_at) FROM activities) AS newest`,
   ).first<{ oldest: number | null; newest: number | null }>()
 
   const collected: SummaryActivity[] = []

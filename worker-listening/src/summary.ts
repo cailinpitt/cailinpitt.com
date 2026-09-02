@@ -323,7 +323,10 @@ export async function allTimeTotals(db: D1Database): Promise<AllTimeTotals> {
               (SELECT COUNT(*) FROM albums)               AS albums,
               (SELECT COUNT(*) FROM tracks)               AS tracks`,
     ),
-    db.prepare('SELECT MIN(day) AS firstDay, MAX(day) AS lastDay FROM days'),
+    // Split subqueries: SQLite indexes a lone min/max only, not MIN(x),MAX(x) together.
+    db.prepare(
+      `SELECT (SELECT MIN(day) FROM days) AS firstDay, (SELECT MAX(day) FROM days) AS lastDay`,
+    ),
   ])
   const t = totals.results[0] ?? {}
   const b = bounds.results[0] ?? {}

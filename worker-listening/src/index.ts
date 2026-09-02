@@ -17,7 +17,15 @@ import {
   returnsIn,
   summaryStatements,
 } from './summary'
-import { enrichOneOrigin, enrichSome, metaWatermark, refreshLookups } from './enrich'
+import {
+  enrichIsIdle,
+  enrichOneOrigin,
+  enrichSome,
+  metaWatermark,
+  parkEnrichment,
+  refreshLookups,
+  wakeEnrichment,
+} from './enrich'
 import { renderText, renderYear } from './text'
 import { computeOnThisDay, listYears, type OnThisDay } from './year'
 import {
@@ -176,6 +184,9 @@ async function ingest(env: Env): Promise<void> {
     const prior = await priorLastPlay(env.DB, inserted.map((r) => r.artist))
     const summary = summaryStatements(env, inserted, prior)
     if (summary.length) await env.DB.batch(summary)
+
+    // A prior miss means a first-ever artist — wake the enrichment queue.
+    if (inserted.some((r) => !prior.has(r.artist))) await wakeEnrichment(env)
   }
 
   // Last.fm returns newest-first, so scrobbles[0] is the most recent completed play.
@@ -284,17 +295,23 @@ async function tick(env: Env): Promise<void> {
 // period computed before the rebuild just classifies slightly fewer artists,
 // self-correcting on the next build.
 async function runEnrichment(env: Env, now: number): Promise<boolean> {
-  const handled = await enrichSome(env, now)
+  // Skip the anti-join queue scans while parked; the lookup check below still runs.
+  const idle = await enrichIsIdle(env, now)
 
-  // At most one MusicBrainz artist per pass — it caps at 1 req/s and
-  // resolveArtist() can make two calls, so this is the slowest queue by far.
-  // scripts/musicbrainz-listening.mjs handles the bulk archive; this just keeps
-  // up with newly-heard artists.
+  let handled = 0
   let origins = false
-  try {
-    origins = await enrichOneOrigin(env, now)
-  } catch (err) {
-    console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', error: String(err) }))
+  if (!idle) {
+    const some = await enrichSome(env, now)
+    handled = some.handled
+
+    // One MusicBrainz artist per pass (caps at 1 req/s, resolveArtist may call twice).
+    try {
+      origins = await enrichOneOrigin(env, now)
+    } catch (err) {
+      console.log(JSON.stringify({ level: 'warn', stage: 'enrich-origin', error: String(err) }))
+    }
+
+    if (some.drained && !origins) await parkEnrichment(env, now)
   }
 
   // Rebuild when source data actually moved, not merely on a timer — see
