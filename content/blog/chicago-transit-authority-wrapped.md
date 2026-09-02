@@ -30,8 +30,7 @@ When writing a script, figuring out how auth worked took some trial and error. T
 ### Some random things I learned from my Ventra data
 
 * Some station names in the data predate the CTA's 1993 adoption of a color naming system for rail lines, still carrying their old branch names. For example, the Blue Line's Oak Park station is called `Blue-OakPark_Congress` and the Pink Line's Polk station is called `Pink-Polk_Douglas`
-
-* Ventra doesn't record bus stops. For rail taps Ventra records the line[^lines] and station (ex. Jarvis on the Red Line) but simply records the route for buses. It sort of makes sense buses are on the move, but it would have been neat if Ventra had a way to at least record the GPS coordinates of bus taps so I could have figured out a way to tie them to specific bus stops
+* Ventra doesn't record bus stops. For rail taps Ventra records the line[^lines] and station (ex. Jarvis on the Red Line) but simply records the route for buses. It sort of makes sense since buses are on the move, but it would have been neat if Ventra had a way to at least record the GPS coordinates of bus taps so I could have figured out a way to tie them to specific bus stops
 * Bus taps occasionally have routes that are mislabeled as `0 Deadhead` or `CTA Bus Default`. I saw this happen with a few taps I made on the 72 bus route earlier in the year (and the buses I tapped on were definitely in service), so I'm guessing these were data quirks where the system couldn't determine what route the bus I was on belonged to
 
 ### In conclusion
