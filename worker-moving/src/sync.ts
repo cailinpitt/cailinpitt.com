@@ -27,7 +27,7 @@ const COLUMNS =
   'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr'
 
 export interface SyncResult {
-  mode: 'incremental' | 'backfill' | 'refresh'
+  mode: 'incremental' | 'backfill' | 'refresh' | 'recompute'
   /** refresh only: the page this pass stopped after, to resume from. */
   page?: number
   /** Activities returned by Strava this run. */
@@ -48,8 +48,15 @@ export interface SyncResult {
 
 export async function sync(
   env: Env,
-  options: { backfill?: boolean; refresh?: boolean; page?: number } = {},
+  options: { backfill?: boolean; refresh?: boolean; recompute?: boolean; page?: number } = {},
 ): Promise<SyncResult> {
+  // Rebuild totals from the archive without touching Strava — for when the shape
+  // of the stats changed but the rows did not.
+  if (options.recompute) {
+    await recomputeStats(env.DB)
+    return { mode: 'recompute', seen: 0, added: 0, changed: 0, recomputed: true, complete: true }
+  }
+
   const token = await accessToken(env)
   const budget = pageBudget(env)
   // Split subqueries: SQLite indexes a lone min/max only, not MIN(x),MAX(x) together.
@@ -254,7 +261,9 @@ async function recomputeStats(db: D1Database): Promise<void> {
                 COALESCE(SUM(kind = 'lift'), 0) AS lifts,
                 COALESCE(SUM(distance_mi), 0) AS distance_mi,
                 COALESCE(SUM(CASE WHEN kind IN ('ride', 'ebike') THEN distance_mi ELSE 0 END), 0)
-                  AS bike_miles
+                  AS bike_miles,
+                COALESCE(SUM(kind = 'run'), 0) AS runs,
+                COALESCE(SUM(CASE WHEN kind = 'run' THEN distance_mi ELSE 0 END), 0) AS run_miles
          FROM activities GROUP BY year`,
       )
       .all<{
@@ -264,6 +273,8 @@ async function recomputeStats(db: D1Database): Promise<void> {
         lifts: number
         distance_mi: number
         bike_miles: number
+        runs: number
+        run_miles: number
       }>(),
   ])
 
@@ -276,6 +287,8 @@ async function recomputeStats(db: D1Database): Promise<void> {
       lifts: row.lifts,
       distanceMi: Math.round(row.distance_mi * 10) / 10,
       bikeMiles: Math.round(row.bike_miles * 10) / 10,
+      runs: row.runs,
+      runMiles: Math.round(row.run_miles * 10) / 10,
     }
   }
 

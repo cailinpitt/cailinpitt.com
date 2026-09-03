@@ -138,12 +138,14 @@ export function renderText(
 
   lines.push(
     c.dim(
-      `${num(counts.activities)} activities · ${num(Math.round(counts.distanceMi))} mi · ` +
+      `${num(counts.activities)} activities · ${num(Math.round(counts.bikeMiles))} bike mi · ` +
+        `${num(Math.round(counts.runMiles))} run mi · ` +
         `${num(counts.rides)} rides · ${num(counts.lifts)} lifts`,
     ),
     c.dim(
       `${options.year}: ${num(counts.activitiesThisYear)} activities · ` +
         `${num(Math.round(counts.bikeMilesThisYear))} bike mi · ` +
+        `${num(Math.round(counts.runMilesThisYear))} run mi · ` +
         `${num(counts.ridesThisYear)} rides · ${num(counts.liftsThisYear)} lifts`,
     ),
     '',

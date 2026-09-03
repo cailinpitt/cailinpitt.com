@@ -51,15 +51,23 @@ export interface MovingBundle {
   counts: {
     activities: number
     rides: number
+    runs: number
     lifts: number
     distanceMi: number
+    /** Ride + e-bike distance, all time — narrower than distanceMi (drops walks and runs). */
+    bikeMiles: number
+    /** Run distance, all time. */
+    runMiles: number
     movingTime: number
     activitiesThisYear: number
     ridesThisYear: number
+    runsThisYear: number
     liftsThisYear: number
     distanceMiThisYear: number
     /** Ride + e-bike distance only, for the year — narrower than distanceMiThisYear. */
     bikeMilesThisYear: number
+    /** Run distance, for the year. */
+    runMilesThisYear: number
   }
 }
 
@@ -175,22 +183,51 @@ export async function buildNow(db: D1Database): Promise<ActivityNow> {
 interface YearTotals {
   activities: number
   rides: number
+  runs: number
   lifts: number
   distanceMi: number
   bikeMiles: number
+  runMiles: number
 }
 
-const EMPTY_YEAR: YearTotals = { activities: 0, rides: 0, lifts: 0, distanceMi: 0, bikeMiles: 0 }
+const EMPTY_YEAR: YearTotals = {
+  activities: 0,
+  rides: 0,
+  runs: 0,
+  lifts: 0,
+  distanceMi: 0,
+  bikeMiles: 0,
+  runMiles: 0,
+}
+
+function parseByYear(byYear: string | undefined): Record<string, Partial<YearTotals>> {
+  if (!byYear) return {}
+  try {
+    const parsed = JSON.parse(byYear) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? (parsed as Record<string, Partial<YearTotals>>)
+      : {}
+  } catch {
+    return {}
+  }
+}
 
 function yearFrom(byYear: string | undefined, year: number): YearTotals {
-  if (!byYear) return EMPTY_YEAR
-  try {
-    const parsed = JSON.parse(byYear) as Record<string, Partial<YearTotals>>
-    const found = parsed[String(year)]
-    return found ? { ...EMPTY_YEAR, ...found } : EMPTY_YEAR
-  } catch {
-    return EMPTY_YEAR
+  const found = parseByYear(byYear)[String(year)]
+  return found ? { ...EMPTY_YEAR, ...found } : EMPTY_YEAR
+}
+
+/** All-time bike/run distance and run count, summed from the per-year breakdown so no stats column is needed. */
+function allTimeFrom(byYear: string | undefined): { bikeMiles: number; runMiles: number; runs: number } {
+  let bikeMiles = 0
+  let runMiles = 0
+  let runs = 0
+  for (const y of Object.values(parseByYear(byYear))) {
+    bikeMiles += y.bikeMiles ?? 0
+    runMiles += y.runMiles ?? 0
+    runs += y.runs ?? 0
   }
+  return { bikeMiles: Math.round(bikeMiles * 10) / 10, runMiles: Math.round(runMiles * 10) / 10, runs }
 }
 
 export async function buildBundle(db: D1Database, year: number): Promise<MovingBundle> {
@@ -211,6 +248,7 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
   ])
 
   const thisYear = yearFrom(counts?.by_year, year)
+  const allTime = allTimeFrom(counts?.by_year)
 
   return {
     updatedAt: Math.floor(Date.now() / 1000),
@@ -219,14 +257,19 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
     counts: {
       activities: counts?.activities ?? 0,
       rides: counts?.rides ?? 0,
+      runs: allTime.runs,
       lifts: counts?.lifts ?? 0,
       distanceMi: counts?.distance_mi ?? 0,
+      bikeMiles: allTime.bikeMiles,
+      runMiles: allTime.runMiles,
       movingTime: counts?.moving_time ?? 0,
       activitiesThisYear: thisYear.activities,
       ridesThisYear: thisYear.rides,
+      runsThisYear: thisYear.runs,
       liftsThisYear: thisYear.lifts,
       distanceMiThisYear: thisYear.distanceMi,
       bikeMilesThisYear: thisYear.bikeMiles,
+      runMilesThisYear: thisYear.runMiles,
     },
   }
 }

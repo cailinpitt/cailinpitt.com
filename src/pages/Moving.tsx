@@ -62,8 +62,17 @@ export function Component() {
             </h2>
             <dl className="stat-tiles">
               <StatTile label="Activities" value={bundle.counts.activities} />
-              <StatTile label="Miles" value={Math.round(bundle.counts.distanceMi)} />
+              <StatTile
+                label={bundle.counts.bikeMiles != null ? 'Bike miles' : 'Miles'}
+                value={Math.round(bundle.counts.bikeMiles ?? bundle.counts.distanceMi)}
+              />
+              {bundle.counts.runMiles != null && (
+                <StatTile label="Run miles" value={Math.round(bundle.counts.runMiles)} />
+              )}
               <StatTile label="Rides" value={bundle.counts.rides} />
+              {bundle.counts.runs != null && (
+                <StatTile label="Runs" value={bundle.counts.runs} />
+              )}
               <StatTile label="Lifts" value={bundle.counts.lifts} />
             </dl>
           </section>
@@ -87,15 +96,21 @@ export function Component() {
 function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
   if (counts.bikeMilesThisYear == null) return null
   const year = new Date().getFullYear()
+  const hasRun = counts.runMilesThisYear != null
 
   return (
     <section className="moving-year" aria-labelledby="moving-year-heading">
       <h2 id="moving-year-heading" className="eyebrow">
         {year} so far
       </h2>
+      {/* Three tiles, or six once the Worker sends run splits — is-compact is a
+          fixed 3-wide grid, so four or five would leave the last row ragged. */}
       <dl className="stat-tiles is-compact">
+        {hasRun && <StatTile label="Activities" value={counts.activitiesThisYear} />}
         <StatTile label="Bike miles" value={Math.round(counts.bikeMilesThisYear)} />
+        {hasRun && <StatTile label="Run miles" value={Math.round(counts.runMilesThisYear ?? 0)} />}
         <StatTile label="Rides" value={counts.ridesThisYear} />
+        {hasRun && <StatTile label="Runs" value={counts.runsThisYear ?? 0} />}
         <StatTile label="Lifts" value={counts.liftsThisYear} />
       </dl>
     </section>

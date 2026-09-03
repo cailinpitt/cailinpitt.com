@@ -4,6 +4,7 @@
 //   npm run moving:sync               # one incremental pass
 //   npm run moving:sync -- --backfill # walk backwards until history runs out
 //   npm run moving:sync -- --refresh  # re-pull everything already stored
+//   npm run moving:sync -- --recompute # rebuild totals from the archive, no Strava call
 //   npm run moving:sync -- --api http://localhost:8787
 //
 // Needs MOVING_ADMIN_TOKEN in .env — the same value stored on the Worker as
@@ -29,6 +30,7 @@ try {
 const args = process.argv.slice(2)
 const BACKFILL = args.includes('--backfill')
 const REFRESH = args.includes('--refresh')
+const RECOMPUTE = args.includes('--recompute')
 const apiArg = args.indexOf('--api')
 const API =
   (apiArg >= 0 ? args[apiArg + 1] : process.env.MOVING_API) ?? 'https://moving.cailinpitt.com'
@@ -48,7 +50,13 @@ if (!TOKEN) {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function sync(page) {
-  const query = REFRESH ? `?refresh=1&page=${page}` : BACKFILL ? '?backfill=1' : ''
+  const query = RECOMPUTE
+    ? '?recompute=1'
+    : REFRESH
+      ? `?refresh=1&page=${page}`
+      : BACKFILL
+        ? '?backfill=1'
+        : ''
   const url = `${API}/sync${query}`
   const res = await fetch(url, {
     method: 'POST',
@@ -68,8 +76,20 @@ async function sync(page) {
 }
 
 async function main() {
-  const mode = REFRESH ? ' (refresh)' : BACKFILL ? ' (backfill)' : ''
+  const mode = RECOMPUTE
+    ? ' (recompute)'
+    : REFRESH
+      ? ' (refresh)'
+      : BACKFILL
+        ? ' (backfill)'
+        : ''
   console.log(`→ ${API}/sync${mode}`)
+
+  if (RECOMPUTE) {
+    const result = await sync(1)
+    console.log(`  ${result.recomputed ? 'totals rebuilt' : 'nothing to do'}`)
+    return
+  }
 
   let page = 1
   for (let pass = 1; pass <= MAX_PASSES; pass++) {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   fetchWatchingNow,
-  formatWatchedDate,
+  formatWatchedLabel,
   stars,
   watchingImage,
   type WatchingNow,
@@ -30,7 +30,7 @@ export function WatchingBar() {
   const film = now?.lastFilm
   if (!film) return null
 
-  const watched = formatWatchedDate(film.watchedDate)
+  const watched = formatWatchedLabel(film.watchedDate)
   const rating = stars(film.rating)
   // Year and rating share the secondary line; both optional (an unrated film still belongs here).
   const secondary = [film.year, rating].filter(Boolean).join(' · ')

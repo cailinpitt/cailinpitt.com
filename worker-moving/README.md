@@ -99,8 +99,9 @@ per pass. A fallback for when the export isn't available; prefer the export.
 | `GET /` with a CLI user-agent | The text view (`curl moving.cailinpitt.com`) |
 | `POST /sync` | Runs the pull. Needs `Authorization: Bearer $ADMIN_TOKEN` |
 
-`/sync` takes `?backfill=1` to walk backwards into the archive, or `?refresh=1&page=N` to re-pull
-history already stored.
+`/sync` takes `?backfill=1` to walk backwards into the archive, `?refresh=1&page=N` to re-pull
+history already stored, or `?recompute=1` to rebuild the totals from the archive with no Strava
+call — for when the stats shape changed but the rows did not.
 
 ## Notes on the data
 
@@ -133,7 +134,8 @@ history already stored.
 - **`name` and `commute` are stored but not served.** The log renders a summary built from the
   numbers instead.
 - **`stats` is recomputed from the archive**, not incremented — a run sees only a week, so totals
-  must come from the whole table. `rides` counts both `ride` and `ebike`.
+  must come from the whole table. `rides` counts both `ride` and `ebike`. All-time bike miles, run
+  miles, and run count are summed from `by_year` at read time, not stored as their own columns.
 - **…but only when a row actually moved.** That recompute scans the table twice, and the cron
   fires every 30 minutes re-offering the same week of overlap each time, so nearly every run has
   nothing to say. The write is an upsert guarded by a `WHERE` comparing every column, and

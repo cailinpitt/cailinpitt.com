@@ -152,6 +152,7 @@ export default {
       // Runs the pull on demand. `?backfill=1` walks backwards into the archive
       // instead, a few pages per call; `?refresh=1&page=N` re-pulls history that
       // is already stored, to correct it — see PAGE_BUDGET in sync.ts.
+      // `?recompute=1` just rebuilds totals from the archive, no Strava call.
       if (url.pathname === '/sync') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: cors })
@@ -167,6 +168,7 @@ export default {
           const result = await sync(env, {
             backfill: url.searchParams.has('backfill'),
             refresh: url.searchParams.has('refresh'),
+            recompute: url.searchParams.has('recompute'),
             page: Number(url.searchParams.get('page')) || undefined,
           })
           console.log(JSON.stringify({ level: 'info', sync: result }))

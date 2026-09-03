@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS stats (
   lifts       INTEGER NOT NULL DEFAULT 0,
   distance_mi REAL    NOT NULL DEFAULT 0,
   moving_time INTEGER NOT NULL DEFAULT 0,
-  -- {"2026": {"activities": 120, "rides": 80, "lifts": 40, "distanceMi": 412.3, "bikeMiles": 380.1}, …}
+  -- {"2026": {"activities": 120, "rides": 80, "runs": 4, "lifts": 40, "distanceMi": 412.3, "bikeMiles": 380.1, "runMiles": 12.3}, …}
+  -- All-time bike miles, run miles, and run count are summed from this, not stored as columns.
   by_year     TEXT    NOT NULL DEFAULT '{}',
   updated_at  INTEGER NOT NULL DEFAULT 0
 );

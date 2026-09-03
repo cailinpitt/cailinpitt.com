@@ -67,6 +67,12 @@ export interface MovingBundle extends ActivityPage {
     distanceMiThisYear: number
     /** Ride + e-bike distance only, for the year — narrower than distanceMiThisYear. */
     bikeMilesThisYear: number
+    /** Run count and distance. Absent on a Worker deployed before the split. */
+    runs?: number
+    bikeMiles?: number
+    runMiles?: number
+    runsThisYear?: number
+    runMilesThisYear?: number
   }
 }
 
