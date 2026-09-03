@@ -1,7 +1,7 @@
 # Runbook
 
-Every command in the repo, by task. Explanations live in [`README.md`](README.md) and the per-worker
-READMEs.
+Every command in the repo, by task. The overview is in [`README.md`](README.md); per-feature
+rationale is in [`docs/DESIGN.md`](docs/DESIGN.md) and the per-worker READMEs.
 
 ## Develop
 
