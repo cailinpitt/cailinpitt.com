@@ -18,6 +18,13 @@ const dayFmt = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
 })
 
+const stampFmt = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
 const numFmt = new Intl.NumberFormat('en-US')
 
 // en-CA gives an ISO-ish YYYY-MM-DD. No timeZone, so it uses the browser's.
@@ -46,6 +53,19 @@ export function formatDayLabel(date: string): string {
   if (date === keyForOffset(-1)) return 'Yesterday'
   // Noon UTC so the date can't slip across a boundary before being formatted.
   return dayFmt.format(new Date(`${date}T12:00:00Z`))
+}
+
+/**
+ * "Today" / "Yesterday" / "June 9, 2026" from a YYYY-MM-DD key or longer ISO date —
+ * the label the "last X" cards share. Null on empty/invalid input.
+ */
+export function formatDayStamp(date: string | null | undefined): string | null {
+  if (!date) return null
+  const key = date.slice(0, 10)
+  if (key === keyForOffset(0)) return 'Today'
+  if (key === keyForOffset(-1)) return 'Yesterday'
+  const parsed = new Date(`${key}T12:00:00Z`)
+  return Number.isNaN(parsed.getTime()) ? null : stampFmt.format(parsed)
 }
 
 /** Compact "just now / 5m ago / 3h ago / 2d ago" from unix seconds. */

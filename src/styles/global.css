@@ -174,13 +174,29 @@ img {
      value would leave the bar visibly lagging the page under a fast scroll. */
 }
 
-/* Layout shell */
+/* Layout shell. One width for every page — the wide "index" measure — with the
+   nav and footer always aligned to it. Prose then re-centres itself narrower
+   inside .site-main (see the .post group below); log pages fill it. */
 .site-header,
 .site-main,
 .site-footer {
-  max-width: var(--measure);
+  max-width: var(--measure-wide);
   margin-inline: auto;
   padding-inline: var(--space);
+}
+
+/* Long-form pages and the blocks that trail a post keep the reading measure,
+   centred in the wide shell rather than filling it. */
+.post,
+.post-history,
+.related-posts,
+.post-navigation,
+.comments-section,
+.route-error,
+.not-found,
+.guestbook {
+  max-width: var(--measure);
+  margin-inline: auto;
 }
 
 .site-header {
@@ -567,16 +583,13 @@ h3 {
   }
 }
 
-/* Past 40rem the homepage widens beyond the reading measure — it is an index,
-   not an article — and its grids go two-up. Header and footer widen too. */
+/* Past 40rem the homepage's grids go two-up. */
 @media (min-width: 40rem) {
-  body:has(.lately) :is(.site-header, .site-main, .site-footer) {
-    max-width: var(--measure-wide);
-  }
   .panel-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+    /* stretch, not start: paired panels match the taller one's height. */
+    align-items: stretch;
     gap: 1rem;
   }
   .panel:has(.now-bar),
@@ -793,10 +806,7 @@ h3 {
   text-transform: uppercase;
 }
 
-/* Article */
-.post {
-  max-width: var(--measure);
-}
+/* Article. Width comes from the .post group near the layout shell. */
 .post-header {
   margin-bottom: 2.5rem;
 }
@@ -1218,7 +1228,6 @@ h3 {
 /* Posts sharing tags with this one. Sits above the chronological nav: it is the
    more useful of the two, and the prev/next pair reads as the end of the page. */
 .related-posts {
-  max-width: var(--measure);
   margin-top: 4rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--rule);
@@ -1241,7 +1250,6 @@ h3 {
 
 /* Chronological navigation between posts. */
 .post-navigation {
-  max-width: var(--measure);
   margin-top: 4rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--rule);
@@ -1399,12 +1407,7 @@ h3 {
 }
 
 /* ---- /listening ---------------------------------------------------------
-   Breaks out a little wider than the reading column so the heatmap and the
-   top-lists have room; text blocks inside stay narrow for readability. */
-.listening {
-  width: min(56rem, 92vw);
-  margin-inline: calc(50% - min(56rem, 92vw) / 2);
-}
+   Fills the wide shell like the homepage; text blocks inside stay narrow. */
 .listening > section {
   margin-top: 3rem;
 }
@@ -2200,12 +2203,8 @@ h3 {
 }
 
 /* ---- /reading -----------------------------------------------------------
-   Same width breakout as /listening so the two activity pages line up. Colors
-   come only from the theme tokens, which is what makes dark mode free here. */
-.reading {
-  width: min(56rem, 92vw);
-  margin-inline: calc(50% - min(56rem, 92vw) / 2);
-}
+   Fills the wide shell, like the other activity pages. Colors come only from
+   the theme tokens, which is what makes dark mode free here. */
 .reading section {
   margin-top: 3rem;
 }
@@ -2438,10 +2437,6 @@ a.book-link:hover .book-title {
    as siblings — and the film grid deliberately matches .book-grid, since a
    poster and a cover are the same object at the same 2:3. */
 
-.watching {
-  width: min(56rem, 92vw);
-  margin-inline: calc(50% - min(56rem, 92vw) / 2);
-}
 .watching section {
   margin-top: 3rem;
 }
@@ -2554,10 +2549,6 @@ a.film-link:hover .film-title {
   color: var(--muted);
 }
 
-.concerts {
-  width: min(56rem, 92vw);
-  margin-inline: calc(50% - min(56rem, 92vw) / 2);
-}
 .concerts section {
   margin-top: 3rem;
 }
@@ -2674,13 +2665,8 @@ a.concert-link:hover .concert-title {
 }
 
 /* ---- /timeline ----------------------------------------------------------
-   One row per day, merging listening / reading / writing / photos. Slightly
-   wider than the reading column so a day's events don't wrap awkwardly, but
-   narrower than the photo feed — it's still a text page. */
-.timeline {
-  width: min(48rem, 92vw);
-  margin-inline: calc(50% - min(48rem, 92vw) / 2);
-}
+   One row per day, merging listening / reading / writing / photos. Fills the
+   wide shell like the other logs. */
 .timeline h1 {
   font-size: var(--step-3);
   margin-bottom: 0.5rem;
@@ -3645,7 +3631,6 @@ a.guestbook-name:hover {
    Same visual language as the guestbook, embedded at the end of a post. */
 
 .comments-section {
-  max-width: var(--measure);
   margin-top: 4rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--rule);
@@ -3843,10 +3828,8 @@ a.comment-name:hover {
 }
 
 /* The route error boundary. Rarely seen on purpose: a stale-build failure
-   reloads before this paints, so what's left is the genuine breakage. */
-.route-error {
-  max-width: var(--measure);
-}
+   reloads before this paints, so what's left is the genuine breakage.
+   Width comes from the .post group near the layout shell. */
 .route-error-retry {
   font: inherit;
   padding: 0;
@@ -4094,10 +4077,6 @@ a.comment-name:hover {
    timestamp sits there, then icon, line, and trailing detail. Ruled rows rather
    than boxed cards, so a day of activities reads as a list. */
 
-.moving {
-  width: min(56rem, 92vw);
-  margin-inline: calc(50% - min(56rem, 92vw) / 2);
-}
 .moving section {
   margin-top: 3rem;
 }

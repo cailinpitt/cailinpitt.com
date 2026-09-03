@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  fetchWatchingNow,
-  formatWatchedLabel,
-  stars,
-  watchingImage,
-  type WatchingNow,
-} from '../lib/watching'
+import { formatDayStamp } from '../lib/datetime'
+import { fetchWatchingNow, stars, watchingImage, type WatchingNow } from '../lib/watching'
 
 /**
  * Compact last-watched strip, counterpart to ReadingBar. Client-fetched from
@@ -30,7 +25,7 @@ export function WatchingBar() {
   const film = now?.lastFilm
   if (!film) return null
 
-  const watched = formatWatchedLabel(film.watchedDate)
+  const watched = formatDayStamp(film.watchedDate)
   const rating = stars(film.rating)
   // Year and rating share the secondary line; both optional (an unrated film still belongs here).
   const secondary = [film.year, rating].filter(Boolean).join(' · ')

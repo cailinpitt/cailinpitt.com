@@ -3,11 +3,13 @@ import Markdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeRaw from 'rehype-raw'
 import { Link, useLoaderData } from 'react-router-dom'
+import { posts as indexedPosts } from 'virtual:site-index'
 import { NowPlayingBar } from '../components/NowPlayingBar'
 import { PhotoStrip } from '../components/PhotoStrip'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostSource } from '../components/PostSource'
 import { ReadingBar } from '../components/ReadingBar'
+import { WritingBar } from '../components/WritingBar'
 import { WatchingBar } from '../components/WatchingBar'
 import { ConcertBar } from '../components/ConcertBar'
 import { MovingBar } from '../components/MovingBar'
@@ -118,6 +120,7 @@ export function Component() {
             lands, and a section would announce an empty region meanwhile. */}
         <div className="now-live">
           <NowPlayingBar />
+          <WritingBar post={indexedPosts[0] ?? null} />
           <ReadingBar showLogLinks={false} />
           <WatchingBar />
           <ConcertBar concert={lastConcert} />

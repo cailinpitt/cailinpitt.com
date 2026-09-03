@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatDayLabel } from '../lib/datetime'
+import { formatDayStamp } from '../lib/datetime'
 import { duration, kindIcon, summary, type ActivityNow } from '../lib/moving'
 
 // Compact last-activity strip, counterpart to WatchingBar. Client-fetched
@@ -28,6 +28,7 @@ export function MovingBar() {
   // Distance is already in the headline when there is one, so the second
   // line carries the time instead of repeating it.
   const secondary = activity.distanceMi > 0 ? duration(activity.movingTime) : null
+  const moved = formatDayStamp(activity.startDate)
 
   return (
     <div className="now-bar">
@@ -36,8 +37,7 @@ export function MovingBar() {
           {kindIcon(activity.kind)}
         </span>
         <span className="now-bar-text">
-          {/* formatDayLabel, not longDate: matches how the chips say "Today". */}
-          <span className="now-bar-label">Last moved · {formatDayLabel(activity.startDate)}</span>
+          <span className="now-bar-label">Last moved{moved ? ` · ${moved}` : ''}</span>
           <span className="now-bar-track">
             <span className="now-bar-title">{summary(activity)}</span>
             {secondary && <span className="now-bar-artist">{secondary}</span>}

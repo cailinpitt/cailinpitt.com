@@ -1,7 +1,6 @@
 // Client for the watching API (Cloudflare Worker in /worker-watching), fetched in the browser
 // like /reading and /listening. Interfaces mirror the Worker's by hand — not a shared package.
 
-import { keyForOffset } from './datetime'
 import { imageUrl } from './images'
 
 const API_BASE = import.meta.env.VITE_WATCHING_API ?? 'https://watching.cailinpitt.com'
@@ -117,12 +116,4 @@ export function formatWatchedDate(date: string | null): string | null {
   // Parse at noon UTC so the formatter can't push it onto the adjacent day.
   const parsed = new Date(`${date.slice(0, 10)}T12:00:00Z`)
   return Number.isNaN(parsed.getTime()) ? null : dateFmt.format(parsed)
-}
-
-export function formatWatchedLabel(date: string | null): string | null {
-  if (!date) return null
-  const key = date.slice(0, 10)
-  if (key === keyForOffset(0)) return 'Today'
-  if (key === keyForOffset(-1)) return 'Yesterday'
-  return formatWatchedDate(date)
 }

@@ -5,6 +5,7 @@ import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
 import { ListeningSparkline, OnThisDayLine } from '../components/ListeningExtras'
 import { ReadingBar } from '../components/ReadingBar'
+import { WritingBar } from '../components/WritingBar'
 import { WatchingBar } from '../components/WatchingBar'
 import { ConcertBar } from '../components/ConcertBar'
 import { MovingBar } from '../components/MovingBar'
@@ -69,6 +70,7 @@ const PANEL_ICON = {
     'M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',
     'M12 17.5V14l-3-3 4-3 2 3h2',
   ],
+  pen: ['M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z', 'm15 5 4 4'],
 } as const
 
 function PanelIcon({ paths }: { paths: readonly string[] }) {
@@ -153,6 +155,16 @@ export function Component() {
 
           <div className="panel">
             <h3 className="panel-head">
+              <PanelIcon paths={PANEL_ICON.pen} /> Latest post
+            </h3>
+            <WritingBar post={recent[0] ?? null} />
+            <p className="more">
+              <Link to="/blog">All posts →</Link>
+            </p>
+          </div>
+
+          <div className="panel">
+            <h3 className="panel-head">
               <PanelIcon paths={PANEL_ICON.note} /> Latest note
             </h3>
             <NotesBar />
@@ -165,7 +177,7 @@ export function Component() {
             <h3 className="panel-head">
               <PanelIcon paths={PANEL_ICON.book} /> Reading
             </h3>
-            <ReadingBar showLogLinks={false} />
+            <ReadingBar showLogLinks={false} showArticle={false} />
             <p className="more">
               <Link to="/reading">Book log →</Link>
               {' · '}

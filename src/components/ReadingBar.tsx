@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { formatTime } from '../lib/datetime'
-import { fetchReadingNow, formatBookDate, readingImage, type ReadingNow } from '../lib/reading'
+import { formatDayStamp, formatTime } from '../lib/datetime'
+import { fetchReadingNow, readingImage, type ReadingNow } from '../lib/reading'
 
 // Currently-reading strip, counterpart to NowPlayingBar. No polling, unlike
 // that bar: books sync once a day, so there's nothing to refresh mid-visit.
-export function ReadingBar({ showLogLinks = true }: { showLogLinks?: boolean } = {}) {
+// showArticle is off on the homepage, where one row per card keeps the grid even.
+export function ReadingBar({
+  showLogLinks = true,
+  showArticle = true,
+}: { showLogLinks?: boolean; showArticle?: boolean } = {}) {
   const [now, setNow] = useState<ReadingNow | null>(null)
 
   useEffect(() => {
@@ -19,10 +23,10 @@ export function ReadingBar({ showLogLinks = true }: { showLogLinks?: boolean } =
   // Fall back to the last finished book so the strip isn't empty between books.
   const reading = now?.currentlyReading?.[0]
   const book = reading ?? now?.lastFinished
-  const article = now?.todaysArticle
+  const article = showArticle ? now?.todaysArticle : null
   if (!book && !article) return null
 
-  const finishedOn = book ? formatBookDate(book.finishedAt) : null
+  const finishedOn = book ? formatDayStamp(book.finishedAt) : null
   const others = (now?.currentlyReading?.length ?? 0) - 1
 
   return (
