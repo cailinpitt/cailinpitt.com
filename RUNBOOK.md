@@ -29,18 +29,20 @@ VITE_NOTES_API=http://localhost:8787 npm run dev
 
 ```bash
 # 1. write content/blog/<slug>.md  (frontmatter: title, date, path, slug, tags, description, image)
-# 2. inline images
-mkdir -p originals/<slug>/         # drop originals here
-npm run images:publish             # compress → images/<slug>/ + upload to R2
-# reference in markdown as /images/<slug>/<name>.webp
-
+# 2. drop image originals in originals/<slug>/, reference them as /images/<slug>/<name>.webp
 npm run dev                        # 3. preview
-npm run publish:atproto            # 4. Bluesky records; then commit content/atproto.json
-git add content/blog/<slug>.md content/atproto.json && git commit && git push   # 5. deploys
+
+npm run post -- <slug>             # 4. images → R2, atproto records, stages the files
+git commit && git push            # 5. deploys
 ```
 
+`npm run post` with no slug picks up the single added/changed post under `content/blog`. It runs
+`images:sync` + `images:upload`, then `publish:atproto`, then `git add`s `content/blog`,
+`content/atproto.json`, `src/lib/photos.json`. It stops before commit.
+
 ```bash
-npm run publish:atproto -- --dry-run   # no login, no writes
+npm run post -- <slug> --dry-run       # preview every step, stage nothing
+npm run post -- <slug> --skip-images   # or --skip-atproto
 ```
 
 ## Photos
@@ -106,20 +108,27 @@ npm run md                          # post sources → dist/<post path>.md
 
 ## Deploy
 
-```bash
-git push                               # main → GitHub Pages (site only)
+Push to `main`:
 
-cd worker-listening && npm run deploy   # listening.cailinpitt.com
-cd worker-reading   && npm run deploy   # reading.cailinpitt.com
-cd worker-watching  && npm run deploy   # watching.cailinpitt.com
-cd worker-moving    && npm run deploy   # moving.cailinpitt.com
-cd worker-guestbook && npm run deploy   # guestbook.cailinpitt.com
-cd worker-photos    && npm run deploy   # photos.cailinpitt.com
-cd worker-notes     && npm run deploy   # notes.cailinpitt.com
-cd worker-comments  && npm run deploy   # comments.cailinpitt.com
+- The site builds and publishes to GitHub Pages (`deploy.yml`).
+- Every `worker-*/` that changed in the push is deployed by `deploy-workers.yml` — `wrangler deploy`
+  only, no D1 schema. Force one (or all) from the Actions tab → "Deploy workers" → Run workflow.
+
+Manual fallback, from a `worker-*/` directory:
+
+```bash
+npm run deploy
 ```
 
-Workers are **not** part of the site pipeline — a push to `main` never touches them.
+D1 schema is never applied automatically — see the per-feature sections below.
+
+### deploy-workers.yml setup (one time)
+
+Add two repo secrets (Settings → Secrets and variables → Actions):
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` — dashboard → My Profile → API Tokens → "Edit Cloudflare Workers" template,
+  Account Resources = your account, Zone Resources = `cailinpitt.com`.
 
 ## Workers — common
 
@@ -585,8 +594,9 @@ Worker secrets (`npx wrangler secret put`, per directory):
 | `worker-comments` | `TURNSTILE_SECRET`, `ADMIN_TOKEN`, `IP_SALT` |
 | `worker-photos` | `INGEST_TOKEN`, `GITHUB_TOKEN` |
 
-GitHub Actions secrets (for `ingest-photos.yml`): `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-`R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_ORIGINALS_BUCKET`.
+GitHub Actions secrets: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`,
+`R2_ORIGINALS_BUCKET` (`ingest-photos.yml`, `note-og.yml`); `CLOUDFLARE_API_TOKEN`,
+`CLOUDFLARE_ACCOUNT_ID` (`deploy-workers.yml`).
 
 Cloudflare secrets are write-only — `.env` is the only place a token can be read back from.
 

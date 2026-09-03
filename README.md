@@ -95,10 +95,9 @@ time.
 The site deploys itself: push to `main`, GitHub Actions runs typecheck → test → build and publishes
 to Pages. A failing test stops the deploy.
 
-The Workers don't — a push to `main` never touches them. Deploy each one by hand:
+Each Worker deploys on its own when its `worker-*/` directory changes in a push (`deploy-workers.yml`,
+needs `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` secrets). `cd worker-listening && npm run deploy`
+still works as a manual fallback. D1 schema is never applied automatically.
 
-```bash
-cd worker-listening && npm run deploy
-```
-
-First-time setup for a Worker (D1 schema, secrets, cron) is in its own README.
+First-time setup for a Worker (D1 schema, secrets, cron) is in its own README; the deploy-workers
+secret setup is in [`RUNBOOK.md`](RUNBOOK.md#deploy-workersyml-setup-one-time).

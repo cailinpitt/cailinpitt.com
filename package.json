@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "post": "node scripts/publish-post.mjs",
     "migrate:posts": "node scripts/migrate-posts.mjs",
     "migrate:images": "node scripts/download-images.mjs",
     "images:sync": "node scripts/sync-images.mjs",

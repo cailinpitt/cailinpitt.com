@@ -1,0 +1,76 @@
+name: Deploy workers
+
+# Needs repo secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID. No D1 schema.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker-*/**'
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: 'Worker dir to deploy (blank = all)'
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-workers
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ github.event.inputs.worker }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          all=$(for d in worker-*/; do echo "${d%/}"; done)
+
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            selected="${INPUT:-$all}"
+          elif git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            selected=$(git diff --name-only "${BEFORE}..${SHA}" | grep -oE '^worker-[^/]+' | sort -u || true)
+          else
+            selected=$(git diff --name-only "${SHA}^..${SHA}" | grep -oE '^worker-[^/]+' | sort -u || true)
+          fi
+
+          matrix=$(printf '%s\n' "$selected" | grep -v '^$' | jq -R . | jq -cs . || echo '[]')
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Deploying: $matrix"
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    concurrency:
+      group: deploy-${{ matrix.worker }}
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ matrix.worker }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.worker }}/package-lock.json
+      - run: npm ci
+      - run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
