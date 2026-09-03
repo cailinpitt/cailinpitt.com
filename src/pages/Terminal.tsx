@@ -75,7 +75,7 @@ function OutputLine({ line }: { line: Line }) {
   if (line.image) {
     return (
       <div className="tl-image">
-        <img src={line.image.src} alt={line.image.alt} loading="lazy" decoding="async" />
+        <img src={line.image.src} alt={line.image.alt} loading="eager" decoding="async" />
       </div>
     )
   }
@@ -165,9 +165,25 @@ export function Component() {
     return () => tags.forEach((tag, i) => (tag.content = before[i]))
   }, [])
 
-  // The screen is the page, so following the output down means scrolling the window.
+  // Follow output to the bottom of the window (the screen is the page), re-scrolling
+  // as images load since they grow the page after this runs.
   useEffect(() => {
-    window.scrollTo({ top: document.documentElement.scrollHeight })
+    const toBottom = () => window.scrollTo({ top: document.documentElement.scrollHeight })
+    toBottom()
+
+    const pending = [...(screenRef.current?.querySelectorAll('img') ?? [])].filter(
+      (img) => !img.complete,
+    )
+    for (const img of pending) {
+      img.addEventListener('load', toBottom)
+      img.addEventListener('error', toBottom)
+    }
+    return () => {
+      for (const img of pending) {
+        img.removeEventListener('load', toBottom)
+        img.removeEventListener('error', toBottom)
+      }
+    }
   }, [lines])
 
   const submit = useCallback(

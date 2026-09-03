@@ -211,6 +211,16 @@ export function findNode(root: Node, path: string): Node | undefined {
   return node
 }
 
+/** First node anywhere in the tree with this exact name — lets `open` take a bare id. */
+export function findByName(root: Node, name: string): Node | undefined {
+  for (const child of root.children ?? []) {
+    if (child.name === name) return child
+    const deep = child.children && findByName(child, name)
+    if (deep) return deep
+  }
+  return undefined
+}
+
 /** How a path is shown in the prompt: `~` for the root, `~/blog` below it. */
 export const promptPath = (cwd: string): string => (cwd === '/' ? '~' : `~${cwd}`)
 
@@ -505,9 +515,12 @@ export async function run(
     }
 
     case 'open': {
-      const node = findNode(state.tree, resolvePath(state.cwd, args[0]))
-      const to = node?.to ?? (state.cwd === '/' ? '/' : undefined)
-      if (!to) return { lines: [err(`open: ${args[0] ?? state.cwd}: nowhere to go`)] }
+      const target = args[0]
+      const node =
+        findNode(state.tree, resolvePath(state.cwd, target)) ??
+        (target ? findByName(state.tree, target) : undefined)
+      const to = node?.to ?? (!target && state.cwd === '/' ? '/' : undefined)
+      if (!to) return { lines: [err(`open: ${target ?? state.cwd}: nowhere to go`)] }
       shell.navigate(to)
       return { lines: [muted(`Opening ${to}…`)] }
     }

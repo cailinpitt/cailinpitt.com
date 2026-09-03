@@ -302,6 +302,19 @@ describe('commands', () => {
     expect(navigated).toEqual(['/blog/2026/8/1/seasons', '/photos'])
   })
 
+  it('open takes a bare photo id from anywhere, not just its full path', async () => {
+    const { shell, navigated } = fakeShell()
+    await run('open 2026-img-1', state('/'), shell)
+    expect(navigated).toEqual(['/photos/2026-img-1'])
+  })
+
+  it('open errors on an unknown target rather than falling back to home', async () => {
+    const { shell, navigated } = fakeShell()
+    const result = await run('open 2022-img-nope', state('/'), shell)
+    expect(navigated).toEqual([])
+    expect(result.lines[0].text).toContain('nowhere to go')
+  })
+
   it('photo shows a photograph', async () => {
     const { shell } = fakeShell()
     const result = await run('photo 2019-img-9', state(), shell)
