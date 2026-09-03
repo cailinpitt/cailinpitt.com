@@ -1,7 +1,7 @@
 # worker-watching
 
 The API behind [cailinpitt.com/watching](https://cailinpitt.com/watching). Films come from the
-Letterboxd diary RSS feed; D1 stores them, R2 holds mirrored poster art, and a daily cron pulls
+Letterboxd diary RSS feed; D1 stores them, R2 holds mirrored poster art, and an hourly cron pulls
 the feed.
 
 Sibling of `worker-reading`, deliberately shaped like it — same CORS rules, same edge-cached

@@ -3,13 +3,13 @@
 Backs [`cailinpitt.com/reading`](https://cailinpitt.com/reading). Two sources, two ingest paths,
 one read API:
 
-- **Books** — pulled from [hardcover.app](https://hardcover.app)'s GraphQL API on a daily cron.
+- **Books** — pulled from [hardcover.app](https://hardcover.app)'s GraphQL API on an hourly cron.
 - **Articles** — pushed to `/ingest` from an iOS/macOS Shortcut or a desktop bookmarklet. The
   Worker fetches the page's social card and stores it; the same endpoint annotates and removes.
 
 | File | What it does |
 |---|---|
-| `src/index.ts` | `scheduled` (daily sync) and `fetch` (read API + `/ingest`) |
+| `src/index.ts` | `scheduled` (hourly sync) and `fetch` (read API + `/ingest`) |
 | `src/hardcover.ts` | hardcover.app GraphQL client |
 | `src/sync.ts` | full-replace library ingest into D1 |
 | `src/articles.ts` | url canonicalization + save / annotate / remove |

@@ -1,7 +1,7 @@
 # worker-moving
 
 The API behind [cailinpitt.com/moving](https://cailinpitt.com/moving). Bike rides and lifting
-sessions come from the Strava API; D1 stores them and a cron every 30 minutes pulls anything new.
+sessions come from the Strava API; D1 stores them and a cron every 10 minutes pulls anything new.
 
 Sibling of `worker-watching`, deliberately shaped like it — same CORS rules, same edge-cached
 bundle, same `curl` text view, same admin-token `/sync`. No R2: activities carry no art.
@@ -137,7 +137,7 @@ call — for when the stats shape changed but the rows did not.
   must come from the whole table. `rides` counts both `ride` and `ebike`. All-time bike miles, run
   miles, and run count are summed from `by_year` at read time, not stored as their own columns.
 - **…but only when a row actually moved.** That recompute scans the table twice, and the cron
-  fires every 30 minutes re-offering the same week of overlap each time, so nearly every run has
+  fires every 10 minutes re-offering the same week of overlap each time, so nearly every run has
   nothing to say. The write is an upsert guarded by a `WHERE` comparing every column, and
   `RETURNING` reports only rows that were new or genuinely different — `changed` in the sync
   result. Zero means totals can't have moved, and the scan is skipped.

@@ -8,10 +8,9 @@
   // log workers. Auto-provisions the DNS record + cert.
   "routes": [{ "pattern": "moving.cailinpitt.com", "custom_domain": true }],
 
-  // Every 30 minutes, so an activity shows up on the page the same day it
-  // happens. The access token is cached in D1, so a run is one Strava request;
-  // 48 a day sits well under the 1,000/day non-upload limit.
-  "triggers": { "crons": ["*/30 * * * *"] },
+  // Every 10 minutes. One Strava request per run (token cached in D1), so
+  // 144/day — well under the 1,000/day non-upload limit.
+  "triggers": { "crons": ["*/10 * * * *"] },
 
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 

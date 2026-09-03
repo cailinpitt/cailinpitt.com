@@ -8,12 +8,9 @@
   // listening and reading workers. Auto-provisions the DNS record + cert.
   "routes": [{ "pattern": "watching.cailinpitt.com", "custom_domain": true }],
 
-  // Daily, matching worker-reading. Films change a few times a week at most, so
-  // plenty of runs find nothing — but a run that finds nothing is nearly free
-  // (one feed fetch, two D1 reads, no mirroring), and the alternative is a film
-  // logged on Tuesday not showing up here until the following Monday.
-  // 09:00 UTC ≈ 04:00 Central.
-  "triggers": { "crons": ["0 9 * * *"] },
+  // Hourly. A run that finds nothing is nearly free (one feed fetch, two D1
+  // reads, no mirroring), and a film logged now shows up within the hour.
+  "triggers": { "crons": ["0 * * * *"] },
 
   "observability": { "enabled": true, "head_sampling_rate": 1 },
 
