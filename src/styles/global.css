@@ -29,7 +29,6 @@
   /* Color — warm paper / ink, one restrained clay accent */
   --bg: #faf8f4;
   --surface: #f2ede5;
-  --panel: #efe9df; /* ground for homepage "Lately" panels */
   --fg: #1b1a17;
   --muted: #766f64;
   --rule: #e5dfd5;
@@ -57,7 +56,6 @@
   :root {
     --bg: #141312;
     --surface: #1f1d1a;
-    --panel: #24201b;
     --fg: #ece8e1;
     --muted: #a49c90;
     --rule: #2c2a26;
@@ -73,7 +71,6 @@
   color-scheme: light;
   --bg: #faf8f4;
   --surface: #f2ede5;
-  --panel: #efe9df;
   --fg: #1b1a17;
   --muted: #766f64;
   --rule: #e5dfd5;
@@ -84,7 +81,6 @@
   color-scheme: dark;
   --bg: #141312;
   --surface: #1f1d1a;
-  --panel: #24201b;
   --fg: #ece8e1;
   --muted: #a49c90;
   --rule: #2c2a26;
@@ -280,6 +276,21 @@ img {
   text-decoration: underline;
   text-decoration-color: var(--accent);
   text-underline-offset: 0.3em;
+}
+
+/* Timeline is the spine of the site, not one more link in the row: full-weight
+   ink instead of muted, with a 🌀 ahead of it. */
+.nav-timeline a {
+  color: var(--fg);
+  font-weight: 600;
+}
+.nav-timeline a::before {
+  content: '🌀';
+  margin-right: 0.4em;
+  font-size: 0.95em;
+}
+.nav-timeline a:hover {
+  color: var(--accent);
 }
 
 /* Nav disclosure ("Me") — a <details> so it opens without JavaScript. See
@@ -488,8 +499,7 @@ h3 {
   border-top: 1px solid var(--rule);
 }
 .home-section .more,
-.intro .more,
-.lately .more {
+.intro .more {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   margin: 1.5rem 0 0;
@@ -510,103 +520,179 @@ h3 {
   border-bottom-color: var(--accent);
 }
 .home-section .more a,
-.intro .more a,
-.lately .more a {
+.intro .more a {
   text-decoration: none;
 }
 .home-section .more a:hover,
-.intro .more a:hover,
-.lately .more a:hover {
+.intro .more a:hover {
   text-decoration: underline;
 }
 
-/* ---- homepage "Lately" panels -----------------------------------------
-   One panel per activity widget: full-bleed tinted bands on a phone, a
-   two-up grid from 40rem. A panel stays hidden until its bar has data. */
-.lately {
+/* ---- homepage "Right now" strip --------------------------------------
+   The present-tense pieces the day-grained timeline below doesn't carry:
+   what's playing, the current book, the 90-day scrobble sparkline. Hidden
+   whole until at least one of them has data. */
+.now-strip {
   margin-top: 3.5rem;
 }
-.lately:not(:has(.now-bar, .note-bar, .sparkline)) {
+.now-strip:not(:has(.now-bar, .sparkline)) {
   display: none;
 }
-.panel-grid {
-  display: flex;
-  flex-direction: column;
+.now-strip .eyebrow {
+  margin-bottom: 0.25rem;
 }
-.panel {
-  display: none;
+.now-strip .sparkline {
+  margin-top: 1.25rem;
 }
-.panel:has(.now-bar),
-.panel:has(.note-bar),
-.panel:has(.sparkline) {
-  display: block;
+
+/* ---- homepage Timeline preview --------------------------------------
+   The last few days of /timeline, each a link into that day, under an
+   "N years ago today" line. Client-fetched: heading + skeleton first. */
+.home-timeline-lead {
+  margin: -0.4rem 0 1.5rem;
+  color: var(--muted);
 }
-.panel-head {
-  display: flex;
+.home-timeline-otd {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.6rem;
   align-items: center;
-  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  text-decoration: none;
+  color: var(--fg);
+}
+.home-timeline-otd:hover {
+  border-color: var(--accent);
+}
+.home-timeline-otd-ico {
+  font-size: 1.15em;
+  line-height: 1;
+  text-align: center;
+}
+.home-timeline-otd-when {
+  display: block;
+  font-weight: 600;
+}
+.home-timeline-otd-summary {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+}
+.home-timeline-days {
+  list-style: none;
   margin: 0;
-  font-family: var(--font-serif);
+  padding: 0;
+}
+.home-timeline-day {
+  border-top: 1px solid var(--rule);
+}
+.home-timeline-day:last-child {
+  border-bottom: 1px solid var(--rule);
+}
+.home-timeline-day > a {
+  display: block;
+  padding: 1.1rem 0.6rem 1.15rem;
+  margin-inline: -0.6rem;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  text-decoration: none;
+  color: var(--fg);
+  transition: background-color 0.12s ease;
+}
+.home-timeline-day > a:hover {
+  background: var(--surface);
+}
+.home-timeline-day > a:hover .home-timeline-date {
+  color: var(--accent);
+}
+/* Same weight/size as /timeline's own day heading, so a day anchors its block
+   rather than blurring into the lines under it. */
+.home-timeline-date {
+  display: block;
+  margin-bottom: 0.55rem;
   font-size: var(--step-0);
   font-weight: 600;
   letter-spacing: -0.01em;
 }
-.panel-ico {
-  width: 1.05em;
-  height: 1.05em;
-  flex: none;
-  color: var(--accent);
+.home-timeline-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
-.panel .now-bar,
-.panel .note-bar {
-  margin-top: 0.9rem;
+/* Mirrors .timeline-event: a two-glyph e-bike mark fits the 1.6rem column, and
+   each stream carries the same quiet left-border tint as the full page. */
+.home-timeline-events li {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.45rem;
+  font-size: var(--step--1);
+  line-height: 1.45;
+  color: var(--muted);
+  border-left: 2px solid var(--stream-color, transparent);
+  padding-left: 0.6rem;
 }
-.panel .now-bar + .now-bar {
-  margin-top: 0.6rem;
+.home-timeline-events li[data-stream='listening'] {
+  --stream-color: var(--stream-listening);
 }
-.panel .more {
-  margin: 1rem 0 0;
+.home-timeline-events li[data-stream='reading'] {
+  --stream-color: var(--stream-reading);
+}
+.home-timeline-events li[data-stream='watching'] {
+  --stream-color: var(--stream-watching);
+}
+.home-timeline-events li[data-stream='concerts'] {
+  --stream-color: var(--stream-concerts);
+}
+.home-timeline-events li[data-stream='moving'] {
+  --stream-color: var(--stream-moving);
+}
+.home-timeline-events li[data-stream='writing'] {
+  --stream-color: var(--stream-writing);
+}
+.home-timeline-events li[data-stream='notes'] {
+  --stream-color: var(--stream-notes);
+}
+.home-timeline-events li[data-stream='photos'] {
+  --stream-color: var(--stream-photos);
+}
+.home-timeline-ico {
+  font-size: 0.9em;
+  white-space: nowrap;
+  letter-spacing: -0.1em;
+}
+.home-timeline-more {
+  display: block;
+  margin-top: 0.5rem;
+  padding-left: 0.6rem;
+  font-size: var(--step--2, 0.8rem);
+  color: var(--muted);
+}
+.home-timeline-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 2.2rem;
+  padding: 1.1rem 0;
+}
+.home-timeline-skeleton span {
+  height: 3.4rem;
+  max-width: 24rem;
+  background: var(--surface);
+  border-radius: 6px;
+  animation: sk-pulse 1.5s ease-in-out infinite;
 }
 
-@media (max-width: 39.999rem) {
-  .panel-grid {
-    width: 100vw;
-    margin-inline: calc(50% - 50vw);
-    background: var(--panel);
-    border-block: 1px solid var(--rule);
-  }
-  .panel {
-    padding: 1.5rem var(--space) 1.6rem;
-  }
-  .panel + .panel {
-    border-top: 1px solid var(--rule);
-  }
-}
-
-/* Past 40rem the homepage's grids go two-up. */
+/* Past 40rem the homepage's list grids go two-up. */
 @media (min-width: 40rem) {
-  .panel-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    /* stretch, not start: paired panels match the taller one's height. */
-    align-items: stretch;
-    gap: 1rem;
-  }
-  .panel:has(.now-bar),
-  .panel:has(.note-bar),
-  .panel:has(.sparkline) {
-    display: flex;
-    flex-direction: column;
-  }
-  .panel {
-    padding: 1.4rem;
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    border-radius: 14px;
-  }
-  .panel-wide {
-    grid-column: 1 / -1;
-  }
   .recent .post-list,
   .recent-projects .project-previews {
     display: grid;
@@ -1387,6 +1473,13 @@ h3 {
 }
 .photo-when {
   color: var(--fg);
+}
+.photo-day {
+  color: var(--muted);
+  text-decoration: none;
+}
+.photo-day:hover {
+  color: var(--accent);
 }
 .photo-nav {
   display: flex;
@@ -3105,24 +3198,6 @@ a.concert-link:hover .concert-title {
 }
 .sparkline:hover .sparkline-caption {
   color: var(--accent);
-}
-
-.on-this-day-line {
-  margin: 0.75rem 0 0;
-  font-family: var(--font-sans);
-  font-size: var(--step--1);
-  color: var(--muted);
-}
-.on-this-day-line a {
-  color: inherit;
-  text-decoration: none;
-}
-.on-this-day-line a:hover {
-  color: var(--accent);
-}
-.on-this-day-when {
-  font-weight: 600;
-  color: var(--fg);
 }
 
 /* ---- /blog filter + year sections ---------------------------------------
@@ -5409,6 +5484,20 @@ a.comment-name:hover {
   border-radius: 12px;
   margin-inline: -1rem;
   padding-inline: 1rem;
+}
+/* Under the solo note: a way out into the day it belongs to (the solo view has
+   no site header). */
+.note-day {
+  margin: 1rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+.note-day a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.note-day a:hover {
+  color: var(--accent);
 }
 
 .note-body p {

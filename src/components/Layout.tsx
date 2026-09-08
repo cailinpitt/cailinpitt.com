@@ -62,6 +62,11 @@ export function Layout() {
                   { to: '/moving', label: 'Moving' },
                 ]}
               />
+              {/* Right after Logs, which are its facets, and marked so it doesn't
+                  read as one more link in the row — see .nav-timeline. */}
+              <li className="nav-timeline">
+                <NavLink to="/timeline">Timeline</NavLink>
+              </li>
               <li>
                 <Link to="/photos" aria-current={photosActive ? 'page' : undefined}>
                   Photos
@@ -77,9 +82,6 @@ export function Layout() {
                   even though it's Worker-backed too. */}
               <li>
                 <NavLink to="/notes">Notes</NavLink>
-              </li>
-              <li>
-                <NavLink to="/timeline">Timeline</NavLink>
               </li>
               <li>
                 <NavLink to="/guestbook">Guestbook</NavLink>

@@ -14,6 +14,7 @@ import { imageUrl } from '../lib/images'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
 import { relatedPosts, tagPath } from '../lib/tags'
+import { timelineDayPath } from '../lib/timeline'
 import { blogPostSchema, firstImagePath } from '../lib/structuredData'
 
 // A heading that links to itself. `id` comes from rehype-slug (dedupes, derives
@@ -181,6 +182,7 @@ export function Component() {
               History
             </a>
           )}
+          {post.date && <Link to={timelineDayPath(post.date.slice(0, 10))}>That day</Link>}
         </div>
         {showSource ? (
           <pre className="post-source">{post.body}</pre>

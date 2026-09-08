@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { LinkCard } from '../components/LinkCard'
 import { NoteText } from '../components/NoteText'
-import { formatRelative, formatTime } from '../lib/datetime'
+import { dayKey, formatRelative, formatTime } from '../lib/datetime'
 import { imageUrl } from '../lib/images'
+import { timelineDayPath } from '../lib/timeline'
 import {
   fetchNote,
   fetchNoteHashtags,
@@ -379,9 +380,14 @@ function SingleNote({ id }: { id: string }) {
   }
 
   return (
-    <div ref={ref} className="note is-solo" tabIndex={-1}>
-      <NoteRow note={note} />
-    </div>
+    <>
+      <div ref={ref} className="note is-solo" tabIndex={-1}>
+        <NoteRow note={note} />
+      </div>
+      <p className="note-day">
+        <Link to={timelineDayPath(dayKey(note.createdAt))}>See the whole day →</Link>
+      </p>
+    </>
   )
 }
 

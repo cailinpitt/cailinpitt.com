@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useLoaderData, type LoaderFunctionArgs } 
 import { Seo } from '../components/Seo'
 import { formatPhotoDate, imageUrl, photoNeighbors, yearAnchor, type Photo } from '../lib/photos'
 import { formatSettings } from '../lib/exif'
+import { timelineDayPath } from '../lib/timeline'
 import { photoSchema } from '../lib/structuredData'
 
 // One photograph at its own permanent URL — replaced the gallery lightbox so a
@@ -88,6 +89,13 @@ export function Component() {
           {place && (
             <Link className="photo-place" to="/photos/map">
               {place[0].toFixed(2)}, {place[1].toFixed(2)}
+            </Link>
+          )}
+          {/* Only real capture dates place a photo on the timeline — the
+              year-only pre-2026 uploads (approx) have no day to link to. */}
+          {!photo.approx && (
+            <Link className="photo-day" to={timelineDayPath(photo.date.slice(0, 10))}>
+              That day →
             </Link>
           )}
           <span className="photo-position">

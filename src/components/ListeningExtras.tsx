@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  fetchOnThisDay,
-  fetchSparkline,
-  formatNumber,
-  type OnThisDay,
-  type Sparkline,
-} from '../lib/listening'
+import { fetchSparkline, formatNumber, type Sparkline } from '../lib/listening'
 
-// Two homepage pieces (90-day scrobble sparkline, "on this day" line) that
-// render nothing until their fetch lands and nothing if it fails — covers API
-// hiccups and /sparkline.json being newer than whatever Worker is deployed.
+// The homepage 90-day scrobble sparkline — renders nothing until its fetch
+// lands and nothing if it fails, covering API hiccups and /sparkline.json being
+// newer than whatever Worker is deployed. (The cross-stream "on this day" line
+// lives in HomeTimeline now.)
 
 const BAR = 2
 const GAP = 1
@@ -64,35 +59,5 @@ export function ListeningSparkline() {
         {formatNumber(total)} scrobbles · {data.days.length} days
       </span>
     </Link>
-  )
-}
-
-export function OnThisDayLine() {
-  const [data, setData] = useState<OnThisDay | null>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetchOnThisDay(controller.signal)
-      .then(setData)
-      .catch(() => {
-        /* leave it hidden */
-      })
-    return () => controller.abort()
-  }, [])
-
-  // Newest-first; a date with no history simply has none.
-  const year = data?.years?.[0]
-  if (!year) return null
-
-  const ago = new Date().getFullYear() - year.year
-  const when = ago === 1 ? 'A year ago today' : `${ago} years ago today`
-
-  return (
-    <p className="on-this-day-line">
-      <Link to="/listening">
-        <span className="on-this-day-when">{when}</span> · {formatNumber(year.count)} scrobbles
-        {year.topArtist && <> · mostly {year.topArtist}</>}
-      </Link>
-    </p>
   )
 }

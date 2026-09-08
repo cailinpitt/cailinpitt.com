@@ -5,8 +5,10 @@
 // record per post into your AT Protocol repo (PDS), so the posts render as
 // first-class long-form documents in the Bluesky / AT Protocol ecosystem.
 //
-// Idempotent: records use stable record keys (`self` for the publication, the post
-// slug for each document), so re-running updates in place instead of duplicating.
+// Idempotent: the standard.site lexicons declare `key: tid`, so record keys are
+// PDS-assigned TIDs rather than stable strings. Re-runs match existing records by
+// `url` (publication) and `path` (documents) and update those in place. Legacy
+// records keyed by `self`/slug from before the lexicon change are deleted on sight.
 //
 // The resulting AT-URIs are written to content/atproto.json, which the build reads
 // to emit /.well-known/site.standard.publication and the per-post <link> tags. That
@@ -103,6 +105,46 @@ function toPlainText(body) {
     .trim()
 }
 
+// atproto TID: 13 chars, base32-sortable, restricted first char.
+const TID_RE = /^[234567abcdefghij][234567abcdefghijklmnopqrstuvwxyz]{12}$/
+
+const rkeyOf = (uri) => uri.split('/').pop()
+
+async function listRecords(agent, did, collection) {
+  const records = []
+  let cursor
+  do {
+    const res = await agent.com.atproto.repo.listRecords({
+      repo: did,
+      collection,
+      limit: 100,
+      cursor,
+    })
+    records.push(...res.data.records)
+    cursor = res.data.cursor
+  } while (cursor)
+  return records
+}
+
+// Drop records whose key predates the `key: tid` lexicon change — they can no
+// longer be written to, so re-running would leave stale duplicates behind.
+async function deleteLegacy(agent, did, collection, records) {
+  for (const rec of records) {
+    const rkey = rkeyOf(rec.uri)
+    if (TID_RE.test(rkey)) continue
+    await agent.com.atproto.repo.deleteRecord({ repo: did, collection, rkey })
+    console.log(`✓ removed legacy ${collection}/${rkey}`)
+  }
+}
+
+// Update the record at `rkey` if given, otherwise create one with a PDS-assigned TID.
+async function upsert(agent, did, collection, record, rkey) {
+  const res = rkey
+    ? await agent.com.atproto.repo.putRecord({ repo: did, collection, rkey, record })
+    : await agent.com.atproto.repo.createRecord({ repo: did, collection, record })
+  return res.data.uri
+}
+
 function isoDateTime(date) {
   if (!date) return new Date().toISOString()
   // Frontmatter dates are "YYYY-MM-DD"; promote to a full UTC datetime.
@@ -139,7 +181,7 @@ async function main() {
   if (DRY_RUN) {
     console.log('\n--dry-run: no records will be written.\n')
     for (const p of posts) {
-      console.log(`  document  ${p.path}  (rkey: ${p.slug}, ${p.textContent.length} chars)`)
+      console.log(`  document  ${p.path}  (${p.textContent.length} chars)`)
     }
     return
   }
@@ -158,7 +200,16 @@ async function main() {
   const did = agent.session.did
   console.log(`Logged in as ${did} via ${service}`)
 
-  // 1. Publication record (stable rkey "self"). Upload the icon blob first, if present.
+  // 1. Publication record.
+  const existingPubs = await listRecords(agent, did, 'site.standard.publication')
+  await deleteLegacy(agent, did, 'site.standard.publication', existingPubs)
+  const pubMatch = existingPubs.find(
+    (r) => TID_RE.test(rkeyOf(r.uri)) && r.value.url === PUBLICATION_URL,
+  )
+
+  // Upload the icon blob last, right before the record that references it: an
+  // unreferenced blob is only briefly retained, and deleting the old publication
+  // record above can sweep a same-CID blob it still held.
   let icon
   if (existsSync(ICON_FILE)) {
     const bytes = await readFile(ICON_FILE)
@@ -166,30 +217,39 @@ async function main() {
     icon = up.data.blob
     console.log(`✓ uploaded icon (${(bytes.length / 1024).toFixed(0)} KB)`)
   }
-  const pub = await agent.com.atproto.repo.putRecord({
-    repo: did,
-    collection: 'site.standard.publication',
-    rkey: 'self',
-    record: {
+  const pubUri = await upsert(
+    agent,
+    did,
+    'site.standard.publication',
+    {
       $type: 'site.standard.publication',
       url: PUBLICATION_URL,
       name: PUBLICATION.name,
       description: PUBLICATION.description,
       ...(icon ? { icon } : {}),
     },
-  })
-  console.log(`✓ publication → ${pub.data.uri}`)
+    pubMatch && rkeyOf(pubMatch.uri),
+  )
+  console.log(`✓ publication → ${pubUri}`)
 
-  // 2. Document record per post (stable rkey = slug), pointing at the publication.
+  // 2. Document record per post, matched to any existing record by `path`.
+  const existingDocs = await listRecords(agent, did, 'site.standard.document')
+  await deleteLegacy(agent, did, 'site.standard.document', existingDocs)
+  const docRkeyByPath = new Map(
+    existingDocs
+      .filter((r) => TID_RE.test(rkeyOf(r.uri)))
+      .map((r) => [r.value.path, rkeyOf(r.uri)]),
+  )
+
   const documents = {}
   for (const p of posts) {
-    const doc = await agent.com.atproto.repo.putRecord({
-      repo: did,
-      collection: 'site.standard.document',
-      rkey: p.slug,
-      record: {
+    const uri = await upsert(
+      agent,
+      did,
+      'site.standard.document',
+      {
         $type: 'site.standard.document',
-        site: pub.data.uri,
+        site: pubUri,
         path: p.path,
         title: p.title,
         ...(p.description ? { description: p.description } : {}),
@@ -197,14 +257,15 @@ async function main() {
         textContent: p.textContent,
         publishedAt: isoDateTime(p.date),
       },
-    })
-    documents[p.path] = doc.data.uri
-    console.log(`✓ document   ${p.path} → ${doc.data.uri}`)
+      docRkeyByPath.get(p.path),
+    )
+    documents[p.path] = uri
+    console.log(`✓ document   ${p.path} → ${uri}`)
   }
 
   await writeFile(
     RECORDS_FILE,
-    JSON.stringify({ did, publication: pub.data.uri, publicationUrl: PUBLICATION_URL, documents }, null, 2) + '\n',
+    JSON.stringify({ did, publication: pubUri, publicationUrl: PUBLICATION_URL, documents }, null, 2) + '\n',
     'utf8',
   )
   console.log(`\n✓ Wrote ${path.relative(ROOT, RECORDS_FILE)} (${posts.length} documents).`)

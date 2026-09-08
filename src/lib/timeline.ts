@@ -14,6 +14,12 @@ import type { Note } from './notes'
 import type { CompactDay } from './listening'
 import type { Concert } from './concerts'
 
+/** The post fields the timeline reads. PostSummary satisfies it, and so does the compiled-in virtual:site-index the homepage preview feeds. */
+export type TimelinePost = Pick<PostSummary, 'path' | 'title' | 'date'>
+
+/** The photo fields the timeline reads — full Photo satisfies it, and so does the trimmed slice the homepage preview ships. */
+export type TimelinePhoto = Pick<Photo, 'id' | 'date' | 'src' | 'thumb' | 'alt'>
+
 export interface TimelineDay {
   date: string
   scrobbles: number
@@ -24,8 +30,8 @@ export interface TimelineDay {
   booksStarted: Book[]
   films: Film[]
   activities: Activity[]
-  posts: PostSummary[]
-  photos: Photo[]
+  posts: TimelinePost[]
+  photos: TimelinePhoto[]
   notes: Note[]
   concerts: Concert[]
 }
@@ -42,8 +48,8 @@ export interface TimelineSources {
   books: Book[]
   films: Film[]
   activities: Activity[]
-  posts: PostSummary[]
-  photos: Photo[]
+  posts: readonly TimelinePost[]
+  photos: readonly TimelinePhoto[]
   notes: Note[]
   concerts: Concert[]
   /** Oldest day to include; older streams are only partly loaded so a row would understate what happened. Null once listening is exhausted. */

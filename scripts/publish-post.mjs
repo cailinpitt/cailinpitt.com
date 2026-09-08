@@ -14,7 +14,7 @@ const args = process.argv.slice(2)
 const DRY_RUN = args.includes('--dry-run')
 const SKIP_IMAGES = args.includes('--skip-images')
 const SKIP_ATPROTO = args.includes('--skip-atproto')
-const REQUIRED_KEYS = ['title', 'date', 'path', 'slug', 'description', 'image']
+const REQUIRED_KEYS = ['title', 'date', 'path', 'slug', 'description']
 
 const slugArg = args.find((a) => !a.startsWith('-'))
 

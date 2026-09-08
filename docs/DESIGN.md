@@ -633,6 +633,10 @@ build-time posts, photos, and concerts (`src/lib/timeline.ts`).
   this note/photo/activity go" endpoint on every other Worker for a bonus section — `/listening`'s
   own On this day (`worker-listening`'s `/on-this-day.json`) can afford a real query because
   scrobbles are the one stream with the depth to make it worth one.
+- **The homepage previews the last five days of it** — see [Homepage](#homepage). Same
+  `buildTimeline()`, so a day reads the same on both.
+- **`/timeline/:date` is reachable from the thing that happened**: every blog post, photo page, and
+  single note links to its own day ("That day →"), turning each dated page into a way in.
 
 ## Notes
 
@@ -771,13 +775,25 @@ articles come from `/reading.json`. Photo counts are the length of `src/lib/phot
 
 ## Homepage
 
-Static except for three things: the now-playing bar (polls `/now.json` every 60s), a 90-day
-sparkline, and an "on this day" line from `/on-this-day.json`. A link to [/now](#now) sits under the
-rotating identity line, answering the question that line raises. All three render nothing until
-their fetch lands, and nothing at all if it fails. Under those, currently-reading, last-watched, and
-last-moved strips, all from their Workers' `/now.json` — plus a last-seen concert strip
-(`ConcertBar`), the one card here built from static build-time data rather than a Worker fetch.
-Below that, the four newest photographs, labeled with capture day or year.
+Under the rotating identity line and its [/now](#now) link:
+
+- **"Right now"** — a slim strip of the present-tense pieces the day-grained timeline below can't
+  carry: the now-playing bar (polls `/now.json` every 60s), the current book (`/now.json` from
+  reading), and the 90-day scrobble sparkline. Each renders nothing until its fetch lands and
+  nothing if it fails; the whole strip is hidden until at least one has data.
+- **Timeline preview** (`HomeTimeline`) — the focal block. The last five days of
+  [/timeline](#timeline), each a small icon-led event list (`dayEvents()`, capped at five with a
+  "+N more") linking to that day, under an "N years ago today" line. Every stream `/timeline` shows
+  is represented, with the same per-stream colour accents. Built by `useHomeTimeline`
+  (`src/lib/homeTimeline.ts`): one unpaged fetch of every stream merged through the same
+  `buildTimeline()` the full page uses, so the two can't disagree. Posts come from the compiled-in
+  `virtual:site-index`; recent slices of concerts and photos (trimmed to the few fields the preview
+  reads, not the full manifest) ride in via the loader. The "on this day" line uses listening's
+  cross-year `/on-this-day.json` plus any post on that month/day — not photos/concerts, which the
+  homepage only has a recent slice of. SSR renders the heading + a skeleton; it fills in on
+  hydration, and the section drops only if every stream failed.
+- **Recent writing / Current projects / Recent photos** — static, from `virtual:site-index` and the
+  loader. The four newest photographs are labeled with capture day or year.
 
 ## Social cards
 
@@ -869,6 +885,11 @@ about the person rather than the work) and **Logs** (`/listening`, `/reading`, `
 Worker-backed). "Logs" rather than "Doing" because it's the word the rest of the site already uses
 (the homepage links read "Listening log →") and because it explains why those five are grouped and
 Projects/Blog aren't. Grouping also keeps the row from growing a link every time a new one is added.
+
+**Timeline** sits directly after Logs — it's the union of them — and is set apart from the rest of
+the row (`.nav-timeline`: full-weight ink, not muted, with a 🌀 ahead of it) because it's the spine
+of the site, not one more page. Blog posts, photo pages, and single notes each carry a quiet link to
+their own day on it ("That day →").
 
 Each is a `<details>`/`<summary>`, so it opens with no JavaScript, which matters since the nav is in
 the prerendered HTML of every page. `<summary>` also brings the button role, expanded/collapsed
