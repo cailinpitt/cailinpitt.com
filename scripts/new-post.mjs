@@ -34,7 +34,7 @@ function fail(msg) {
 }
 
 function frontmatter(fm) {
-  return [
+  const lines = [
     '---',
     `title: ${JSON.stringify(fm.title)}`,
     `date: ${fm.date}`,
@@ -42,11 +42,10 @@ function frontmatter(fm) {
     `slug: ${fm.slug}`,
     `tags: ${JSON.stringify(fm.tags)}`,
     `description: ${JSON.stringify(fm.description)}`,
-    `image: ${fm.image}`,
-    '---',
-    '',
-    '',
-  ].join('\n')
+  ]
+  if (fm.image) lines.push(`image: ${JSON.stringify(fm.image)}`)
+  lines.push('---', '', '')
+  return lines.join('\n')
 }
 
 async function main() {
@@ -69,7 +68,7 @@ async function main() {
   const title = await ask('Title', titleCase(slug))
   const description = await ask('Description (optional)', '')
   const tagsInput = await ask('Tags, comma-separated (optional)', '')
-  const image = await ask('Cover image', `/images/${slug}/cover.webp`)
+  const image = await ask('Cover image (optional)', '')
   rl.close()
 
   const now = new Date()
