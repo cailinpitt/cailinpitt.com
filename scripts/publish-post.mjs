@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// npm run post [-- <slug>] [--dry-run] [--skip-images] [--skip-atproto]
+// npm run blog:post [-- <slug>] [--dry-run] [--skip-images] [--skip-atproto]
 
 import { execFileSync } from 'node:child_process'
 import { readdir, readFile } from 'node:fs/promises'

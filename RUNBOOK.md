@@ -28,21 +28,25 @@ VITE_NOTES_API=http://localhost:8787 npm run dev
 ## Publish a blog post
 
 ```bash
-# 1. write content/blog/<slug>.md  (frontmatter: title, date, path, slug, tags, description, image)
+npm run blog:draft -- <slug>      # 1. scaffold content/blog/<slug>.md with its frontmatter block
 # 2. drop image originals in originals/<slug>/, reference them as /images/<slug>/<name>.webp
 npm run dev                        # 3. preview
 
-npm run post -- <slug>             # 4. images → R2, atproto records, stages the files
+npm run blog:post -- <slug>        # 4. images → R2, atproto records, stages the files
 git commit && git push            # 5. deploys
 ```
 
-`npm run post` with no slug picks up the single added/changed post under `content/blog`. It runs
+`npm run blog:draft` prompts for the title, description, tags, and cover image (slug can be passed or
+prompted); everything but the slug has a default and can be left blank. It fills `date`/`path` from
+today and writes `title, date, path, slug, tags, description, image`.
+
+`npm run blog:post` with no slug picks up the single added/changed post under `content/blog`. It runs
 `images:sync` + `images:upload`, then `publish:atproto`, then `git add`s `content/blog`,
 `content/atproto.json`, `src/lib/photos.json`. It stops before commit.
 
 ```bash
-npm run post -- <slug> --dry-run       # preview every step, stage nothing
-npm run post -- <slug> --skip-images   # or --skip-atproto
+npm run blog:post -- <slug> --dry-run       # preview every step, stage nothing
+npm run blog:post -- <slug> --skip-images   # or --skip-atproto
 ```
 
 ## Photos
