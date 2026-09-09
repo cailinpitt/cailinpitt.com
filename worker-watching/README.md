@@ -94,5 +94,11 @@ RSS feed. Those cards render the placeholder with no data to fix it from.
 - **Reviews and diary permalinks aren't stored.** The feed carries both; the page shows ratings
   only, and cards link to `letterboxd.com/film/<slug>` — the film's public page — rather than the
   entry under `/<member>/`, which would put the account on every card.
-- **`stats` is recomputed on every sync**, not incremented — the sync only sees the newest 50
-  entries, so totals must come from the archive itself.
+- **`stats` is recomputed, not incremented** — the sync only sees the newest 50 entries, so totals
+  must come from the archive itself. The recompute (two full-archive scans) runs only when a write
+  actually moved a row, with a daily floor; `npm run watching:sync -- --recompute` forces it after
+  a bulk load.
+- **Writes are guarded.** The feed re-offers its whole 50-entry window hourly. Rather than
+  `INSERT OR REPLACE` (which deletes + re-inserts every row and its index entry every run), each
+  write is `… ON CONFLICT(id) DO UPDATE SET … WHERE <any column differs>` with `RETURNING id`, so a
+  quiet run writes nothing at all. Same pattern as worker-moving.

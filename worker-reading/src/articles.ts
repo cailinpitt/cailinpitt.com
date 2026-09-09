@@ -114,8 +114,8 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
   const meta = await fetchMetadata(url)
   const image = await mirrorImage(env, meta.image)
 
-  // Increment rather than COUNT(*), which would grow with the archive; the
-  // daily sync reconciles any drift.
+  // Increment rather than COUNT(*), which would grow with the archive; the sync
+  // reconciles any drift (on a rebuild, and at least once a day otherwise).
   await env.DB.batch([
     env.DB.prepare(
       `INSERT OR IGNORE INTO articles (id, url, title, site, excerpt, image, note, read_at)

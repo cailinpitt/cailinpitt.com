@@ -1,7 +1,7 @@
 // Watching API for cailinpitt.com/watching.
 //
-//  scheduled (daily): pull the Letterboxd diary feed into D1 and mirror new
-//    poster art to R2.
+//  scheduled (hourly): pull the Letterboxd diary feed and mirror new poster art
+//    to R2, writing D1 only for rows that actually changed (see sync.ts).
 //  fetch: serve the bundle from D1 behind the edge cache. No ingest endpoint —
 //    the feed is pulled, never pushed. No KV — see store.ts.
 
@@ -149,8 +149,10 @@ export default {
         )
       }
 
-      // Runs the daily sync on demand — for the poster backfill (see
-      // MIRROR_BUDGET) and to pick up a film without waiting for the cron.
+      // Runs the sync on demand — for the poster backfill (see MIRROR_BUDGET)
+      // and to pick up a film without waiting for the cron. `?recompute=1` just
+      // rebuilds the totals from the archive, no Letterboxd call — for after a
+      // CSV backfill.
       if (url.pathname === '/sync') {
         if (request.method !== 'POST') {
           return new Response('Method not allowed', { status: 405, headers: cors })
@@ -164,7 +166,7 @@ export default {
         let body: string
         let status = 200
         try {
-          const result = await sync(env)
+          const result = await sync(env, { recompute: url.searchParams.has('recompute') })
           console.log(JSON.stringify({ level: 'info', sync: result }))
           body = JSON.stringify(result)
         } catch (err) {

@@ -8,8 +8,9 @@
   // listening and reading workers. Auto-provisions the DNS record + cert.
   "routes": [{ "pattern": "watching.cailinpitt.com", "custom_domain": true }],
 
-  // Hourly. A run that finds nothing is nearly free (one feed fetch, two D1
-  // reads, no mirroring), and a film logged now shows up within the hour.
+  // Hourly, so a film logged now shows up within the hour. A run that finds
+  // nothing new writes nothing to D1 — writes are guarded upserts and the totals
+  // recompute only fires on a real change (see src/sync.ts).
   "triggers": { "crons": ["0 * * * *"] },
 
   "observability": { "enabled": true, "head_sampling_rate": 1 },

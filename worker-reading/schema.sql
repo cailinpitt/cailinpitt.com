@@ -4,11 +4,14 @@
 -- own entry with its own dates. `read_id` is 0 for a user_book that has no read
 -- rows at all (e.g. want-to-read), which keeps the primary key total.
 --
--- This table is rebuilt wholesale on every sync (DELETE + batch insert in one
--- atomic D1 batch) because Hardcover is the source of truth and rows there can
--- be edited or deleted. At a few hundred books that is cheaper than diffing, and
--- it is also why there is no separate backfill script — the first cron run
--- imports the entire history.
+-- This table is rebuilt wholesale (DELETE + batch insert in one atomic D1 batch)
+-- because Hardcover is the source of truth and rows there can be edited or
+-- deleted. At a few hundred books that is cheaper than diffing, and it is also
+-- why there is no separate backfill script — the first cron run imports the
+-- entire history. The rebuild only runs when a SHA-256 fingerprint of the pulled
+-- library changes, though: the cron is hourly and the library changes a few
+-- times a week, so an unconditional rebuild was tens of thousands of D1
+-- row-writes a day for nothing. See syncBooks() and `stats.library_hash`.
 CREATE TABLE IF NOT EXISTS books (
   user_book_id INTEGER NOT NULL,      -- hardcover user_books.id
   read_id      INTEGER NOT NULL,      -- user_book_reads.id; 0 when there is no read row
@@ -43,8 +46,11 @@ CREATE INDEX IF NOT EXISTS idx_books_read_seq
 DROP INDEX IF EXISTS idx_books_finished_seq;
 DROP INDEX IF EXISTS idx_books_finished;
 
--- Serves the currently-reading query, which has no date ordering.
-CREATE INDEX IF NOT EXISTS idx_books_status ON books (status_id);
+-- Dropped: idx_books_read_seq leads with status_id, so it already serves every
+-- status_id lookup (the currently-reading query included). A separate status
+-- index was pure write amplification on the rebuild. Explicit drop so existing
+-- databases converge on re-running this file.
+DROP INDEX IF EXISTS idx_books_status;
 
 -- Articles, ingested from mail sent to the secret address (see src/email.ts).
 --
@@ -79,16 +85,21 @@ DROP INDEX IF EXISTS idx_articles_read_at;
 -- the all-time total in the listening worker — see worker/README.md.
 --
 -- Written by syncBooks() (which already has every row in memory, so computing
--- them costs no reads at all) and incremented by the email ingest. The daily
--- sync also reconciles the article count, so a missed increment self-heals.
+-- them costs no reads at all) and incremented by the email ingest. syncBooks()
+-- reconciles the article count on every rebuild and, when the library is
+-- unchanged, at least once a day (STATS_MAX_AGE) — so a missed increment or a
+-- manual edit to `books` self-heals within a day.
 CREATE TABLE IF NOT EXISTS stats (
-  id         INTEGER PRIMARY KEY CHECK (id = 1),
-  books_read INTEGER NOT NULL DEFAULT 0,
-  articles   INTEGER NOT NULL DEFAULT 0,
+  id           INTEGER PRIMARY KEY CHECK (id = 1),
+  books_read   INTEGER NOT NULL DEFAULT 0,
+  articles     INTEGER NOT NULL DEFAULT 0,
   -- {"2026": {"books": 36, "pages": 12043}, …}. Per-year rather than a single
   -- "this year" figure so the counter is correct the moment the year rolls over,
   -- instead of showing last year's total until the next sync.
-  by_year    TEXT    NOT NULL DEFAULT '{}',
-  updated_at INTEGER NOT NULL DEFAULT 0
+  by_year      TEXT    NOT NULL DEFAULT '{}',
+  -- SHA-256 of exactly what the last sync wrote to `books`. syncBooks() rebuilds
+  -- the table only when the freshly pulled library hashes to something else.
+  library_hash TEXT,
+  updated_at   INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO stats (id) VALUES (1);

@@ -1,8 +1,11 @@
-// The daily pull: Letterboxd RSS → films, plus poster art into R2.
+// The hourly pull: Letterboxd RSS → films, plus poster art into R2.
 //
-// Every write is an upsert, not a replace (see schema.sql), and the run stays
-// inside the Workers free plan's 50 subrequests per invocation — `fetch()`, D1,
-// and R2 calls all counted together.
+// Every write is an upsert guarded by a WHERE comparing every column (see
+// schema.sql and writeFilms), so the feed's 50-entry overlap — mostly rows
+// byte-identical to what is already stored — writes nothing on a quiet run and
+// the totals are only recomputed when a row actually moved. The run stays inside
+// the Workers free plan's 50 subrequests per invocation — `fetch()`, D1, and R2
+// calls all counted together.
 
 import { fetchDiary, type DiaryEntry } from './letterboxd'
 import { mirrorImage } from './images'
@@ -10,6 +13,28 @@ import { mirrorImage } from './images'
 // D1 caps bound parameters at 100 per query; each film binds 13, so 7 rows
 // (91 parameters) is the most that fits.
 const ROWS_PER_INSERT = 7
+
+// Every column except the primary key — the set writeFilms() upserts and diffs.
+const MUTABLE = [
+  'guid',
+  'title',
+  'year',
+  'slug',
+  'watched_date',
+  'rewatch',
+  'rating',
+  'liked',
+  'tmdb_id',
+  'poster',
+  'poster_source',
+  'published_at',
+] as const
+
+// Longest the totals may go without a recompute, however quiet Letterboxd is.
+// The `changed > 0` guard only sees rows this run wrote, so an out-of-band edit
+// (a CSV backfill loaded straight into D1) would otherwise leave the totals
+// wrong until the next diary entry. Matches worker-moving's STATS_MAX_AGE.
+const STATS_MAX_AGE = 24 * 60 * 60
 
 // Posters mirrored per run: 2 subrequests each, and the rest of a run spends
 // ~6, leaving headroom under the 50-subrequest free-plan ceiling. Leftovers
@@ -25,6 +50,10 @@ export interface SyncResult {
   added: number
   /** Entries in the feed at all — the window, currently 50. */
   seen: number
+  /** Rows the write actually moved: new entries plus genuine edits. */
+  changed: number
+  /** Whether the totals were rebuilt. False on a run that changed nothing. */
+  recomputed: boolean
   postersMirrored: number
   postersRemaining: number
 }
@@ -40,7 +69,17 @@ async function knownPosters(db: D1Database): Promise<Map<string, string>> {
   return new Map((results ?? []).map((r) => [r.poster_source, r.poster]))
 }
 
-export async function sync(env: Env): Promise<SyncResult> {
+export async function sync(
+  env: Env,
+  options: { recompute?: boolean } = {},
+): Promise<SyncResult> {
+  // Rebuild the totals from the archive without touching Letterboxd — for after
+  // a CSV backfill, or when the shape of `stats` changed but the rows did not.
+  if (options.recompute) {
+    await recomputeStats(env.DB)
+    return { added: 0, seen: 0, changed: 0, recomputed: true, postersMirrored: 0, postersRemaining: 0 }
+  }
+
   const entries = await fetchDiary(env.LETTERBOXD_USER)
 
   // Reuse what's already mirrored so a steady-state run makes no image
@@ -72,12 +111,18 @@ export async function sync(env: Env): Promise<SyncResult> {
     for (const row of results ?? []) existing.add(row.id)
   }
 
-  await writeFilms(env.DB, entries, posters)
-  await recomputeStats(env.DB)
+  const changed = await writeFilms(env.DB, entries, posters)
+
+  // Recomputing scans the whole archive twice, so skip it unless a row moved —
+  // with a daily floor (see STATS_MAX_AGE) so an out-of-band edit still lands.
+  const recomputed = changed > 0 || (await statsStale(env.DB))
+  if (recomputed) await recomputeStats(env.DB)
 
   return {
     added: entries.filter((e) => !existing.has(e.id)).length,
     seen: entries.length,
+    changed,
+    recomputed,
     postersMirrored: mirrored,
     // Anything still unmirrored (over budget, or a fetch that failed) is picked
     // up by the next run; the card renders without art until then.
@@ -85,15 +130,30 @@ export async function sync(env: Env): Promise<SyncResult> {
   }
 }
 
+/**
+ * Store the feed entries, and report how many rows actually moved.
+ *
+ * Upsert guarded by a WHERE comparing every column, not a bare INSERT OR
+ * REPLACE: the feed re-offers its whole 50-entry window every run, so most rows
+ * are byte-identical to what is stored, and REPLACE would delete + re-insert
+ * every one of them (and its index entry) on every hourly tick. The guard makes
+ * RETURNING yield only rows that changed — a rating or review added days later
+ * still lands, a quiet run writes nothing.
+ *
+ * `IS NOT` rather than `<>`, since `<>` against NULL is NULL, not true, and a
+ * column moving to/from NULL (a poster finally mirrored, a rating added) is
+ * exactly an edit.
+ */
 async function writeFilms(
   db: D1Database,
   entries: DiaryEntry[],
   posters: Map<string, string>,
-): Promise<void> {
-  if (!entries.length) return
+): Promise<number> {
+  if (!entries.length) return 0
 
-  const COLUMNS =
-    'id, guid, title, year, slug, watched_date, rewatch, rating, liked, tmdb_id, poster, poster_source, published_at'
+  const COLUMNS = `id, ${MUTABLE.join(', ')}`
+  const assignments = MUTABLE.map((c) => `${c} = excluded.${c}`).join(', ')
+  const differs = MUTABLE.map((c) => `films.${c} IS NOT excluded.${c}`).join(' OR ')
 
   const statements: D1PreparedStatement[] = []
   for (let i = 0; i < entries.length; i += ROWS_PER_INSERT) {
@@ -114,19 +174,34 @@ async function writeFilms(
       e.posterSource,
       e.publishedAt,
     ])
-    // REPLACE rather than IGNORE: a rating or a review added days after the
-    // fact arrives as an edit to an entry already stored, and the feed is the
-    // authority on every column here.
     statements.push(
-      db.prepare(`INSERT OR REPLACE INTO films (${COLUMNS}) VALUES ${placeholders}`).bind(...values),
+      db
+        .prepare(
+          `INSERT INTO films (${COLUMNS}) VALUES ${placeholders}
+           ON CONFLICT(id) DO UPDATE SET ${assignments}
+           WHERE ${differs}
+           RETURNING id`,
+        )
+        .bind(...values),
     )
   }
-  await db.batch(statements)
+  const written = await db.batch<{ id: string }>(statements)
+  return written.reduce((n, r) => n + (r.results?.length ?? 0), 0)
+}
+
+/** Whether the stored totals are old enough to rebuild on their own account. */
+async function statsStale(db: D1Database): Promise<boolean> {
+  const row = await db.prepare('SELECT updated_at FROM stats WHERE id = 1').first<{
+    updated_at: number
+  }>()
+  if (!row) return true
+  return Math.floor(Date.now() / 1000) - row.updated_at >= STATS_MAX_AGE
 }
 
 // Rebuild `stats`. Unlike worker-reading, this can't be computed from rows in
 // memory — the sync only sees the newest 50 entries — so it's two aggregate
-// queries once a day, kept off the read path by the stats table.
+// scans of the archive, kept off the read path by the stats table and only run
+// when writeFilms() moved a row (or the daily floor fires).
 async function recomputeStats(db: D1Database): Promise<void> {
   const [totals, byYear] = await Promise.all([
     db

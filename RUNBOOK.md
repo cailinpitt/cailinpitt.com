@@ -153,6 +153,22 @@ npx wrangler secret list
 `worker-reading` and `worker-photos` also have `npm run dev:remote` (real D1/R2; needs one prior
 deploy so the custom domain exists).
 
+### D1 usage — staying under the free tier
+
+Free tier is 5M rows read/day and **100k rows written/day**, per account (all databases
+combined). "Rows written" counts index entries too, so a row in a table with four indexes is
+~5 writes. Anything on a cron that rewrites rows unconditionally is the thing to watch.
+
+```bash
+cd <worker-dir>
+npx wrangler d1 insights <db-name> --sort-by writes --limit 10   # per-query write attribution, last 1d
+npx wrangler d1 insights <db-name> --sort-by reads  --limit 10
+```
+
+The dashboard (D1 → each database → Metrics) shows the daily totals and which database they came
+from. Steady state should be near zero writes on every database — a write means someone signed the
+guestbook, saved an article, or a sync genuinely picked something up.
+
 ## Listening
 
 ### One-time migration for the period views (do this in order)
@@ -330,6 +346,26 @@ npm run reading:sync                   # run the Hardcover sync now
 npm run reading:sync -- --covers       # loop until covers stop mirroring
 ```
 
+### One-time migration: fingerprint the sync (do this before deploying)
+
+`stats.library_hash` gates the wholesale `books` rebuild — without it an ingest
+tick reads a missing column and the whole sync fails. Apply it first, same as the
+listening migration:
+
+```bash
+cd worker-reading
+npx wrangler d1 execute cailinpitt-reading --remote --file=schema-v3.sql
+# then deploy the Worker
+```
+
+The hourly cron pulls the whole library every run, but the rebuild (DELETE +
+re-insert of ~400 rows, each hitting several indexes) now runs only when a
+SHA-256 of the pulled library changes — books change a few times a week, so this
+takes the worker from ~100k D1 row-writes/day to near zero. The totals row is
+still refreshed at least once a day so a manual edit to `books` reconciles.
+`schema-v3.sql` also drops `idx_books_status`, which `idx_books_read_seq` already
+covered.
+
 Save / annotate / remove an article:
 
 ```bash
@@ -364,7 +400,14 @@ curl reading.cailinpitt.com            # terminal view; ?T for no color
 ```bash
 npm run watching:sync                  # pull the Letterboxd diary feed now
 npm run watching:sync -- --posters     # loop until posters stop mirroring
+npm run watching:sync -- --recompute   # rebuild the totals from the archive, no feed call
 ```
+
+The hourly cron re-offers the feed's whole 50-entry window every run. Each write
+is now a guarded upsert (`… ON CONFLICT DO UPDATE … WHERE <any column differs>`),
+so a quiet run writes nothing and the totals are recomputed only when a row
+actually moved — no schema change, just deploy. Use `--recompute` after a bulk
+load, which the `changed > 0` guard can't see.
 
 Import the history behind the feed's 50-entry window (letterboxd.com/settings/data → export):
 
@@ -372,7 +415,7 @@ Import the history behind the feed's 50-entry window (letterboxd.com/settings/da
 node scripts/watching-backfill.mjs ~/Downloads/letterboxd-export/diary.csv
 cd worker-watching && npx wrangler d1 execute cailinpitt-watching \
   --remote --file=../scripts/watching-backfill.sql
-cd .. && npm run watching:sync         # recompute the totals in `stats`
+cd .. && npm run watching:sync -- --recompute   # rebuild the totals in `stats`
 ```
 
 The script resolves every `boxd.it` short link in the export to its real film slug and caches the

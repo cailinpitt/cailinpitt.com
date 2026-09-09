@@ -1,7 +1,7 @@
 // Reading API for cailinpitt.com/reading.
 //
-//  scheduled (daily): pull the hardcover.app library into D1 and mirror new
-//    cover art to R2.
+//  scheduled (hourly): pull the hardcover.app library and mirror new cover art
+//    to R2, rewriting D1 only when the library actually changed (see sync.ts).
 //  fetch: serve the bundle from D1 behind the edge cache, and manage articles
 //    at /ingest (POST save, PATCH note, DELETE remove). No KV — see store.ts.
 
@@ -247,7 +247,7 @@ export default {
         return new Response('Method not allowed', { status: 405, headers: cors })
       }
 
-      // Runs the daily sync on demand — for the cover backfill (see MIRROR_BUDGET)
+      // Runs the sync on demand — for the cover backfill (see MIRROR_BUDGET)
       // and to pick up a finished book without waiting for the cron.
       if (url.pathname === '/sync') {
         if (request.method !== 'POST') {

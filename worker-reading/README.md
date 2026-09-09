@@ -180,12 +180,20 @@ On the free plan an invocation gets **50 subrequests**, and R2/KV/D1 binding cal
 So a first sync of a few hundred books needs several passes — see [Backfilling
 covers](#backfilling-covers).
 
-### Books are replaced, not appended
+### Books are replaced, not appended — but only when they changed
 
 Hardcover is the source of truth and rows there can be edited or deleted, so `syncBooks()` does
 `DELETE FROM books` + re-insert in a single atomic D1 batch. At this size that's cheaper and more
 correct than diffing, and deletions/edits come free. Rows are per *read session*, so a re-read is
 its own row. `ROWS_PER_INSERT` is 7 because D1 caps bound parameters at 100 and each row binds 13.
+
+The catch is the cron is **hourly** and that replace rewrites every row — ~400 rows against five
+indexes each — whether or not anything changed. That was ~100k D1 row-writes a day, the entire
+free-tier budget, for a library that changes a few times a week. So the rebuild now runs only when
+a SHA-256 of exactly what it would write (`libraryFingerprint()`, stored in `stats.library_hash`)
+differs from last time. On an unchanged library the sync refreshes the totals row alone, and only
+once a day (`STATS_MAX_AGE`), so a manual edit to `books` still reconciles. Steady-state writes:
+near zero.
 
 ## Testing in pieces
 

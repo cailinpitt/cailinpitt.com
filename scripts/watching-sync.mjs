@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Trigger the watching Worker's Letterboxd sync (POST /sync).
 //
-//   npm run watching:sync              # one pass
-//   npm run watching:sync -- --posters # keep going until poster mirroring is done
+//   npm run watching:sync                # one pass
+//   npm run watching:sync -- --posters   # keep going until poster mirroring is done
+//   npm run watching:sync -- --recompute # rebuild totals from the archive, no Letterboxd call
 //   npm run watching:sync -- --api http://localhost:8787
 //
 // Needs WATCHING_ADMIN_TOKEN in .env — the same value stored on the Worker as
@@ -29,6 +30,7 @@ try {
 
 const args = process.argv.slice(2)
 const POSTERS = args.includes('--posters')
+const RECOMPUTE = args.includes('--recompute')
 const apiArg = args.indexOf('--api')
 const API =
   (apiArg >= 0 ? args[apiArg + 1] : process.env.WATCHING_API) ?? 'https://watching.cailinpitt.com'
@@ -48,7 +50,7 @@ if (!TOKEN) {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function sync() {
-  const res = await fetch(`${API}/sync`, {
+  const res = await fetch(`${API}/sync${RECOMPUTE ? '?recompute=1' : ''}`, {
     method: 'POST',
     headers: { authorization: `Bearer ${TOKEN}` },
   })
@@ -66,7 +68,13 @@ async function sync() {
 }
 
 async function main() {
-  console.log(`→ ${API}/sync`)
+  console.log(`→ ${API}/sync${RECOMPUTE ? ' (recompute)' : ''}`)
+
+  if (RECOMPUTE) {
+    const result = await sync()
+    console.log(`  ${result.recomputed ? 'totals rebuilt' : 'nothing to do'}`)
+    return
+  }
 
   let previous = null
   for (let pass = 1; pass <= MAX_PASSES; pass++) {

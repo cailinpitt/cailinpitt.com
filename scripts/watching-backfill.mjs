@@ -5,7 +5,7 @@
 //   2. node scripts/watching-backfill.mjs ~/Downloads/letterboxd-export/diary.csv
 //   3. cd worker-watching && npx wrangler d1 execute cailinpitt-watching \
 //        --remote --file=../scripts/watching-backfill.sql
-//   4. npm run watching:sync            # from the repo root — recomputes `stats`
+//   4. npm run watching:sync -- --recompute   # from the repo root — rebuilds `stats`
 //
 // This exists because the RSS feed the Worker syncs is only the last 50 diary
 // entries (see worker-watching/src/letterboxd.ts). Everything before that has
@@ -257,7 +257,7 @@ async function main() {
   console.log(
     '\nNext:\n  cd worker-watching && npx wrangler d1 execute cailinpitt-watching \\\n' +
       '    --remote --file=../scripts/watching-backfill.sql\n' +
-      '  cd .. && npm run watching:sync   # recompute the totals in `stats`',
+      '  cd .. && npm run watching:sync -- --recompute   # rebuild the totals in `stats`',
   )
 }
 
