@@ -37,9 +37,6 @@ export function HomeTimeline({
       <h2 id="home-timeline-heading" className="section-title">
         Timeline
       </h2>
-      <p className="home-timeline-lead">
-        One row per day — music, reading, film, rides, writing, notes, and photos, woven together.
-      </p>
 
       {onThisDay && (
         <Link className="home-timeline-otd" to={timelineDayPath(onThisDay.date)}>

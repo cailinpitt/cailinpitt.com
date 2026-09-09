@@ -62,8 +62,6 @@ export function Layout() {
                   { to: '/moving', label: 'Moving' },
                 ]}
               />
-              {/* Right after Logs, which are its facets, and marked so it doesn't
-                  read as one more link in the row — see .nav-timeline. */}
               <li className="nav-timeline">
                 <NavLink to="/timeline">Timeline</NavLink>
               </li>

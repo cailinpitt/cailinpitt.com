@@ -278,19 +278,10 @@ img {
   text-underline-offset: 0.3em;
 }
 
-/* Timeline is the spine of the site, not one more link in the row: full-weight
-   ink instead of muted, with a 🌀 ahead of it. */
-.nav-timeline a {
-  color: var(--fg);
-  font-weight: 600;
-}
 .nav-timeline a::before {
   content: '🌀';
   margin-right: 0.4em;
   font-size: 0.95em;
-}
-.nav-timeline a:hover {
-  color: var(--accent);
 }
 
 /* Nav disclosure ("Me") — a <details> so it opens without JavaScript. See

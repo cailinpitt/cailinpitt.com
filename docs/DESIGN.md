@@ -887,7 +887,7 @@ Worker-backed). "Logs" rather than "Doing" because it's the word the rest of the
 Projects/Blog aren't. Grouping also keeps the row from growing a link every time a new one is added.
 
 **Timeline** sits directly after Logs — it's the union of them — and is set apart from the rest of
-the row (`.nav-timeline`: full-weight ink, not muted, with a 🌀 ahead of it) because it's the spine
+the row because it's the spine
 of the site, not one more page. Blog posts, photo pages, and single notes each carry a quiet link to
 their own day on it ("That day →").
 
