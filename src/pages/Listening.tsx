@@ -164,7 +164,7 @@ function OnThisDaySection() {
         if (active) setData(d)
       })
       .catch(() => {
-        /* silently absent — this is a bonus section, not load-bearing */
+        /* silently absent — this section is optional */
       })
     return () => {
       active = false

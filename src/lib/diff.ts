@@ -29,7 +29,7 @@ const MAX_ROWS = 40
 // a plain replacement — a pair this size is a rewrite anyway.
 const MAX_REFINE_TOKENS = 1200
 
-// Below this, a refined pair has too little in common and reads as confetti — show old/new whole instead.
+// Below this, a refined pair has too little in common to mark word-by-word — show old/new whole instead.
 const MIN_SIMILARITY = 0.3
 
 // Keeps whitespace so text reassembles exactly as written; punctuation rides with its word

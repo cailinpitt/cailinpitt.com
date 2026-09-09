@@ -3,14 +3,14 @@
 The API behind [cailinpitt.com/moving](https://cailinpitt.com/moving). Bike rides and lifting
 sessions come from the Strava API; D1 stores them and a cron every 10 minutes pulls anything new.
 
-Sibling of `worker-watching`, deliberately shaped like it — same CORS rules, same edge-cached
-bundle, same `curl` text view, same admin-token `/sync`. No R2: activities carry no art.
+Sibling of `worker-watching`, shaped like it — same CORS rules, same edge-cached bundle, same
+`curl` text view, same admin-token `/sync`. No R2: activities carry no art.
 
 ## Nothing user-facing names Strava
 
-The page, nav, terminal view, and row copy all avoid naming where this comes from — a deliberate
-product decision, not an accident. Keep it in mind when editing `src/text.ts` or anything under
-`src/` in the site. Comments and this file are implementation, and say Strava freely.
+The page, nav, terminal view, and row copy avoid naming where this comes from — a deliberate
+product decision. Keep it in mind when editing `src/text.ts` or anything under `src/` in the site.
+Comments and this file say Strava freely.
 
 ## Why the API, and what it costs
 
@@ -23,7 +23,7 @@ from serving it. `intervals.icu`, for instance, returns a stub for every Strava-
 {"id":"…","source":"STRAVA","_note":"STRAVA activities are not available via the API"}
 ```
 
-Two limits worth knowing:
+Two limits:
 
 - **1,000 non-upload requests a day**, 100 per 15 minutes. A steady-state run spends one, so the
   30-minute cron spends about 48 a day — the access token is cached in `auth`, so most runs skip
@@ -83,8 +83,8 @@ cd .. && npm run moving:sync -- --refresh
 
 That last step isn't optional. **The export carries no local timestamp**, only UTC, so
 `moving-backfill.mjs` derives each calendar date with a fixed Central offset — wrong across DST
-and anywhere but home. `--refresh` re-pulls every stored activity and takes Strava's own
-per-activity local date, the only authority on which day a ride belongs to.
+and travel. `--refresh` re-pulls every stored activity and takes Strava's own per-activity local
+date.
 
 `npm run moving:sync -- --backfill` walks the history through the API instead, `PAGE_BUDGET` pages
 per pass. A fallback for when the export isn't available; prefer the export.
@@ -118,19 +118,18 @@ call — for when the stats shape changed but the rows did not.
   fetched, so older rows keep the old bucket otherwise.
 - **Distances are stored in miles and feet**, converted on write, so nothing converts on the read
   path.
-- **No polylines, coordinates, or streams are stored.** The page shows a date and a distance; what
-  isn't stored can't leak. Heart rate is the one exception to "numbers only", and it's two summary
-  values — `avg_hr`, `max_hr` — never a per-second series.
+- **No polylines, coordinates, or streams are stored.** The page shows a date and a distance. Heart
+  rate is the one exception to "numbers only", and it's two summary values — `avg_hr`, `max_hr` —
+  never a per-second series.
 - **Heart rate is null, not zero, when there was no monitor.** Most of the archive has none, and
   every row predating the column does. A stored zero would render "0 bpm" under a ride and drag
   any future average down, so the columns are nullable and `has_heartrate` is checked before
   either is read — Strava omits the values entirely on an activity without one, so this costs no
   extra API requests.
 - **Both figures are labelled.** A row reads "145 avg · 178 max" behind a heart, since an
-  unlabelled bpm number is ambiguous between the two. The page draws a `♥` glyph; the terminal
-  view draws `<3`, since that output lands in whatever encoding the reader's terminal happens to
-  use and a mojibaked glyph is worse than a plain one. `max` renders only when present — a
-  separate field from the average, and a row can carry one without the other.
+  unlabelled bpm number is ambiguous. The page draws a `♥` glyph; the terminal view draws `<3`,
+  since that output lands in whatever encoding the reader's terminal uses. `max` renders only when
+  present; a row can carry one without the other.
 - **`name` and `commute` are stored but not served.** The log renders a summary built from the
   numbers instead.
 - **`stats` is recomputed from the archive**, not incremented — a run sees only a week, so totals
@@ -138,14 +137,13 @@ call — for when the stats shape changed but the rows did not.
   miles, and run count are summed from `by_year` at read time, not stored as their own columns.
 - **…but only when a row actually moved.** That recompute scans the table twice, and the cron
   fires every 10 minutes re-offering the same week of overlap each time, so nearly every run has
-  nothing to say. The write is an upsert guarded by a `WHERE` comparing every column, and
-  `RETURNING` reports only rows that were new or genuinely different — `changed` in the sync
-  result. Zero means totals can't have moved, and the scan is skipped.
+  nothing to do. The write is an upsert guarded by a `WHERE` comparing every column, and
+  `RETURNING` reports only rows that were new or different — `changed` in the sync result. Zero
+  means totals can't have moved, and the scan is skipped.
 - **A daily floor covers out-of-band edits.** `changed` only sees rows this sync wrote, so
-  anything editing the table directly — `scripts/moving-recategorize.sql` after a `kind` mapping
-  change is the standing example — would otherwise leave totals wrong indefinitely, where before
-  every sync quietly repaired them. `STATS_MAX_AGE` forces a rebuild once a day regardless,
-  bounding that to a day while still skipping ~47 of the 48 runs.
+  anything editing the table directly — e.g. `scripts/moving-recategorize.sql` after a `kind`
+  mapping change — would otherwise leave totals wrong indefinitely. `STATS_MAX_AGE` forces a
+  rebuild once a day regardless, still skipping ~47 of the 48 runs.
 
 ## `/windows.json`
 

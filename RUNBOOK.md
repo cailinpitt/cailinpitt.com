@@ -157,7 +157,7 @@ deploy so the custom domain exists).
 
 Free tier is 5M rows read/day and **100k rows written/day**, per account (all databases
 combined). "Rows written" counts index entries too, so a row in a table with four indexes is
-~5 writes. Anything on a cron that rewrites rows unconditionally is the thing to watch.
+~5 writes. Watch anything on a cron that rewrites rows unconditionally.
 
 ```bash
 cd <worker-dir>
@@ -166,8 +166,8 @@ npx wrangler d1 insights <db-name> --sort-by reads  --limit 10
 ```
 
 The dashboard (D1 → each database → Metrics) shows the daily totals and which database they came
-from. Steady state should be near zero writes on every database — a write means someone signed the
-guestbook, saved an article, or a sync genuinely picked something up.
+from. Steady state is near zero writes on every database — a write means someone signed the
+guestbook, saved an article, or a sync picked something up.
 
 ## Listening
 
@@ -191,9 +191,9 @@ Step 2 writes absolute values (`plays = COUNT(*)`), so it's safe to re-run if in
 not race a *running* new Worker, though — the tick increments these counters, so run it before the
 deploy, not after.
 
-After deploying, the cron backfills period blobs on its own: years first, then months, then weeks,
-one every three minutes. All ~356 periods finish inside a day; `/listening/<year>` pages work within
-about twenty minutes. Watch it with:
+After deploying, the cron backfills period blobs: years first, then months, then weeks, one every
+three minutes. All ~356 periods finish inside a day; `/listening/<year>` pages work within about
+twenty minutes. Watch it with:
 
 ```bash
 curl -s https://listening.cailinpitt.com/periods.json | python3 -m json.tool | head
@@ -222,8 +222,8 @@ wrangler d1 execute cailinpitt-listening --remote --file=../scripts/enrich.sql
 
 `enrich.sql` is large — roughly 7 MB and ~31,000 statements, because unlike `backfill.sql` (which
 packs 100 rows per `INSERT`) this writes one upsert per entity. If `wrangler` times out or rejects
-the file, split it and load in chunks — every statement is a self-contained, idempotent upsert, so a
-failed chunk can just be re-run:
+the file, split it and load in chunks — every statement is an idempotent upsert, so a failed chunk
+can be re-run:
 
 ```bash
 cd /tmp && rm -rf d1chunks && mkdir d1chunks
@@ -243,12 +243,12 @@ lookups cover all 18,114 tracks.
 Genre stats read an artist→genre blob rebuilt daily, so genres appear on periods built from the next
 rebuild onward. To force it sooner, delete `meta:v1:built-at` from KV.
 
-**Editing the taxonomy** in `worker-listening/src/genres.ts` is expected — it encodes taste. Raw
-tags are stored, not canonical genres, so a change needs no re-fetching. But completed period blobs
-are frozen, so after editing you must bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and
-redeploy — the prefix is part of the edge cache key too, invalidating both KV and the edge; the
-backfill walk then rebuilds every period under the new prefix within a day. Old keys are orphaned
-and only cost KV storage, not a metered constraint here.
+**Editing the taxonomy** in `worker-listening/src/genres.ts` is expected. Raw tags are stored, not
+canonical genres, so a change needs no re-fetching. But completed period blobs are frozen, so after
+editing you must bump `PREFIX` in `src/period.ts` (`p:v2:` → `p:v3:`) and redeploy — the prefix is
+part of the edge cache key too, so this invalidates both KV and the edge; the backfill walk then
+rebuilds every period under the new prefix within a day. Old keys are orphaned and only cost KV
+storage.
 
 ### Artist origin and era (Tier D)
 
@@ -265,29 +265,27 @@ wrangler d1 execute cailinpitt-listening --remote --file=../scripts/musicbrainz.
 errors on the second pass. Harmless.
 
 MusicBrainz caps at one request per second, hence the runtime. Accuracy comes from Last.fm's
-`artist.getInfo` MBID, turning a fuzzy name search into an exact lookup; measured across the top
-artists here, the two methods never disagreed.
+`artist.getInfo` MBID, which turns a fuzzy name search into an exact lookup; across the top artists
+here the two methods never disagreed.
 
-**Reviewing the fuzzy matches.** Use `node scripts/review-origins.mjs`, which ranks by play count
-and hides everything under 0.1% of the archive (a wrong country on a one-play artist moves nothing).
-`--verify 20` then asks MusicBrainz which of the top names are shared by more than one act — the
-actual signal (the `score` column in the review file is not: MusicBrainz returns 100 for any exact
-name match, including when several acts share the name).
+**Reviewing the fuzzy matches.** `node scripts/review-origins.mjs` ranks by play count and hides
+everything under 0.1% of the archive. `--verify 20` then asks MusicBrainz which of the top names are
+shared by more than one act — the `score` column in the review file doesn't tell you this, since
+MusicBrainz returns 100 for any exact name match.
 
 ```bash
 node scripts/review-origins.mjs             # ranked by plays
 node scripts/review-origins.mjs --verify 20 # + name-collision check, after the backfill
 ```
 
-Artists resolved by name search — the only ones that can be confidently *wrong* — are listed in
+Artists resolved by name search — the only ones that can be *wrong* — are listed in
 `scripts/musicbrainz.review.txt`. Failure mode: a name shared by two acts (Last.fm resolves
 "Turnstile" to a Spanish group rather than the Baltimore band). Correct any in `ORIGIN_OVERRIDES`
 (`worker-listening/src/musicbrainz.ts`), applied when the lookup blob is built, so a correction
 needs no re-fetch — redeploy, then delete `meta:v1:built-at` from KV to rebuild immediately.
 
 **Era is groups only.** MusicBrainz's `life-span.begin` is a formation year for a band but a
-*birth* year for a person, so counting both would file Charli xcx under the 1990s. Solo artists are
-excluded from the era chart by design.
+*birth* year for a person, so solo artists are excluded from the era chart.
 
 ### Returning artists
 
@@ -308,8 +306,8 @@ The 365-day threshold lives in two places that must agree — `RETURN_GAP` in `s
 ### Baking periods into the build
 
 Completed periods are fetched at build time into `public/listening-data/` to serve as static assets
-instead of Worker requests. Runs automatically as `prebuild`, and never fails a build — an
-unreachable Worker just means the client fetches at runtime instead.
+instead of Worker requests. Runs automatically as `prebuild` and never fails a build — an
+unreachable Worker means the client fetches at runtime instead.
 
 ```bash
 npm run listening:bake                 # refresh the local copy by hand
@@ -359,10 +357,10 @@ npx wrangler d1 execute cailinpitt-reading --remote --file=schema-v3.sql
 ```
 
 The hourly cron pulls the whole library every run, but the rebuild (DELETE +
-re-insert of ~400 rows, each hitting several indexes) now runs only when a
-SHA-256 of the pulled library changes — books change a few times a week, so this
-takes the worker from ~100k D1 row-writes/day to near zero. The totals row is
-still refreshed at least once a day so a manual edit to `books` reconciles.
+re-insert of ~400 rows, each hitting several indexes) runs only when a SHA-256 of
+the pulled library changes — books change a few times a week, so this takes the
+worker from ~100k D1 row-writes/day to near zero. The totals row is still
+refreshed at least once a day so a manual edit to `books` reconciles.
 `schema-v3.sql` also drops `idx_books_status`, which `idx_books_read_seq` already
 covered.
 
@@ -404,10 +402,10 @@ npm run watching:sync -- --recompute   # rebuild the totals from the archive, no
 ```
 
 The hourly cron re-offers the feed's whole 50-entry window every run. Each write
-is now a guarded upsert (`… ON CONFLICT DO UPDATE … WHERE <any column differs>`),
-so a quiet run writes nothing and the totals are recomputed only when a row
-actually moved — no schema change, just deploy. Use `--recompute` after a bulk
-load, which the `changed > 0` guard can't see.
+is a guarded upsert (`… ON CONFLICT DO UPDATE … WHERE <any column differs>`), so a
+quiet run writes nothing and the totals are recomputed only when a row moved — no
+schema change, just deploy. Use `--recompute` after a bulk load, which the
+`changed > 0` guard can't see.
 
 Import the history behind the feed's 50-entry window (letterboxd.com/settings/data → export):
 
@@ -419,7 +417,7 @@ cd .. && npm run watching:sync -- --recompute   # rebuild the totals in `stats`
 ```
 
 The script resolves every `boxd.it` short link in the export to its real film slug and caches the
-results in `scripts/.watching-slugs.json`; delete that file to force a re-resolve. Both it and the
+results in `scripts/.watching-slugs.json`; delete that file to force a re-resolve. It and the
 generated `.sql` are gitignored.
 
 Inspect D1:
@@ -479,9 +477,8 @@ cd .. && npm run moving:sync -- --refresh   # fill in history; ~12 API requests
 ```
 
 `schema.sql` is `CREATE TABLE IF NOT EXISTS`, so it can't add a column to a table that already
-exists. Re-running `schema-v2.sql` fails with "duplicate column name" — that's how you know it was
-already applied. `--refresh` is what backfills the archive; the incremental sync only ever rewrites
-the last week.
+exists. Re-running `schema-v2.sql` fails with "duplicate column name", meaning it was already
+applied. `--refresh` backfills the archive; the incremental sync only rewrites the last week.
 
 Import history from the bulk export (strava.com/settings/privacy → request an archive):
 
@@ -492,9 +489,9 @@ cd worker-moving && npx wrangler d1 execute cailinpitt-moving \
 cd .. && npm run moving:sync -- --refresh   # fix dates, recompute `stats`
 ```
 
-`--refresh` is required, not tidiness: the export carries no local timestamp, so the generated SQL
-dates every activity with a fixed Central offset — only the API knows which day a ride actually
-belongs to. The generated `.sql` is gitignored.
+`--refresh` is required: the export carries no local timestamp, so the generated SQL dates every
+activity with a fixed Central offset — only the API knows which day a ride actually belongs to. The
+generated `.sql` is gitignored.
 
 After changing the `kind` mapping in `worker-moving/src/strava.ts`, re-derive the stored column —
 the sync only rewrites rows it fetched, so older rows keep the old bucket:
@@ -514,7 +511,7 @@ npx wrangler d1 execute cailinpitt-moving --remote \
   --command "SELECT start_date, kind, distance_mi FROM activities ORDER BY start_date DESC LIMIT 5"
 ```
 
-Dates look a day off? That is the export's UTC bucketing; compare against the real timestamp:
+Dates look a day off? That's the export's UTC bucketing. Compare against the real timestamp:
 
 ```bash
 npx wrangler d1 execute cailinpitt-moving --remote \
@@ -528,8 +525,8 @@ npx wrangler d1 execute cailinpitt-moving --remote --command "DROP TABLE activit
 npm run schema:remote                  # from worker-moving/
 ```
 
-Note this drops the `auth` row too if you drop the whole database rather than the table — the
-refresh token then has to be re-seeded from `STRAVA_REFRESH_TOKEN`.
+Dropping the whole database rather than the table also drops the `auth` row; the refresh token then
+has to be re-seeded from `STRAVA_REFRESH_TOKEN`.
 
 ```bash
 curl moving.cailinpitt.com             # terminal view; ?T for no color
@@ -539,7 +536,7 @@ curl moving.cailinpitt.com             # terminal view; ?T for no color
 
 Publishing is a page, not a command: **<https://cailinpitt.com/notes/compose>** on a computer, or
 the iOS Shortcut on a phone (recipe in [`worker-notes/README.md`](worker-notes/README.md)). Both
-need the `PUBLISH_TOKEN`; the compose page asks once per device and remembers it.
+need the `PUBLISH_TOKEN`; the compose page asks once per device.
 
 From a terminal:
 
@@ -579,7 +576,7 @@ wrangler secret put PUBLISH_TOKEN          # openssl rand -hex 32
 npm run deploy
 ```
 
-Rotating `PUBLISH_TOKEN` signs out every device — that is how to revoke a lost phone.
+Rotating `PUBLISH_TOKEN` signs out every device; use it to revoke a lost phone.
 
 ## Guestbook — moderation
 

@@ -10,11 +10,10 @@
 //
 //   --fetch  →  npm run images:sync  →  npm run images:upload  →  --finish  →  commit
 //
-// The two middle steps are the ordinary local pipeline, unchanged: once --fetch
-// has put the files in originals/<year>/, a photo from the phone is
-// indistinguishable from one added at the laptop. That is the whole point of
-// splitting this in two — there is no second code path that publishes photos,
-// only a second way of getting the files into originals/.
+// The two middle steps are the ordinary local pipeline: once --fetch has put the
+// files in originals/<year>/, a phone photo is like one added at the laptop.
+// There's no second code path that publishes photos, only a second way of
+// getting files into originals/.
 //
 // Required env (same R2 API token as the other scripts, plus the second bucket):
 //   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ORIGINALS_BUCKET

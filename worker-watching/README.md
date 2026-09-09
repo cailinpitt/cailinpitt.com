@@ -4,8 +4,8 @@ The API behind [cailinpitt.com/watching](https://cailinpitt.com/watching). Films
 Letterboxd diary RSS feed; D1 stores them, R2 holds mirrored poster art, and an hourly cron pulls
 the feed.
 
-Sibling of `worker-reading`, deliberately shaped like it — same CORS rules, same edge-cached
-bundle, same `curl` text view, same admin-token `/sync`.
+Sibling of `worker-reading`, shaped like it — same CORS rules, same edge-cached bundle, same
+`curl` text view, same admin-token `/sync`.
 
 ## Why RSS
 
@@ -17,13 +17,12 @@ markup, so this isn't scraping and a site redesign can't break it. Two consequen
 - The feed is a **50-entry window** — why every write is an upsert (`schema.sql`) and why history
   behind it needs a one-time CSV import (see "Backfill").
 - Letterboxd **403s requests that don't look like a browser**. The `user-agent` in `fetchDiary()`
-  is load-bearing. If Letterboxd ever blocks Cloudflare egress by IP, `/sync` fails with a
+  must stay set. If Letterboxd ever blocks Cloudflare egress by IP, `/sync` fails with a
   `FeedError`; the fix is moving that fetch into a GitHub Action and POSTing parsed entries in —
   the storage half needs no changes.
 
-Television is deliberately absent — no free way to get it: Hulu and Max publish no history, Simkl
-says as much outright, Trakt's Streaming Scrobbler is paid, and Trakt has since moved API
-application creation behind VIP too.
+Television is absent — no free way to get it: Hulu and Max publish no history, Trakt's Streaming
+Scrobbler is paid, and Trakt has moved API application creation behind VIP.
 
 ## Setup
 

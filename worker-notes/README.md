@@ -11,18 +11,17 @@ phone Shortcut ─┐
                                      └─→ cailinpitt.com/notes/<id> ─→ a shared link
 ```
 
-## The one decision worth understanding
+## The main design decision
 
-**Nothing here is prerendered, and that is the point.**
+**Nothing here is prerendered, deliberately.**
 
-Everything else on the site is static HTML at build time. The photo pipeline goes to real
-trouble — Worker, `repository_dispatch`, workflow, commit — so a phone photo is the same kind of
-object as one added from a laptop: prerendered, permalinked, with a social card. Notes
-deliberately don't do that.
+Everything else on the site is static HTML at build time. The photo pipeline goes through several
+steps — Worker, `repository_dispatch`, workflow, commit — so a phone photo is the same kind of
+object as one added from a laptop: prerendered, permalinked, with a social card. Notes don't do
+that.
 
-A thought worth 480 characters is worth publishing in the two seconds it takes to type it. One
-that had to wait for a green CI run to appear simply wouldn't get written, however well-built the
-feature. So notes live in D1 and the page fetches them.
+A note that had to wait for a green CI run to appear wouldn't get written. So notes live in D1 and
+the page fetches them.
 
 Costs accepted:
 
@@ -32,8 +31,7 @@ Costs accepted:
 | **Invisible to crawlers that don't run JS** | The permalink's HTML carries real `<meta property="og:...">` tags for link-unfurl bots; a general crawler gets redirected into the SPA like any browser. `/feed.xml` keeps notes syndicable either way |
 | **A Worker outage empties the page** | Same contract as `/listening` and `/reading` — the prerendered shell stays, the content doesn't arrive |
 
-If a note ever deserves to be a real page, it wasn't a note — it was a post, and `content/blog/`
-is where it goes.
+If a note needs to be a real page, it's a post, and belongs in `content/blog/`.
 
 ## Setup
 
@@ -68,15 +66,15 @@ Point the site at it with `VITE_NOTES_API=http://localhost:8787` in the repo roo
 | `PATCH /notes/:id` | Rewrite, stamping `edited_at`. Returns the updated note |
 | `DELETE /notes/:id` | Immediate and permanent, like `guestbook:rm` |
 
-`text` is read from JSON, a form field, or the raw body — whichever's easiest for the caller. Form
-and raw shapes exist for Shortcuts, whose *Get Contents of URL* makes JSON awkward to build by
-hand — the same accommodation `worker-photos` makes, for the same reason.
+`text` is read from JSON, a form field, or the raw body. Form and raw shapes exist for Shortcuts,
+whose *Get Contents of URL* makes JSON awkward to build by hand — the same accommodation
+`worker-photos` makes.
 
 A JSON body may also carry `contextType` (`"photo"` | `"activity"` | `"post"`) and `contextRef`
 (that thing's own id — a photo id, an activity id, or a post's path), an optional reference to one
-other piece of site content. Both or neither: one without the other is refused rather than guessed
-at (`validateContext` in `src/validate.ts`). The Shortcut and raw-body paths never send these —
-fine, since every note's reference is optional.
+other piece of site content. Both or neither: one without the other is refused (`validateContext`
+in `src/validate.ts`). The Shortcut and raw-body paths never send these, which is fine since the
+reference is optional.
 
 ```sh
 TOKEN=…
@@ -90,8 +88,8 @@ curl -X DELETE https://notes.cailinpitt.com/notes/a3f91c2b40d1 \
 ```
 
 **Editing and deleting are first-class**, because publishing from a phone means publishing typos.
-An edit stamps `edited_at` and the site renders an "edited" marker from it — a permalink that
-quietly changes what it says is the thing worth avoiding, not the edit.
+An edit stamps `edited_at` and the site renders an "edited" marker so a permalink doesn't silently
+change.
 
 ### Reads — public, behind a 30-second edge cache
 
@@ -150,8 +148,8 @@ which need Node and can't run in a Worker — just asynchronously instead of at 
 `worker-photos`'s `dispatchBuild`), `.github/workflows/note-og.yml` runs
 `scripts/generate-note-og.mjs` (a minimal card — no kicker, no spine, just the note's own text and
 a small byline, matching the single-note page), and uploads to R2 at `og/notes/<id>.jpg`. The
-image typically lags the note's text by 30-90 seconds; a failed dispatch just costs that one
-note's card, the same non-blocking trade `dispatchBuild` makes.
+image typically lags the note's text by 30-90 seconds; a failed dispatch costs that one note's
+card, the same non-blocking trade `dispatchBuild` makes.
 
 The JSON and text/HTML variants are cached like everything else here (`caches.default`,
 30-second TTL), keyed per id since they can't sit in the blanket `CACHED_READS` list —
@@ -167,9 +165,9 @@ purge a key that was never written.
 each post. Notes have no prerendered HTML, so that generator would have nothing to read — and a
 build-time feed would only refresh when something unrelated triggered a deploy.
 
-It's a **separate feed** from the site's on purpose: someone who subscribed for essays didn't sign
-up for every passing thought, and vice versa. `/notes` advertises it with its own
-`<link rel="alternate">`; `index.html` still advertises `/feed.xml` everywhere.
+It's a **separate feed** from the site's on purpose, so an essay subscriber isn't opted into notes
+and vice versa. `/notes` advertises it with its own `<link rel="alternate">`; `index.html` still
+advertises `/feed.xml` everywhere.
 
 ## Publishing from an iPhone
 
@@ -211,9 +209,9 @@ posting.
 existing database — see the comment in that file); a fresh `schema.sql` includes them from the
 start. Both are nullable and always travel together — see `validateContext()` in `src/validate.ts`.
 
-The pagination cursor is `<created_at>_<id>`, not a bare timestamp. Two notes in the same second
-is one Shortcut firing twice on a flaky connection — it happens — and a bare-timestamp cursor
-would then either skip the second note or loop on it forever.
+The pagination cursor is `<created_at>_<id>`, not a bare timestamp: two notes can land in the same
+second (a Shortcut firing twice on a flaky connection), and a bare-timestamp cursor would then skip
+the second note or loop on it.
 
 ## Notes are plain text, not Markdown
 
@@ -223,9 +221,9 @@ string anywhere in the pipeline and no `dangerouslySetInnerHTML` — a note can'
 to the page no matter what was typed. The RSS feed is the one place a note's text meets a parser,
 and `feed.ts` escapes on the way out.
 
-That's also why validation is so short (`src/validate.ts`): bound the length, normalize
-whitespace, strip invisibles. The guestbook's equivalent is long because it's deciding what a
-stranger may store; this one only ever says no to Cailin.
+Validation is short (`src/validate.ts`): bound the length, normalize whitespace, strip invisibles.
+The guestbook's equivalent is long because it decides what a stranger may store; this one only
+rejects Cailin's own input.
 
 ## Tests
 

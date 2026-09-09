@@ -85,8 +85,7 @@ Saving a link twice is a no-op *except* for the note — an explicit note is alw
 response says `noted: true`.
 
 Deleting leaves the mirrored image in R2 on purpose: keys are content-addressed, so re-saving
-reuses the object, and `prune-r2.mjs` never touches this prefix. A few KB is cheaper than risking
-deletion of an image another row still points at.
+reuses the object, and `prune-r2.mjs` never touches this prefix.
 
 `/ingest` allows **any** origin. The bookmarklet runs in the page context of whatever article is
 open, so an allowlist can't work — the token is the security boundary.
@@ -108,11 +107,10 @@ in settings enable **Show in Share Sheet** accepting *URLs* and *Safari web page
   3. Get Contents of URL          url → URLs, note → Ask for Input
   ```
 
-  > Order is load-bearing. Shortcuts defaults every action's input to the *previous action's
-  > output*, so if **Ask for Input** sits above **Get URLs from Input**, that action hunts for a
-  > url inside the note you typed, `url` arrives empty, and the API rejects the body. The variable
-  > picker doesn't reliably offer "Shortcut Input", so relying on the default order is the
-  > dependable fix.
+  > Order matters. Shortcuts defaults every action's input to the *previous action's output*, so
+  > if **Ask for Input** sits above **Get URLs from Input**, that action hunts for a url inside the
+  > note you typed, `url` arrives empty, and the API rejects the body. The variable picker doesn't
+  > reliably offer "Shortcut Input", so rely on the default order.
 
 ### Desktop bookmarklets
 
@@ -136,7 +134,7 @@ javascript:(()=>{if(!confirm('Remove from reading?'))return;fetch('https://readi
 That worker precomputes blobs into KV because it has ~100k scrobbles and a per-minute cron. This
 one has a few hundred books and a few thousand articles, so every query in `src/store.ts` is a
 small indexed scan and the bundle is built straight from D1 behind a 5-minute edge cache. KV here
-would be a staleness ladder in exchange for nothing.
+would add staleness for nothing.
 
 ### Caching
 
@@ -151,7 +149,7 @@ The page is static HTML on GitHub Pages, so a `/reading` visit costs exactly **o
 
 **Cost per bundle build** (per edge cache miss) is ~49 D1 rows: ~2 currently reading, 25 finished
 books, 21 articles, 1 precomputed `stats` row. That number is **flat** — it doesn't grow with the
-archive. Two fixes got it there, both worth preserving:
+archive. Two fixes got it there:
 
 - **Pagination, not full history.** The bundle used to carry every finished book. It's rebuilt per
   edge colo per TTL, so payload size multiplies by traffic — history is unbounded but the bundle
@@ -164,7 +162,7 @@ the edge cache doesn't reduce that, since the Cache API runs *inside* the Worker
 matter above ~100k builds/day, which the TTL puts out of reach; `EDGE_TTL` is the lever if it ever
 gets close. Writes are negligible.
 
-### The subrequest budget is the real constraint
+### The subrequest budget
 
 On the free plan an invocation gets **50 subrequests**, and R2/KV/D1 binding calls count alongside
 `fetch()`. That shapes two things:
@@ -195,7 +193,7 @@ differs from last time. On an unchanged library the sync refreshes the totals ro
 once a day (`STATS_MAX_AGE`), so a manual edit to `books` still reconciles. Steady-state writes:
 near zero.
 
-## Testing in pieces
+## Testing
 
 ### Books, without deploying
 
@@ -218,7 +216,7 @@ Deploy, then drive the sync through `POST /sync`:
 npm run reading:sync                  # from the repo root
 ```
 
-Prints `{ books, rows, coversMirrored, coversRemaining }` — also how to pick up a book you just
+Prints `{ books, rows, coversMirrored, coversRemaining }`. Use it to pick up a book you just
 finished without waiting for 09:00 UTC. If `ADMIN_TOKEN` and `READING_ADMIN_TOKEN` in `.env`
 drift, `/sync` returns 401 — re-put both.
 
@@ -272,7 +270,7 @@ npx wrangler d1 execute cailinpitt-reading --remote \
   --command "SELECT url, title, site, image, note, read_at FROM articles ORDER BY read_at DESC LIMIT 5"
 ```
 
-Worth checking explicitly:
+Worth checking:
 
 - **Idempotency** — post the same link with `?utm_source=x` appended. Still one row, `stored:
   false`, original `read_at` kept: the id hashes the *canonical* url.
@@ -295,9 +293,9 @@ reading now (falling back to the last book finished, so the top is never blank b
 this year and all-time counts, the last 8 books finished with ratings, and the last 8 articles
 grouped by day.
 
-The renderer deliberately copies the listening worker's helpers (`clip`, `fit`, `ink`, `stars`)
-rather than sharing a module — the two Workers are separate packages with separate deploys, and a
-shared package would couple them for about 60 lines of string padding.
+The renderer copies the listening worker's helpers (`clip`, `fit`, `ink`, `stars`) rather than
+sharing a module — the two Workers are separate packages with separate deploys, and a shared
+package would couple them for ~60 lines of string padding.
 
 ## R2
 

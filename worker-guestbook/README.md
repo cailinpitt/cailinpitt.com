@@ -1,13 +1,13 @@
 # Guestbook API (Cloudflare Worker)
 
 Backs [`cailinpitt.com/guestbook`](https://cailinpitt.com/guestbook). The only endpoint on this
-site that accepts **writes from the public** — what makes it different from the other Workers.
+site that accepts **writes from the public**.
 
 | File | What it does |
 |---|---|
-| `src/index.ts` | routing, CORS, edge cache, the write gauntlet, admin routes |
+| `src/index.ts` | routing, CORS, edge cache, the write path, admin routes |
 | `src/validate.ts` | every rule about what a stranger may type |
-| `src/turnstile.ts` | siteverify call — the part that stops automation |
+| `src/turnstile.ts` | siteverify call |
 | `src/store.ts` | all D1 access (list, insert, delete, rate-limit counts) |
 | `src/text.ts` | the `curl guestbook.cailinpitt.com` view |
 | `src/hash.ts` | salted IP hashing + entry ids |
@@ -66,15 +66,13 @@ root.
 ### Instant publish, moderate after
 
 Entries go live the moment they pass — no pending state, no approval queue; deleting is immediate
-and permanent. The trade: signing a guestbook should feel like signing a guestbook, and the
-defenses below make it affordable to skip the queue.
+and permanent. The defenses below make it affordable to skip the queue.
 
 Moderation is `npm run guestbook:list` / `npm run guestbook:rm -- <id>` from the repo root
-(`scripts/guestbook.mjs`). The admin listing includes each entry's IP hash and flags repeats,
-since ten entries under ten names from one hash is the shape a flood actually has — invisible on
-the public page.
+(`scripts/guestbook.mjs`). The admin listing includes each entry's IP hash and flags repeats from
+one hash, which the public page doesn't show.
 
-### The write gauntlet
+### The write path
 
 Ordered cheapest-first, so an attack is turned away before it costs a query:
 
@@ -82,17 +80,17 @@ Ordered cheapest-first, so an attack is turned away before it costs a query:
 |---|---|---|
 | 1 | Origin against `ALLOWED_ORIGIN` (+ loopback) | the form driven from another page |
 | 2 | Honeypot `nickname` field | anything filling every input in the DOM |
-| 3 | Turnstile siteverify | automation, which is the actual threat |
+| 3 | Turnstile siteverify | automation |
 | 4 | `validate.ts` — lengths, link cap, URL scheme | junk and payload attempts |
 | 5 | Per-IP: 3/hour, 10/day | one person flooding |
 | 6 | Global: 60/hour | a botnet, and the D1 bill |
 
 Only 5 and 6 touch the database, both index seeks over `(ip_hash, created_at)`.
 
-**Turnstile is load-bearing.** Everything else raises the cost of an attack; Turnstile makes a
-submission loop not work at all — the token is single-use and short-lived, so a captured request
-body can't be replayed. It fails **closed**: an outage makes the guestbook briefly read-only
-rather than briefly open. The read path never calls it.
+**Turnstile is the key check.** Everything else raises the cost of an attack; Turnstile stops a
+submission loop outright — the token is single-use and short-lived, so a captured request body
+can't be replayed. It fails **closed**: an outage makes the guestbook read-only rather than open.
+The read path never calls it.
 
 **The honeypot returns a fake success.** A bot filling the hidden field gets
 `200 {"ok":true,"entry":null}` and nothing is written — telling it the truth would teach it to
@@ -100,7 +98,7 @@ skip the field.
 
 **The global limit is the cost ceiling.** Per-IP limits do nothing against a distributed attack,
 so the guestbook refuses more than `GLOBAL_HOURLY` (60) entries an hour — worst case ~1,440
-rows/day against D1's 100,000 free writes. Real human attention arrives as tens of entries a day.
+rows/day against D1's 100,000 free writes. Real traffic is tens of entries a day.
 
 ### IP addresses are never stored
 
@@ -114,13 +112,13 @@ existing rows no longer hash to anything a new request matches.
 ### Escaping happens on output, not input
 
 Stored text is exactly what someone typed, minus control and format characters. The page renders
-entries as React text nodes, never as markup, so a stored `<script>` is eleven visible characters.
+entries as React text nodes, never as markup, so a stored `<script>` renders as visible text.
 
 Escaping matters in the terminal too: `src/text.ts` strips control characters before printing,
 since a raw byte stream could carry ANSI sequences that repaint a reader's screen.
 `scripts/guestbook.mjs` does the same.
 
-Links carry `rel="nofollow ugc noopener noreferrer"`, removing the reason to spam a guestbook.
+Links carry `rel="nofollow ugc noopener noreferrer"`.
 
 ### No KV, no cron
 

@@ -10,15 +10,14 @@ Shortcut → POST /ingest → R2 (private originals bucket) → GitHub repositor
 
 ## Scope
 
-Authenticates the request, checks the file, stores it, and rings a bell — that's all.
+Authenticates the request, checks the file, stores it, fires a dispatch — that's all.
 
 No resizing, no EXIF reads, no writing anything the site reads. Renditions need `sharp` (doesn't
 run in a Worker); the photo manifest is a file in git. Both belong to the build — see
 `scripts/ingest-photos.mjs`.
 
-Consequence: **publishing takes a deploy, not a second.** In exchange a phone photo is the same
-kind of photo as one added from the laptop — prerendered, permalinked, with a social card, in the
-same `src/lib/photos.json` — not a second-class runtime-only photo.
+Consequence: **publishing takes a deploy.** In exchange a phone photo is like one added from the
+laptop — prerendered, permalinked, with a social card, in the same `src/lib/photos.json`.
 
 ## Setup
 
@@ -97,13 +96,12 @@ converts to JPEG first.
 Share sheet → Photos. Seven actions:
 
 1. **Receive** images from the share sheet.
-2. **Convert Image** → JPEG, **Preserve Metadata: On**. Load-bearing: off, and the photo arrives
-   stripped, dateable only to the year.
+2. **Convert Image** → JPEG, **Preserve Metadata: On**. If it's off, the photo arrives stripped,
+   dateable only to the year.
 3. **Get Details of Images** → *Creation Date*.
-4. **Format Date** on that, **Custom** format `yyyy-MM-dd'T'HH:mm:ss`. Also load-bearing:
-   Shortcuts otherwise formats by locale (`8/2/26, 3:42 PM`), which `/ingest` can't read — it
-   falls back to upload time and may file the photo under the wrong year. Only the id/folder are
-   affected, but the id is permanent.
+4. **Format Date** on that, **Custom** format `yyyy-MM-dd'T'HH:mm:ss`. Shortcuts otherwise formats
+   by locale (`8/2/26, 3:42 PM`), which `/ingest` can't read — it falls back to upload time and may
+   file the photo under the wrong year. Only the id/folder are affected, but the id is permanent.
 5. *(optional)* **Ask for Input** → Text, "Alt text?".
 6. **Get Contents of URL**
    - URL `https://photos.cailinpitt.com/ingest`, Method `POST`

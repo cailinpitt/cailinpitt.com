@@ -25,9 +25,9 @@ into D1 on a cron and serves a precomputed JSON bundle from KV.
 - `GET /periods.json` — which period blobs exist, for the navigator and the build-time bake
 - `GET /` or `/listening` — terminal view for CLI user-agents, else a 302 to the site
 
-`/<year>` and `/<year>.json` are aliases for `/p/y/<year>.json` — the published `curl
-listening.cailinpitt.com/2025` address kept working, but it's no longer a second implementation.
-The year-in-review once computed from D1 on request is gone.
+`/<year>` and `/<year>.json` are aliases for `/p/y/<year>.json`. `curl
+listening.cailinpitt.com/2025` keeps working, but it's no longer a second implementation computed
+from D1 on request.
 
 ### Period blobs are read-only
 
@@ -40,7 +40,7 @@ Completed periods are immutable and served with a 24-hour edge TTL; the site add
 them into the build as static assets, which don't count against the Workers request ceiling at
 all.
 
-### Unauthenticated endpoints are a budget anyone can spend
+### Unauthenticated endpoints and cost
 
 An edge cache doesn't protect a D1-backed endpoint from abuse: vary a query parameter and the
 cache key is fresh. So the only real lever is **rows read per request**, sized so the Workers
@@ -58,20 +58,18 @@ traffic instead of the database going dark.
 250` = 3,500 rows for the 14 days `/timeline` asks for (~1,400 requests to a whole day's budget);
 it's now capped at 900.
 
-**If this ever matters in practice, the fix is a Cloudflare Rate Limiting rule, not more tuning
-here.** The free plan includes one, and rate limiting is the right layer for it — no per-request
-cap makes an open endpoint immune.
+**If this ever matters in practice, add a Cloudflare Rate Limiting rule rather than tuning further
+here.** The free plan includes one.
 
 **`/during` is cheap by construction, not by caching.** It's an index range over
 `idx_scrobbles_uts` returning a couple dozen rows, asked only when a visitor expands an activity
-on /moving — a page of thirty costs nothing to render. The 24-hour span cap keeps it that way:
-without it the endpoint is a full-archive scan with extra steps. A window that ended over an hour
-ago can never gain scrobbles, so it caches for a day; one still in progress does not.
+on /moving. The 24-hour span cap keeps it that way; without it the endpoint is a full-archive
+scan. A window that ended over an hour ago can never gain scrobbles, so it caches for a day; one
+still in progress does not.
 
 **The blob namespace is part of the edge cache key.** `PREFIX` is folded into the cache variant
-for `/p/…` and `/<year>`, so bumping it invalidates the edge along with KV. Without that, bumping
-the prefix would rebuild every period correctly and change nothing a visitor could see for up to
-24 hours — the rebuild would be invisible behind a stale cache entry.
+for `/p/…` and `/<year>`, so bumping it invalidates the edge along with KV. Without that, a rebuild
+would sit invisible behind a stale cache entry for up to 24 hours.
 
 ## Setup
 
@@ -123,20 +121,18 @@ The cron fires every minute, but only the cheap work runs that often:
 Reads are served from KV, so page loads never touch D1 or Last.fm.
 
 **A tick does ingest plus at most one heavy thing.** Stacking the legacy refresh and a period
-compute into one invocation is how the CPU ceiling and the KV write budget both get blown, so they
-take turns. At 1,440 ticks a day there's no hurry.
+compute into one invocation blows the CPU ceiling and the KV write budget, so they take turns. At
+1,440 ticks a day there's no hurry.
 
 **The backfill is finite, so its rate isn't a budget question.** Building the archive costs ~356
-KV writes *total* — one per period, then pickWork finds nothing and it stops. Spreading those over
-eighteen hours costs exactly what spreading them over two hours costs. An earlier version
-throttled it to one period every three minutes, reasoning as though it ran forever; that bought
-nothing and made a rebuild after a `PREFIX` bump take most of a day.
+KV writes total — one per period, then pickWork finds nothing and it stops. An earlier version
+throttled it to one period every three minutes as though it ran forever; that bought nothing and
+made a rebuild after a `PREFIX` bump take most of a day.
 
-What actually binds is **CPU: 10 ms per invocation, scheduled events included** — far tighter than
-the D1 query ceiling and the real limit on how much a tick can do. Batching several periods per
-tick blew through it, and the failure mode is quiet: the invocation ends as `exceededCpu`, writes
-nothing, and the backfill stalls on whatever period it reached with no error in the logs. It looks
-exactly like the cron having stopped.
+What binds is **CPU: 10 ms per invocation, scheduled events included** — tighter than the D1 query
+ceiling. Batching several periods per tick blew through it, and the failure mode is quiet: the
+invocation ends as `exceededCpu`, writes nothing, and the backfill stalls with no error in the
+logs, looking like the cron stopped.
 
 Two things kept it inside the budget:
 
@@ -151,10 +147,10 @@ The write budget still shapes everything *recurring*: KV allows 1,000/day, `now:
 and the live period blobs ~65. It's also why there's no period *index* key — maintaining one would
 cost a write per frozen period, so `/periods.json` lists KV instead, which costs a read.
 
-**Layer 1 counters increment, so they must only see genuinely new rows.** Ingest re-offers an hour
-of overlap on every pull and lets `INSERT OR IGNORE` drop the duplicates. Those dropped rows must
-not reach the summary tables or `plays` drifts upward every minute forever — hence `RETURNING` on
-the archive insert, which yields only rows that were actually stored.
+**Layer 1 counters increment, so they must only see new rows.** Ingest re-offers an hour of
+overlap on every pull and lets `INSERT OR IGNORE` drop the duplicates. Those dropped rows must not
+reach the summary tables or `plays` drifts upward every minute — hence `RETURNING` on the archive
+insert, which yields only rows that were actually stored.
 
 ### Budget after the period work
 
@@ -175,7 +171,7 @@ Workers 100k requests/day.
 The backfill is the only thing that approaches the KV write ceiling, and only on the day it runs —
 once the archive is walked, completed periods are never rewritten and the steady state is ~370.
 
-**Two things that were nearly cost regressions, and how they were avoided:**
+**Two things that were nearly cost regressions:**
 
 *The year summary on `/listening`.* The obvious implementation fetches `/p/y/<year>.json` from the
 page — a 21 KB response to display five numbers, and, since a Cache API hit still executes the
@@ -195,9 +191,9 @@ unconditionally. `ingest()` reads `now:v1` and rewrites it only when the observa
 run would look changed. Budget: a few hundred writes/day for `now:v1`, 96 for `stats:v1`, 4 for
 `heatmap:v1`.
 
-### Four rules for changing anything here
+### Five rules for changing anything here
 
-Both expensive mistakes in this file were made by measuring *after* deploying.
+Both expensive mistakes below were found only after deploying.
 
 **1. `GROUP BY artist` needs `INDEXED BY`.** It matches `idx_scrobbles_artist` exactly, so SQLite
 plans `SCAN scrobbles USING INDEX idx_scrobbles_artist` — a full ~101k-row scan that **ignores the
@@ -227,13 +223,13 @@ rows instead of ~10k. If you change `windowStats()`, re-verify against the SQL i
 `COUNT(DISTINCT album)` counts album *names*, not name+artist, and it's easy to "fix" that into a
 discrepancy.
 
-**5. `UNION ALL` is capped at five branches.** D1 sets SQLITE_MAX_COMPOUND_SELECT to 5, not
+**4. `UNION ALL` is capped at five branches.** D1 sets SQLITE_MAX_COMPOUND_SELECT to 5, not
 SQLite's default 500, so a six-branch compound query fails at runtime with `too many terms in
 compound SELECT` — and only at runtime, since nothing about it is a type error. `countInWindows()`
 uses `db.batch()` of small statements instead, bounded by the ~50-statements-per-invocation limit.
 If you need N of something in one round trip, reach for `batch()`, not `UNION`.
 
-**4. Two things that look cheap and aren't:** `SELECT COUNT(*)` over the archive reads ~100k rows
+**5. Two things that look cheap and aren't:** `SELECT COUNT(*)` over the archive reads ~100k rows
 (at the 15-minute cadence that blows past 5M/day), and a per-tick counter key in KV costs a write
 every time it moves.
 
@@ -271,7 +267,7 @@ Two things the cache key must account for:
   origin-independent and `withCors()` re-applies the right header per request. Storing them would
   serve one visitor's `access-control-allow-origin` to everyone behind that cache entry.
 
-`/now.json` is deliberately uncached: one KV read, the one endpoint whose staleness is visible.
+`/now.json` is uncached: one KV read, and it's the one endpoint whose staleness is visible.
 
 ## Terminal view
 
@@ -286,17 +282,16 @@ The wttr.in trick: an 80-column ANSI page instead of JSON. Dispatch is on User-A
 scripts piping into `jq` are unaffected. Color is on by default because curl can't tell the server
 it's a TTY; `?T` opts out.
 
-A browser on those paths gets a **302 with `no-store`** — deliberately not permanent or
-shared-cacheable, since the response varies by User-Agent and a cached redirect could later be
-replayed to a client that wanted the terminal view. Only the text variant is written to the edge
-cache, keyed `__variant=text`.
+A browser on those paths gets a **302 with `no-store`** — not permanent or shared-cacheable, since
+the response varies by User-Agent and a cached redirect could be replayed to a client that wanted
+the terminal view. Only the text variant is written to the edge cache, keyed `__variant=text`.
 
 Two rendering details that are easy to regress:
 
 - Pad with `fit()` only for columns with something to their right. On a line's last field the
   padding lands *inside* the ANSI color wrap, where `trimEnd()` can't reach it.
 - The 30-day sparkline takes `max(heatmap, recentDays)` per day. The heatmap recomputes every 6h,
-  so on its own it draws today — the cell people look at first — as empty.
+  so on its own it draws today as empty.
 
 ## Timezone
 

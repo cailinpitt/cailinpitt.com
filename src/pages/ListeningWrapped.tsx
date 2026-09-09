@@ -51,8 +51,7 @@ export function Component() {
         title={`Listening · ${year} wrapped`}
         description={`Cailin Pitt's ${year} in music — top artists, tracks and genres, listening time, and the patterns behind them.`}
         path={`/listening/wrapped/${year}`}
-        // The one /listening sub-page worth its own card — a year in review
-        // is what anyone would actually share.
+        // The one /listening sub-page with its own card.
         card={{ kicker: 'Listening', meta: `${year} in review` }}
       />
       <section className="listening wrapped">

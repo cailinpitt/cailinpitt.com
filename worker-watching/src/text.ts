@@ -66,7 +66,7 @@ function shortDate(date: string): string {
 }
 
 // "★★★½" from a 0–5 rating. Half stars rendered, not rounded (unlike the book
-// shelf) — on Letterboxd the half is the whole point of the scale.
+// shelf), since Letterboxd ratings are half-star.
 function stars(rating: number | null): string {
   if (rating == null || rating <= 0) return ''
   const full = Math.floor(rating)

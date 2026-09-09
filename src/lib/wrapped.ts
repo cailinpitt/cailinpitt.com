@@ -1,11 +1,10 @@
 // Turns a period's PeriodStats into a narrative. Pure, no fetching. Two rules: never assert
-// what the data doesn't support (missing/thin inputs just skip the card or trait), and
-// thresholds are stated in one block (T below) rather than hidden inline. Voice is first
-// person — "I played", not "you played", since this is Cailin's listening on Cailin's site.
+// what the data doesn't support (missing/thin inputs skip the card or trait), and thresholds
+// live in one block (T below) rather than inline. Voice is first person — "I played".
 
 import type { PeriodStats } from './listening'
 
-// Below this many scrobbles, "my top artist" is noise and the traits are coin flips.
+// Below this many scrobbles, top artist and traits aren't meaningful.
 export const MIN_SCROBBLES = 50
 
 const T = {

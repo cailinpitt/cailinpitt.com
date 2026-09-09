@@ -1,13 +1,12 @@
 # Comments API (Cloudflare Worker)
 
 Backs the comment thread under each post on [`cailinpitt.com/blog`](https://cailinpitt.com/blog).
-Sibling to `worker-guestbook` — same write gauntlet, same instant-publish-then-moderate design —
-scoped per post instead of sitewide. See that worker's README for the full write-gauntlet
-reasoning.
+Sibling to `worker-guestbook` — same write path, same instant-publish-then-moderate design —
+scoped per post instead of sitewide. See that worker's README for the full write-path reasoning.
 
 | File | What it does |
 |---|---|
-| `src/index.ts` | routing, CORS, edge cache, the write gauntlet, admin routes |
+| `src/index.ts` | routing, CORS, edge cache, the write path, admin routes |
 | `src/validate.ts` | input rules, plus the post-path shape check |
 | `src/turnstile.ts` | siteverify call |
 | `src/store.ts` | all D1 access |
@@ -62,4 +61,4 @@ Point the site at it with `VITE_COMMENTS_API=http://localhost:8788 npm run dev`.
 - Scoped by `post_path`; rate limits and admin listing still run across all posts.
 - No `location` field.
 - No curl/text view — there's no single page to browse from a terminal.
-- Same Turnstile widget as the guestbook, deliberately, since one site key covers the domain.
+- Same Turnstile widget as the guestbook — one site key covers the domain.
