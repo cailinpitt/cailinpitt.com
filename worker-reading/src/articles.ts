@@ -113,13 +113,16 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
 
   const meta = await fetchMetadata(url)
   const image = await mirrorImage(env, meta.image)
+  const now = Math.floor(Date.now() / 1000)
 
   // Increment rather than COUNT(*), which would grow with the archive; the sync
   // reconciles any drift (on a rebuild, and at least once a day otherwise).
+  // enriched_at null when no title was found — the hourly cron retries (enrich.ts).
   await env.DB.batch([
     env.DB.prepare(
-      `INSERT OR IGNORE INTO articles (id, url, title, site, excerpt, image, note, read_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
+      `INSERT OR IGNORE INTO articles
+         (id, url, title, site, excerpt, image, note, read_at, enriched_at, attempts, last_attempt_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10)`,
     ).bind(
       id,
       url,
@@ -128,7 +131,9 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
       meta.excerpt,
       image,
       cleanNote(input.note),
-      input.readAt ?? Math.floor(Date.now() / 1000),
+      input.readAt ?? now,
+      meta.title ? now : null,
+      now,
     ),
     env.DB.prepare('UPDATE stats SET articles = articles + 1 WHERE id = 1'),
   ])

@@ -9,15 +9,16 @@ one read API:
 
 | File | What it does |
 |---|---|
-| `src/index.ts` | `scheduled` (hourly sync) and `fetch` (read API + `/ingest`) |
+| `src/index.ts` | `scheduled` (hourly: sync ∥ re-enrich) and `fetch` (read API + `/ingest`) |
 | `src/hardcover.ts` | hardcover.app GraphQL client |
 | `src/sync.ts` | full-replace library ingest into D1 |
 | `src/articles.ts` | url canonicalization + save / annotate / remove |
-| `src/metadata.ts` | og:/twitter: extraction via `HTMLRewriter` |
+| `src/metadata.ts` | og:/twitter:/JSON-LD/`<p>` extraction via `HTMLRewriter`, with a link-unfurler UA retry |
+| `src/enrich.ts` | hourly retry of articles whose card came back without a title |
 | `src/images.ts` | mirrors covers + social cards into R2 |
 | `src/store.ts` | D1 reads for the bundle and article pagination |
 | `src/text.ts` | the `curl reading.cailinpitt.com` view |
-| `schema.sql` | `books`, `articles`, `stats` |
+| `schema.sql` | `books`, `articles`, `stats` (apply `schema-v4.sql` to an existing DB) |
 
 ## Endpoints
 
@@ -192,6 +193,17 @@ a SHA-256 of exactly what it would write (`libraryFingerprint()`, stored in `sta
 differs from last time. On an unchanged library the sync refreshes the totals row alone, and only
 once a day (`STATS_MAX_AGE`), so a manual edit to `books` still reconciles. Steady-state writes:
 near zero.
+
+### Article metadata is retried, not one-shot
+
+The `/ingest` fetch of a page's social card gets two tries — the honest UA, then
+`Slackbot-LinkExpanding` (publishers that 403 an unknown agent usually allowlist link
+unfurlers). Anything still missing a title is retried by `reenrichArticles()` (`src/enrich.ts`),
+which runs in parallel with the sync on the hourly cron — `BATCH` rows per pass, with backoff, up
+to `MAX_ATTEMPTS`. One cron, sharing the ~50-subrequest budget: the account is at the free-plan
+5-trigger limit. `articles.enriched_at` is the flag: null until a fetch produces a title. Beyond
+og:/twitter:, `metadata.ts` also reads JSON-LD `headline`/`description` and, last, the first
+real `<p>`.
 
 ## Testing
 

@@ -19,6 +19,7 @@ import {
   fetchOlderBooks,
   fetchReading,
   hardcoverUrl,
+  titleFromUrl,
   type Article,
   type Book,
 } from '../lib/reading'
@@ -771,7 +772,7 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
                         />
                       )}
                       <a href={article.url} target="_blank" rel="noopener noreferrer">
-                        {article.title ?? article.url}
+                        {article.title || titleFromUrl(article.url)}
                       </a>
                       <span className="timeline-detail">
                         {article.site && ` — ${article.site}`} · {formatTime(article.readAt)}

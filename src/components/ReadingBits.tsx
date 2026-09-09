@@ -8,6 +8,7 @@ import {
   hardcoverUrl,
   readingImage,
   stars,
+  titleFromUrl,
   type Article,
   type Book,
 } from '../lib/reading'
@@ -75,9 +76,7 @@ export function ArticleCard({ article }: { article: Article }) {
           <Art src={readingImage(article.image)} alt="" className="article-image" />
         </span>
         <span className="article-meta">
-          {/* Falls back to the url: a page that blocked the metadata fetch is
-              still worth having in the log. */}
-          <span className="article-title">{article.title ?? article.url}</span>
+          <span className="article-title">{article.title || titleFromUrl(article.url)}</span>
           <span className="article-source">
             {article.site && <span className="article-site">{article.site}</span>}
             <time dateTime={new Date(article.readAt * 1000).toISOString()}>

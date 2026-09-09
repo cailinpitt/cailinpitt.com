@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDayStamp, formatTime } from '../lib/datetime'
-import { fetchReadingNow, readingImage, type ReadingNow } from '../lib/reading'
+import { fetchReadingNow, readingImage, titleFromUrl, type ReadingNow } from '../lib/reading'
 
 // Currently-reading strip, counterpart to NowPlayingBar. No polling, unlike
 // that bar: books sync once a day, so there's nothing to refresh mid-visit.
@@ -95,7 +95,7 @@ export function ReadingBar({
               <span className="now-bar-text">
                 <span className="now-bar-label">Read today · {formatTime(article.readAt)}</span>
                 <span className="now-bar-track">
-                  <span className="now-bar-title">{article.title ?? article.url}</span>
+                  <span className="now-bar-title">{article.title || titleFromUrl(article.url)}</span>
                   {article.site && <span className="now-bar-artist">{article.site}</span>}
                 </span>
               </span>

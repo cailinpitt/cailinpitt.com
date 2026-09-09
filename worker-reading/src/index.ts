@@ -6,6 +6,7 @@
 //    at /ingest (POST save, PATCH note, DELETE remove). No KV — see store.ts.
 
 import { annotateArticle, deleteArticle, ingestArticle, resolveId } from './articles'
+import { reenrichArticles } from './enrich'
 import {
   ARTICLE_PAGE,
   BOOK_PAGE,
@@ -162,15 +163,28 @@ async function cached(
   return withCors(fresh, cors)
 }
 
+// One cron (account is at the 5-trigger free limit): the book sync and the
+// article re-enrichment run in parallel and share the ~50-subrequest budget.
+// Independent — one failing doesn't stop the other.
+async function hourly(env: Env): Promise<void> {
+  const [sync, enrich] = await Promise.allSettled([syncBooks(env), reenrichArticles(env)])
+
+  if (sync.status === 'fulfilled') {
+    console.log(JSON.stringify({ level: 'info', sync: sync.value }))
+  } else {
+    console.log(JSON.stringify({ level: 'error', stage: 'sync', error: String(sync.reason) }))
+  }
+
+  if (enrich.status === 'fulfilled') {
+    console.log(JSON.stringify({ level: 'info', enrich: enrich.value }))
+  } else {
+    console.log(JSON.stringify({ level: 'error', stage: 'enrich', error: String(enrich.reason) }))
+  }
+}
+
 export default {
   async scheduled(_controller, env, ctx): Promise<void> {
-    ctx.waitUntil(
-      syncBooks(env)
-        .then((result) => console.log(JSON.stringify({ level: 'info', sync: result })))
-        .catch((err) =>
-          console.log(JSON.stringify({ level: 'error', stage: 'sync', error: String(err) })),
-        ),
-    )
+    ctx.waitUntil(hourly(env))
   },
 
   async fetch(request, env, ctx): Promise<Response> {

@@ -135,6 +135,27 @@ export const readingImage = (src: string | null): string | null => imageUrl(src 
 export const hardcoverUrl = (book: Book): string | null =>
   book.slug ? `https://hardcover.app/books/${book.slug}` : null
 
+/** Readable stand-in when a metadata fetch never got a title: de-slugified last
+ *  path segment plus host. Raw URL if it won't parse. */
+export function titleFromUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, '')
+    const segs = u.pathname.split('/').filter(Boolean)
+    let slug = segs.pop() ?? ''
+    if (/^\d{4,}$/.test(slug) && segs.length) slug = segs.pop() ?? slug
+    const words = decodeURIComponent(slug)
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s*[\d.]{5,}\s*$/, '')
+      .trim()
+    if (!words) return host
+    return `${words.charAt(0).toUpperCase()}${words.slice(1)} — ${host}`
+  } catch {
+    return url
+  }
+}
+
 /** Google's favicon service, keyed by hostname. Null on an unparseable URL. */
 export function faviconUrl(url: string): string | null {
   try {

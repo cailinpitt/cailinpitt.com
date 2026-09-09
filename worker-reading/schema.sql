@@ -64,7 +64,11 @@ CREATE TABLE IF NOT EXISTS articles (
   excerpt TEXT,                       -- og:description
   image   TEXT,                       -- /images/reading/<hash>.<ext>, mirrored to R2
   note    TEXT,                       -- whatever else was in the email body
-  read_at INTEGER NOT NULL            -- unix seconds, from the email Date header
+  read_at INTEGER NOT NULL,           -- unix seconds, from the email Date header
+  -- Re-enrichment (src/enrich.ts): enriched_at null until a fetch found a title.
+  enriched_at     INTEGER,
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  last_attempt_at INTEGER NOT NULL DEFAULT 0
 );
 
 -- Both ordering columns, in the query's direction, so paging is an index seek.
@@ -74,6 +78,13 @@ CREATE TABLE IF NOT EXISTS articles (
 -- PLAN before changing this.
 CREATE INDEX IF NOT EXISTS idx_articles_seq ON articles (read_at DESC, id DESC);
 DROP INDEX IF EXISTS idx_articles_read_at;
+
+-- Partial, so it only holds rows the re-enrichment query (src/enrich.ts) can
+-- return; the column order serves that query's `attempts <` filter and its
+-- `ORDER BY attempts, read_at DESC` with no temp b-tree. The backoff on
+-- last_attempt_at is a post-filter over the handful of rows that match.
+CREATE INDEX IF NOT EXISTS idx_articles_unenriched
+  ON articles (attempts, read_at DESC) WHERE enriched_at IS NULL;
 
 -- Precomputed totals — a single row, read once per bundle.
 --

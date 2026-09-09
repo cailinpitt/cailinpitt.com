@@ -5,7 +5,7 @@ import { imageUrl } from './images'
 import { formatNumber, formatRelative } from './datetime'
 import { tagSlug } from './tags'
 import type { NowState } from './listening'
-import type { Article, ReadingNow } from './reading'
+import { titleFromUrl, type Article, type ReadingNow } from './reading'
 import { formatWatchedDate, stars, type WatchingNow } from './watching'
 import { kindIcon, longDate, summary, type ActivityNow } from './moving'
 import type { EntryPage } from './guestbook'
@@ -394,7 +394,7 @@ function articleLines(article: Article): Line[] {
     }
   }
   return [
-    { text: article.title ?? article.url, href: article.url, prefix: '📄 ' },
+    { text: article.title || titleFromUrl(article.url), href: article.url, prefix: '📄 ' },
     muted(`   ${host}`),
   ]
 }
