@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayEvents } from '../src/lib/homeTimeline'
+import { dayEvents, summarizeOnThisDay } from '../src/lib/homeTimeline'
 import type { TimelineDay } from '../src/lib/timeline'
 
 // dayEvents is the per-day line list the homepage preview renders.
@@ -59,5 +59,52 @@ describe('dayEvents', () => {
 
   it('is empty for a day with nothing in it', () => {
     expect(dayEvents(base)).toEqual([])
+  })
+})
+
+describe('summarizeOnThisDay', () => {
+  it('folds a whole day into one line — discrete things first, then the counts', () => {
+    const day: TimelineDay = {
+      ...base,
+      activities: [
+        { kind: 'ride', distanceMi: 12.4, movingTime: 3600 } as TimelineDay['activities'][number],
+        { kind: 'lift', distanceMi: 0, movingTime: 1920 } as TimelineDay['activities'][number],
+      ],
+      films: [{ title: 'Dune' } as TimelineDay['films'][number]],
+    }
+    expect(summarizeOnThisDay(day)).toBe('watched Dune · biked 12.4 miles · lifted for 32m')
+  })
+
+  it('includes the streams the old music-only line dropped', () => {
+    const day: TimelineDay = {
+      ...base,
+      activities: [
+        { kind: 'ride', distanceMi: 8, movingTime: 1800 } as TimelineDay['activities'][number],
+      ],
+      films: [{ title: 'Dune' } as TimelineDay['films'][number]],
+    }
+    expect(summarizeOnThisDay(day)).toBe('watched Dune · biked 8.0 miles')
+  })
+
+  it('trails off into "+N more" when the day is packed, like the today/yesterday rows', () => {
+    const day: TimelineDay = {
+      ...base,
+      scrobbles: 47,
+      topArtist: 'Interpol',
+      posts: [{ path: '/blog/x', title: 'A Post', date: base.date }],
+      activities: [
+        { kind: 'ride', distanceMi: 12.4, movingTime: 3600 } as TimelineDay['activities'][number],
+        { kind: 'lift', distanceMi: 0, movingTime: 1920 } as TimelineDay['activities'][number],
+      ],
+      articles: [{} as TimelineDay['articles'][number]],
+    }
+    // 5 things (post, 2 activities, scrobbles, articles) → first 3 + "+2 more".
+    expect(summarizeOnThisDay(day)).toBe(
+      'published “A Post” · biked 12.4 miles · lifted for 32m · +2 more',
+    )
+  })
+
+  it('is empty for a day with nothing in it', () => {
+    expect(summarizeOnThisDay(base)).toBe('')
   })
 })

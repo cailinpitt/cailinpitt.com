@@ -859,10 +859,10 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
         )}
 
         {day.booksFinished.map((book) => (
-          <BookEvent key={`fin-${book.userBookId}-${book.readId}`} book={book} verb="Finished" />
+          <BookEvent key={`fin-${book.userBookId}-${book.readId}`} book={book} verb="Finished reading" />
         ))}
         {day.booksStarted.map((book) => (
-          <BookEvent key={`start-${book.userBookId}-${book.readId}`} book={book} verb="Started" />
+          <BookEvent key={`start-${book.userBookId}-${book.readId}`} book={book} verb="Started reading" />
         ))}
 
         {day.films.map((film) => (
@@ -1016,7 +1016,7 @@ function ConcertEvent({ concert }: { concert: Concert }) {
   )
 }
 
-function BookEvent({ book, verb }: { book: Book; verb: 'Finished' | 'Started' }) {
+function BookEvent({ book, verb }: { book: Book; verb: 'Finished reading' | 'Started reading' }) {
   const href = hardcoverUrl(book)
   return (
     <li className="timeline-event" data-stream="reading">

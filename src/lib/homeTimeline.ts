@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react'
 import { formatNumber, keyForOffset } from './datetime'
 import { buildTimeline, type TimelinePhoto, type TimelinePost, type TimelineDay } from './timeline'
 import { fetchOnThisDay, fetchTimelineDays, type OnThisDay } from './listening'
-import { fetchReading } from './reading'
-import { fetchWatching } from './watching'
-import { fetchMoving, kindIcon, summary as activitySummary } from './moving'
-import { fetchNotes } from './notes'
+import { fetchArticlesOnDate, fetchBooksOnDate, fetchLinksOnDate, fetchReading } from './reading'
+import { fetchFilmsOnDate, fetchWatching } from './watching'
+import {
+  fetchActivitiesOnDate,
+  fetchMoving,
+  kindIcon,
+  summary as activitySummary,
+} from './moving'
+import { fetchNotes, fetchNotesOnDate } from './notes'
 import type { Concert } from './concerts'
 
 // Powers the homepage Timeline preview. One unpaged fetch of every stream (plus
@@ -14,6 +19,11 @@ import type { Concert } from './concerts'
 // recent days needs only each stream's first page. Posts come from the
 // compiled-in site index; concerts and a trimmed slice of recent photos ride in
 // from the loader — every stream /timeline shows is represented here too.
+//
+// The "N years ago today" line then does a second batch: it picks the year from
+// listening + posts and pulls that one day from every stream's day-scoped
+// endpoint (the same ones /timeline/:date reads), so it summarizes the whole day
+// — rides, lifts, films, books — not just the music.
 
 /** Recent days shown before "Explore the full timeline". */
 const HOME_DAYS = 5
@@ -56,10 +66,10 @@ export function dayEvents(day: TimelineDay): DayEvent[] {
   }
   for (const film of day.films) events.push({ stream: 'watching', icon: '🎬', label: `Watched ${film.title}` })
   for (const book of day.booksFinished) {
-    events.push({ stream: 'reading', icon: '📚', label: `Finished ${book.title}` })
+    events.push({ stream: 'reading', icon: '📚', label: `Finished reading ${book.title}` })
   }
   for (const book of day.booksStarted) {
-    events.push({ stream: 'reading', icon: '📚', label: `Started ${book.title}` })
+    events.push({ stream: 'reading', icon: '📚', label: `Started reading ${book.title}` })
   }
   for (const activity of day.activities) {
     events.push({ stream: 'moving', icon: kindIcon(activity.kind), label: activitySummary(activity) })
@@ -81,42 +91,131 @@ export function dayEvents(day: TimelineDay): DayEvent[] {
   return events
 }
 
-// The most recent past year with something on today's month/day. Listening
-// comes from its own cross-year endpoint; posts are fully in the site index.
-// Photos/concerts aren't checked here — the homepage only has a recent slice.
-function resolveOnThisDay(listening: OnThisDay | null, posts: readonly TimelinePost[]): OnThisDayEntry | null {
+/** Things named in the "N years ago today" line before it trails off into
+ *  "+N more" — matching how the today/yesterday rows cap their event list. */
+const MAX_OTD_PARTS = 3
+
+// `new Date('YYYY-MM-DD')` parses as UTC midnight; go through the numeric
+// constructor for the viewer's own local day, the same range /timeline/:date
+// asks the day-scoped endpoints for.
+function localDayRange(date: string): [number, number] {
+  const [y, m, d] = date.split('-').map(Number)
+  const start = new Date(y, m - 1, d).getTime() / 1000
+  return [start, start + 86_400]
+}
+
+const lowerFirst = (s: string): string => (s ? s[0].toLowerCase() + s.slice(1) : s)
+
+const settled = <T,>(r: PromiseSettledResult<T>): T | null =>
+  r.status === 'fulfilled' ? r.value : null
+
+/**
+ * Which past year the "on this day" line should cover: the most recent one with
+ * a post or a scrobble on today's month/day. Listening comes from its own
+ * cross-year endpoint; posts are fully in the compiled-in site index.
+ */
+function pickOnThisDayYear(
+  listening: OnThisDay | null,
+  posts: readonly TimelinePost[],
+): { date: string; yearsAgo: number; scrobbles: number; topArtist: string | null } | null {
   const today = keyForOffset(0)
   const monthDay = today.slice(5)
   const thisYear = Number(today.slice(0, 4))
 
-  const byYear = new Map<number, { scrobbles: number; topArtist: string | null; posts: TimelinePost[] }>()
-  const entry = (year: number) => {
-    let e = byYear.get(year)
-    if (!e) byYear.set(year, (e = { scrobbles: 0, topArtist: null, posts: [] }))
-    return e
-  }
+  const years = new Set<number>()
+  const byYear = new Map<number, { count: number; topArtist: string | null }>()
 
   for (const post of posts) {
     const date = post.date.slice(0, 10)
     const year = Number(date.slice(0, 4))
-    if (date.slice(5) === monthDay && year && year < thisYear) entry(year).posts.push(post)
+    if (date.slice(5) === monthDay && year && year < thisYear) years.add(year)
   }
-  for (const year of listening?.years ?? []) {
-    if (year.year >= thisYear) continue
-    const e = entry(year.year)
-    e.scrobbles = year.count
-    e.topArtist = year.topArtist
+  for (const y of listening?.years ?? []) {
+    if (y.year >= thisYear) continue
+    years.add(y.year)
+    byYear.set(y.year, { count: y.count, topArtist: y.topArtist })
   }
 
-  if (byYear.size === 0) return null
-  const year = Math.max(...byYear.keys())
-  const e = byYear.get(year)!
-  const parts = e.posts.map((post) => `published “${post.title}”`)
-  if (e.scrobbles > 0) {
-    parts.push(`${formatNumber(e.scrobbles)} scrobbles${e.topArtist ? ` · mostly ${e.topArtist}` : ''}`)
+  if (years.size === 0) return null
+  const year = Math.max(...years)
+  const l = byYear.get(year)
+  return {
+    date: `${year}-${monthDay}`,
+    yearsAgo: thisYear - year,
+    scrobbles: l?.count ?? 0,
+    topArtist: l?.topArtist ?? null,
   }
-  if (parts.length === 0) return null
-  return { date: `${year}-${monthDay}`, yearsAgo: thisYear - year, summary: parts.join(' · ') }
+}
+
+/** Fold one day into a single line — discrete things first, count-ish streams after. */
+export function summarizeOnThisDay(day: TimelineDay): string {
+  const parts: string[] = []
+  for (const post of day.posts) parts.push(`published “${post.title}”`)
+  for (const concert of day.concerts) parts.push(`saw ${concert.artists.join(' / ')}`)
+  for (const film of day.films) parts.push(`watched ${film.title}`)
+  for (const book of day.booksFinished) parts.push(`finished reading ${book.title}`)
+  for (const book of day.booksStarted) parts.push(`started reading ${book.title}`)
+  for (const activity of day.activities) parts.push(lowerFirst(activitySummary(activity)))
+  if (day.scrobbles > 0) {
+    parts.push(
+      `${formatNumber(day.scrobbles)} scrobbles${day.topArtist ? ` · mostly ${day.topArtist}` : ''}`,
+    )
+  }
+  if (day.articles.length) parts.push(`saved ${plural(day.articles.length, 'article')}`)
+  if (day.links.length) parts.push(`saved ${plural(day.links.length, 'link')}`)
+  if (day.notes.length) parts.push(plural(day.notes.length, 'note'))
+  if (day.photos.length) parts.push(plural(day.photos.length, 'photo'))
+
+  const shown = parts.slice(0, MAX_OTD_PARTS)
+  const more = parts.length - shown.length
+  if (more > 0) shown.push(`+${more} more`)
+  return shown.join(' · ')
+}
+
+/**
+ * The "N years ago today" line: pick the year (above), then pull that exact day
+ * from every stream's day-scoped endpoint — the same ones /timeline/:date reads
+ * — and fold it into one sentence. Null when no past year has anything.
+ */
+async function resolveOnThisDay(
+  listening: OnThisDay | null,
+  posts: readonly TimelinePost[],
+  photos: readonly TimelinePhoto[],
+  concerts: readonly Concert[],
+  signal: AbortSignal,
+): Promise<OnThisDayEntry | null> {
+  const target = pickOnThisDayYear(listening, posts)
+  if (!target) return null
+
+  const { date, yearsAgo, scrobbles, topArtist } = target
+  const [from, to] = localDayRange(date)
+
+  const [books, articles, links, films, activities, notes] = await Promise.allSettled([
+    fetchBooksOnDate(date, signal),
+    fetchArticlesOnDate(from, to, signal),
+    fetchLinksOnDate(from, to, signal),
+    fetchFilmsOnDate(date, signal),
+    fetchActivitiesOnDate(date, signal),
+    fetchNotesOnDate(from, to, signal),
+  ])
+  if (signal.aborted) return null
+
+  const [day] = buildTimeline({
+    days: [{ date, count: scrobbles, topArtist }],
+    articles: settled(articles) ?? [],
+    links: settled(links) ?? [],
+    books: settled(books) ?? [],
+    films: settled(films) ?? [],
+    activities: settled(activities) ?? [],
+    posts: posts.filter((p) => p.date.slice(0, 10) === date),
+    photos: photos.filter((p) => p.date.slice(0, 10) === date),
+    notes: settled(notes) ?? [],
+    concerts: concerts.filter((c) => c.date === date),
+    floor: null,
+  })
+
+  const summary = day ? summarizeOnThisDay(day) : ''
+  return summary ? { date, yearsAgo, summary } : null
 }
 
 export function useHomeTimeline(
@@ -128,26 +227,25 @@ export function useHomeTimeline(
 
   useEffect(() => {
     const controller = new AbortController()
+    const { signal } = controller
 
     // allSettled: this reads every Worker, so one being down still leaves a
     // timeline built from the rest (same reasoning as /timeline itself).
     Promise.allSettled([
-      fetchTimelineDays(controller.signal),
-      fetchReading(controller.signal),
-      fetchWatching(controller.signal),
-      fetchMoving(controller.signal),
-      fetchNotes(controller.signal),
-      fetchOnThisDay(controller.signal),
-    ]).then(([listening, reading, watching, moving, notes, otd]) => {
-      if (controller.signal.aborted) return
-      const value = <T,>(r: PromiseSettledResult<T>): T | null =>
-        r.status === 'fulfilled' ? r.value : null
+      fetchTimelineDays(signal),
+      fetchReading(signal),
+      fetchWatching(signal),
+      fetchMoving(signal),
+      fetchNotes(signal),
+      fetchOnThisDay(signal),
+    ]).then(async ([listening, reading, watching, moving, notes, otd]) => {
+      if (signal.aborted) return
 
-      const l = value(listening)
-      const r = value(reading)
-      const w = value(watching)
-      const m = value(moving)
-      const n = value(notes)
+      const l = settled(listening)
+      const r = settled(reading)
+      const w = settled(watching)
+      const m = settled(moving)
+      const n = settled(notes)
 
       const days = buildTimeline({
         days: l?.days ?? [],
@@ -163,7 +261,20 @@ export function useHomeTimeline(
         floor: null,
       }).slice(0, HOME_DAYS)
 
-      setState({ days, onThisDay: resolveOnThisDay(value(otd), posts), ready: true })
+      // The "N years ago today" line needs a second round of day-scoped fetches
+      // (small, edge-cached, parallel). Resolve it before the one setState so the
+      // section doesn't lay itself out twice — it's a bonus, so a failure just
+      // leaves it off.
+      const onThisDay = await resolveOnThisDay(
+        settled(otd),
+        posts,
+        photos,
+        concerts,
+        signal,
+      ).catch(() => null)
+      if (signal.aborted) return
+
+      setState({ days, onThisDay, ready: true })
     })
 
     return () => controller.abort()
