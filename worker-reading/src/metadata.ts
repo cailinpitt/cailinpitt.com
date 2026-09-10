@@ -1,9 +1,9 @@
 // Social-card metadata (title, image, description, site) from a page's HTML via
 // HTMLRewriter. Best-effort: a blocked or tag-less page must still be loggable.
-// title: og/twitter, else JSON-LD headline, else <title>. excerpt: og/twitter/
-// meta description, else JSON-LD, else first <p>. Blocked/flaky fetches retry
-// once as a link-unfurler UA (many publishers allowlist those); enrich.ts
-// retries the rest off the cron.
+//   title   — og/twitter, else JSON-LD headline, else <title>
+//   excerpt — longest of og/twitter/meta description and JSON-LD, else first <p>
+// Blocked/flaky fetches retry once as a link-unfurler UA (many publishers
+// allowlist those); enrich.ts retries the rest off the cron.
 
 const TIMEOUT_MS = 6_000
 const MAX_BYTES = 1024 * 1024
@@ -134,7 +134,9 @@ async function scrape(url: string, ua: string): Promise<Attempt> {
         if (!(name in found)) found[name] = content
       },
     })
-    .on('title', {
+    // `head title` only: a page with inline SVG charts can carry hundreds of
+    // <title> tooltip elements, and a bare selector concatenates them all.
+    .on('head title', {
       text(chunk) {
         documentTitle = (documentTitle ?? '') + chunk.text
       },
@@ -201,6 +203,17 @@ function assemble(s: Scrape, url: string, hostname: string | null): PageMetadata
     }
     return null
   }
+  // Longest wins for the description: an unescaped `"` in a `content=` attribute
+  // makes HTMLRewriter return the value truncated at that quote, and a sibling
+  // tag (or JSON-LD) usually has the same text escaped and intact.
+  const longest = (max: number, ...values: (string | null | undefined)[]) => {
+    let best: string | null = null
+    for (const value of values) {
+      const v = trim(value, max)
+      if (v && (!best || v.length > best.length)) best = v
+    }
+    return best
+  }
   const jsonLd = parseJsonLd(s.ld)
 
   return {
@@ -209,9 +222,13 @@ function assemble(s: Scrape, url: string, hostname: string | null): PageMetadata
       trim(jsonLd.title, MAX_TITLE) ??
       trim(s.documentTitle, MAX_TITLE),
     excerpt:
-      pick(MAX_EXCERPT, 'og:description', 'twitter:description', 'description') ??
-      trim(jsonLd.description, MAX_EXCERPT) ??
-      trim(s.paragraphs[0], MAX_EXCERPT),
+      longest(
+        MAX_EXCERPT,
+        s.found['og:description'],
+        s.found['twitter:description'],
+        s.found['description'],
+        jsonLd.description,
+      ) ?? trim(s.paragraphs[0], MAX_EXCERPT),
     image: absolute(
       pick(2048, 'og:image', 'og:image:url', 'twitter:image', 'twitter:image:src') ??
         jsonLd.image ??
