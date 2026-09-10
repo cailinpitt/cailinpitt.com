@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDayStamp, formatTime } from '../lib/datetime'
 import { fetchReadingNow, readingImage, titleFromUrl, type ReadingNow } from '../lib/reading'
+import { Favicon } from './ReadingBits'
 
 // Currently-reading strip, counterpart to NowPlayingBar. No polling, unlike
 // that bar: books sync once a day, so there's nothing to refresh mid-visit.
@@ -94,7 +95,7 @@ export function ReadingBar({
                 <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
               )}
               <span className="now-bar-text">
-                <span className="now-bar-label">Read today · {formatTime(article.readAt)}</span>
+                <span className="now-bar-label">Read article · {formatTime(article.readAt)}</span>
                 <span className="now-bar-track">
                   <span className="now-bar-title">{article.title || titleFromUrl(article.url)}</span>
                   {article.site && <span className="now-bar-artist">{article.site}</span>}
@@ -115,9 +116,11 @@ export function ReadingBar({
         <>
           <div className="now-bar">
             <a className="now-bar-main" href={link.url} target="_blank" rel="noopener noreferrer">
-              <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
+              {/* A link has no social card — show the site's favicon as a chip,
+                  falling back to 🔗. */}
+              <Favicon url={link.url} className="now-bar-art is-favicon" />
               <span className="now-bar-text">
-                <span className="now-bar-label">Saved today · {formatTime(link.savedAt)}</span>
+                <span className="now-bar-label">Saved link · {formatTime(link.savedAt)}</span>
                 <span className="now-bar-track">
                   <span className="now-bar-title">{link.title || titleFromUrl(link.url)}</span>
                   {link.site && <span className="now-bar-artist">{link.site}</span>}

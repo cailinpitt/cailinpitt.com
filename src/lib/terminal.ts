@@ -385,7 +385,7 @@ function photoLines(photo: TerminalPhoto): Line[] {
   ]
 }
 
-// Shared by today's article (📄) and today's link (🔗) — both are just a saved
+// Shared by today's article (📰) and today's link (🔗) — both are just a saved
 // url with a title and a host.
 function savedLines(item: Pick<Article, 'url' | 'title' | 'site'>, prefix: string): Line[] {
   let host = item.site
@@ -402,7 +402,7 @@ function savedLines(item: Pick<Article, 'url' | 'title' | 'site'>, prefix: strin
   ]
 }
 
-const articleLines = (article: Article): Line[] => savedLines(article, '📄 ')
+const articleLines = (article: Article): Line[] => savedLines(article, '📰 ')
 const linkLines = (link: Link): Line[] => savedLines(link, '🔗 ')
 
 function nowPlayingLines({ nowPlaying, lastPlayed }: NowState): Line[] {

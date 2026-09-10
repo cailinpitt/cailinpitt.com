@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { ArticleCard } from '../components/ReadingBits'
 import { dayKey, formatDayLabel, formatNumber } from '../lib/datetime'
@@ -38,8 +37,7 @@ export function Component() {
       <h1>Articles</h1>
       <p>
         Articles I enjoyed that I saved after reading them. There are
-        {bundle && `  ${formatNumber(bundle.counts.articles)} so far`}. Bare interesting pages go in{' '}
-        <Link to="/links">links</Link>.
+        {bundle && `  ${formatNumber(bundle.counts.articles)} so far`}.
       </p>
 
       {error && !bundle ? (

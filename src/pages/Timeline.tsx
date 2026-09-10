@@ -669,11 +669,7 @@ function TimelineFeed({ posts, photos, concerts }: TimelineData) {
       />
       <h1>Timeline</h1>
       <p>
-        One row per day, pulling together <Link to="/listening">listening</Link>,{' '}
-        <Link to="/reading">reading</Link>, <Link to="/watching">watching</Link>,{' '}
-        <Link to="/concerts">concerts</Link>, <Link to="/moving">moving</Link>,{' '}
-        <Link to="/blog">blog</Link>, <Link to="/notes">notes</Link>, and{' '}
-        <Link to="/photos">photos</Link>.
+        One row per day, pulling together all of the logs on the website.
       </p>
 
       <TimelineJump />
@@ -783,7 +779,7 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
         {day.articles.length > 0 && (
           <li className="timeline-event" data-stream="reading">
             <span className="timeline-icon" aria-hidden="true">
-              📄
+              📰
             </span>
             <span>
               <span className="timeline-label">

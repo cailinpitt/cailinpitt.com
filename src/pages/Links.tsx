@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { LinkRow } from '../components/ReadingBits'
 import { dayKey, formatDayLabel, formatNumber } from '../lib/datetime'
@@ -37,9 +36,7 @@ export function Component() {
 
       <h1>Links</h1>
       <p>
-        Interesting things I&rsquo;ve come across &mdash; sites, tools, one-off pages worth
-        remembering. Longer things I actually read go in{' '}
-        <Link to="/reading/articles">articles</Link>.
+        Interesting links I&rsquo;ve come across.
         {bundle && ` ${formatNumber(bundle.counts.links ?? 0)} so far.`}
       </p>
 

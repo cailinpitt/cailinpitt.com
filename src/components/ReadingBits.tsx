@@ -1,6 +1,7 @@
 // Presentational pieces for /reading. Kept out of the page file so the two card
 // shapes — a book and an article — stay easy to read side by side.
 
+import { useState } from 'react'
 import { Art } from './ListeningBits'
 import { formatTime } from '../lib/datetime'
 import {
@@ -93,44 +94,67 @@ export function ArticleCard({ article }: { article: Article }) {
   )
 }
 
-// A saved link — deliberately lighter than ArticleCard: favicon, title, host,
-// and your note. No card image; /links is a list, not a gallery.
+// A site's favicon (via Google's service), falling back to a 🔗 glyph when the
+// url won't parse or the image can't load — so a link always has an icon, the
+// way the timeline always gives concerts and activities one.
+export function Favicon({
+  url,
+  className,
+  fallback = '🔗',
+}: {
+  url: string
+  className?: string
+  fallback?: string
+}) {
+  const [failed, setFailed] = useState(false)
+  const src = failed ? null : faviconUrl(url)
+
+  if (!src) {
+    return (
+      <span className={[className, 'is-emoji'].filter(Boolean).join(' ')} aria-hidden="true">
+        {fallback}
+      </span>
+    )
+  }
+  return (
+    <img
+      className={className}
+      src={src}
+      alt=""
+      width={16}
+      height={16}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
+// A saved link — deliberately lighter than ArticleCard: one quiet line of
+// favicon + title + host, with the note as a plain muted line under it. No card
+// image, no timestamp; /links is a list of pointers, not a reading log.
 export function LinkRow({ link }: { link: Link }) {
-  const favicon = faviconUrl(link.url)
+  const realTitle = link.title?.trim()
+  const title = realTitle || titleFromUrl(link.url)
+
   let host = link.site
   if (!host) {
     try {
       host = new URL(link.url).hostname.replace(/^www\./, '')
     } catch {
-      host = link.url
+      host = null
     }
   }
+  // Only show the host next to a real title — titleFromUrl already ends in the host.
+  const showHost = Boolean(realTitle) && host && host.toLowerCase() !== title.toLowerCase()
 
   return (
     <li className="link-row">
       <a className="link-row-link" href={link.url} target="_blank" rel="noopener noreferrer">
-        {favicon ? (
-          <img
-            className="link-row-favicon"
-            src={favicon}
-            alt=""
-            width={16}
-            height={16}
-            loading="lazy"
-            decoding="async"
-            onError={(e) => {
-              e.currentTarget.style.visibility = 'hidden'
-            }}
-          />
-        ) : (
-          <span className="link-row-favicon" aria-hidden="true" />
-        )}
-        <span className="link-row-title">{link.title || titleFromUrl(link.url)}</span>
-        <span className="link-row-meta">
-          {host && <span className="link-row-host">{host}</span>}
-          <time dateTime={new Date(link.savedAt * 1000).toISOString()}>
-            {formatTime(link.savedAt)}
-          </time>
+        <Favicon url={link.url} className="link-row-favicon" />
+        <span className="link-row-text">
+          <span className="link-row-title">{title}</span>
+          {showHost && <span className="link-row-host">{host}</span>}
         </span>
       </a>
       {link.note && <p className="link-row-note">{link.note}</p>}

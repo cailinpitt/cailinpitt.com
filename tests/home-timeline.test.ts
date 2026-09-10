@@ -47,7 +47,7 @@ describe('dayEvents', () => {
       links: [{} as TimelineDay['links'][number], {} as TimelineDay['links'][number]],
     }
     expect(dayEvents(day).map((e) => `${e.icon} ${e.stream}:${e.label}`)).toEqual([
-      '📄 reading:1 article saved',
+      '📰 reading:1 article saved',
       '🔗 reading:2 links saved',
     ])
   })

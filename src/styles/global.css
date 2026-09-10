@@ -2474,83 +2474,95 @@ a.book-link:hover .book-title {
 }
 
 /* Links ---------------------------------------------------------------------
-   Deliberately lighter than .article-card: /links is a scannable list, so a
-   favicon, the title, and a muted host on one row, with your note underneath. */
+   A quiet, dense list of pointers, not a gallery. One sans line per link —
+   favicon, title, muted host — with the note as plain muted text under it. No
+   card, no image, no timestamp; the day header carries the "when". The whole
+   block is deliberately lighter in weight than /reading/articles. */
 
-.link-day + .link-day {
-  margin-top: 2rem;
-}
+/* --link-indent keeps the note and mobile host aligned under the title. */
 .link-list {
+  --link-indent: calc(15px + 0.6rem);
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
+
+.link-day + .link-day {
+  margin-top: 1.6rem;
+}
+/* A small tracked label, the site's date-divider idiom (cf. .post-list time),
+   not the big serif date heading books/articles use. */
+.link-day-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.3rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.link-day-count {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .link-row-link {
   display: grid;
-  grid-template-columns: 1rem 1fr auto;
-  gap: 0.6rem;
+  grid-template-columns: 15px 1fr;
+  column-gap: 0.6rem;
   align-items: baseline;
-  padding: 0.5rem 0.6rem;
-  border-radius: 5px;
   color: var(--fg);
   text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
 }
-.link-row-link:hover {
-  background: var(--surface);
+.link-row-favicon {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  /* Grid baseline-aligns the row; drop the icon onto the first line's baseline. */
+  position: relative;
+  top: 0.15em;
+}
+/* No favicon — a 🔗 glyph instead of the image. */
+.link-row-favicon.is-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  font-size: 11px;
+  line-height: 1;
+}
+.link-row-title {
+  font-weight: 500;
 }
 .link-row-link:hover .link-row-title {
   color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
-.link-row-favicon {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  align-self: center;
-}
-.link-row-title {
-  min-width: 0;
-  font-weight: 500;
-  line-height: 1.4;
-}
-.link-row-meta {
-  display: flex;
-  gap: 0.5rem;
+.link-row-host {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.86em;
   white-space: nowrap;
+}
+/* Why I saved it — a plain muted line, aligned under the title. */
+.link-row-note {
+  margin: 0.1rem 0 0 var(--link-indent);
+  color: var(--muted);
   font-family: var(--font-sans);
   font-size: var(--step--1);
-  color: var(--muted);
-}
-.link-row-host::after {
-  content: ' ·';
-}
-/* Your reason for saving it — same commentary treatment as .article-note. */
-.link-row-note {
-  margin: 0.1rem 0.6rem 0.4rem 2.2rem;
-  padding: 0.4rem 0.7rem;
-  border-radius: 4px;
-  border-left: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  color: var(--fg);
-  font-size: var(--step--1);
-  font-style: italic;
   line-height: 1.5;
-}
-
-@media (max-width: 640px) {
-  /* The host/time column drops under the title rather than squeezing it. */
-  .link-row-link {
-    grid-template-columns: 1rem 1fr;
-    row-gap: 0.15rem;
-  }
-  .link-row-meta {
-    grid-column: 2;
-  }
-  .link-row-note {
-    margin-left: 1.6rem;
-  }
 }
 
 /* Year sections in the finished-books list. */
@@ -2558,8 +2570,7 @@ a.book-link:hover .book-title {
   margin-top: 2.5rem;
 }
 .book-year-label,
-.article-day-label,
-.link-day-label {
+.article-day-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -2572,8 +2583,7 @@ a.book-link:hover .book-title {
   margin: 0 0 0.6rem;
 }
 .book-year-count,
-.article-day-count,
-.link-day-count {
+.article-day-count {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   font-weight: 400;
@@ -2786,6 +2796,26 @@ a.concert-link:hover .concert-title {
   width: 56px;
   height: 34px;
   border-radius: 3px;
+}
+/* A saved link has no card image, so the now bar shows its favicon as a small
+   square chip — contained, not stretched, on a surface tile. */
+.now-bar-art.is-favicon {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  object-fit: contain;
+  padding: 5px;
+  background: var(--surface);
+}
+/* No favicon — a 🔗 glyph on a transparent tile, like the coverless-book 📖. */
+.now-bar-art.is-favicon.is-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 /* Coverless books get an emoji instead of a hidden box — unlike an album
    or article, a book with no cover art is still worth flagging as a book. */

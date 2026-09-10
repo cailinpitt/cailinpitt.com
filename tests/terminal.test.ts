@@ -394,7 +394,7 @@ describe('commands', () => {
     const linked = lines.find((line) => line.href === 'https://example.com/a-piece')
     // The emoji sits outside the link, so it isn't underlined with the title.
     expect(linked?.text).toBe('A piece')
-    expect(linked?.prefix).toBe('📄 ')
+    expect(linked?.prefix).toBe('📰 ')
     expect(lines.some((line) => line.text.includes('example.com'))).toBe(true)
   })
 

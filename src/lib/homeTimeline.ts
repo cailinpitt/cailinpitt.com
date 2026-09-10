@@ -72,7 +72,7 @@ export function dayEvents(day: TimelineDay): DayEvent[] {
     })
   }
   if (day.articles.length) {
-    events.push({ stream: 'reading', icon: '📄', label: `${plural(day.articles.length, 'article')} saved` })
+    events.push({ stream: 'reading', icon: '📰', label: `${plural(day.articles.length, 'article')} saved` })
   }
   if (day.links.length) {
     events.push({ stream: 'reading', icon: '🔗', label: `${plural(day.links.length, 'link')} saved` })

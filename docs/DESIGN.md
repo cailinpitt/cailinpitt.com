@@ -594,7 +594,7 @@ coordinate collapse into one pin; each popup links to the photo's page.
 started/finished, films watched, concerts seen, rides and lifts, published posts, notes, photos
 taken. Nothing new is stored — it fetches `/timeline.json` plus the same `/reading.json`,
 `/watching.json`, and `/moving.json` bundles the other pages read, and merges them against
-build-time posts, photos, and concerts (`src/lib/timeline.ts`). Articles get a 📄 row, links a
+build-time posts, photos, and concerts (`src/lib/timeline.ts`). Articles get a � row, links a
 🔗 row; both share the `reading` stream accent.
 
 - **It reads a projection, not the bundle.** The page shows a count and the day's most-played artist
