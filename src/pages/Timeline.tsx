@@ -15,13 +15,16 @@ import {
   faviconUrl,
   fetchArticlesOnDate,
   fetchBooksOnDate,
+  fetchLinksOnDate,
   fetchOlderArticles,
   fetchOlderBooks,
+  fetchOlderLinks,
   fetchReading,
   hardcoverUrl,
   titleFromUrl,
   type Article,
   type Book,
+  type Link as SavedLink,
 } from '../lib/reading'
 import {
   fetchFilmsOnDate,
@@ -125,6 +128,7 @@ const activityDate = (activity: Activity) => activity.startDate
 function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[]) {
   const [days, setDays] = useState<CompactDay[]>([])
   const [articles, setArticles] = useState<Article[]>([])
+  const [links, setLinks] = useState<SavedLink[]>([])
   const [books, setBooks] = useState<Book[]>([])
   const [films, setFilms] = useState<Film[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
@@ -132,6 +136,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
   const [noteCursor, setNoteCursor] = useState<string | null>(null)
   const [before, setBefore] = useState<number | null>(null)
   const [articleCursor, setArticleCursor] = useState<string | null>(null)
+  const [linkCursor, setLinkCursor] = useState<string | null>(null)
   const [bookCursor, setBookCursor] = useState<string | null>(null)
   const [filmCursor, setFilmCursor] = useState<string | null>(null)
   const [activityCursor, setActivityCursor] = useState<string | null>(null)
@@ -171,7 +176,7 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
       }
 
       if (reading.status === 'fulfilled') {
-        const [toppedArticles, toppedBooks] = await Promise.all([
+        const [toppedArticles, toppedLinks, toppedBooks] = await Promise.all([
           topUp(
             reading.value.articles,
             reading.value.nextCursor,
@@ -180,6 +185,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
             async (cursor, signal) => {
               const page = await fetchOlderArticles(cursor, 20, signal)
               return { items: page.articles, nextCursor: page.nextCursor }
+            },
+            controller.signal,
+          ),
+          topUp(
+            reading.value.links ?? [],
+            reading.value.nextLinkCursor ?? null,
+            initialFloor,
+            (link) => dayKey(link.savedAt),
+            async (cursor, signal) => {
+              const page = await fetchOlderLinks(cursor, 20, signal)
+              return { items: page.links, nextCursor: page.nextCursor }
             },
             controller.signal,
           ),
@@ -197,6 +213,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
         ])
         setArticles(toppedArticles.items)
         setArticleCursor(toppedArticles.cursor)
+        setLinks(toppedLinks.items)
+        setLinkCursor(toppedLinks.cursor)
         setBooks(toppedBooks.items)
         setBookCursor(toppedBooks.cursor)
       }
@@ -273,7 +291,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
       const nextFloor =
         older.nextBefore != null && nextDays.length ? nextDays[nextDays.length - 1].date : null
 
-      const [nextArticles, nextBooks, nextFilms, nextActivities, nextNotes] = await Promise.all([
+      const [nextArticles, nextLinks, nextBooks, nextFilms, nextActivities, nextNotes] =
+        await Promise.all([
         topUp(
           articles,
           articleCursor,
@@ -284,6 +303,17 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
           async (cursor, signal) => {
             const page = await fetchOlderArticles(cursor, 20, signal)
             return { items: page.articles, nextCursor: page.nextCursor }
+          },
+          controller.signal,
+        ),
+        topUp(
+          links,
+          linkCursor,
+          nextFloor,
+          (link) => dayKey(link.savedAt),
+          async (cursor, signal) => {
+            const page = await fetchOlderLinks(cursor, 20, signal)
+            return { items: page.links, nextCursor: page.nextCursor }
           },
           controller.signal,
         ),
@@ -338,6 +368,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
       setBefore(older.nextBefore)
       setArticles(nextArticles.items)
       setArticleCursor(nextArticles.cursor)
+      setLinks(nextLinks.items)
+      setLinkCursor(nextLinks.cursor)
       setBooks(nextBooks.items)
       setBookCursor(nextBooks.cursor)
       setFilms(nextFilms.items)
@@ -363,6 +395,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
     days,
     filmCursor,
     films,
+    linkCursor,
+    links,
     loading,
     noteCursor,
     notes,
@@ -370,8 +404,8 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
 
   const timeline = useMemo(
     () =>
-      buildTimeline({ days, articles, books, films, activities, posts, photos, notes, concerts, floor }),
-    [activities, articles, books, concerts, days, films, floor, notes, photos, posts],
+      buildTimeline({ days, articles, links, books, films, activities, posts, photos, notes, concerts, floor }),
+    [activities, articles, books, concerts, days, films, floor, links, notes, photos, posts],
   )
 
   return { timeline, ready, error, loading, hasMore: before != null, loadMore }
@@ -441,11 +475,12 @@ function useTimelineDay(date: string): DayFetchState {
       staticContent,
       fetchTimelineDay(date, controller.signal),
       fetchArticlesOnDate(from, to, controller.signal),
+      fetchLinksOnDate(from, to, controller.signal),
       fetchBooksOnDate(date, controller.signal),
       fetchFilmsOnDate(date, controller.signal),
       fetchActivitiesOnDate(date, controller.signal),
       fetchNotesOnDate(from, to, controller.signal),
-    ]).then(([staticRes, listening, articles, books, films, activities, notes]) => {
+    ]).then(([staticRes, listening, articles, links, books, films, activities, notes]) => {
       if (controller.signal.aborted) return
 
       const posts = staticRes.status === 'fulfilled' ? staticRes.value.posts : []
@@ -454,7 +489,7 @@ function useTimelineDay(date: string): DayFetchState {
 
       // Error only when every day-scoped stream failed; a lost static-content fetch just
       // means posts/photos/concerts read empty for the day, not a page-wide failure.
-      const results = [listening, articles, books, films, activities, notes]
+      const results = [listening, articles, links, books, films, activities, notes]
       if (results.every((r) => r.status === 'rejected')) {
         setState({ ...EMPTY_STATE, ready: true, error: true })
         return
@@ -463,6 +498,7 @@ function useTimelineDay(date: string): DayFetchState {
       const timeline = buildTimeline({
         days: listening.status === 'fulfilled' && listening.value ? [listening.value] : [],
         articles: articles.status === 'fulfilled' ? articles.value : [],
+        links: links.status === 'fulfilled' ? links.value : [],
         books: books.status === 'fulfilled' ? books.value : [],
         films: films.status === 'fulfilled' ? films.value : [],
         activities: activities.status === 'fulfilled' ? activities.value : [],
@@ -747,7 +783,7 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
         {day.articles.length > 0 && (
           <li className="timeline-event" data-stream="reading">
             <span className="timeline-icon" aria-hidden="true">
-              🔗
+              📄
             </span>
             <span>
               <span className="timeline-label">
@@ -776,6 +812,47 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
                       </a>
                       <span className="timeline-detail">
                         {article.site && ` — ${article.site}`} · {formatTime(article.readAt)}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </span>
+          </li>
+        )}
+
+        {day.links.length > 0 && (
+          <li className="timeline-event" data-stream="reading">
+            <span className="timeline-icon" aria-hidden="true">
+              🔗
+            </span>
+            <span>
+              <span className="timeline-label">
+                {day.links.length} {day.links.length === 1 ? 'link' : 'links'} saved
+              </span>
+              <ul className="timeline-sublist">
+                {day.links.map((link) => {
+                  const favicon = faviconUrl(link.url)
+                  return (
+                    <li key={link.id}>
+                      {favicon && (
+                        <img
+                          className="article-favicon"
+                          src={favicon}
+                          alt=""
+                          width={16}
+                          height={16}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      )}
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        {link.title || titleFromUrl(link.url)}
+                      </a>
+                      <span className="timeline-detail">
+                        {link.site && ` — ${link.site}`} · {formatTime(link.savedAt)}
                       </span>
                     </li>
                   )

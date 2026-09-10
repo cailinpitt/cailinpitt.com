@@ -52,6 +52,9 @@ squarespace-backup/
 scripts/watching-backfill.sql
 scripts/.watching-slugs.json
 
+# Review file for scripts/reading-split-links.mjs — a one-off article→link sort.
+scripts/.reading-split.tsv
+
 # Generated from the Strava bulk export; re-derivable, and thousands of lines.
 # scripts/moving-recategorize.sql is hand-written and *is* tracked.
 scripts/moving-backfill.sql

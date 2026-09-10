@@ -72,7 +72,10 @@ export function dayEvents(day: TimelineDay): DayEvent[] {
     })
   }
   if (day.articles.length) {
-    events.push({ stream: 'reading', icon: '🔗', label: `${plural(day.articles.length, 'article')} saved` })
+    events.push({ stream: 'reading', icon: '📄', label: `${plural(day.articles.length, 'article')} saved` })
+  }
+  if (day.links.length) {
+    events.push({ stream: 'reading', icon: '🔗', label: `${plural(day.links.length, 'link')} saved` })
   }
   if (day.notes.length) events.push({ stream: 'notes', icon: '💬', label: plural(day.notes.length, 'note') })
   return events
@@ -149,6 +152,7 @@ export function useHomeTimeline(
       const days = buildTimeline({
         days: l?.days ?? [],
         articles: r?.articles ?? [],
+        links: r?.links ?? [],
         books: r ? [...r.currentlyReading, ...r.finishedBooks] : [],
         films: w?.films ?? [],
         activities: m?.activities ?? [],

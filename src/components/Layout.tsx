@@ -57,6 +57,7 @@ export function Layout() {
                   { to: '/listening', label: 'Listening' },
                   { to: '/reading', label: 'Books' },
                   { to: '/reading/articles', label: 'Articles' },
+                  { to: '/links', label: 'Links' },
                   { to: '/watching', label: 'Watching' },
                   { to: '/concerts', label: 'Concerts' },
                   { to: '/moving', label: 'Moving' },

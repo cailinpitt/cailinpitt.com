@@ -1,38 +1,46 @@
 # Reading API (Cloudflare Worker)
 
-Backs [`cailinpitt.com/reading`](https://cailinpitt.com/reading). Two sources, two ingest paths,
-one read API:
+Backs [`cailinpitt.com/reading`](https://cailinpitt.com/reading) and
+[`/links`](https://cailinpitt.com/links). Two sources, one ingest path, one read API:
 
 - **Books** — pulled from [hardcover.app](https://hardcover.app)'s GraphQL API on an hourly cron.
-- **Articles** — pushed to `/ingest` from an iOS/macOS Shortcut or a desktop bookmarklet. The
-  Worker fetches the page's social card and stores it; the same endpoint annotates and removes.
+- **Articles & links** — pushed to `/ingest` from an iOS/macOS Shortcut or a desktop bookmarklet.
+  An *article* is something I read and kept (card art, excerpt, a note); a *link* is a bare
+  interesting page (`{"kind":"link"}` — a compact favicon row, no art). Same endpoint annotates,
+  removes, and moves a url between the two.
 
 | File | What it does |
 |---|---|
 | `src/index.ts` | `scheduled` (hourly: sync ∥ re-enrich) and `fetch` (read API + `/ingest`) |
 | `src/hardcover.ts` | hardcover.app GraphQL client |
 | `src/sync.ts` | full-replace library ingest into D1 |
-| `src/articles.ts` | url canonicalization + save / annotate / remove |
+| `src/articles.ts` | url canonicalization + save / annotate / remove (articles) |
+| `src/links.ts` | the same for `links` — no image mirror |
+| `src/saved.ts` | move a row between `articles` and `links` (article ⇄ link) |
 | `src/metadata.ts` | og:/twitter:/JSON-LD/`<p>` extraction via `HTMLRewriter`, with a link-unfurler UA retry |
-| `src/enrich.ts` | hourly retry of articles whose card came back without a title |
-| `src/images.ts` | mirrors covers + social cards into R2 |
-| `src/store.ts` | D1 reads for the bundle and article pagination |
+| `src/enrich.ts` | hourly retry of articles *and* links whose card came back without a title |
+| `src/images.ts` | mirrors covers + article social cards into R2 |
+| `src/store.ts` | D1 reads for the bundle and article/link pagination |
 | `src/text.ts` | the `curl reading.cailinpitt.com` view |
-| `schema.sql` | `books`, `articles`, `stats` (apply `schema-v4.sql` to an existing DB) |
+| `schema.sql` | `books`, `articles`, `links`, `stats` (apply `schema-v6.sql` to an existing DB) |
 
 ## Endpoints
 
 | Route | Auth | Notes |
 |---|---|---|
-| `GET /reading.json` | — | the bundle: `currentlyReading`, `recentBooks`, `articles`, `counts`, `nextCursor` |
-| `GET /articles?cursor=&limit=` | — | older articles. Cursor is `<read_at>:<id>` — composite, so two articles saved in the same second don't drop one at a page boundary |
+| `GET /reading.json` | — | the bundle: `currentlyReading`, `finishedBooks`, `articles`, `links`, `counts`, `nextCursor`, `nextLinkCursor` |
+| `GET /articles?cursor=&limit=` | — | older articles. Cursor is `<read_at>:<id>` — composite, so two saved in the same second don't drop one at a page boundary |
+| `GET /articles?from=&to=` | — | articles in a unix-seconds range, for `/timeline/:date` |
+| `GET /links?cursor=&limit=` | — | older links. Cursor is `<saved_at>:<id>` |
+| `GET /links?from=&to=` | — | links in a unix-seconds range |
 | `GET /` or `/reading` | — | terminal view for CLI user-agents, else a 302 (`no-store`) |
-| `POST /ingest` | `Bearer INGEST_TOKEN` | save an article |
-| `PATCH /ingest` | `Bearer INGEST_TOKEN` | set or extend its note |
-| `DELETE /ingest` | `Bearer INGEST_TOKEN` | remove it |
+| `POST /ingest` | `Bearer INGEST_TOKEN` | save a url. `{"kind":"link"}` → `links`, otherwise `articles` |
+| `PATCH /ingest` | `Bearer INGEST_TOKEN` | set/extend the note; `{"kind":…}` moves the row between tables |
+| `DELETE /ingest` | `Bearer INGEST_TOKEN` | remove it (from whichever table has it, or the given `kind`) |
 | `POST /sync` | `Bearer ADMIN_TOKEN` | run the Hardcover sync now (constant-time token compare) |
 
-`/ingest` accepts `url` or `id`, allows any origin, and is never cached.
+`/ingest` accepts `url` or `id`, allows any origin, and is never cached. Saving a url as a `link`
+that already exists as an article (or vice versa) **moves** it rather than duplicating it.
 
 ## Setup
 
@@ -46,6 +54,9 @@ npx wrangler secret put HARDCOVER_TOKEN
 # 2. Database — paste database_id into wrangler.jsonc
 npx wrangler d1 create cailinpitt-reading
 npm run schema:remote
+# On an existing DB, apply migrations in order instead: schema-v2 … schema-v6.
+# schema-v6 adds the `links` table and `stats.links` — apply it *before* deploying
+# the code that reads them (see RUNBOOK.md).
 
 # 3. Tokens. Put the same values in the repo-root .env as INGEST_TOKEN and
 #    READING_ADMIN_TOKEN — Cloudflare secrets are write-only, so .env is the
@@ -62,12 +73,16 @@ Then set `VITE_READING_API` at build time (defaults to `https://reading.cailinpi
 `INGEST_TOKEN` is separate from `ADMIN_TOKEN` on purpose: it lives on a phone and inside a
 bookmarklet, and all it can do is add an article.
 
-## Saving an article
+## Saving an article or a link
 
 ```bash
 curl -sX POST https://reading.cailinpitt.com/ingest \
   -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
-  -d '{"url":"https://arstechnica.com/...","note":"optional"}'
+  -d '{"url":"https://arstechnica.com/...","note":"optional"}'          # → articles
+
+curl -sX POST https://reading.cailinpitt.com/ingest \
+  -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
+  -d '{"url":"https://opusfived.dev/","kind":"link"}'                   # → links
 ```
 
 One path, three verbs, all keyed by the url you shared (tracking params and all —
@@ -75,15 +90,17 @@ canonicalized away before hashing), so you never need an id:
 
 | Verb | Body | Does |
 |---|---|---|
-| `POST` | `{"url": "…", "note": "…"}` | save it (`note` optional) |
+| `POST` | `{"url": "…", "note": "…", "kind": "link"}` | save it. `kind` defaults to `article` |
 | `PATCH` | `{"url": "…", "note": "…", "append": true}` | set or extend the note |
-| `DELETE` | `{"url": "…"}` | remove it |
+| `PATCH` | `{"url": "…", "kind": "link"}` | move it to that table (article ⇄ link) |
+| `DELETE` | `{"url": "…"}` | remove it from whichever table has it |
 
 `PATCH` with `"note": ""` clears a note; `"append": true` adds to the existing one rather than
-replacing it. Both `PATCH` and `DELETE` also take `{"id": "…"}`.
+replacing it. All three also take `{"id": "…"}`.
 
-Saving a link twice is a no-op *except* for the note — an explicit note is always written, and the
-response says `noted: true`.
+Saving a url twice is a no-op *except* for the note — an explicit note is always written, and the
+response says `noted: true`. Saving it as the other `kind` moves the row (and returns `moved:
+true`) rather than making a second copy.
 
 Deleting leaves the mirrored image in R2 on purpose: keys are content-addressed, so re-saving
 reuses the object, and `prune-r2.mjs` never touches this prefix.
@@ -93,13 +110,14 @@ open, so an allowlist can't work — the token is the security boundary.
 
 ### iOS / macOS share sheet
 
-Three shortcuts, all built the same way: Shortcuts → new shortcut → **Get Contents of URL**, then
+Shortcuts, all built the same way: Shortcuts → new shortcut → **Get Contents of URL**, then
 in settings enable **Show in Share Sheet** accepting *URLs* and *Safari web pages*. Each gets
 `authorization` = `Bearer <INGEST_TOKEN>` as a header.
 
 - **"Save to reading"** — URL `https://reading.cailinpitt.com/ingest`, method **POST**, Request
   Body **JSON**, key `url` = **Shortcut Input**.
-- **"Remove from reading"** — same, method **DELETE**.
+- **"Save link"** — same, with a second JSON field `kind` = `link`.
+- **"Remove from reading"** — same, method **DELETE** (works for a link too).
 - **"Save to reading with note"** — three actions, in this order:
 
   ```
@@ -123,6 +141,9 @@ javascript:(()=>{fetch('https://reading.cailinpitt.com/ingest',{method:'POST',he
 
 // Save with a note (prompts; cancel saves without one)
 javascript:(()=>{const n=prompt('Note?');fetch('https://reading.cailinpitt.com/ingest',{method:'POST',headers:{'authorization':'Bearer INGEST_TOKEN_HERE','content-type':'application/json'},body:JSON.stringify({url:location.href,note:n||''})}).then(r=>r.json()).then(r=>alert(r.error||(r.stored?'Saved':'Already saved'))).catch(e=>alert('Failed: '+e))})()
+
+// Save as a link (compact list, no card art)
+javascript:(()=>{fetch('https://reading.cailinpitt.com/ingest',{method:'POST',headers:{'authorization':'Bearer INGEST_TOKEN_HERE','content-type':'application/json'},body:JSON.stringify({url:location.href,kind:'link'})}).then(r=>r.json()).then(r=>alert(r.error||(r.moved?'Moved to links':r.stored?'Saved':'Already saved'))).catch(e=>alert('Failed: '+e))})()
 
 // Remove
 javascript:(()=>{if(!confirm('Remove from reading?'))return;fetch('https://reading.cailinpitt.com/ingest',{method:'DELETE',headers:{'authorization':'Bearer INGEST_TOKEN_HERE','content-type':'application/json'},body:JSON.stringify({url:location.href})}).then(r=>r.json()).then(r=>alert(r.error||'Removed')).catch(e=>alert('Failed: '+e))})()
@@ -194,16 +215,17 @@ differs from last time. On an unchanged library the sync refreshes the totals ro
 once a day (`STATS_MAX_AGE`), so a manual edit to `books` still reconciles. Steady-state writes:
 near zero.
 
-### Article metadata is retried, not one-shot
+### Article & link metadata is retried, not one-shot
 
 The `/ingest` fetch of a page's social card gets two tries — the honest UA, then
 `Slackbot-LinkExpanding` (publishers that 403 an unknown agent usually allowlist link
-unfurlers). Anything still missing a title is retried by `reenrichArticles()` (`src/enrich.ts`),
-which runs in parallel with the sync on the hourly cron — `BATCH` rows per pass, with backoff, up
-to `MAX_ATTEMPTS`. One cron, sharing the ~50-subrequest budget: the account is at the free-plan
-5-trigger limit. `articles.enriched_at` is the flag: null until a fetch produces a title. Beyond
-og:/twitter:, `metadata.ts` also reads JSON-LD `headline`/`description` and, last, the first
-real `<p>`.
+unfurlers). Anything still missing a title is retried by `reenrich()` (`src/enrich.ts`), which
+runs in parallel with the sync on the hourly cron — one pass over **both** `articles` and `links`
+sharing a single `BATCH` and deadline, with backoff, up to `MAX_ATTEMPTS`. One cron, sharing the
+~50-subrequest budget: the account is at the free-plan 5-trigger limit. `enriched_at` is the flag
+in either table: null until a fetch produces a title. Links never mirror an image; otherwise the
+two are treated the same. Beyond og:/twitter:, `metadata.ts` also reads JSON-LD
+`headline`/`description` and, last, the first real `<p>`.
 
 ## Testing
 
@@ -292,6 +314,23 @@ Worth checking:
 
 `canonicalizeUrl` is exported from `src/articles.ts` if you want to check the rules directly.
 
+### Links
+
+Same as articles with `-d '{"url":"…","kind":"link"}'`; the row lands in `links` (no `image`
+column) and `stats.links` ticks up. Worth checking:
+
+- **Move** — `POST` a url that already exists in `articles` with `"kind":"link"`. It leaves
+  `articles`, appears in `links`, and the response says `moved: true`. `PATCH` it back with
+  `"kind":"article"`.
+- **Split existing articles** — `npm run reading:split-links` (repo root) dumps every article to
+  `scripts/.reading-split.tsv` with a guessed `link`/`article` in column 1. Edit that column, then
+  `npm run reading:split-links -- --apply` moves the `link` rows across. Idempotent.
+
+```bash
+npx wrangler d1 execute cailinpitt-reading --remote \
+  --command "SELECT url, title, site, note, saved_at FROM links ORDER BY saved_at DESC LIMIT 5"
+```
+
 ## Terminal view
 
 ```bash
@@ -302,8 +341,8 @@ curl reading.cailinpitt.com?T   # no color
 A 72-column ANSI page. Dispatch rules match the listening worker's — see
 [`worker-listening/README.md`](../worker-listening/README.md#terminal-view). Shows what you're
 reading now (falling back to the last book finished, so the top is never blank between books),
-this year and all-time counts, the last 8 books finished with ratings, and the last 8 articles
-grouped by day.
+this year and all-time counts, the last 8 books finished with ratings, the last 8 articles, and
+the last 8 links — the two lists grouped by day.
 
 The renderer copies the listening worker's helpers (`clip`, `fit`, `ink`, `stars`) rather than
 sharing a module — the two Workers are separate packages with separate deploys, and a shared

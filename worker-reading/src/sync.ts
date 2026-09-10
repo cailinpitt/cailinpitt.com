@@ -192,12 +192,14 @@ async function reconcileStats(db: D1Database, rows: BookRow[], fingerprint: stri
 
 function statsStatement(db: D1Database, rows: BookRow[], fingerprint: string): D1PreparedStatement {
   const { booksRead, byYear } = summarize(rows)
-  // `articles` is reconciled here rather than incremented, which repairs any
-  // increment the email ingest may have missed.
+  // `articles` and `links` are reconciled here rather than incremented, which
+  // repairs any increment the ingest path may have missed and any counter drift
+  // left by a table-to-table move (see src/saved.ts).
   return db
     .prepare(
       `UPDATE stats SET books_read = ?1, by_year = ?2,
          articles = (SELECT COUNT(*) FROM articles),
+         links = (SELECT COUNT(*) FROM links),
          library_hash = ?3, updated_at = ?4
        WHERE id = 1`,
     )

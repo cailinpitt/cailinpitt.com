@@ -52,9 +52,11 @@ DROP INDEX IF EXISTS idx_books_finished;
 -- databases converge on re-running this file.
 DROP INDEX IF EXISTS idx_books_status;
 
--- Articles, ingested from mail sent to the secret address (see src/email.ts).
+-- Articles I read and enjoyed, pushed to POST /ingest (see src/articles.ts).
+-- Bare "interesting link" saves go in `links` instead — same ingest path with
+-- `{"kind":"link"}` — and render as a compact favicon list with no card art.
 --
--- `id` is a hash of the *canonical* url, so re-sending the same link is a no-op:
+-- `id` is a hash of the *canonical* url, so re-saving the same link is a no-op:
 -- INSERT OR IGNORE keeps the date it was first read rather than bumping it.
 CREATE TABLE IF NOT EXISTS articles (
   id      TEXT    PRIMARY KEY,        -- sha-256 of the canonical url, first 16 hex chars
@@ -86,6 +88,29 @@ DROP INDEX IF EXISTS idx_articles_read_at;
 CREATE INDEX IF NOT EXISTS idx_articles_unenriched
   ON articles (attempts, read_at DESC) WHERE enriched_at IS NULL;
 
+-- Saved links: the same shape as `articles` minus `image` (the /links page is a
+-- compact favicon list, so links never mirror art to R2). Ingested via
+-- POST /ingest with `{"kind":"link"}`; a PATCH with a different `kind` moves a
+-- row between the two tables. See src/links.ts. Apply schema-v6.sql to an
+-- existing DB.
+CREATE TABLE IF NOT EXISTS links (
+  id       TEXT    PRIMARY KEY,        -- sha-256 of the canonical url, first 16 hex chars
+  url      TEXT    NOT NULL,
+  title    TEXT,
+  site     TEXT,
+  excerpt  TEXT,
+  note     TEXT,
+  saved_at INTEGER NOT NULL,
+  enriched_at     INTEGER,
+  attempts        INTEGER NOT NULL DEFAULT 0,
+  last_attempt_at INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_links_seq ON links (saved_at DESC, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_links_unenriched
+  ON links (attempts, saved_at DESC) WHERE enriched_at IS NULL;
+
 -- Precomputed totals — a single row, read once per bundle.
 --
 -- These used to be COUNT(*)/SUM() subqueries in the bundle query, which read
@@ -104,6 +129,7 @@ CREATE TABLE IF NOT EXISTS stats (
   id           INTEGER PRIMARY KEY CHECK (id = 1),
   books_read   INTEGER NOT NULL DEFAULT 0,
   articles     INTEGER NOT NULL DEFAULT 0,
+  links        INTEGER NOT NULL DEFAULT 0,
   -- {"2026": {"books": 36, "pages": 12043}, …}. Per-year rather than a single
   -- "this year" figure so the counter is correct the moment the year rolls over,
   -- instead of showing last year's total until the next sync.

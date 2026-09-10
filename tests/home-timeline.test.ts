@@ -9,6 +9,7 @@ const base: TimelineDay = {
   scrobbles: 0,
   topArtist: null,
   articles: [],
+  links: [],
   booksFinished: [],
   booksStarted: [],
   films: [],
@@ -36,6 +37,18 @@ describe('dayEvents', () => {
       'watching:Watched Dune',
       'listening:42 scrobbles · Interpol',
       'reading:1 article saved',
+    ])
+  })
+
+  it('lists saved links after saved articles, each with its own glyph', () => {
+    const day: TimelineDay = {
+      ...base,
+      articles: [{} as TimelineDay['articles'][number]],
+      links: [{} as TimelineDay['links'][number], {} as TimelineDay['links'][number]],
+    }
+    expect(dayEvents(day).map((e) => `${e.icon} ${e.stream}:${e.label}`)).toEqual([
+      '📄 reading:1 article saved',
+      '🔗 reading:2 links saved',
     ])
   })
 

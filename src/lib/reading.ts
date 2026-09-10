@@ -44,6 +44,24 @@ export interface ArticlePage {
   nextCursor: string | null
 }
 
+/** A bare saved link — an interesting page, not something I sat and read.
+ *  Rendered as a compact favicon row on /links (no card image, unlike Article). */
+export interface Link {
+  id: string
+  url: string
+  title: string | null
+  site: string | null
+  excerpt: string | null
+  note: string | null
+  savedAt: number
+}
+
+export interface LinkPage {
+  links: Link[]
+  /** Opaque; pass straight back to fetchOlderLinks. Null means no more. */
+  nextCursor: string | null
+}
+
 export interface BookPage {
   books: Book[]
   /** Opaque; pass straight back to fetchOlderBooks. Null means no more. */
@@ -56,11 +74,15 @@ export interface ReadingBundle extends ArticlePage {
   /** First page of finished books, newest first. */
   finishedBooks: Book[]
   nextBookCursor: string | null
+  /** First page of saved links, newest first. */
+  links: Link[]
+  nextLinkCursor: string | null
   counts: {
     booksRead: number
     booksThisYear: number
     pagesThisYear: number
     articles: number
+    links: number
   }
 }
 
@@ -71,6 +93,8 @@ export interface ReadingNow {
   lastFinished: Book | null
   /** Most recent article, but only if saved today. Null on a quiet day. */
   todaysArticle: Article | null
+  /** Most recent link, same today-only rule. */
+  todaysLink: Link | null
   updatedAt: number
 }
 
@@ -120,6 +144,29 @@ export async function fetchArticlesOnDate(
   if (!res.ok) throw new Error(`Reading API ${res.status}`)
   const data = (await res.json()) as { articles: Article[] }
   return data.articles
+}
+
+export async function fetchOlderLinks(
+  cursor: string,
+  limit = 20,
+  signal?: AbortSignal,
+): Promise<LinkPage> {
+  const res = await fetch(`${API_BASE}/links?cursor=${encodeURIComponent(cursor)}&limit=${limit}`, {
+    signal,
+  })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  return res.json() as Promise<LinkPage>
+}
+
+export async function fetchLinksOnDate(
+  from: number,
+  to: number,
+  signal?: AbortSignal,
+): Promise<Link[]> {
+  const res = await fetch(`${API_BASE}/links?from=${from}&to=${to}`, { signal })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  const data = (await res.json()) as { links: Link[] }
+  return data.links
 }
 
 export async function fetchBooksOnDate(date: string, signal?: AbortSignal): Promise<Book[]> {

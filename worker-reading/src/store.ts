@@ -12,6 +12,10 @@ const MAX_BOOK_PAGE = 100
 export const ARTICLE_PAGE = 20
 const MAX_ARTICLE_PAGE = 50
 
+/** Links per page. Same shape as articles; a link row is smaller (no image). */
+export const LINK_PAGE = 20
+const MAX_LINK_PAGE = 50
+
 const BOOK_COLS =
   'user_book_id, read_id, title, authors, slug, cover, pages, rating, status_id, started_at, finished_at'
 
@@ -40,6 +44,16 @@ export interface Article {
   readAt: number
 }
 
+export interface Link {
+  id: string
+  url: string
+  title: string | null
+  site: string | null
+  excerpt: string | null
+  note: string | null
+  savedAt: number
+}
+
 export interface BookPage {
   books: Book[]
   /** Opaque; pass straight back to /books. Null means the history is exhausted. */
@@ -54,11 +68,14 @@ export interface ReadingBundle {
   nextBookCursor: string | null
   articles: Article[]
   nextCursor: string | null
+  links: Link[]
+  nextLinkCursor: string | null
   counts: {
     booksRead: number
     booksThisYear: number
     pagesThisYear: number
     articles: number
+    links: number
   }
 }
 
@@ -87,6 +104,16 @@ interface ArticleRow {
   read_at: number
 }
 
+interface LinkRow {
+  id: string
+  url: string
+  title: string | null
+  site: string | null
+  excerpt: string | null
+  note: string | null
+  saved_at: number
+}
+
 const toBook = (r: BookRow): Book => ({
   userBookId: r.user_book_id,
   readId: r.read_id,
@@ -110,6 +137,18 @@ const toArticle = (r: ArticleRow): Article => ({
   image: r.image,
   note: r.note,
   readAt: r.read_at,
+})
+
+const LINK_COLS = 'id, url, title, site, excerpt, note, saved_at'
+
+const toLink = (r: LinkRow): Link => ({
+  id: r.id,
+  url: r.url,
+  title: r.title,
+  site: r.site,
+  excerpt: r.excerpt,
+  note: r.note,
+  savedAt: r.saved_at,
 })
 
 // Cursor is composite (`<read_at>:<id>`), not a bare timestamp: two articles
@@ -222,6 +261,52 @@ export async function fetchArticlesBetween(
   return (results ?? []).map(toArticle)
 }
 
+// Same composite-cursor shape as articles (`<saved_at>:<id>`); decodeCursor is
+// generic enough to reuse (its `.readAt` field is just "the timestamp").
+const encodeLinkCursor = (l: Link): string => `${l.savedAt}:${l.id}`
+
+export async function fetchLinks(
+  db: D1Database,
+  cursor: string | null,
+  limit: number,
+): Promise<{ links: Link[]; nextCursor: string | null }> {
+  const size = Math.min(Math.max(limit, 1), MAX_LINK_PAGE)
+  const from = decodeCursor(cursor)
+
+  const query = from
+    ? db
+        .prepare(
+          `SELECT ${LINK_COLS} FROM links
+           WHERE saved_at < ?1 OR (saved_at = ?1 AND id < ?2)
+           ORDER BY saved_at DESC, id DESC LIMIT ?3`,
+        )
+        .bind(from.readAt, from.id, size + 1)
+    : db
+        .prepare(`SELECT ${LINK_COLS} FROM links ORDER BY saved_at DESC, id DESC LIMIT ?1`)
+        .bind(size + 1)
+
+  const { results } = await query.all<LinkRow>()
+  const rows = (results ?? []).map(toLink)
+  const hasMore = rows.length > size
+  const links = hasMore ? rows.slice(0, size) : rows
+  return {
+    links,
+    nextCursor: hasMore && links.length ? encodeLinkCursor(links[links.length - 1]) : null,
+  }
+}
+
+/** Links saved in [from, to) — a single indexed range scan, for /timeline's permalink. */
+export async function fetchLinksBetween(db: D1Database, from: number, to: number): Promise<Link[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ${LINK_COLS} FROM links
+       WHERE saved_at >= ?1 AND saved_at < ?2 ORDER BY saved_at DESC, id DESC`,
+    )
+    .bind(from, to)
+    .all<LinkRow>()
+  return (results ?? []).map(toLink)
+}
+
 /** Books finished, or started-and-not-finished, on `date` — matches buildTimeline()'s
  * bucketing (frontend src/lib/timeline.ts) so a permalink day agrees with the paged view. */
 export async function fetchBooksOnDate(db: D1Database, date: string): Promise<Book[]> {
@@ -246,6 +331,8 @@ export interface ReadingNow {
    * the card rather than showing a stale one from last week.
    */
   todaysArticle: Article | null
+  /** Most recent link, same "saved today" rule as todaysArticle. */
+  todaysLink: Link | null
   updatedAt: number
 }
 
@@ -255,7 +342,7 @@ export async function buildNow(db: D1Database, offsetSeconds: number): Promise<R
   const now = Math.floor(Date.now() / 1000)
   const startOfToday = Math.floor((now + offsetSeconds) / 86400) * 86400 - offsetSeconds
 
-  const [current, finished, article] = await Promise.all([
+  const [current, finished, article, link] = await Promise.all([
     db
       .prepare(
         `SELECT ${BOOK_COLS} FROM books WHERE status_id = 2
@@ -276,12 +363,20 @@ export async function buildNow(db: D1Database, offsetSeconds: number): Promise<R
       )
       .bind(startOfToday)
       .first<ArticleRow>(),
+    db
+      .prepare(
+        `SELECT ${LINK_COLS} FROM links
+         WHERE saved_at >= ?1 ORDER BY saved_at DESC, id DESC LIMIT 1`,
+      )
+      .bind(startOfToday)
+      .first<LinkRow>(),
   ])
 
   return {
     currentlyReading: (current.results ?? []).map(toBook),
     lastFinished: finished ? toBook(finished) : null,
     todaysArticle: article ? toArticle(article) : null,
+    todaysLink: link ? toLink(link) : null,
     updatedAt: now,
   }
 }
@@ -303,7 +398,7 @@ function yearFrom(byYear: string | undefined, year: number): YearTotals {
 }
 
 export async function buildBundle(db: D1Database, year: number): Promise<ReadingBundle> {
-  const [current, finished, counts, page] = await Promise.all([
+  const [current, finished, counts, page, linkPage] = await Promise.all([
     db
       .prepare(
         // NULL dates sort last: a book you started without recording a date
@@ -316,9 +411,10 @@ export async function buildBundle(db: D1Database, year: number): Promise<Reading
     // One row, precomputed by the sync. See the `stats` table in schema.sql for
     // why these are not COUNT(*)/SUM() subqueries over the archive.
     db
-      .prepare('SELECT books_read, articles, by_year FROM stats WHERE id = 1')
-      .first<{ books_read: number; articles: number; by_year: string }>(),
+      .prepare('SELECT books_read, articles, links, by_year FROM stats WHERE id = 1')
+      .first<{ books_read: number; articles: number; links: number; by_year: string }>(),
     fetchArticles(db, null, ARTICLE_PAGE),
+    fetchLinks(db, null, LINK_PAGE),
   ])
 
   // A year absent from by_year is genuinely zero — which is what makes the
@@ -333,11 +429,14 @@ export async function buildBundle(db: D1Database, year: number): Promise<Reading
     nextBookCursor: finished.nextCursor,
     articles: page.articles,
     nextCursor: page.nextCursor,
+    links: linkPage.links,
+    nextLinkCursor: linkPage.nextCursor,
     counts: {
       booksRead: counts?.books_read ?? 0,
       booksThisYear: thisYear.books,
       pagesThisYear: thisYear.pages,
       articles: counts?.articles ?? 0,
+      links: counts?.links ?? 0,
     },
   }
 }

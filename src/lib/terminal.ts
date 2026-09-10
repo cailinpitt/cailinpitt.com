@@ -5,7 +5,7 @@ import { imageUrl } from './images'
 import { formatNumber, formatRelative } from './datetime'
 import { tagSlug } from './tags'
 import type { NowState } from './listening'
-import { titleFromUrl, type Article, type ReadingNow } from './reading'
+import { titleFromUrl, type Article, type Link, type ReadingNow } from './reading'
 import { formatWatchedDate, stars, type WatchingNow } from './watching'
 import { kindIcon, longDate, summary, type ActivityNow } from './moving'
 import type { EntryPage } from './guestbook'
@@ -167,9 +167,10 @@ export function buildTree(posts: TerminalPost[], photos: TerminalPhoto[]): Node 
         meta: 'books, from Hardcover',
         keywords: 'hardcover',
         children: [
-          { name: 'articles', kind: 'page', to: '/reading/articles', meta: 'saved articles', keywords: 'links saved bookmarks' },
+          { name: 'articles', kind: 'page', to: '/reading/articles', meta: 'saved articles', keywords: 'essays longreads saved' },
         ],
       },
+      { name: 'links', kind: 'page', to: '/links', meta: 'saved links', keywords: 'bookmarks interesting sites tools saved' },
       { name: 'watching', kind: 'page', to: '/watching', meta: 'films, from Letterboxd', keywords: 'movies letterboxd cinema' },
       { name: 'moving', kind: 'page', to: '/moving', meta: 'exercise', keywords: 'bike cycling ebike lifting gym exercise' },
       { name: 'timeline', kind: 'page', to: '/timeline', meta: 'one row per day', keywords: 'log activity' },
@@ -384,20 +385,25 @@ function photoLines(photo: TerminalPhoto): Line[] {
   ]
 }
 
-function articleLines(article: Article): Line[] {
-  let host = article.site
+// Shared by today's article (📄) and today's link (🔗) — both are just a saved
+// url with a title and a host.
+function savedLines(item: Pick<Article, 'url' | 'title' | 'site'>, prefix: string): Line[] {
+  let host = item.site
   if (!host) {
     try {
-      host = new URL(article.url).host
+      host = new URL(item.url).host
     } catch {
-      host = article.url
+      host = item.url
     }
   }
   return [
-    { text: article.title || titleFromUrl(article.url), href: article.url, prefix: '📄 ' },
+    { text: item.title || titleFromUrl(item.url), href: item.url, prefix },
     muted(`   ${host}`),
   ]
 }
+
+const articleLines = (article: Article): Line[] => savedLines(article, '📄 ')
+const linkLines = (link: Link): Line[] => savedLines(link, '🔗 ')
 
 function nowPlayingLines({ nowPlaying, lastPlayed }: NowState): Line[] {
   const track = nowPlaying ?? lastPlayed
@@ -562,6 +568,8 @@ export async function run(
         }
         const article = reading.value.todaysArticle
         if (article) lines.push(blank(), ...articleLines(article))
+        const savedLink = reading.value.todaysLink
+        if (savedLink) lines.push(blank(), ...linkLines(savedLink))
       }
 
       // No "today" filter, unlike the article above — films are logged a few times a week,
@@ -593,7 +601,8 @@ export async function run(
 
     case 'reading': {
       try {
-        const { currentlyReading, lastFinished, todaysArticle } = await shell.fetchReading()
+        const { currentlyReading, lastFinished, todaysArticle, todaysLink } =
+          await shell.fetchReading()
         const lines: Line[] = []
         for (const book of currentlyReading) {
           lines.push(line(`📖 ${book.title}`, 'accent'), muted(`   ${book.authors ?? 'Unknown'}`))
@@ -607,12 +616,14 @@ export async function run(
         }
         if (!lines.length) lines.push(muted('Nothing in progress.'))
         if (todaysArticle) lines.push(blank(), ...articleLines(todaysArticle))
+        if (todaysLink) lines.push(blank(), ...linkLines(todaysLink))
         return {
           lines: [
             ...lines,
             blank(),
             link('The whole shelf → /reading', '/reading'),
             link('Saved articles → /reading/articles', '/reading/articles'),
+            link('Saved links → /links', '/links'),
           ],
         }
       } catch {

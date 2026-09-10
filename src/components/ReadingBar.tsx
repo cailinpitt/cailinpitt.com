@@ -24,7 +24,8 @@ export function ReadingBar({
   const reading = now?.currentlyReading?.[0]
   const book = reading ?? now?.lastFinished
   const article = showArticle ? now?.todaysArticle : null
-  if (!book && !article) return null
+  const link = showArticle ? now?.todaysLink : null
+  if (!book && !article && !link) return null
 
   const finishedOn = book ? formatDayStamp(book.finishedAt) : null
   const others = (now?.currentlyReading?.length ?? 0) - 1
@@ -104,6 +105,29 @@ export function ReadingBar({
           {showLogLinks && (
             <p className="more">
               <Link to="/reading/articles">Article log →</Link>
+            </p>
+          )}
+        </>
+      )}
+
+      {/* Null unless something was saved today, same as the article card. */}
+      {link && (
+        <>
+          <div className="now-bar">
+            <a className="now-bar-main" href={link.url} target="_blank" rel="noopener noreferrer">
+              <span className="now-bar-art is-card art-placeholder" aria-hidden="true" />
+              <span className="now-bar-text">
+                <span className="now-bar-label">Saved today · {formatTime(link.savedAt)}</span>
+                <span className="now-bar-track">
+                  <span className="now-bar-title">{link.title || titleFromUrl(link.url)}</span>
+                  {link.site && <span className="now-bar-artist">{link.site}</span>}
+                </span>
+              </span>
+            </a>
+          </div>
+          {showLogLinks && (
+            <p className="more">
+              <Link to="/links">Link log →</Link>
             </p>
           )}
         </>

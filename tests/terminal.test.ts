@@ -53,6 +53,16 @@ const article = {
   readAt: 1,
 }
 
+const savedLink = {
+  id: 'l1',
+  url: 'https://opusfived.dev/',
+  title: 'Opus Five',
+  site: null,
+  excerpt: null,
+  note: null,
+  savedAt: 1,
+}
+
 const film = {
   id: 'office-space|2026-07-25',
   title: 'Office Space',
@@ -104,6 +114,7 @@ function fakeShell(overrides: Partial<Shell> = {}) {
       currentlyReading: [book],
       lastFinished: null,
       todaysArticle: article,
+      todaysLink: savedLink,
       updatedAt: 0,
     }),
     fetchWatching: async () => ({ lastFilm: film, updatedAt: 0 }),
@@ -385,6 +396,20 @@ describe('commands', () => {
     expect(linked?.text).toBe('A piece')
     expect(linked?.prefix).toBe('📄 ')
     expect(lines.some((line) => line.text.includes('example.com'))).toBe(true)
+  })
+
+  it("links today's saved link with the 🔗 glyph, separate from the article", async () => {
+    const { shell } = fakeShell()
+    const lines = (await run('now', state(), shell)).lines
+    const linked = lines.find((line) => line.href === 'https://opusfived.dev/')
+    expect(linked?.text).toBe('Opus Five')
+    expect(linked?.prefix).toBe('🔗 ')
+  })
+
+  it('reading points at the links page too', async () => {
+    const { shell } = fakeShell()
+    const lines = (await run('reading', state(), shell)).lines
+    expect(lines.some((line) => line.href === '/links')).toBe(true)
   })
 
   it('now keeps the half that answered when a Worker is down', async () => {

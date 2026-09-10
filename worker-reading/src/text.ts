@@ -4,13 +4,14 @@
 // separate copy: the two workers are separate packages with no shared module,
 // and this one renders different rows.
 
-import type { Article, Book, ReadingBundle } from './store'
+import type { Article, Book, Link, ReadingBundle } from './store'
 
 const WIDTH = 72
 
 /** How many rows each list gets. A terminal view is a glance, not the archive. */
 const FINISHED_ROWS = 8
 const ARTICLE_ROWS = 8
+const LINK_ROWS = 8
 
 // 256-color approximations of the site's palette: --accent #e3925b, plus grays.
 const CODES = {
@@ -248,11 +249,35 @@ function articlesSection(articles: Article[], c: Ink, offset: number): string[] 
   return ['', `  ${c.accentDim('recently saved')}`, ...lines]
 }
 
+// Bare links I've saved — the compact counterpart to articlesSection. Same
+// day-grouped shape; the url on its own line, no site column.
+function linksSection(links: Link[], c: Ink, offset: number): string[] {
+  const rows = links.slice(0, LINK_ROWS)
+  if (!rows.length) return []
+
+  let lastDate = ''
+  const lines: string[] = []
+  for (const link of rows) {
+    const { date } = localParts(link.savedAt, offset)
+    if (date !== lastDate) {
+      lines.push(`    ${c.faint(date)}`)
+      lastDate = date
+    }
+    const time = c.dim(clockTime(link.savedAt, offset))
+    const title = clip(link.title ?? link.url, WIDTH - 17)
+    lines.push(`      ${time}  ${title}`)
+
+    const url = safeUrl(link.url)
+    if (url) lines.push(`        ${c.faint(tidyUrl(url))}`)
+  }
+  return ['', `  ${c.accentDim('recently linked')}`, ...lines]
+}
+
 function footer(c: Ink): string[] {
   return [
     '',
     `  ${c.dim('─'.repeat(WIDTH - 4))}`,
-    `  ${c.dim('books via hardcover.app · articles saved as I read them')}`,
+    `  ${c.dim('books via hardcover.app · articles & links saved as I go')}`,
     `  ${c.faint('?T for no color · /reading.json for JSON · /listening for music')}`,
     '',
   ]
@@ -276,6 +301,7 @@ export function renderText(b: ReadingBundle, opts: TextOptions): string {
     ...statsSection(b, c, opts.year),
     ...finishedSection(b.finishedBooks, c),
     ...articlesSection(b.articles, c, opts.offset),
+    ...linksSection(b.links, c, opts.offset),
     ...footer(c),
   ].join('\n')
 }

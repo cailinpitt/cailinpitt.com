@@ -28,6 +28,7 @@
     "publish:atproto": "node scripts/publish-atproto.mjs",
     "reading:probe": "node scripts/hardcover-probe.mjs",
     "reading:sync": "node scripts/reading-sync.mjs",
+    "reading:split-links": "node scripts/reading-split-links.mjs",
     "watching:sync": "node scripts/watching-sync.mjs",
     "watching:backfill": "node scripts/watching-backfill.mjs",
     "concerts:import": "node scripts/concerts-import.mjs",

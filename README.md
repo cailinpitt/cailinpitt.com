@@ -26,7 +26,7 @@ separately from the site.
 ## The Workers
 
 - **worker-listening** (`listening.cailinpitt.com`) — pulls my Last.fm scrobbles into D1 on a cron and keeps precomputed aggregates in KV. Backs `/listening` and the yearly wrapped pages.
-- **worker-reading** (`reading.cailinpitt.com`) — my books from [Hardcover](https://hardcover.app) once a day, plus articles I save from my phone. Cover art mirrors to R2.
+- **worker-reading** (`reading.cailinpitt.com`) — my books from [Hardcover](https://hardcover.app) once a day, plus articles and links I save from my phone. Cover and card art mirrors to R2.
 - **worker-watching** (`watching.cailinpitt.com`) — films from my Letterboxd RSS diary.
 - **worker-moving** (`moving.cailinpitt.com`) — bike rides and lifts, pulled from Strava.
 - **worker-notes** (`notes.cailinpitt.com`) — microblog. Notes live only in D1.

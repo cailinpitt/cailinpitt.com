@@ -342,6 +342,8 @@ npm run reading:probe                  # check the Hardcover query, no deploy ne
 npm run reading:probe -- --json
 npm run reading:sync                   # run the Hardcover sync now
 npm run reading:sync -- --covers       # loop until covers stop mirroring
+npm run reading:split-links            # dump articles to a review file (see "Splitting links out")
+npm run reading:split-links -- --apply # move the rows you marked `link`
 ```
 
 ### One-time migration: fingerprint the sync (do this before deploying)
@@ -364,21 +366,50 @@ refreshed at least once a day so a manual edit to `books` reconciles.
 `schema-v3.sql` also drops `idx_books_status`, which `idx_books_read_seq` already
 covered.
 
-Save / annotate / remove an article:
+### One-time migration: the `links` table (do this before deploying)
+
+`schema-v6.sql` adds the `links` table and `stats.links`. A bundle build or an ingest tick that
+hits the missing table/column fails, so apply it first — same rule as v3/v4:
+
+```bash
+cd worker-reading
+npx wrangler d1 execute cailinpitt-reading --remote --file=schema-v6.sql
+# then deploy the Worker
+```
+
+Save / annotate / remove / move an article or a link:
 
 ```bash
 curl -sX POST https://reading.cailinpitt.com/ingest \
   -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
-  -d '{"url":"https://example.com/x","note":"optional"}'
+  -d '{"url":"https://example.com/x","note":"optional"}'          # → articles
+
+curl -sX POST https://reading.cailinpitt.com/ingest \
+  -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
+  -d '{"url":"https://opusfived.dev/","kind":"link"}'             # → links (moves if already an article)
 
 curl -sX PATCH https://reading.cailinpitt.com/ingest \
   -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
   -d '{"url":"https://example.com/x","note":"more","append":true}'
 
+curl -sX PATCH https://reading.cailinpitt.com/ingest \
+  -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
+  -d '{"url":"https://example.com/x","kind":"article"}'           # move a link back
+
 curl -sX DELETE https://reading.cailinpitt.com/ingest \
   -H "authorization: Bearer $INGEST_TOKEN" -H 'content-type: application/json' \
   -d '{"url":"https://example.com/x"}'
 ```
+
+### Splitting links out of articles
+
+```bash
+npm run reading:split-links             # writes scripts/.reading-split.tsv, one row per article
+#   edit column 1 (link | article) by hand
+npm run reading:split-links -- --apply  # POSTs each `link` row with kind:"link" — the Worker moves it
+```
+
+Idempotent; the next hourly sync reconciles `stats.articles` / `stats.links`.
 
 Inspect D1:
 
@@ -387,6 +418,8 @@ npx wrangler d1 execute cailinpitt-reading --remote \
   --command "SELECT COUNT(*) AS rows, SUM(cover IS NOT NULL) AS with_cover FROM books"
 npx wrangler d1 execute cailinpitt-reading --remote \
   --command "SELECT url, title, note, read_at FROM articles ORDER BY read_at DESC LIMIT 5"
+npx wrangler d1 execute cailinpitt-reading --remote \
+  --command "SELECT url, title, note, saved_at FROM links ORDER BY saved_at DESC LIMIT 5"
 ```
 
 ```bash
@@ -614,7 +647,7 @@ Needs `COMMENTS_ADMIN_TOKEN` in `.env`, matching the Worker's `ADMIN_TOKEN`.
 | `WATCHING_ADMIN_TOKEN` | `watching:sync` |
 | `MOVING_ADMIN_TOKEN` | `moving:sync` |
 | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN` | `moving:auth` |
-| `INGEST_TOKEN` | saving articles |
+| `INGEST_TOKEN` | saving articles & links, `reading:split-links` |
 | `GUESTBOOK_ADMIN_TOKEN`, `GUESTBOOK_IP_SALT` | `guestbook:list` / `rm` |
 | `COMMENTS_ADMIN_TOKEN`, `COMMENTS_IP_SALT` | `comments:list` / `rm` |
 | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | guestbook and comment forms (same widget) |

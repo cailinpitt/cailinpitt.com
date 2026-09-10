@@ -9,7 +9,7 @@ about to touch.
 
 - [Blog posts](#blog-posts) · [Photos](#photos) · [standard.site / Bluesky](#standardsite--bluesky)
 - Pages: [/now](#now) · [/uses](#uses) · [/notes](#notes) · [/listening](#listening) · [/reading](#reading) ·
-  [/watching](#watching) · [/concerts](#concerts) · [/moving](#moving) · [/guestbook](#guestbook) ·
+  [/links](#links) · [/watching](#watching) · [/concerts](#concerts) · [/moving](#moving) · [/guestbook](#guestbook) ·
   [/timeline](#timeline) ·
   [/photos](#photos-page) ·
   [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
@@ -393,8 +393,8 @@ through `soundtrackWindow()`, so label and list can't disagree.
 
 ## Reading
 
-`/reading` shows books (from [hardcover.app](https://hardcover.app)) and saved articles with cover
-art. Owned by `worker-reading/`.
+`/reading` shows books (from [hardcover.app](https://hardcover.app)); `/reading/articles` shows
+articles I read and kept, with card art. Owned by `worker-reading/`.
 
 - **Books** sync from Hardcover's GraphQL API on a daily cron into D1. Full replace, so the first
   run imports everything — no backfill script.
@@ -406,6 +406,24 @@ art. Owned by `worker-reading/`.
 - Check the Hardcover query without deploying: `npm run reading:probe` (needs `HARDCOVER_TOKEN`).
 - API base: `VITE_READING_API` (default `https://reading.cailinpitt.com`).
 - Setup and testing: [`worker-reading/README.md`](../worker-reading/README.md)
+
+## Links
+
+`/links` shows bare interesting pages I've saved — sites, tools, one-off things worth
+remembering. Same Worker, same `POST /ingest` (with `{"kind":"link"}`), a separate `links` table.
+
+- **Deliberately not articles.** An article is something I sat and read; a link is a pointer. They
+  had been piling into one list; the split lets each get the right treatment.
+- **Compact by design.** A link renders as one row — favicon, title, host, and my note — with no
+  card image, so a link never costs an R2 mirror. `/reading/articles` keeps the image cards.
+- **One url, one place.** Saving a url as a link when it's already an article (or vice versa)
+  *moves* the row between tables rather than duplicating it (`src/saved.ts`); `PATCH` with a
+  `kind` does the same on demand. `stats.links` / `stats.articles` are reconciled by the daily
+  sync, so a nudged counter self-heals.
+- **Migrating the backlog:** `npm run reading:split-links` dumps every article to a review file
+  with a guessed `link`/`article`; edit column 1, then `--apply` moves the links across.
+- Both lists feed `/reading.json` (`links`, `nextLinkCursor`, `counts.links`); `/links?cursor=`
+  and `/links?from=&to=` page and range-scan, mirroring `/articles`.
 
 ## Watching
 
@@ -572,11 +590,12 @@ coordinate collapse into one pin; each popup links to the photo's page.
 
 ## Timeline
 
-`/timeline` is one row per day merging nine streams: scrobbles, saved articles, books
+`/timeline` is one row per day merging every stream: scrobbles, saved articles, saved links, books
 started/finished, films watched, concerts seen, rides and lifts, published posts, notes, photos
 taken. Nothing new is stored — it fetches `/timeline.json` plus the same `/reading.json`,
 `/watching.json`, and `/moving.json` bundles the other pages read, and merges them against
-build-time posts, photos, and concerts (`src/lib/timeline.ts`).
+build-time posts, photos, and concerts (`src/lib/timeline.ts`). Articles get a 📄 row, links a
+🔗 row; both share the `reading` stream accent.
 
 - **It reads a projection, not the bundle.** The page shows a count and the day's most-played artist
   and renders no individual track — but the daily track logs are ~93% of `/listening.json` (ten days
@@ -606,8 +625,8 @@ build-time posts, photos, and concerts (`src/lib/timeline.ts`).
   optional "re: …" reference (see [Notes](#notes)) shows here too, resolved against whatever this
   page already has loaded, never a fetch made just to label one.
 - **Day bucketing is inherited from each stream, not recomputed** — the Worker groups scrobbles into
-  US Central days while articles bucket in the viewer's zone, so the two disagree at the margins far
-  from Central. See the note in `src/lib/datetime.ts`.
+  US Central days while articles and links bucket in the viewer's zone, so the two disagree at the
+  margins far from Central. See the note in `src/lib/datetime.ts`.
 - **Each stream gets a left-border accent** (`data-stream` on `.timeline-event`, `--stream-*` tokens
   in `global.css`). All eight are tints of `--accent` mixed toward `--fg`, not new hues.
 - **"On this day"** surfaces days already loaded that share today's month and day across past years,

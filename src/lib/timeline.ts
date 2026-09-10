@@ -7,7 +7,7 @@
 import { dayKey } from './datetime'
 import type { Photo } from './photos'
 import type { PostSummary } from './posts'
-import type { Article, Book } from './reading'
+import type { Article, Book, Link } from './reading'
 import type { Film } from './watching'
 import type { Activity } from './moving'
 import type { Note } from './notes'
@@ -26,6 +26,7 @@ export interface TimelineDay {
   /** Most-played artist that day, when the day's tracks are loaded. */
   topArtist: string | null
   articles: Article[]
+  links: Link[]
   booksFinished: Book[]
   booksStarted: Book[]
   films: Film[]
@@ -45,6 +46,7 @@ export function datedPhotos(photos: Photo[]): Photo[] {
 export interface TimelineSources {
   days: CompactDay[]
   articles: Article[]
+  links: Link[]
   books: Book[]
   films: Film[]
   activities: Activity[]
@@ -63,6 +65,7 @@ export interface TimelineSources {
 export function buildTimeline({
   days,
   articles,
+  links,
   books,
   films,
   activities,
@@ -83,6 +86,7 @@ export function buildTimeline({
         scrobbles: 0,
         topArtist: null,
         articles: [],
+        links: [],
         booksFinished: [],
         booksStarted: [],
         films: [],
@@ -105,6 +109,7 @@ export function buildTimeline({
   }
 
   for (const article of articles) dayFor(dayKey(article.readAt))?.articles.push(article)
+  for (const link of links) dayFor(dayKey(link.savedAt))?.links.push(link)
 
   for (const book of books) {
     if (book.finishedAt) dayFor(book.finishedAt.slice(0, 10))?.booksFinished.push(book)
@@ -132,6 +137,7 @@ export function buildTimeline({
       (day) =>
         day.scrobbles > 0 ||
         day.articles.length > 0 ||
+        day.links.length > 0 ||
         day.booksFinished.length > 0 ||
         day.booksStarted.length > 0 ||
         day.films.length > 0 ||

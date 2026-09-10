@@ -7,9 +7,10 @@
 import { sha256Hex } from './hash'
 import { mirrorImage } from './images'
 import { fetchMetadata } from './metadata'
+import { moveRow } from './saved'
 
 /** Article id length, in hex chars. Collisions at this width aren't a concern. */
-const ID_LENGTH = 16
+export const ID_LENGTH = 16
 
 /** Cap on a note, so a stray paste can't become the whole card. */
 const MAX_NOTE = 1000
@@ -38,6 +39,8 @@ export interface IngestResult {
   stored: boolean
   /** True when a note was written, whether the article was new or not. */
   noted?: boolean
+  /** True when the url was carried over from the other table (article ⇄ link). */
+  moved?: boolean
 }
 
 /**
@@ -81,7 +84,7 @@ export async function resolveId(input: {
   return url ? sha256Hex(url, ID_LENGTH) : null
 }
 
-const cleanNote = (note: string | null | undefined): string | null => {
+export const cleanNote = (note: string | null | undefined): string | null => {
   const text = note?.replace(/\s+/g, ' ').trim()
   if (!text) return null
   return text.length <= MAX_NOTE ? text : `${text.slice(0, MAX_NOTE - 1).trimEnd()}…`
@@ -109,6 +112,15 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
       return { id, url, stored: false, noted: true }
     }
     return { id, url, stored: false }
+  }
+
+  // Saved as a bare link before? "Save as article" means promote it — move the
+  // row over rather than duplicating the url across both tables.
+  if ((await env.DB.prepare('SELECT id FROM links WHERE id = ?1').bind(id).first())) {
+    await moveRow(env, id, 'article')
+    const note = cleanNote(input.note)
+    if (note) await env.DB.prepare('UPDATE articles SET note = ?2 WHERE id = ?1').bind(id, note).run()
+    return { id, url, stored: true, moved: true, noted: note ? true : undefined }
   }
 
   const meta = await fetchMetadata(url)

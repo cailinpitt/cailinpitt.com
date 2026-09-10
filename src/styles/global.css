@@ -2473,12 +2473,93 @@ a.book-link:hover .book-title {
   }
 }
 
+/* Links ---------------------------------------------------------------------
+   Deliberately lighter than .article-card: /links is a scannable list, so a
+   favicon, the title, and a muted host on one row, with your note underneath. */
+
+.link-day + .link-day {
+  margin-top: 2rem;
+}
+.link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.link-row-link {
+  display: grid;
+  grid-template-columns: 1rem 1fr auto;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.5rem 0.6rem;
+  border-radius: 5px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.link-row-link:hover {
+  background: var(--surface);
+}
+.link-row-link:hover .link-row-title {
+  color: var(--accent);
+}
+.link-row-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  align-self: center;
+}
+.link-row-title {
+  min-width: 0;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.link-row-meta {
+  display: flex;
+  gap: 0.5rem;
+  white-space: nowrap;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+.link-row-host::after {
+  content: ' ·';
+}
+/* Your reason for saving it — same commentary treatment as .article-note. */
+.link-row-note {
+  margin: 0.1rem 0.6rem 0.4rem 2.2rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--fg);
+  font-size: var(--step--1);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  /* The host/time column drops under the title rather than squeezing it. */
+  .link-row-link {
+    grid-template-columns: 1rem 1fr;
+    row-gap: 0.15rem;
+  }
+  .link-row-meta {
+    grid-column: 2;
+  }
+  .link-row-note {
+    margin-left: 1.6rem;
+  }
+}
+
 /* Year sections in the finished-books list. */
 .book-year + .book-year {
   margin-top: 2.5rem;
 }
 .book-year-label,
-.article-day-label {
+.article-day-label,
+.link-day-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -2491,7 +2572,8 @@ a.book-link:hover .book-title {
   margin: 0 0 0.6rem;
 }
 .book-year-count,
-.article-day-count {
+.article-day-count,
+.link-day-count {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   font-weight: 400;
