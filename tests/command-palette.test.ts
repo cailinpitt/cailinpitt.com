@@ -5,7 +5,7 @@ import { LISTED_PAGES, PAGES } from '../src/components/CommandPalette'
 
 // PAGES is hand-written (see its own comment); a missing entry is invisible from ⌘K but fine everywhere else.
 
-/** Every leaf route, so a page outside <Layout> (e.g. /terminal) is still checked. */
+/** Every leaf route, so a page outside <Layout> is still checked. */
 const leaves = (list: RouteRecord[]): RouteRecord[] =>
   list.flatMap((route) => (route.children ? leaves(route.children as RouteRecord[]) : [route]))
 

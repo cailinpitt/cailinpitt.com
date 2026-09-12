@@ -1,7 +1,7 @@
 # cailinpitt.com
 
 Personal site: a blog, a photo feed, short notes, and pages for what I've been listening to,
-reading, watching, and doing. Also a terminal, a timeline, a guestbook, and a photo map.
+reading, watching, and doing. Also a timeline, a guestbook, and a photo map.
 
 Two other files go with this one:
 

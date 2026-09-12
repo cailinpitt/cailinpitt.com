@@ -12,8 +12,7 @@ about to touch.
   [/links](#links) · [/watching](#watching) · [/concerts](#concerts) · [/moving](#moving) · [/guestbook](#guestbook) ·
   [/timeline](#timeline) ·
   [/photos](#photos-page) ·
-  [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index) ·
-  [/terminal](#terminal)
+  [/photos/map](#photo-map) · [/colophon](#colophon) · [/blog](#blog-index)
 - Build features: [social cards](#social-cards) · [RSS](#rss-feed) · [search](#search-k) ·
   [home screen](#home-screen--installing) ·
   [header nav](#header-nav) · [theme](#color-theme) · [markdown source](#markdown-source) ·
@@ -280,8 +279,8 @@ to what `/blog` or `/projects` shows. Prose lives in **`content/now.md`** — ed
   homepage's and render nothing until their fetch lands, so a Worker being down costs the page a
   strip and nothing else; the photographs come from the build and are prerendered. `<PhotoStrip>` is
   shared with the homepage, which shows four.
-- Like the colophon it gets a **Markdown** toggle, publishes its source at `/now.md`, and answers
-  to `cat now` in [/terminal](#terminal) — all free from being a `.md` in `content/`.
+- Like the colophon it gets a **Markdown** toggle, publishes its source at `/now.md` — free from
+  being a `.md` in `content/`.
 - Reached from the **Me** menu in the header (see [header nav](#header-nav)) and from a line in the
   homepage intro, and listed first in `llms.txt` as the page that answers "what is this person
   doing".
@@ -685,8 +684,7 @@ note needs to be a real page, it's a post, and belongs in `content/blog/`.
   `/feed.xml` so an essay subscriber isn't opted into notes. `scripts/generate-rss.mjs` couldn't
   build it anyway — it lifts prerendered HTML, and notes have none. `/notes` advertises both feeds
   in its `<head>`.
-- **Terminal view:** `curl notes.cailinpitt.com`; `?T` disables color. `notes [n]` works in
-  [/terminal](#terminal) too.
+- **Terminal view:** `curl notes.cailinpitt.com`; `?T` disables color.
 - Also appears on the homepage (newest note) and as an eighth stream on [/timeline](#timeline).
 - API base: `VITE_NOTES_API` (default `https://notes.cailinpitt.com`).
 - Setup, the API, and the iOS Shortcut recipe: [`worker-notes/README.md`](../worker-notes/README.md)
@@ -797,18 +795,15 @@ npm run og -- --only /blog/…        # one page
 npm run og -- --out .og-preview     # write somewhere safe to look at
 ```
 
-- **Three layouts.** Pages with a photograph get it full-bleed under an ink scrim; `/terminal` gets
-  its own dark screen, rendered as a session in JetBrains Mono; everything else gets the paper card
-  — paper/ink palette, clay spine, title and description between hairlines. A page picks the
-  terminal layout with `card={{ layout: 'terminal' }}`.
+- **Two layouts.** Pages with a photograph get it full-bleed under an ink scrim; everything else
+  gets the paper card — paper/ink palette, clay spine, title and description between hairlines.
 - **Copy comes from the built HTML** (`og:title`, `og:description`), so a card can't drift from its
   page. Page-only details (kicker, date, which photo) come through a `<meta name="og-card">` hint
   emitted by `<Seo card={{…}}>`.
 - **Photographs are fetched from R2** at build time, falling back to `images/`. A photo that
   can't be fetched falls back to the paper card rather than failing the deploy.
-- **Type is Source Serif 4 + Inter** (+ JetBrains Mono, terminal card only), not the site's own
-  fonts, which a Linux runner lacks. They ship as `.woff` in `node_modules`; satori converts glyphs
-  to paths.
+- **Type is Source Serif 4 + Inter**, not the site's own fonts, which a Linux runner lacks. They
+  ship as `.woff` in `node_modules`; satori converts glyphs to paths.
 - Card paths are built in two places — `ogCardPath()` in `Seo.tsx` and `cardFile()` in the script.
   **They must agree** or pages point at a 404.
 
@@ -839,30 +834,6 @@ magnifier. Jumps to any page, post, photo year, or tag.
   needs adding there (years and tags are derived). `tests/command-palette.test.ts` holds the list
   against `App.tsx` in both directions.
 - A native `<dialog>` opened with `showModal()`, so focus trapping and Escape come free.
-
-## Terminal
-
-`/terminal` is the site as a shell: `ls` the sections, `cat` a post or page, `open` a page, `now`,
-`reading`, `guestbook`, `photo random`, `neofetch`. Tab completes, ↑/↓ walk history, Ctrl-L clears.
-
-- **It's the whole viewport.** The route sits *outside* `<Layout>` in `App.tsx`, so there's no
-  header or footer — `exit` (or any link in the output) is the way back. Also why
-  `tests/command-palette.test.ts` walks the route tree recursively instead of reading
-  `routes[0].children`.
-- **`src/lib/terminal.ts` is the engine and it's pure**: the tree, path resolution, completion, and
-  every command. The outside world (navigation, theme, clock, fetchers) arrives as a `Shell`, so
-  `tests/terminal.test.ts` runs it with no DOM and no network.
-- **Nothing is a second source of truth.** Posts come from `virtual:site-index` (already in the
-  bundle for ⌘K); `cat` fetches the published `.md` of a post, or of `colophon`/`projects` (two
-  pages that are themselves one Markdown file); `now`/`reading`/`guestbook` call the same clients
-  the pages do.
-- **Photo ids ride in the route loader**, since the browser build of `virtual:site-index`
-  deliberately carries none.
-- `COMMANDS` drives `help`, completion, and did-you-mean; a test asserts every name in it is
-  actually handled.
-- Signing the guestbook navigates to the real form rather than reimplementing a write path past
-  Turnstile.
-- Without JavaScript the prerendered HTML is a short list of real links, not an empty box.
 
 ## Header nav
 
@@ -906,7 +877,7 @@ first few frames.
 The spec says a manifest without `start_url` falls back to *the document URL of the page that
 linked it*. Since the manifest is linked from `index.html`, in the `<head>` of every prerendered
 page, omitting the field means **"Add to Home Screen" launches whatever page you were actually
-on** — `/blog`, `/notes/compose`, `/terminal` — instead of sending everyone to `/`.
+on** — `/blog`, `/notes/compose` — instead of sending everyone to `/`.
 
 With `"start_url": "/"` present, iOS reads it, ignores the address bar, and greys out the URL field,
 so there's no way to pin anything but the homepage. That was the bug. **Do not add it back.**

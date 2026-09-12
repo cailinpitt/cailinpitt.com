@@ -85,9 +85,6 @@ export function Layout() {
               <li>
                 <NavLink to="/guestbook">Guestbook</NavLink>
               </li>
-              <li>
-                <NavLink to="/terminal">Terminal</NavLink>
-              </li>
             </ul>
           </nav>
         </header>

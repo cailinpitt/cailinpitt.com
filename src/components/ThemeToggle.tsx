@@ -8,7 +8,7 @@ export type Theme = 'system' | 'light' | 'dark'
 
 const ORDER: Theme[] = ['system', 'light', 'dark']
 
-/** Lets the button follow a change it didn't make (the `theme` command in /terminal). */
+/** Lets the button follow a change it didn't make elsewhere. */
 const THEME_EVENT = 'cailinpitt:themechange'
 
 export function storedTheme(): Theme {
@@ -92,7 +92,7 @@ export function ThemeToggle() {
     syncThemeColor(stored)
   }, [])
 
-  // Follow changes made elsewhere, e.g. `theme dark` in /terminal.
+  // Follow changes made elsewhere (another tab, another instance of this component).
   useEffect(() => {
     const onChange = (event: Event) => setTheme((event as CustomEvent<Theme>).detail)
     window.addEventListener(THEME_EVENT, onChange)

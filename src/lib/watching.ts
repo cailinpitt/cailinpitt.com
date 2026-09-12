@@ -36,7 +36,7 @@ export interface WatchingBundle extends FilmPage {
   }
 }
 
-/** Lightweight payload for the terminal (see /now.json). */
+/** Lightweight payload for the homepage/now-bar (see /now.json). */
 export interface WatchingNow {
   lastFilm: Film | null
   updatedAt: number

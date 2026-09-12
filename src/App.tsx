@@ -80,6 +80,4 @@ export const routes: RouteRecord[] = [
       { path: '*', lazy: () => import('./pages/NotFound') },
     ]),
   },
-  // Outside <Layout>: the terminal fills the viewport, header and footer included.
-  ...withErrorBoundary([{ path: '/terminal', lazy: () => import('./pages/Terminal') }]),
 ]

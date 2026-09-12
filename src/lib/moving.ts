@@ -76,7 +76,7 @@ export interface MovingBundle extends ActivityPage {
   }
 }
 
-/** Lightweight payload for the terminal (see /now.json). */
+/** Lightweight payload for the homepage/now-bar (see /now.json). */
 export interface ActivityNow {
   lastActivity: Activity | null
   updatedAt: number
