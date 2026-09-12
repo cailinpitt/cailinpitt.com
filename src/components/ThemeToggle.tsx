@@ -8,8 +8,17 @@ export type Theme = 'system' | 'light' | 'dark'
 
 const ORDER: Theme[] = ['system', 'light', 'dark']
 
-/** Lets the button follow a change it didn't make elsewhere. */
-const THEME_EVENT = 'cailinpitt:themechange'
+/** Lets the button follow a change it didn't make elsewhere — also useful to
+ *  anything else on the page (map tiles, charts) that needs to redraw for the
+ *  new theme. */
+export const THEME_EVENT = 'cailinpitt:themechange'
+
+/** The theme actually in effect right now, resolving 'system' against the OS. */
+export function resolvedTheme(): 'light' | 'dark' {
+  const stored = document.documentElement.dataset.theme
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 export function storedTheme(): Theme {
   try {

@@ -57,6 +57,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+        env:
+          VITE_CARTO_API_KEY: ${{ secrets.VITE_CARTO_API_KEY }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

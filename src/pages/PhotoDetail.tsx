@@ -84,23 +84,26 @@ export function Component() {
           decoding="async"
         />
         <figcaption>
-          <span className="photo-when">{title}</span>
-          {settings && <span className="photo-settings">{settings}</span>}
-          {place && (
-            <Link className="photo-place" to="/photos/map">
-              {place[0].toFixed(2)}, {place[1].toFixed(2)}
-            </Link>
-          )}
-          {/* Only real capture dates place a photo on the timeline — the
-              year-only pre-2026 uploads (approx) have no day to link to. */}
-          {!photo.approx && (
-            <Link className="photo-day" to={timelineDayPath(photo.date.slice(0, 10))}>
-              That day →
-            </Link>
-          )}
-          <span className="photo-position">
-            {data.position} / {data.total}
-          </span>
+          <p className="photo-description">{photo.alt}</p>
+          <div className="photo-meta">
+            <span className="photo-when">{title}</span>
+            {settings && <span className="photo-settings">{settings}</span>}
+            {place && (
+              <Link className="photo-place" to={`/photos/map?photo=${photo.id}`}>
+                {place[0].toFixed(2)}, {place[1].toFixed(2)}
+              </Link>
+            )}
+            {/* Only real capture dates place a photo on the timeline — the
+                year-only pre-2026 uploads (approx) have no day to link to. */}
+            {!photo.approx && (
+              <Link className="photo-day" to={timelineDayPath(photo.date.slice(0, 10))}>
+                That day →
+              </Link>
+            )}
+            <span className="photo-position">
+              {data.position} / {data.total}
+            </span>
+          </div>
         </figcaption>
       </figure>
 

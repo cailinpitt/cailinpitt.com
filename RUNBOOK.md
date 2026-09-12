@@ -687,6 +687,7 @@ Cloudflare secrets are write-only — `.env` is the only place a token can be re
 | `VITE_MOVING_API` | `https://moving.cailinpitt.com` |
 | `VITE_GUESTBOOK_API` | `https://guestbook.cailinpitt.com` |
 | `VITE_COMMENTS_API` | `https://comments.cailinpitt.com` |
+| `VITE_CARTO_API_KEY` | none — required for `/photos/map` tiles to load, no default |
 
 ## First-time setup
 

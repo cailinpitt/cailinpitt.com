@@ -1447,6 +1447,16 @@ h3 {
   background: var(--surface);
 }
 .photo-detail figcaption {
+  margin-top: 0.8rem;
+  text-align: center;
+}
+.photo-description {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  color: var(--fg);
+}
+.photo-meta {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1454,8 +1464,6 @@ h3 {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   color: var(--muted);
-  text-align: center;
-  margin-top: 0.8rem;
 }
 /* Shooting settings and feed position read as footnotes to the date beside them. */
 .photo-settings,
@@ -3223,23 +3231,84 @@ a.concert-link:hover .concert-title {
   margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
   height: min(70vh, 40rem);
   margin-top: 2rem;
-  border-radius: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.12);
   background: var(--surface);
   /* Leaflet panes stack above the header's z-index otherwise. */
   z-index: 0;
 }
-
-/* OSM tiles are drawn for light backgrounds, so a dark page gets a glaring
-   white slab. Inverting and re-rotating the hue keeps roads and water reading
-   correctly while sitting in the page's palette. Markers are drawn in an
-   overlay pane above this, so they keep their real color. */
-:root[data-theme='dark'] .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+.map-focus-note {
+  color: var(--muted);
+  font-size: var(--step--1);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
-  }
+/* A link in prose, not a control: it resets the view, not the page's business. */
+.map-focus-note button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+.map-hint {
+  margin-top: 0.5rem;
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-style: italic;
+  text-align: center;
+}
+
+/* Leaflet's own chrome (zoom buttons, popups, attribution) ships styled for a
+   plain white page; retint it to the site's tokens so it doesn't look like a
+   pasted-in widget. `!important` because these compete with leaflet.css rules
+   of the same specificity, and load order between the two isn't guaranteed. */
+.leaflet-control-zoom a {
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  border-color: var(--rule) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface) 85%, transparent) !important;
+  color: var(--muted) !important;
+  font-family: var(--font-sans);
+}
+.leaflet-control-attribution a {
+  color: var(--muted) !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.2) !important;
+}
+.leaflet-popup-tip {
+  background: var(--surface) !important;
+}
+.leaflet-popup-content {
+  margin: 0.8rem 0.9rem !important;
+}
+.leaflet-popup-close-button {
+  color: var(--muted) !important;
+}
+.leaflet-popup-close-button:hover {
+  color: var(--accent) !important;
+}
+/* Markers lift off the tiles instead of sitting flush, and brighten on hover
+   so it's clear they're clickable. */
+.map-canvas .leaflet-interactive {
+  cursor: pointer;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.4));
+  transition: filter 0.15s ease;
+}
+.map-canvas .leaflet-interactive:hover {
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.4)) brightness(1.15);
 }
 
 .map-popup {
@@ -3249,6 +3318,12 @@ a.concert-link:hover .concert-title {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+.map-popup-count {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  font-weight: 600;
 }
 .map-popup a {
   display: block;
@@ -3267,6 +3342,64 @@ a.concert-link:hover .concert-title {
 .map-popup span {
   display: block;
   margin-top: 0.3rem;
+}
+
+/* "Places" grid below the map — same tile treatment as .photo-previews, but
+   a <button> that moves the map instead of a link that navigates. */
+.map-places {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+  /* Same wide breakout and centering as .map-canvas above it, so the grid
+     doesn't read narrower than the map it belongs to. */
+  width: min(var(--measure-wide), 92vw);
+  margin-inline: calc(50% - min(var(--measure-wide), 92vw) / 2);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
+  gap: 0.6rem;
+}
+.map-places button {
+  all: unset;
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.map-places button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.map-places img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.map-places button:hover img,
+.map-places button:focus-visible img {
+  transform: scale(1.04);
+}
+.map-place-label {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 1rem 0.6rem 0.5rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: var(--step--1);
+  color: #fff;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.6));
+}
+.map-place-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
 }
 
 /* ---- homepage listening extras -----------------------------------------
