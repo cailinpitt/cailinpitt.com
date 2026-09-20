@@ -12,3 +12,5 @@ A list of gripes that I'll periodically update.
 * Coffee shops that don’t have caramel syrup for lattes
 * Ambulances and fire truck sirens. We can see the flashing lights, you don't need to blast my ear drums too 
 * When you order multiple things online from the same store and they individually show up in different boxes on different days
+* When people at ice cream shops repeatedly ask for samples of different flavors, like they've never had ice cream before
+* When people at coffee shops hold up the line because they didn't look at the menu beforehand
