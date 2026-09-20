@@ -19,7 +19,8 @@ export const identities = [
   'a public transit lover',
   'a he/they',
   'an Atlantan',
-  'a former runner',
+  'a runner',
+  'a composer'
 ]
 
 export const descriptions = [
@@ -32,4 +33,11 @@ export const descriptions = [
   'loves taking roadtrips',
   'wants to visit every state',
   'is empowering people to efficiently operate their restaurants',
+  'tripped and broke his finger in 6th grade while running for ice cream',
+  'enjoys eating sushi from Whole Foods',
+  'is trying to use his phone less',
+  'likes to read at and work from coffee shops',
+  'loves the public library',
+  'loves to move his body',
+  'wishes phones were getting smaller, not larger'
 ]
