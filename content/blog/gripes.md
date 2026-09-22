@@ -17,3 +17,5 @@ A list of gripes that I'll periodically update.
 * Not using headphones in public when using your phone to play music, take calls, watch videos, etc.
 * Smoking on public transit
 * Not walking in a predicable pattern at the grocery store / airport / on the sidewalk / etc. 
+* Cities that don't have public bathrooms
+* Cities that don't have public seating
