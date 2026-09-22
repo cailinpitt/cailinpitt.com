@@ -14,3 +14,6 @@ A list of gripes that I'll periodically update.
 * When you order multiple things online from the same store and they individually show up in different boxes on different days
 * When people at ice cream shops repeatedly ask for samples of different flavors, like they've never had ice cream before
 * When people at coffee shops hold up the line because they didn't look at the menu beforehand
+* Not using headphones in public when using your phone to play music, take calls, watch videos, etc.
+* Smoking on public transit
+* Not walking in a predicable pattern at the grocery store / airport / on the sidewalk / etc. 
