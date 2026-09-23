@@ -99,5 +99,7 @@ jobs:
     # `main`, not the triggering SHA: the commit to publish was made a moment ago
     # by the job above and does not exist at the SHA this run started from.
     uses: ./.github/workflows/deploy.yml
+    # Called workflows don't see the caller's secrets unless passed explicitly.
+    secrets: inherit
     with:
       ref: main
