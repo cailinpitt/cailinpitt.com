@@ -916,8 +916,7 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
               ✏️
             </span>
             <span>
-              <span className="timeline-label">Updated</span>{' '}
-              <Link to={`${post.path}#history`}>{post.title}</Link>
+              <span className="timeline-label">Updated</span> <Link to={post.path}>{post.title}</Link>
             </span>
           </li>
         ))}
