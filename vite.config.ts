@@ -7,6 +7,7 @@ import react from '@vitejs/plugin-react'
 import { parseFrontmatter } from './src/lib/frontmatter'
 import { parseUnifiedDiff } from './src/lib/diff'
 import {
+  editDays,
   gitLogArgs,
   gitShowArgs,
   parsePostHistory,
@@ -22,6 +23,27 @@ const VIRTUAL_ID = 'virtual:site-index'
 const RESOLVED_ID = '\0virtual:site-index'
 const HISTORY_ID = 'virtual:post-history'
 const RESOLVED_HISTORY_ID = '\0virtual:post-history'
+
+// For the timeline's "Updated" rows. Only the log, not the per-commit diffs the post-history
+// plugin also reads, so it stays cheap enough for the eagerly loaded site index.
+async function collectPostEdits(
+  postsByFile: Record<string, { path: string; title: string; date: string }>,
+): Promise<{ path: string; title: string; date: string }[]> {
+  let byFile: Record<string, PostHistory>
+  try {
+    const { stdout } = await run('git', gitLogArgs('content/blog'), { maxBuffer: 32 * 1024 * 1024 })
+    byFile = parsePostHistory(stdout)
+  } catch {
+    return []
+  }
+  const edits: { path: string; title: string; date: string }[] = []
+  for (const [file, post] of Object.entries(postsByFile)) {
+    const entry = byFile[`content/blog/${file}`]
+    if (!entry) continue
+    for (const date of editDays(entry, post.date)) edits.push({ path: post.path, title: post.title, date })
+  }
+  return edits.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+}
 
 // Build-time post index for the command palette (⌘K) — frontmatter only, no bodies, no fetch.
 // photoIds (photo permalink slugs, for App.tsx's /photos/:id prerender paths) is SSR-only;
@@ -52,10 +74,12 @@ function siteIndex(): Plugin {
           }
         }),
       )
+      const postEdits = await collectPostEdits(Object.fromEntries(files.map((file, i) => [file, posts[i]])))
       // Newest first, matching every other list of posts on the site.
       posts.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       return (
         `export const posts = ${JSON.stringify(posts)}\n` +
+        `export const postEdits = ${JSON.stringify(postEdits)}\n` +
         `export const photoIds = ${JSON.stringify(photoIds)}\n` +
         `export const photoYears = ${JSON.stringify(photoYears)}\n`
       )

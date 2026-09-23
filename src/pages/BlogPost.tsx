@@ -5,6 +5,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { CommentsSection } from '../components/CommentsSection'
+import { PostActions } from '../components/PostActions'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostShare } from '../components/PostShare'
 import { PostSource } from '../components/PostSource'
@@ -164,7 +165,7 @@ export function Component() {
             </ul>
           )}
         </header>
-        <div className="post-source-bar">
+        <PostActions>
           <PostShare path={post.path} title={post.title} />
           <a href={`mailto:hello@cailinpitt.com?subject=${encodeURIComponent(`Re: "${post.title}"`)}`}>
             Reply by email
@@ -183,7 +184,7 @@ export function Component() {
             </a>
           )}
           {post.date && <Link to={timelineDayPath(post.date.slice(0, 10))}>That day</Link>}
-        </div>
+        </PostActions>
         {showSource ? (
           <pre className="post-source">{post.body}</pre>
         ) : (

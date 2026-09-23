@@ -32,6 +32,8 @@ export interface TimelineDay {
   films: Film[]
   activities: Activity[]
   posts: TimelinePost[]
+  /** Posts edited that day; `date` is the edit day. */
+  editedPosts: TimelinePost[]
   photos: TimelinePhoto[]
   notes: Note[]
   concerts: Concert[]
@@ -51,6 +53,8 @@ export interface TimelineSources {
   films: Film[]
   activities: Activity[]
   posts: readonly TimelinePost[]
+  /** One entry per post per day it was edited, as virtual:site-index's postEdits. */
+  edits?: readonly TimelinePost[]
   photos: readonly TimelinePhoto[]
   notes: Note[]
   concerts: Concert[]
@@ -70,6 +74,7 @@ export function buildTimeline({
   films,
   activities,
   posts,
+  edits = [],
   photos,
   notes,
   concerts,
@@ -92,6 +97,7 @@ export function buildTimeline({
         films: [],
         activities: [],
         posts: [],
+        editedPosts: [],
         photos: [],
         notes: [],
         concerts: [],
@@ -124,6 +130,7 @@ export function buildTimeline({
   for (const activity of activities) dayFor(activity.startDate)?.activities.push(activity)
 
   for (const post of posts) dayFor(post.date.slice(0, 10))?.posts.push(post)
+  for (const edit of edits) dayFor(edit.date)?.editedPosts.push(edit)
   for (const photo of photos) dayFor(photo.date.slice(0, 10))?.photos.push(photo)
 
   // Notes are instants, bucketed in the viewer's own zone like articles — a note written
@@ -143,6 +150,7 @@ export function buildTimeline({
         day.films.length > 0 ||
         day.activities.length > 0 ||
         day.posts.length > 0 ||
+        day.editedPosts.length > 0 ||
         day.photos.length > 0 ||
         day.notes.length > 0 ||
         day.concerts.length > 0,

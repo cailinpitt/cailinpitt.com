@@ -19,6 +19,8 @@ declare module 'virtual:site-index' {
   export const photoIds: string[]
   /** Years the photo feed covers, newest first. */
   export const photoYears: string[]
+  /** One per post per day it was edited (after publishing), newest first. */
+  export const postEdits: { path: string; title: string; date: string }[]
 }
 
 /**

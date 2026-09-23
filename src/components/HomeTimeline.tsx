@@ -19,14 +19,16 @@ function dayLabel(date: string): string {
 
 export function HomeTimeline({
   posts,
+  edits,
   photos,
   concerts,
 }: {
   posts: readonly TimelinePost[]
+  edits: readonly TimelinePost[]
   photos: readonly TimelinePhoto[]
   concerts: Concert[]
 }) {
-  const { days, onThisDay, ready } = useHomeTimeline(posts, photos, concerts)
+  const { days, onThisDay, ready } = useHomeTimeline(posts, edits, photos, concerts)
 
   // A total outage leaves nothing to preview — drop the section rather than
   // sit it empty, the same call the homepage activity bars make.

@@ -58,6 +58,9 @@ export function dayEvents(day: TimelineDay): DayEvent[] {
   for (const post of day.posts) {
     events.push({ stream: 'writing', icon: '✍️', label: `Published “${post.title}”` })
   }
+  for (const post of day.editedPosts) {
+    events.push({ stream: 'writing', icon: '✏️', label: `Updated “${post.title}”` })
+  }
   for (const concert of day.concerts) {
     events.push({ stream: 'concerts', icon: '🎤', label: `Saw ${concert.artists.join(' / ')}` })
   }
@@ -220,6 +223,7 @@ async function resolveOnThisDay(
 
 export function useHomeTimeline(
   posts: readonly TimelinePost[],
+  edits: readonly TimelinePost[],
   photos: readonly TimelinePhoto[],
   concerts: Concert[],
 ): HomeTimelineState {
@@ -255,6 +259,7 @@ export function useHomeTimeline(
         films: w?.films ?? [],
         activities: m?.activities ?? [],
         posts,
+        edits,
         photos,
         notes: n?.notes ?? [],
         concerts,
@@ -278,7 +283,7 @@ export function useHomeTimeline(
     })
 
     return () => controller.abort()
-  }, [posts, photos, concerts])
+  }, [posts, edits, photos, concerts])
 
   return state
 }

@@ -29,6 +29,7 @@ const day = (date: string): TimelineDay => ({
   films: [],
   activities: [],
   posts: [],
+  editedPosts: [],
   photos: [],
   notes: [],
   concerts: [],
@@ -78,5 +79,20 @@ describe('buildTimeline links', () => {
     expect(buildTimeline({ ...EMPTY_SOURCES, links: [link('old', at)], floor: '2025-01-01' })).toEqual(
       [],
     )
+  })
+})
+
+describe('buildTimeline edits', () => {
+  const edit = { path: '/blog/x', title: 'X', date: '2026-09-22' }
+
+  it('puts an edited post on its edit day', () => {
+    const [today] = buildTimeline({ ...EMPTY_SOURCES, edits: [edit] })
+    expect(today.date).toBe('2026-09-22')
+    expect(today.editedPosts).toEqual([edit])
+    expect(today.posts).toEqual([])
+  })
+
+  it('drops edits older than the floor', () => {
+    expect(buildTimeline({ ...EMPTY_SOURCES, edits: [edit], floor: '2026-09-23' })).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BULK_POSTS, parsePostHistory, repoWebUrl } from '../src/lib/history'
+import { BULK_POSTS, editDays, parsePostHistory, repoWebUrl } from '../src/lib/history'
 
 // A commit editing one post is a revision; a commit sweeping 31 at once is plumbing, not a revision. See src/lib/history.ts.
 
@@ -124,5 +124,37 @@ describe('repoWebUrl', () => {
 
   it('declines to linkify a remote it does not understand', () => {
     expect(repoWebUrl('/srv/git/site.git')).toBeNull()
+  })
+})
+
+describe('editDays', () => {
+  const history = (commits: { sha: string; date: string; files: string[] }[]) =>
+    parsePostHistory(log(commits.map((c) => ({ ...c, subject: c.sha }))))[post(1)]
+
+  it('lists each day a post was edited once, however many commits that day', () => {
+    const entry = history([
+      { sha: 'eee', date: '2026-09-22T15:00:00-05:00', files: [post(1)] },
+      { sha: 'ddd', date: '2026-09-22T13:00:00-05:00', files: [post(1)] },
+      { sha: 'ccc', date: '2026-09-15T09:00:00-05:00', files: [post(1)] },
+      { sha: 'bbb', date: '2026-09-12T12:00:00-05:00', files: [post(1)] },
+    ])
+    expect(editDays(entry, '2026-09-12')).toEqual(['2026-09-22', '2026-09-15'])
+  })
+
+  it('leaves out the publish day and bulk commits', () => {
+    const entry = history([
+      { sha: 'ccc', date: '2026-09-20T10:00:00-05:00', files: many },
+      { sha: 'bbb', date: '2026-09-12T18:00:00-05:00', files: [post(1)] },
+      { sha: 'aaa', date: '2026-09-12T12:00:00-05:00', files: [post(1)] },
+    ])
+    expect(editDays(entry, '2026-09-12')).toEqual([])
+  })
+
+  it('uses the author-local date, not UTC', () => {
+    const entry = history([
+      { sha: 'bbb', date: '2026-09-21T22:30:00-05:00', files: [post(1)] },
+      { sha: 'aaa', date: '2026-09-12T12:00:00-05:00', files: [post(1)] },
+    ])
+    expect(editDays(entry, '2026-09-12')).toEqual(['2026-09-21'])
   })
 })

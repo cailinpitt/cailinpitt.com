@@ -15,6 +15,7 @@ const base: TimelineDay = {
   films: [],
   activities: [],
   posts: [],
+  editedPosts: [],
   photos: [],
   notes: [],
   concerts: [],

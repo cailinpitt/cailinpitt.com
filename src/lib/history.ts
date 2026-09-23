@@ -108,6 +108,17 @@ export function parsePostHistory(log: string): Record<string, PostHistory> {
   return history
 }
 
+/** Days (YYYY-MM-DD, author's local date) a post was edited, newest first — the same
+ *  commits `revisions` counts, minus the day it was published. */
+export function editDays(entry: PostHistory, published: string): string[] {
+  const days = entry.commits
+    .slice(0, -1)
+    .filter((commit) => commit.posts < BULK_POSTS)
+    .map((commit) => commit.date.slice(0, 10))
+    .filter((day) => day !== published.slice(0, 10))
+  return [...new Set(days)]
+}
+
 // Handles both forms GitHub hands out: an https clone URL and an SSH one.
 export function repoWebUrl(remote: string): string | null {
   const url = remote.trim().replace(/\.git$/, '')

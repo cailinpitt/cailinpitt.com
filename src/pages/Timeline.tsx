@@ -59,6 +59,7 @@ import {
   type TimelineDay,
 } from '../lib/timeline'
 import { pageSchema } from '../lib/structuredData'
+import { postEdits } from 'virtual:site-index'
 
 interface TimelineData {
   posts: PostSummary[]
@@ -404,7 +405,20 @@ function useTimeline(posts: PostSummary[], photos: Photo[], concerts: Concert[])
 
   const timeline = useMemo(
     () =>
-      buildTimeline({ days, articles, links, books, films, activities, posts, photos, notes, concerts, floor }),
+      buildTimeline({
+        days,
+        articles,
+        links,
+        books,
+        films,
+        activities,
+        posts,
+        edits: postEdits,
+        photos,
+        notes,
+        concerts,
+        floor,
+      }),
     [activities, articles, books, concerts, days, films, floor, links, notes, photos, posts],
   )
 
@@ -503,6 +517,7 @@ function useTimelineDay(date: string): DayFetchState {
         films: films.status === 'fulfilled' ? films.value : [],
         activities: activities.status === 'fulfilled' ? activities.value : [],
         posts: posts.filter((p) => p.date.slice(0, 10) === date),
+        edits: postEdits.filter((e) => e.date === date),
         photos: datedPhotos(photos).filter((p) => p.date.slice(0, 10) === date),
         notes: notes.status === 'fulfilled' ? notes.value : [],
         concerts: concerts.filter((c) => c.date === date),
@@ -891,6 +906,18 @@ function TimelineRow({ day, context }: { day: TimelineDay; context?: ContextSour
             </span>
             <span>
               <span className="timeline-label">Published</span> <Link to={post.path}>{post.title}</Link>
+            </span>
+          </li>
+        ))}
+
+        {day.editedPosts.map((post) => (
+          <li className="timeline-event" data-stream="writing" key={`edited:${post.path}`}>
+            <span className="timeline-icon" aria-hidden="true">
+              ✏️
+            </span>
+            <span>
+              <span className="timeline-label">Updated</span>{' '}
+              <Link to={`${post.path}#history`}>{post.title}</Link>
             </span>
           </li>
         ))}

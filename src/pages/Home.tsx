@@ -1,5 +1,5 @@
 import { Link, useLoaderData } from 'react-router-dom'
-import { posts as indexedPosts } from 'virtual:site-index'
+import { posts as indexedPosts, postEdits } from 'virtual:site-index'
 import { Seo } from '../components/Seo'
 import { IdentityLine } from '../components/IdentityLine'
 import { NowPlayingBar } from '../components/NowPlayingBar'
@@ -121,7 +121,7 @@ export function Component() {
         <ListeningSparkline />
       </section>
 
-      <HomeTimeline posts={indexedPosts} photos={timelinePhotos} concerts={timelineConcerts} />
+      <HomeTimeline posts={indexedPosts} edits={postEdits} photos={timelinePhotos} concerts={timelineConcerts} />
 
       {recent.length > 0 && (
         <section className="home-section recent" aria-labelledby="recent-heading">
