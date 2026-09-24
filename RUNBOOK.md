@@ -28,7 +28,7 @@ VITE_NOTES_API=http://localhost:8787 npm run dev
 ## Publish a blog post
 
 ```bash
-npm run blog:draft -- <slug>      # 1. scaffold content/blog/<slug>.md with its frontmatter block
+npm run blog:draft -- "<title>"   # 1. scaffold content/blog/<slug>.md with its frontmatter block
 # 2. drop image originals in originals/<slug>/, reference them as /images/<slug>/<name>.webp
 npm run dev                        # 3. preview
 
@@ -36,9 +36,11 @@ npm run blog:post -- <slug>        # 4. images → R2, atproto records, stages t
 git commit && git push            # 5. deploys
 ```
 
-`npm run blog:draft` prompts for the title, description, tags, and cover image (slug can be passed or
-prompted); everything but the slug has a default and can be left blank. It fills `date`/`path` from
-today and writes `title, date, path, slug, tags, description, image`.
+`npm run blog:draft` prompts for the title (or takes it as an argument), then description, tags, and
+cover image, which can be left blank. The slug is made from the title — lowercased, apostrophes and
+accents dropped, everything else non-alphanumeric turned into `-` — and printed so you know the
+filename. It fills `date`/`path` from today and writes `title, date, path, slug, tags, description,
+image`.
 
 `npm run blog:post` with no slug picks up the single added/changed post under `content/blog`. It runs
 `images:sync` + `images:upload`, then `publish:atproto`, then `git add`s `content/blog`,

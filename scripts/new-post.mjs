@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// npm run blog:draft [-- <slug>]
+// npm run blog:draft [-- "<title>"]
 //
 // Scaffolds content/blog/<slug>.md with the frontmatter block npm run blog:post expects
-// (title, date, path, slug, tags, description, image). Prompts for anything not
-// passed; everything but the slug has a sensible default and can be left blank.
+// (title, date, path, slug, tags, description, image). The slug comes from the title.
+// Prompts for anything not passed; everything but the title can be left blank.
 
 import { writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
@@ -15,18 +15,14 @@ import { fileURLToPath } from 'node:url'
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const BLOG = path.join(ROOT, 'content', 'blog')
 
+// Apostrophes are dropped rather than split on, so "We're" → "were", not "we-re".
 const slugify = (value) =>
   value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f'’]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-
-const titleCase = (slug) =>
-  slug
-    .split('-')
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(' ')
 
 function fail(msg) {
   console.error(`\n✗ ${msg}`)
@@ -58,14 +54,21 @@ async function main() {
     return answer || fallback || ''
   }
 
-  const rawSlug = process.argv.slice(2).find((a) => !a.startsWith('-')) || (await ask('Slug'))
-  const slug = slugify(rawSlug.replace(/\.md$/, ''))
-  if (!slug) fail('a slug is required.')
+  const title =
+    process.argv
+      .slice(2)
+      .filter((a) => !a.startsWith('-'))
+      .join(' ')
+      .trim() || (await ask('Title'))
+  if (!title) fail('a title is required.')
+
+  const slug = slugify(title)
+  if (!slug) fail(`"${title}" has nothing to make a slug from.`)
 
   const file = path.join(BLOG, `${slug}.md`)
   if (existsSync(file)) fail(`content/blog/${slug}.md already exists.`)
+  console.log(`  → content/blog/${slug}.md`)
 
-  const title = await ask('Title', titleCase(slug))
   const description = await ask('Description (optional)', '')
   const tagsInput = await ask('Tags, comma-separated (optional)', '')
   const image = await ask('Cover image (optional)', '')
