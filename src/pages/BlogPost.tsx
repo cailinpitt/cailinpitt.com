@@ -7,11 +7,13 @@ import { Link, useLoaderData, type LoaderFunctionArgs } from 'react-router-dom'
 import { CommentsSection } from '../components/CommentsSection'
 import { PostActions } from '../components/PostActions'
 import { PostHistory, useHistoryPanel } from '../components/PostHistory'
+import { PostLinkGraph } from '../components/PostLinkGraph'
 import { PostShare } from '../components/PostShare'
 import { PostSource } from '../components/PostSource'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
+import { postLinks, type PostLinks } from '../lib/postLinks'
 import type { PostHistory as PostHistoryData } from '../lib/history'
 import { formatDate, formatReadingTime, type Post, type PostSummary } from '../lib/posts'
 import { relatedPosts, tagPath } from '../lib/tags'
@@ -60,6 +62,7 @@ interface BlogPostData {
   newer?: PostSummary
   /** Posts sharing tags with this one; empty when it has none. */
   related: PostSummary[]
+  links: PostLinks<PostSummary>
   publicationUri: string | null
   /** What git knows about this post's file; null outside a git checkout. */
   history: (PostHistoryData & { file: string }) | null
@@ -92,6 +95,8 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
   const index = posts.findIndex((post) => post.path === path)
   if (index === -1) throw new Response('Not found', { status: 404 })
   const summary = ({ body: _body, ...post }: Post): PostSummary => post
+  const links = postLinks(posts, posts[index])
+  const linked = new Set([...links.outgoing, ...links.incoming].map((p) => p.path))
   // Dynamic import so this lands in its own chunk: the production client
   // returns above without loading it, and full post history shouldn't bloat
   // the page's own bundle.
@@ -100,7 +105,12 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
     post: posts[index],
     newer: posts[index - 1] ? summary(posts[index - 1]) : undefined,
     older: posts[index + 1] ? summary(posts[index + 1]) : undefined,
-    related: relatedPosts(posts.map(summary), posts[index]),
+    // Posts already in the link graph aren't repeated as related.
+    related: relatedPosts(
+      posts.filter((p) => !linked.has(p.path)).map(summary),
+      posts[index],
+    ),
+    links: { outgoing: links.outgoing.map(summary), incoming: links.incoming.map(summary) },
     publicationUri,
     history: history[path] ?? null,
     repo,
@@ -108,7 +118,7 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<BlogPostDa
 }
 
 export function Component() {
-  const { post, newer, older, related, publicationUri, history, repo } =
+  const { post, newer, older, related, links, publicationUri, history, repo } =
     useLoaderData() as BlogPostData
   const articleRef = useRef<HTMLElement>(null)
   const [showSource, setShowSource] = useState(false)
@@ -117,6 +127,7 @@ export function Component() {
   // frontmatter field still get a photo behind their card (matches the JSON-LD cover).
   const cover = post.image ?? firstImagePath(post.body)
   const readingTime = formatReadingTime(post.words)
+  const hasLinks = links.incoming.length + links.outgoing.length > 0
   return (
     <>
       <Seo
@@ -183,6 +194,11 @@ export function Component() {
               History
             </a>
           )}
+          {links.incoming.length > 0 && (
+            <a href="#links">
+              Linked from {links.incoming.length} {links.incoming.length === 1 ? 'post' : 'posts'}
+            </a>
+          )}
           {post.date && <Link to={timelineDayPath(post.date.slice(0, 10))}>That day</Link>}
         </PostActions>
         {showSource ? (
@@ -206,6 +222,7 @@ export function Component() {
       {history && (
         <PostHistory history={history} repo={repo} open={panel.open} onToggle={panel.setOpen} />
       )}
+      {hasLinks && <PostLinkGraph title={post.title} links={links} />}
       {related.length > 0 && (
         <aside className="related-posts" aria-labelledby="related-heading">
           <h2 id="related-heading" className="eyebrow">

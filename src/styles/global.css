@@ -185,6 +185,7 @@ img {
    centred in the wide shell rather than filling it. */
 .post,
 .post-history,
+.link-graph,
 .related-posts,
 .post-navigation,
 .comments-section,
@@ -1346,6 +1347,137 @@ h3 {
   }
 }
 
+/* Links between posts, drawn as a subway line through this post. Every row
+   draws its own stretch of trunk (::before) so titles can wrap to any height;
+   only the ends of the line curve. Branch stubs (::after) join trunk to node. */
+.link-graph {
+  --trunk-x: 0.45rem;
+  --node-x: 1.55rem;
+  --node-y: calc(0.4rem + 0.7em);
+  --radius: 0.6rem;
+  --edge: color-mix(in srgb, var(--muted) 45%, var(--rule));
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-sans);
+}
+.link-graph-tree {
+  margin-top: 1rem;
+  line-height: 1.4;
+}
+.link-graph-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.link-graph-label {
+  margin: 0;
+  padding: 0.5rem 0 0.15rem 2.4rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.link-graph-row {
+  position: relative;
+  margin: 0;
+  padding: 0.4rem 0 0.4rem 2.4rem;
+}
+.link-graph-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--trunk-x);
+  border-left: 1.5px solid var(--edge);
+}
+.link-graph-in li:first-child::before {
+  top: calc(var(--node-y) + var(--radius));
+}
+.link-graph-out li:last-child::before {
+  bottom: auto;
+  height: calc(var(--node-y) - var(--radius));
+}
+.link-graph-self.is-first::before {
+  top: var(--node-y);
+}
+.link-graph-self.is-last::before {
+  bottom: auto;
+  height: var(--node-y);
+}
+.link-graph-tree li::after {
+  content: '';
+  position: absolute;
+  top: var(--node-y);
+  left: var(--trunk-x);
+  width: calc(var(--node-x) - var(--trunk-x));
+  border-top: 1.5px solid var(--edge);
+  transition: border-color 0.15s ease;
+}
+.link-graph-in li:first-child::after {
+  height: var(--radius);
+  border-left: 1.5px solid var(--edge);
+  border-top-left-radius: var(--radius);
+}
+.link-graph-out li:last-child::after {
+  top: calc(var(--node-y) - var(--radius));
+  height: var(--radius);
+  border-top: 0;
+  border-bottom: 1.5px solid var(--edge);
+  border-left: 1.5px solid var(--edge);
+  border-bottom-left-radius: var(--radius);
+}
+.link-graph-node {
+  position: absolute;
+  z-index: 1;
+  top: var(--node-y);
+  left: var(--node-x);
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  transform: translateY(-50%);
+  transition: background 0.15s ease;
+}
+.link-graph-self {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+.link-graph-self .link-graph-node {
+  left: var(--trunk-x);
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 0;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: translate(-50%, -50%);
+}
+.link-graph-tree li {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+}
+.link-graph-tree li a {
+  color: var(--fg);
+  text-decoration: none;
+}
+.link-graph-tree li time {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--step--1);
+  font-variant-numeric: tabular-nums;
+}
+.link-graph-tree li:is(:hover, :focus-within) a {
+  color: var(--accent);
+}
+.link-graph-tree li:is(:hover, :focus-within)::after {
+  border-color: var(--accent);
+}
+.link-graph-tree li:is(:hover, :focus-within) .link-graph-node {
+  background: var(--accent);
+}
 /* Posts sharing tags with this one. Sits above the chronological nav: it is the
    more useful of the two, and the prev/next pair reads as the end of the page. */
 .related-posts {
@@ -4235,6 +4367,7 @@ a.comment-name:hover {
   .theme-toggle,
   .identity-shuffle,
   .post-navigation,
+  .link-graph,
   .related-posts,
   .curl-hint,
   .load-more,

@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseFrontmatter } from '../src/lib/frontmatter'
+import { linkedKeys, postKey } from '../src/lib/postLinks'
 
 // Checks the frontmatter facts the build trusts without verifying (unique path, path/date agreement, tags shape) — not prose.
 
@@ -25,7 +26,9 @@ it('finds the posts', () => {
   expect(posts.length).toBeGreaterThan(0)
 })
 
-describe.each(posts)('$file', ({ file, data }) => {
+const postKeys = new Set(posts.map((post) => postKey(post.data.path as string)))
+
+describe.each(posts)('$file', ({ file, data, body }) => {
   it('has the fields every listing reads', () => {
     expect(data.title, 'title').toBeTruthy()
     expect(data.slug, 'slug').toBeTruthy()
@@ -57,6 +60,11 @@ describe.each(posts)('$file', ({ file, data }) => {
   it('has tags that parsed as a list', () => {
     // A bracket typo makes `tags` a string, turning every char into a tag page.
     if (data.tags !== undefined) expect(Array.isArray(data.tags)).toBe(true)
+  })
+
+  it('only links to posts that exist', () => {
+    // A dangling link would 404 and quietly drop out of the link graph.
+    for (const key of linkedKeys(body)) expect(postKeys.has(key), key).toBe(true)
   })
 
   it('was not revised before it was written', () => {

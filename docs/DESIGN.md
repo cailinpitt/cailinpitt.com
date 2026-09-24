@@ -60,6 +60,7 @@ unique — two posts sharing one silently overwrite each other. `tests/content.t
 | Social card | Built per page. `image:` picks the photo behind the title; falls back to the first body image, then the paper card |
 | Reading time | Counted from prose only. Under 100 words shows nothing |
 | Related posts | Up to three sharing the most tags; none if the post has no tags |
+| Linked posts | Links between posts, drawn as a line through the post: posts linking in above, posts it links to below. Found in the markdown by `src/lib/postLinks.ts` (absolute or relative, padded or not). A post with backlinks also gets a "Linked from N posts" action. Linked posts aren't repeated under Related. `tests/content.test.ts` fails on a link to a post that doesn't exist |
 | Heading anchors | `rehype-slug` ids + a `#` self-link, hidden until hover/focus. Stripped from RSS |
 | Markdown source | Every post publishes its source at `<post path>.md`, and a **Markdown** toggle above the body swaps the rendered article for the raw source in place, with Copy. See [Markdown source](#markdown-source) |
 | Provenance | A line at the foot of the post, read from `git log` at build time: when the file arrived and how many times it alone was edited since. Each commit opens a word-level diff of what it changed. See [Provenance](#provenance) |
