@@ -1,5 +1,5 @@
 ---
-title: "Chicago Transit Authority: Wrapped"
+title: "Using my transit card data to create a year in review experience"
 date: 2026-09-01
 path: /blog/2026/9/1/chicago-transit-authority-wrapped
 slug: chicago-transit-authority-wrapped
