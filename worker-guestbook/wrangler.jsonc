@@ -45,6 +45,10 @@
   // No KV and no R2, unlike the other two workers. A guestbook is a few hundred
   // short rows; one indexed query behind a 30-second edge cache is cheaper than
   // any precomputed blob would be, and there is nothing to mirror.
+  // Pings ping.cailin.link on each new entry. Service binding, so no public hop.
+  // Needs a sender token: wrangler secret put PING_TOKEN
+  "services": [{ "binding": "PING", "service": "ping" }],
+
   "d1_databases": [
     {
       "binding": "DB",

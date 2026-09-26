@@ -20,6 +20,8 @@ import {
   PAGE_SIZE,
   type Entry,
 } from './store'
+import { sendPing } from './ping'
+import { entryPing } from './pingMessage'
 import { renderText, TEXT_ROWS } from './text'
 import { verifyTurnstile } from './turnstile'
 import { LIMITS, validate } from './validate'
@@ -160,7 +162,12 @@ const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fiel
 
 // POST /entries. Returns the created row so the client can prepend it
 // immediately — the read endpoint sits behind a 30s edge cache.
-async function sign(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
+async function sign(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  cors: Record<string, string>,
+): Promise<Response> {
   // 1. Origin. Not a real boundary (a non-browser client sets any Origin it
   //    likes) but stops the form being embedded elsewhere, for free.
   if (!originAllowed(request, env)) {
@@ -232,6 +239,7 @@ async function sign(request: Request, env: Env, cors: Record<string, string>): P
     ipHash: hash,
   })
   log({ level: 'info', signed: { id: entry.id, country: entry.country } })
+  ctx.waitUntil(sendPing(env, entryPing(entry)))
 
   return jsonNoStore({ ok: true, entry }, 201, cors)
 }
@@ -244,7 +252,7 @@ export default {
     const url = new URL(request.url)
     try {
       if (url.pathname === '/entries' && request.method === 'POST') {
-        return await sign(request, env, cors)
+        return await sign(request, env, ctx, cors)
       }
 
       // Moderation. Both routes are ADMIN_TOKEN-only and never cached.

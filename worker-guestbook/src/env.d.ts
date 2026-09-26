@@ -21,4 +21,10 @@ interface Env {
    * Set with: wrangler secret put IP_SALT
    */
   IP_SALT: string
+  /**
+   * ping.cailin.link sender token for new-entry notifications. Optional:
+   * without it (or the PING binding) nothing is sent.
+   * Set with: wrangler secret put PING_TOKEN
+   */
+  PING_TOKEN?: string
 }

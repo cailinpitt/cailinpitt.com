@@ -7,4 +7,5 @@ interface Env {
 	ADMIN_TOKEN: string;
 	IP_SALT: string;
 	DB: D1Database;
+	PING: Fetcher;
 }

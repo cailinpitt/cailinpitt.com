@@ -12,6 +12,8 @@ import {
   PAGE_SIZE,
   type Comment,
 } from './store'
+import { sendPing } from './ping'
+import { commentPing } from './pingMessage'
 import { verifyTurnstile } from './turnstile'
 import { validate } from './validate'
 
@@ -107,7 +109,12 @@ interface PostPayload {
 
 const log = (fields: Record<string, unknown>) => console.log(JSON.stringify(fields))
 
-async function post(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
+async function post(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  cors: Record<string, string>,
+): Promise<Response> {
   if (!originAllowed(request, env)) {
     return jsonNoStore({ error: 'Not allowed from this origin.' }, 403, cors)
   }
@@ -167,6 +174,7 @@ async function post(request: Request, env: Env, cors: Record<string, string>): P
 
   const comment = await insertComment(env.DB, checked.value, { ipHash: hash })
   log({ level: 'info', posted: { id: comment.id, postPath: comment.postPath } })
+  ctx.waitUntil(sendPing(env, commentPing(comment)))
 
   return jsonNoStore({ ok: true, comment }, 201, cors)
 }
@@ -179,7 +187,7 @@ export default {
     const url = new URL(request.url)
     try {
       if (url.pathname === '/comments' && request.method === 'POST') {
-        return await post(request, env, cors)
+        return await post(request, env, ctx, cors)
       }
 
       if (url.pathname === '/admin/comments' && request.method === 'GET') {

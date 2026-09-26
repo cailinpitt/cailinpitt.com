@@ -6,4 +6,6 @@ interface Env {
   ADMIN_TOKEN: string
   /** Salt for the stored IP hash. Must stay stable — rotating resets rate limits. */
   IP_SALT: string
+  /** ping.cailin.link sender token for new-comment notifications. Optional. */
+  PING_TOKEN?: string
 }

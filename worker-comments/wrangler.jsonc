@@ -18,6 +18,10 @@
   },
 
   // Fill in the id after: wrangler d1 create cailinpitt-comments
+  // Pings ping.cailin.link on each new entry. Service binding, so no public hop.
+  // Needs a sender token: wrangler secret put PING_TOKEN
+  "services": [{ "binding": "PING", "service": "ping" }],
+
   "d1_databases": [
     {
       "binding": "DB",
