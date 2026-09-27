@@ -12,7 +12,7 @@ For those who aren't familiar with Markov Chaining, it's a random process that u
 
 For example, here is a simple Markov Chain with two states:
 
-<figure><img src="/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp" alt=" State A has a 20% chance of looping, and an 80% chance of transitioning to State B. State B has a 50% chance of transitioning to State A, and a 50% chance of looping. "><figcaption>State A has a 20% chance of looping, and an 80% chance of transitioning to State B. State B has a 50% chance of transitioning to State A, and a 50% chance of looping.</figcaption></figure>
+<figure><img src="/images/i-accidentally-created-a-mean-twitter-bot/01.webp" alt=" State A has a 20% chance of looping, and an 80% chance of transitioning to State B. State B has a 50% chance of transitioning to State A, and a 50% chance of looping. "><figcaption>State A has a 20% chance of looping, and an 80% chance of transitioning to State B. State B has a 50% chance of transitioning to State A, and a 50% chance of looping.</figcaption></figure>
 
 Yesterday, I was itching to finally tackle this, so I sat down and wrote [@CailinBot](https://twitter.com/cailinbot), using a really cool Ruby gem called [twitter\_ebooks](https://github.com/mispy/twitter_ebooks). This gem fetched the past 4000 tweets from my personal Twitter account, saved popular words and phrases as a text model, and used Markov Chaining to create @CailinBot tweets. Once I finished setting up the bot and assigning actions (how to respond to private messages, when to reply to someone when someone mentions it, etc.), I set it up on my Raspberry Pi and let it go to work.
 
@@ -20,30 +20,30 @@ I quickly realized I had created a monster.
 
 It immediately started being snarky:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/02.webp)
 
 It doesn't like USG very much:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/03.webp)
 
 It's obsessed with fungus:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/04.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/05.webp)
 
 It pays attention to national politics:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/06.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/07.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/08.webp)
 
 It can be mean at times:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/09.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/10.webp) ![](/images/i-accidentally-created-a-mean-twitter-bot/11.webp)
 
 It also has emotions:
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/12.webp)
 
 Oh, and apparently it thinks it is a human being?
 
-![](/images/i-accidentally-created-a-mean-twitter-bot/image-asset.webp)
+![](/images/i-accidentally-created-a-mean-twitter-bot/13.webp)
 
 Very odd.
