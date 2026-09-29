@@ -3,13 +3,13 @@
 
 import { useState } from 'react'
 import { Link as RouterLink } from 'react-router-dom'
-import { Art } from './ListeningBits'
 import { formatTime } from '../lib/datetime'
 import type { Mention } from '../lib/mentions'
 import { readingMinutes } from '../lib/posts'
 import {
   faviconUrl,
   formatBookDate,
+  hostOf,
   hardcoverUrl,
   readingImage,
   stars,
@@ -104,6 +104,32 @@ function Mentions({ mentions }: { mentions?: Mention[] }) {
   )
 }
 
+// No og:image, or one that won't load: the site's favicon and hostname on a
+// tinted tile, so a card without art still says where it's from.
+function ArticleShot({ article }: { article: Article }) {
+  const src = readingImage(article.image)
+  const [failed, setFailed] = useState(false)
+
+  if (src && !failed) {
+    return (
+      <img
+        src={src}
+        alt=""
+        className="article-image"
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  return (
+    <span className="article-image article-placeholder" aria-hidden="true">
+      <Favicon url={article.url} className="article-placeholder-icon" fallback="📰" />
+      <span className="article-placeholder-host">{hostOf(article.url)}</span>
+    </span>
+  )
+}
+
 export function ArticleCard({ article, mentions }: { article: Article; mentions?: Mention[] }) {
   const minutes =
     article.words && article.words >= MIN_ARTICLE_WORDS ? readingMinutes(article.words) : null
@@ -116,7 +142,7 @@ export function ArticleCard({ article, mentions }: { article: Article; mentions?
         rel="noopener noreferrer"
       >
         <span className="article-shot">
-          <Art src={readingImage(article.image)} alt="" className="article-image" />
+          <ArticleShot article={article} />
         </span>
         <span className="article-meta">
           <span className="article-title">{article.title || titleFromUrl(article.url)}</span>

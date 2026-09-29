@@ -3,7 +3,7 @@ import { useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { ArticleCard } from '../components/ReadingBits'
 import { SavedSearch, SavedStatsStrip } from '../components/SavedExtras'
-import { dayKey, formatDayLabel, formatNumber } from '../lib/datetime'
+import { dayKey, formatDayLabel } from '../lib/datetime'
 import { loadMentions, mentionKey, type Mentions } from '../lib/mentions'
 import { pageSchema } from '../lib/structuredData'
 import {

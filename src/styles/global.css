@@ -2582,6 +2582,37 @@ a.book-link:hover .book-title {
   object-fit: cover;
   display: block;
 }
+.article-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 16%, var(--bg)),
+    color-mix(in srgb, var(--accent) 4%, var(--bg))
+  );
+}
+.article-placeholder-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+.article-placeholder-icon.is-emoji {
+  font-size: 26px;
+  line-height: 1;
+}
+.article-placeholder-host {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
 .article-meta {
   display: flex;
   flex-direction: column;
@@ -2639,6 +2670,14 @@ a.book-link:hover .book-title {
   }
   .article-shot {
     aspect-ratio: 1 / 1;
+  }
+  /* The square thumbnail is too small for the hostname; the icon is enough. */
+  .article-placeholder-host {
+    display: none;
+  }
+  .article-placeholder-icon {
+    width: 24px;
+    height: 24px;
   }
   .article-meta {
     gap: 0.2rem;
