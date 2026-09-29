@@ -51,7 +51,6 @@ export function Component() {
       <h1>Links</h1>
       <p>
         Interesting links I&rsquo;ve come across.
-        {bundle && ` ${formatNumber(bundle.counts.links ?? 0)} so far.`}
       </p>
 
       <SavedStatsStrip kind="links" site={filter.site} onSite={setSite} />

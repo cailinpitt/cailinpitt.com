@@ -51,7 +51,6 @@ export function Component() {
       <h1>Articles</h1>
       <p>
         Articles I enjoyed that I saved after reading them.
-        {bundle && ` There are ${formatNumber(bundle.counts.articles)} so far.`}
       </p>
 
       <SavedStatsStrip kind="articles" site={filter.site} onSite={setSite} />
