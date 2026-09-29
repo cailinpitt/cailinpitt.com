@@ -379,6 +379,21 @@ npx wrangler d1 execute cailinpitt-reading --remote --file=schema-v6.sql
 # then deploy the Worker
 ```
 
+### One-time migration: reading time, link rot, site filter (do this before deploying)
+
+`schema-v7.sql` adds `articles.words`, the rot-check columns (`checked_at`, `failures`,
+`archive_url`) on both tables, and a generated `host` column with its indexes. Every read now
+selects these, so apply it before deploying:
+
+```bash
+cd worker-reading
+npx wrangler d1 execute cailinpitt-reading --remote --file=schema-v7.sql
+# then deploy the Worker, then the site
+```
+
+Existing rows start with `checked_at = 0`, so the hourly rot check works through the whole
+archive (3 rows an hour) and fills in reading time for older articles as it goes.
+
 Save / annotate / remove / move an article or a link:
 
 ```bash

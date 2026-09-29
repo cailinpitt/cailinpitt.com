@@ -19,10 +19,11 @@ Backs [`cailinpitt.com/reading`](https://cailinpitt.com/reading) and
 | `src/saved.ts` | move a row between `articles` and `links` (article ⇄ link) |
 | `src/metadata.ts` | og:/twitter:/JSON-LD/`<p>` extraction via `HTMLRewriter`, with a link-unfurler UA retry |
 | `src/enrich.ts` | hourly retry of articles *and* links whose card came back without a title |
+| `src/rot.ts` | hourly link-rot check, Wayback snapshot at save time and lookup once dead, word-count backfill |
 | `src/images.ts` | mirrors covers + article social cards into R2 |
 | `src/store.ts` | D1 reads for the bundle and article/link pagination |
 | `src/text.ts` | the `curl reading.cailinpitt.com` view |
-| `schema.sql` | `books`, `articles`, `links`, `stats` (apply `schema-v6.sql` to an existing DB) |
+| `schema.sql` | `books`, `articles`, `links`, `stats` (apply `schema-v6.sql` and `schema-v7.sql` to an existing DB) |
 
 ## Endpoints
 
@@ -33,6 +34,8 @@ Backs [`cailinpitt.com/reading`](https://cailinpitt.com/reading) and
 | `GET /articles?from=&to=` | — | articles in a unix-seconds range, for `/timeline/:date` |
 | `GET /links?cursor=&limit=` | — | older links. Cursor is `<saved_at>:<id>` |
 | `GET /links?from=&to=` | — | links in a unix-seconds range |
+| `GET /articles?q=&site=` `GET /links?q=&site=` | — | filtered pages (combine with `cursor`). `q`: every word must appear in the title, excerpt, note, or url. `site`: a hostname, `www.` ignored |
+| `GET /stats?kind=articles\|links` | — | total, this year, saves per week (26 weeks), top 10 sites, busiest weekday, longest daily streak. Edge-cached for an hour |
 | `GET /` or `/reading` | — | terminal view for CLI user-agents, else a 302 (`no-store`) |
 | `POST /ingest` | `Bearer INGEST_TOKEN` | save a url. `{"kind":"link"}` → `links`, otherwise `articles` |
 | `PATCH /ingest` | `Bearer INGEST_TOKEN` | set/extend the note; `{"kind":…}` moves the row between tables |
@@ -225,7 +228,28 @@ sharing a single `BATCH` and deadline, with backoff, up to `MAX_ATTEMPTS`. One c
 ~50-subrequest budget: the account is at the free-plan 5-trigger limit. `enriched_at` is the flag
 in either table: null until a fetch produces a title. Links never mirror an image; otherwise the
 two are treated the same. Beyond og:/twitter:, `metadata.ts` also reads JSON-LD
-`headline`/`description` and, last, the first real `<p>`.
+`headline`/`description` and, last, the first real `<p>`. It also counts the words across every
+`<p>`, which the site turns into a reading time (hidden under 250 words, where a paywall teaser is
+more likely than the article).
+
+### Link rot
+
+A new save also asks the Wayback Machine to capture the page (`waitUntil`, fire-and-forget).
+After re-enrichment, the hourly cron runs `checkRot()` (`src/rot.ts`), which re-requests up to 3
+urls, oldest-checked first. A healthy url is checked monthly and a failing one every 3 days. Only
+404, 410, and connection or DNS errors count as failures. Blocks, 5xx, and timeouts count for
+nothing either way. After `DEAD_AFTER` (2) consecutive failures the row is dead: the API sends
+`dead: true` plus the closest Wayback snapshot as `archiveUrl` (looked up once, at that point),
+and the site links the snapshot instead. A later successful check resets it. The same visit
+fills in `words` for articles saved before word counts existed.
+
+### Search and stats
+
+`?q=` is a `LIKE` over title, excerpt, note, and url rather than FTS5: at a few thousand rows a
+filtered scan is cheap, each query is edge-cached, and there's no shadow table to keep in step
+with ingest, moves, and deletes. `?site=` and the top-sites stat use `host`, a VIRTUAL generated
+column (the canonical url's hostname minus `www.`), so nothing ever writes it. `/stats` reads
+every timestamp once per build, so it has a 1-hour edge TTL rather than 5 minutes.
 
 ## Testing
 

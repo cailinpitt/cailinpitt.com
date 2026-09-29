@@ -133,8 +133,8 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
   await env.DB.batch([
     env.DB.prepare(
       `INSERT OR IGNORE INTO articles
-         (id, url, title, site, excerpt, image, note, read_at, enriched_at, attempts, last_attempt_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10)`,
+         (id, url, title, site, excerpt, image, note, read_at, enriched_at, attempts, last_attempt_at, words)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 1, ?10, ?11)`,
     ).bind(
       id,
       url,
@@ -146,6 +146,7 @@ export async function ingestArticle(env: Env, input: ArticleInput): Promise<Inge
       input.readAt ?? now,
       meta.title ? now : null,
       now,
+      meta.words,
     ),
     env.DB.prepare('UPDATE stats SET articles = articles + 1 WHERE id = 1'),
   ])

@@ -1,19 +1,22 @@
 // Reading API for cailinpitt.com/reading.
 //
 //  scheduled (hourly): pull the hardcover.app library and mirror new cover art
-//    to R2, rewriting D1 only when the library actually changed (see sync.ts).
+//    to R2, rewriting D1 only when the library actually changed (see sync.ts),
+//    then re-enrich and check a few saved urls for rot (enrich.ts, rot.ts).
 //  fetch: serve the bundle from D1 behind the edge cache, and manage articles
 //    at /ingest (POST save, PATCH note, DELETE remove). No KV — see store.ts.
 
 import { annotateArticle, deleteArticle, ingestArticle, resolveId } from './articles'
 import { reenrich } from './enrich'
 import { annotateLink, deleteLink, ingestLink } from './links'
+import { checkRot, requestSnapshot } from './rot'
 import { findKind, moveRow, type Kind } from './saved'
 import {
   ARTICLE_PAGE,
   BOOK_PAGE,
   buildBundle,
   buildNow,
+  buildSavedStats,
   fetchArticles,
   fetchArticlesBetween,
   fetchBooksOnDate,
@@ -21,6 +24,7 @@ import {
   fetchLinks,
   fetchLinksBetween,
   LINK_PAGE,
+  type SavedFilter,
 } from './store'
 import { syncBooks } from './sync'
 import { renderText } from './text'
@@ -32,6 +36,9 @@ const EDGE_TTL = 300
 // page, s-maxage is what bounds D1 load per colo per window — they don't need
 // to match. stale-while-revalidate serves instantly while refreshing behind it.
 const LIVE_TTL = { browser: 60, edge: EDGE_TTL }
+
+/** /stats reads every row, so it's held longer; a new save shows up within the hour. */
+const STATS_TTL = { browser: 600, edge: 3600 }
 
 /** Where a browser landing on the API gets sent. */
 const SITE_READING = 'https://cailinpitt.com/reading'
@@ -71,6 +78,12 @@ function asText(value: unknown): string | null {
   }
   return null
 }
+
+/** ?q= and ?site= on /articles and /links. */
+const filterFrom = (url: URL): SavedFilter => ({
+  q: url.searchParams.get('q'),
+  site: url.searchParams.get('site'),
+})
 
 /** The local calendar year, for the "this year" counts. */
 function localYear(offsetSeconds: number): number {
@@ -170,9 +183,20 @@ async function cached(
 
 // One cron (account is at the 5-trigger free limit): the book sync and the
 // article re-enrichment run in parallel and share the ~50-subrequest budget.
-// Independent — one failing doesn't stop the other.
+// The rot check runs after re-enrichment, which is usually a no-op, so the two
+// don't both spend their full budget at once. Independent — one failing
+// doesn't stop the others.
 async function hourly(env: Env): Promise<void> {
-  const [sync, enrich] = await Promise.allSettled([syncBooks(env), reenrich(env)])
+  const [sync, enrich] = await Promise.allSettled([
+    syncBooks(env),
+    reenrich(env).finally(async () => {
+      try {
+        console.log(JSON.stringify({ level: 'info', rot: await checkRot(env) }))
+      } catch (err) {
+        console.log(JSON.stringify({ level: 'error', stage: 'rot', error: String(err) }))
+      }
+    }),
+  ])
 
   if (sync.status === 'fulfilled') {
     console.log(JSON.stringify({ level: 'info', sync: sync.value }))
@@ -248,6 +272,8 @@ export default {
               ? await ingestLink(env, { url: target, note })
               : await ingestArticle(env, { url: target, note })
           if (!result) return jsonNoStore({ error: `not a usable url: ${target}` }, 400, cors)
+          // A snapshot from the day it was saved, for when the page later disappears.
+          if (result.stored && !result.moved) ctx.waitUntil(requestSnapshot(result.url))
           console.log(JSON.stringify({ level: 'info', ingest: { kind: kind ?? 'article', ...result } }))
           return jsonNoStore(result, 200, cors)
         }
@@ -376,7 +402,7 @@ export default {
         return cached(url, 'articles', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || ARTICLE_PAGE
-          return json(await fetchArticles(env.DB, cursor, limit), LIVE_TTL)
+          return json(await fetchArticles(env.DB, cursor, limit, filterFrom(url)), LIVE_TTL)
         })
       }
 
@@ -394,8 +420,19 @@ export default {
         return cached(url, 'links', ctx, cors, async () => {
           const cursor = url.searchParams.get('cursor')
           const limit = Number(url.searchParams.get('limit')) || LINK_PAGE
-          return json(await fetchLinks(env.DB, cursor, limit), LIVE_TTL)
+          return json(await fetchLinks(env.DB, cursor, limit, filterFrom(url)), LIVE_TTL)
         })
+      }
+
+      if (url.pathname === '/stats') {
+        const kind = url.searchParams.get('kind')
+        if (kind !== 'articles' && kind !== 'links') {
+          return new Response('Expected ?kind=articles or ?kind=links', { status: 400, headers: cors })
+        }
+        const offset = Number(env.TZ_OFFSET_SECONDS) || 0
+        return cached(url, 'stats', ctx, cors, async () =>
+          json(await buildSavedStats(env.DB, kind, offset, localYear(offset)), STATS_TTL),
+        )
       }
 
       // 302 + no-store: this response is User-Agent dependent (terminal view

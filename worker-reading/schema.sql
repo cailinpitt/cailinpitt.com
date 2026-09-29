@@ -70,7 +70,19 @@ CREATE TABLE IF NOT EXISTS articles (
   -- Re-enrichment (src/enrich.ts): enriched_at null until a fetch found a title.
   enriched_at     INTEGER,
   attempts        INTEGER NOT NULL DEFAULT 0,
-  last_attempt_at INTEGER NOT NULL DEFAULT 0
+  last_attempt_at INTEGER NOT NULL DEFAULT 0,
+  words           INTEGER,             -- prose words on the page, for reading time
+  -- Link-rot checks (src/rot.ts): dead after DEAD_AFTER consecutive failures.
+  checked_at      INTEGER NOT NULL DEFAULT 0,
+  failures        INTEGER NOT NULL DEFAULT 0,
+  archive_url     TEXT,                -- Wayback snapshot, shown once dead
+  -- Hostname minus "www." (schema-v7.sql); VIRTUAL, never written.
+  host TEXT GENERATED ALWAYS AS (
+    CASE WHEN substr(url, instr(url, '://') + 3, 4) = 'www.'
+      THEN substr(url, instr(url, '://') + 7, instr(substr(url, instr(url, '://') + 3), '/') - 5)
+      ELSE substr(url, instr(url, '://') + 3, instr(substr(url, instr(url, '://') + 3), '/') - 1)
+    END
+  ) VIRTUAL
 );
 
 -- Both ordering columns, in the query's direction, so paging is an index seek.
@@ -91,8 +103,8 @@ CREATE INDEX IF NOT EXISTS idx_articles_unenriched
 -- Saved links: the same shape as `articles` minus `image` (the /links page is a
 -- compact favicon list, so links never mirror art to R2). Ingested via
 -- POST /ingest with `{"kind":"link"}`; a PATCH with a different `kind` moves a
--- row between the two tables. See src/links.ts. Apply schema-v6.sql to an
--- existing DB.
+-- row between the two tables. See src/links.ts. Apply schema-v6.sql and
+-- schema-v7.sql to an existing DB.
 CREATE TABLE IF NOT EXISTS links (
   id       TEXT    PRIMARY KEY,        -- sha-256 of the canonical url, first 16 hex chars
   url      TEXT    NOT NULL,
@@ -103,13 +115,30 @@ CREATE TABLE IF NOT EXISTS links (
   saved_at INTEGER NOT NULL,
   enriched_at     INTEGER,
   attempts        INTEGER NOT NULL DEFAULT 0,
-  last_attempt_at INTEGER NOT NULL DEFAULT 0
+  last_attempt_at INTEGER NOT NULL DEFAULT 0,
+  -- Link-rot checks (src/rot.ts): dead after DEAD_AFTER consecutive failures.
+  checked_at      INTEGER NOT NULL DEFAULT 0,
+  failures        INTEGER NOT NULL DEFAULT 0,
+  archive_url     TEXT,                -- Wayback snapshot, shown once dead
+  -- Hostname minus "www." (schema-v7.sql); VIRTUAL, never written.
+  host TEXT GENERATED ALWAYS AS (
+    CASE WHEN substr(url, instr(url, '://') + 3, 4) = 'www.'
+      THEN substr(url, instr(url, '://') + 7, instr(substr(url, instr(url, '://') + 3), '/') - 5)
+      ELSE substr(url, instr(url, '://') + 3, instr(substr(url, instr(url, '://') + 3), '/') - 1)
+    END
+  ) VIRTUAL
 );
 
 CREATE INDEX IF NOT EXISTS idx_links_seq ON links (saved_at DESC, id DESC);
 
 CREATE INDEX IF NOT EXISTS idx_links_unenriched
   ON links (attempts, saved_at DESC) WHERE enriched_at IS NULL;
+
+-- Site filter + the top-sites stat, and the rot check's oldest-first walk.
+CREATE INDEX IF NOT EXISTS idx_articles_host ON articles (host, read_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_links_host ON links (host, saved_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_checked ON articles (checked_at);
+CREATE INDEX IF NOT EXISTS idx_links_checked ON links (checked_at);
 
 -- Precomputed totals — a single row, read once per bundle.
 --

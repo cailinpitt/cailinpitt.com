@@ -36,6 +36,12 @@ export interface Article {
   image: string | null
   note: string | null
   readAt: number
+  /** Prose words on the page, for a reading-time estimate. Null when unknown. */
+  words?: number | null
+  /** Gone from the web (see worker-reading/src/rot.ts). */
+  dead?: boolean
+  /** Wayback snapshot to link instead; only set when dead. */
+  archiveUrl?: string | null
 }
 
 export interface ArticlePage {
@@ -54,6 +60,8 @@ export interface Link {
   excerpt: string | null
   note: string | null
   savedAt: number
+  dead?: boolean
+  archiveUrl?: string | null
 }
 
 export interface LinkPage {
@@ -122,18 +130,33 @@ export async function fetchOlderBooks(
   return res.json() as Promise<BookPage>
 }
 
-export async function fetchOlderArticles(
-  cursor: string,
+/** Narrows /articles and /links: every word of `q` must match, and `site` is a hostname. */
+export interface SavedFilter {
+  q?: string
+  site?: string
+}
+
+function pageQuery(cursor: string | null, limit: number, filter?: SavedFilter): string {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (cursor) params.set('cursor', cursor)
+  if (filter?.q?.trim()) params.set('q', filter.q.trim())
+  if (filter?.site) params.set('site', filter.site)
+  return params.toString()
+}
+
+export async function fetchArticlePage(
+  cursor: string | null,
+  filter?: SavedFilter,
   limit = 20,
   signal?: AbortSignal,
 ): Promise<ArticlePage> {
-  const res = await fetch(
-    `${API_BASE}/articles?cursor=${encodeURIComponent(cursor)}&limit=${limit}`,
-    { signal },
-  )
+  const res = await fetch(`${API_BASE}/articles?${pageQuery(cursor, limit, filter)}`, { signal })
   if (!res.ok) throw new Error(`Reading API ${res.status}`)
   return res.json() as Promise<ArticlePage>
 }
+
+export const fetchOlderArticles = (cursor: string, limit = 20, signal?: AbortSignal) =>
+  fetchArticlePage(cursor, undefined, limit, signal)
 
 export async function fetchArticlesOnDate(
   from: number,
@@ -146,16 +169,49 @@ export async function fetchArticlesOnDate(
   return data.articles
 }
 
-export async function fetchOlderLinks(
-  cursor: string,
+export async function fetchLinkPage(
+  cursor: string | null,
+  filter?: SavedFilter,
   limit = 20,
   signal?: AbortSignal,
 ): Promise<LinkPage> {
-  const res = await fetch(`${API_BASE}/links?cursor=${encodeURIComponent(cursor)}&limit=${limit}`, {
-    signal,
-  })
+  const res = await fetch(`${API_BASE}/links?${pageQuery(cursor, limit, filter)}`, { signal })
   if (!res.ok) throw new Error(`Reading API ${res.status}`)
   return res.json() as Promise<LinkPage>
+}
+
+export const fetchOlderLinks = (cursor: string, limit = 20, signal?: AbortSignal) =>
+  fetchLinkPage(cursor, undefined, limit, signal)
+
+export interface SavedStats {
+  total: number
+  thisYear: number
+  /** Saves per week, oldest first, ending with the current week. */
+  weeks: number[]
+  /** YYYY-MM-DD of the Monday the first week starts on. */
+  firstWeek: string
+  topSites: { host: string; count: number }[]
+  /** 0 = Sunday; null when nothing is saved. */
+  busiestWeekday: number | null
+  longestStreak: number
+}
+
+export async function fetchSavedStats(
+  kind: 'articles' | 'links',
+  signal?: AbortSignal,
+): Promise<SavedStats> {
+  const res = await fetch(`${API_BASE}/stats?kind=${kind}`, { signal })
+  if (!res.ok) throw new Error(`Reading API ${res.status}`)
+  return res.json() as Promise<SavedStats>
+}
+
+/** Hostname without "www.", matching the Worker's `host` column. Null if unparseable. */
+export function hostOf(url: string): string | null {
+  try {
+    return new URL(url).host.replace(/^www\./, '')
+  } catch {
+    return null
+  }
 }
 
 export async function fetchLinksOnDate(

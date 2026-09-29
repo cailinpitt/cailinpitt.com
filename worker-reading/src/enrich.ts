@@ -95,11 +95,12 @@ export async function reenrich(env: Env): Promise<EnrichResult> {
                site = COALESCE(?3, site),
                excerpt = COALESCE(?4, excerpt),
                image = COALESCE(?5, image),
+               words = COALESCE(words, ?7),
                attempts = attempts + 1,
                last_attempt_at = ?6,
                enriched_at = CASE WHEN COALESCE(?2, title) IS NOT NULL THEN ?6 ELSE enriched_at END
              WHERE id = ?1`,
-          ).bind(row.id, meta.title, gotTitle ? meta.site : null, meta.excerpt, image, now)
+          ).bind(row.id, meta.title, gotTitle ? meta.site : null, meta.excerpt, image, now, meta.words)
         : env.DB.prepare(
             `UPDATE ${cfg.table} SET
                title = COALESCE(?2, title),

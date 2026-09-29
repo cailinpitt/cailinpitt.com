@@ -15,10 +15,10 @@ export function postKey(url: string): string | null {
   return `/blog/${year}/${Number(month)}/${Number(day)}/${slug.toLowerCase()}`
 }
 
-/** Keys of every post URL a markdown body links to, in order of first appearance. */
-export function linkedKeys(body: string): string[] {
+/** Every link target in a markdown body (inline, html, reference, autolink), in order, code excluded. */
+export function linkedUrls(body: string): string[] {
   const text = body.replace(/```[\s\S]*?```/g, ' ').replace(/`[^`\n]*`/g, ' ')
-  const urls = [
+  return [
     ...text.matchAll(/\]\(\s*<?([^)\s>]+)/g),
     ...text.matchAll(/href\s*=\s*["']([^"']+)["']/gi),
     ...text.matchAll(/^\s*\[[^\]]+\]:\s*<?(\S+?)>?\s*$/gm),
@@ -26,7 +26,11 @@ export function linkedKeys(body: string): string[] {
   ]
     .sort((a, b) => a.index - b.index)
     .map((match) => match[1])
-  const keys = urls.map(postKey).filter((key): key is string => key !== null)
+}
+
+/** Keys of every post URL a markdown body links to, in order of first appearance. */
+export function linkedKeys(body: string): string[] {
+  const keys = linkedUrls(body).map(postKey).filter((key): key is string => key !== null)
   return [...new Set(keys)]
 }
 

@@ -3,6 +3,8 @@
 // is a small indexed scan, so building the bundle straight from D1 behind the
 // edge cache is simpler and comfortably inside the free tier.
 
+import { DEAD_AFTER } from './rot'
+
 // Paged, not sent whole: the bundle is rebuilt per colo per TTL, so a small
 // first page keeps D1 row reads flat as the archive grows.
 export const BOOK_PAGE = 24
@@ -42,6 +44,12 @@ export interface Article {
   image: string | null
   note: string | null
   readAt: number
+  /** Prose words on the page; null when unknown. */
+  words: number | null
+  /** The url has failed DEAD_AFTER checks in a row (see rot.ts). */
+  dead: boolean
+  /** Wayback snapshot to link instead. Only set when dead. */
+  archiveUrl: string | null
 }
 
 export interface Link {
@@ -52,6 +60,8 @@ export interface Link {
   excerpt: string | null
   note: string | null
   savedAt: number
+  dead: boolean
+  archiveUrl: string | null
 }
 
 export interface BookPage {
@@ -102,6 +112,9 @@ interface ArticleRow {
   image: string | null
   note: string | null
   read_at: number
+  words: number | null
+  dead: number
+  archive_url: string | null
 }
 
 interface LinkRow {
@@ -112,6 +125,8 @@ interface LinkRow {
   excerpt: string | null
   note: string | null
   saved_at: number
+  dead: number
+  archive_url: string | null
 }
 
 const toBook = (r: BookRow): Book => ({
@@ -128,6 +143,12 @@ const toBook = (r: BookRow): Book => ({
   finishedAt: r.finished_at,
 })
 
+// archive_url only goes out for a dead row; a live one links to the page itself.
+const ROT_COLS = `failures >= ${DEAD_AFTER} AS dead,
+  CASE WHEN failures >= ${DEAD_AFTER} THEN archive_url END AS archive_url`
+
+const ARTICLE_COLS = `id, url, title, site, excerpt, image, note, read_at, words, ${ROT_COLS}`
+
 const toArticle = (r: ArticleRow): Article => ({
   id: r.id,
   url: r.url,
@@ -137,9 +158,12 @@ const toArticle = (r: ArticleRow): Article => ({
   image: r.image,
   note: r.note,
   readAt: r.read_at,
+  words: r.words,
+  dead: Boolean(r.dead),
+  archiveUrl: r.archive_url,
 })
 
-const LINK_COLS = 'id, url, title, site, excerpt, note, saved_at'
+const LINK_COLS = `id, url, title, site, excerpt, note, saved_at, ${ROT_COLS}`
 
 const toLink = (r: LinkRow): Link => ({
   id: r.id,
@@ -149,6 +173,8 @@ const toLink = (r: LinkRow): Link => ({
   excerpt: r.excerpt,
   note: r.note,
   savedAt: r.saved_at,
+  dead: Boolean(r.dead),
+  archiveUrl: r.archive_url,
 })
 
 // Cursor is composite (`<read_at>:<id>`), not a bare timestamp: two articles
@@ -211,34 +237,86 @@ export async function fetchFinishedBooks(
   }
 }
 
+export interface SavedFilter {
+  /** Words that must each appear in the title, excerpt, note, or url. */
+  q?: string | null
+  /** Hostname, matched against the generated `host` column (no "www."). */
+  site?: string | null
+}
+
+const SEARCH_COLS = ['title', 'excerpt', 'note', 'url']
+
+/** A hostname as the `host` column stores it, or null if it isn't one. */
+export function normalizeSite(raw: string | null | undefined): string | null {
+  const site = raw?.trim().toLowerCase().replace(/^www\./, '')
+  return site && /^[a-z0-9.-]+(:\d+)?$/.test(site) ? site : null
+}
+
+// LIKE rather than FTS5: at a few thousand rows a filtered scan is cheap, the
+// result is edge-cached per query, and there's no shadow table to keep in step
+// with ingest, moves, and deletes.
+function filterClauses(filter: SavedFilter | undefined): { where: string[]; params: (string | number)[] } {
+  const where: string[] = []
+  const params: (string | number)[] = []
+
+  const site = normalizeSite(filter?.site)
+  if (site) {
+    where.push('host = ?')
+    params.push(site)
+  }
+
+  const terms = (filter?.q ?? '').trim().slice(0, 100).split(/\s+/).filter(Boolean).slice(0, 5)
+  for (const term of terms) {
+    const pattern = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`
+    where.push(`(${SEARCH_COLS.map((col) => `${col} LIKE ? ESCAPE '\\'`).join(' OR ')})`)
+    params.push(...SEARCH_COLS.map(() => pattern))
+  }
+
+  return { where, params }
+}
+
+/** One newest-first page of `table`, after `cursor`, narrowed by `filter`. */
+async function fetchSavedPage<Row, T>(
+  db: D1Database,
+  table: 'articles' | 'links',
+  tsCol: 'read_at' | 'saved_at',
+  cols: string,
+  map: (row: Row) => T,
+  cursor: string | null,
+  size: number,
+  filter: SavedFilter | undefined,
+): Promise<{ items: T[]; hasMore: boolean }> {
+  const { where, params } = filterClauses(filter)
+  const from = decodeCursor(cursor)
+  if (from) {
+    where.push(`(${tsCol} < ? OR (${tsCol} = ? AND id < ?))`)
+    params.push(from.readAt, from.readAt, from.id)
+  }
+
+  // Fetch one extra to learn whether another page exists without a COUNT.
+  const { results } = await db
+    .prepare(
+      `SELECT ${cols} FROM ${table}
+       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+       ORDER BY ${tsCol} DESC, id DESC LIMIT ?`,
+    )
+    .bind(...params, size + 1)
+    .all<Row>()
+
+  const rows = (results ?? []).map(map)
+  return { items: rows.slice(0, size), hasMore: rows.length > size }
+}
+
 export async function fetchArticles(
   db: D1Database,
   cursor: string | null,
   limit: number,
+  filter?: SavedFilter,
 ): Promise<{ articles: Article[]; nextCursor: string | null }> {
   const size = Math.min(Math.max(limit, 1), MAX_ARTICLE_PAGE)
-  const from = decodeCursor(cursor)
-
-  // Fetch one extra to learn whether another page exists without a COUNT.
-  const query = from
-    ? db
-        .prepare(
-          `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
-           WHERE read_at < ?1 OR (read_at = ?1 AND id < ?2)
-           ORDER BY read_at DESC, id DESC LIMIT ?3`,
-        )
-        .bind(from.readAt, from.id, size + 1)
-    : db
-        .prepare(
-          `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
-           ORDER BY read_at DESC, id DESC LIMIT ?1`,
-        )
-        .bind(size + 1)
-
-  const { results } = await query.all<ArticleRow>()
-  const rows = (results ?? []).map(toArticle)
-  const hasMore = rows.length > size
-  const articles = hasMore ? rows.slice(0, size) : rows
+  const { items: articles, hasMore } = await fetchSavedPage(
+    db, 'articles', 'read_at', ARTICLE_COLS, toArticle, cursor, size, filter,
+  )
   return {
     articles,
     nextCursor: hasMore && articles.length ? encodeCursor(articles[articles.length - 1]) : null,
@@ -253,7 +331,7 @@ export async function fetchArticlesBetween(
 ): Promise<Article[]> {
   const { results } = await db
     .prepare(
-      `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
+      `SELECT ${ARTICLE_COLS} FROM articles
        WHERE read_at >= ?1 AND read_at < ?2 ORDER BY read_at DESC, id DESC`,
     )
     .bind(from, to)
@@ -269,26 +347,12 @@ export async function fetchLinks(
   db: D1Database,
   cursor: string | null,
   limit: number,
+  filter?: SavedFilter,
 ): Promise<{ links: Link[]; nextCursor: string | null }> {
   const size = Math.min(Math.max(limit, 1), MAX_LINK_PAGE)
-  const from = decodeCursor(cursor)
-
-  const query = from
-    ? db
-        .prepare(
-          `SELECT ${LINK_COLS} FROM links
-           WHERE saved_at < ?1 OR (saved_at = ?1 AND id < ?2)
-           ORDER BY saved_at DESC, id DESC LIMIT ?3`,
-        )
-        .bind(from.readAt, from.id, size + 1)
-    : db
-        .prepare(`SELECT ${LINK_COLS} FROM links ORDER BY saved_at DESC, id DESC LIMIT ?1`)
-        .bind(size + 1)
-
-  const { results } = await query.all<LinkRow>()
-  const rows = (results ?? []).map(toLink)
-  const hasMore = rows.length > size
-  const links = hasMore ? rows.slice(0, size) : rows
+  const { items: links, hasMore } = await fetchSavedPage(
+    db, 'links', 'saved_at', LINK_COLS, toLink, cursor, size, filter,
+  )
   return {
     links,
     nextCursor: hasMore && links.length ? encodeLinkCursor(links[links.length - 1]) : null,
@@ -358,7 +422,7 @@ export async function buildNow(db: D1Database, offsetSeconds: number): Promise<R
       .first<BookRow>(),
     db
       .prepare(
-        `SELECT id, url, title, site, excerpt, image, note, read_at FROM articles
+        `SELECT ${ARTICLE_COLS} FROM articles
          WHERE read_at >= ?1 ORDER BY read_at DESC, id DESC LIMIT 1`,
       )
       .bind(startOfToday)
@@ -438,5 +502,84 @@ export async function buildBundle(db: D1Database, year: number): Promise<Reading
       articles: counts?.articles ?? 0,
       links: counts?.links ?? 0,
     },
+  }
+}
+
+/** Weeks of history in the stats sparkline. */
+const STAT_WEEKS = 26
+const TOP_SITES = 10
+
+export interface SavedStats {
+  total: number
+  thisYear: number
+  /** Saves per local week, oldest first, the last ending with the current week. */
+  weeks: number[]
+  /** Local YYYY-MM-DD of the Monday the first week starts on. */
+  firstWeek: string
+  topSites: { host: string; count: number }[]
+  /** 0 = Sunday. Null when nothing is saved. */
+  busiestWeekday: number | null
+  /** Most consecutive local days with at least one save. */
+  longestStreak: number
+}
+
+// Reads every timestamp (one covering-index scan) and buckets in JS: at a few
+// thousand rows that's cheaper to reason about than four GROUP BYs, and the
+// result sits behind a long edge TTL.
+export async function buildSavedStats(
+  db: D1Database,
+  kind: 'articles' | 'links',
+  offsetSeconds: number,
+  year: number,
+): Promise<SavedStats> {
+  const tsCol = kind === 'articles' ? 'read_at' : 'saved_at'
+  const [times, sites] = await Promise.all([
+    db.prepare(`SELECT ${tsCol} AS ts FROM ${kind}`).all<{ ts: number }>(),
+    db
+      .prepare(
+        `SELECT host, COUNT(*) AS count FROM ${kind} WHERE host <> ''
+         GROUP BY host ORDER BY count DESC, host LIMIT ?1`,
+      )
+      .bind(TOP_SITES)
+      .all<{ host: string; count: number }>(),
+  ])
+
+  const localDay = (ts: number) => Math.floor((ts + offsetSeconds) / 86400)
+  // Epoch day 0 was a Thursday: (day + 3) % 7 is 0 on Mondays, (day + 4) % 7 on Sundays.
+  const today = localDay(Math.floor(Date.now() / 1000))
+  const firstWeek = today - ((today + 3) % 7) - (STAT_WEEKS - 1) * 7
+
+  const weeks = new Array<number>(STAT_WEEKS).fill(0)
+  const weekdays = new Array<number>(7).fill(0)
+  const days = new Set<number>()
+  let thisYear = 0
+
+  const rows = times.results ?? []
+  for (const { ts } of rows) {
+    const day = localDay(ts)
+    days.add(day)
+    weekdays[(day + 4) % 7]++
+    const week = Math.floor((day - firstWeek) / 7)
+    if (week >= 0 && week < STAT_WEEKS) weeks[week]++
+    if (new Date(day * 86400 * 1000).getUTCFullYear() === year) thisYear++
+  }
+
+  let longestStreak = 0
+  let run = 0
+  let previous = Number.NaN
+  for (const day of [...days].sort((a, b) => a - b)) {
+    run = day === previous + 1 ? run + 1 : 1
+    longestStreak = Math.max(longestStreak, run)
+    previous = day
+  }
+
+  return {
+    total: rows.length,
+    thisYear,
+    weeks,
+    firstWeek: new Date(firstWeek * 86400 * 1000).toISOString().slice(0, 10),
+    topSites: sites.results ?? [],
+    busiestWeekday: rows.length ? weekdays.indexOf(Math.max(...weekdays)) : null,
+    longestStreak,
   }
 }

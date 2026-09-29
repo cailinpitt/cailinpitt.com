@@ -27,6 +27,9 @@ interface Row {
   enriched_at: number | null
   attempts: number
   last_attempt_at: number
+  checked_at: number
+  failures: number
+  archive_url: string | null
 }
 
 /** Which table holds this id, or null if neither does. */
@@ -51,7 +54,8 @@ export async function moveRow(env: Env, id: string, to: Kind): Promise<MoveResul
   const tsCol = from === 'article' ? 'read_at' : 'saved_at'
 
   const src = await env.DB.prepare(
-    `SELECT id, url, title, site, excerpt, note, ${tsCol} AS ts, enriched_at, attempts, last_attempt_at
+    `SELECT id, url, title, site, excerpt, note, ${tsCol} AS ts, enriched_at, attempts, last_attempt_at,
+       checked_at, failures, archive_url
      FROM ${from === 'article' ? 'articles' : 'links'} WHERE id = ?1`,
   )
     .bind(id)
@@ -66,16 +70,18 @@ export async function moveRow(env: Env, id: string, to: Kind): Promise<MoveResul
     to === 'link'
       ? env.DB.prepare(
           `INSERT OR IGNORE INTO links
-             (id, url, title, site, excerpt, note, saved_at, enriched_at, attempts, last_attempt_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+             (id, url, title, site, excerpt, note, saved_at, enriched_at, attempts, last_attempt_at,
+              checked_at, failures, archive_url)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`,
         )
       : // image is null: a link never had card art. The enrich cron won't refetch
         // it (enriched_at carries over), which is fine — re-saving it as an
-        // article is the way to get a card image.
+        // article is the way to get a card image. words is filled by the rot check.
         env.DB.prepare(
           `INSERT OR IGNORE INTO articles
-             (id, url, title, site, excerpt, image, note, read_at, enriched_at, attempts, last_attempt_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?7, ?8, ?9, ?10)`,
+             (id, url, title, site, excerpt, image, note, read_at, enriched_at, attempts, last_attempt_at,
+              checked_at, failures, archive_url)
+           VALUES (?1, ?2, ?3, ?4, ?5, NULL, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)`,
         )
 
   await env.DB.batch([
@@ -90,6 +96,9 @@ export async function moveRow(env: Env, id: string, to: Kind): Promise<MoveResul
       src.enriched_at,
       src.attempts,
       src.last_attempt_at,
+      src.checked_at,
+      src.failures,
+      src.archive_url,
     ),
     env.DB.prepare(`DELETE FROM ${from === 'article' ? 'articles' : 'links'} WHERE id = ?1`).bind(id),
     to === 'link'

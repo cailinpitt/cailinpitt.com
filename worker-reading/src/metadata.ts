@@ -2,6 +2,7 @@
 // HTMLRewriter. Best-effort: a blocked or tag-less page must still be loggable.
 //   title   — og/twitter, else JSON-LD headline, else <title>
 //   excerpt — longest of og/twitter/meta description and JSON-LD, else first <p>
+//   words   — prose words across every <p>, for a reading-time estimate
 // Blocked/flaky fetches retry once as a link-unfurler UA (many publishers
 // allowlist those); enrich.ts retries the rest off the cron.
 
@@ -14,6 +15,7 @@ export interface PageMetadata {
   image: string | null
   excerpt: string | null
   site: string | null
+  words: number | null
 }
 
 const MAX_TITLE = 200
@@ -27,7 +29,7 @@ const MIN_PARAGRAPH = 100
 const BOILERPLATE_RE =
   /data.?min(e|ing)|automated means|subscribe to (read|continue)|sign in to|enable javascript|accept (all )?cookies|all rights reserved|©\s*\d{4}/i
 
-const HONEST_UA = 'Mozilla/5.0 (compatible; cailinpitt.com-reading/1.0; +https://cailinpitt.com)'
+export const HONEST_UA = 'Mozilla/5.0 (compatible; cailinpitt.com-reading/1.0; +https://cailinpitt.com)'
 const UNFURL_UA = 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)'
 
 /** Tried in order; the unfurler UA only on a block or failure. */
@@ -82,6 +84,32 @@ interface Scrape {
   documentTitle: string | null
   ld: string[]
   paragraphs: string[]
+  words: number
+}
+
+/** Counts words across all <p> text. Register `element`/`text` on a 'p' selector. */
+export function wordCounter() {
+  let words = 0
+  let text: string | null = null
+  const flush = () => {
+    if (text) {
+      for (const token of text.split(/\s+/)) if (/[\p{L}\p{N}]/u.test(token)) words++
+    }
+    text = null
+  }
+  return {
+    element() {
+      flush()
+      text = ''
+    },
+    text(chunk: Text) {
+      if (text !== null && text.length < 20_000) text += chunk.text
+    },
+    total() {
+      flush()
+      return words
+    },
+  }
 }
 
 type Attempt = { status: 'ok'; data: Scrape } | { status: 'retry' } | { status: 'dead' }
@@ -123,6 +151,8 @@ async function scrape(url: string, ua: string): Promise<Attempt> {
     pBuf = null
   }
 
+  const counter = wordCounter()
+
   const rewriter = new HTMLRewriter()
     .on('meta', {
       element(el) {
@@ -162,6 +192,7 @@ async function scrape(url: string, ua: string): Promise<Attempt> {
         if (pBuf !== null && pBuf.length < 2_000) pBuf += chunk.text
       },
     })
+    .on('p', { element: counter.element, text: counter.text })
 
   try {
     await drain(rewriter.transform(res).body!)
@@ -172,7 +203,7 @@ async function scrape(url: string, ua: string): Promise<Attempt> {
   flushLd()
   flushParagraph()
 
-  return { status: 'ok', data: { found, documentTitle, ld, paragraphs } }
+  return { status: 'ok', data: { found, documentTitle, ld, paragraphs, words: counter.total() } }
 }
 
 export async function fetchMetadata(url: string): Promise<PageMetadata> {
@@ -236,6 +267,7 @@ function assemble(s: Scrape, url: string, hostname: string | null): PageMetadata
       url,
     ),
     site: pick(MAX_SITE, 'og:site_name', 'twitter:site', 'application-name') ?? hostname,
+    words: s.words || null,
   }
 }
 
@@ -307,7 +339,7 @@ function ldImage(value: unknown): string | null {
 }
 
 // Handlers fire only as the body is read; cap the read at MAX_BYTES.
-async function drain(body: ReadableStream): Promise<void> {
+export async function drain(body: ReadableStream): Promise<void> {
   const reader = body.getReader()
   let read = 0
   try {
@@ -345,4 +377,5 @@ const fallback = (hostname: string | null): PageMetadata => ({
   image: null,
   excerpt: null,
   site: hostname,
+  words: null,
 })

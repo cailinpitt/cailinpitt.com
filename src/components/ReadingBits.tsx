@@ -2,8 +2,11 @@
 // shapes — a book and an article — stay easy to read side by side.
 
 import { useState } from 'react'
+import { Link as RouterLink } from 'react-router-dom'
 import { Art } from './ListeningBits'
 import { formatTime } from '../lib/datetime'
+import type { Mention } from '../lib/mentions'
+import { readingMinutes } from '../lib/posts'
 import {
   faviconUrl,
   formatBookDate,
@@ -66,12 +69,49 @@ export function BookCard({ book, dateLabel }: { book: Book; dateLabel: 'started'
   )
 }
 
-export function ArticleCard({ article }: { article: Article }) {
+// Below this a count is more likely a paywall teaser than the article.
+const MIN_ARTICLE_WORDS = 250
+
+/** Where a saved url should take you: the Wayback copy once the page is gone. */
+const savedHref = (item: { url: string; dead?: boolean; archiveUrl?: string | null }) =>
+  item.dead && item.archiveUrl ? item.archiveUrl : item.url
+
+function RotBadge({ item }: { item: { dead?: boolean; archiveUrl?: string | null } }) {
+  if (!item.dead) return null
+  return item.archiveUrl ? (
+    <span className="rot-badge" title="The original page is gone; this opens the Wayback Machine copy">
+      archived
+    </span>
+  ) : (
+    <span className="rot-badge is-dead" title="The original page is gone and no archived copy was found">
+      dead link
+    </span>
+  )
+}
+
+function Mentions({ mentions }: { mentions?: Mention[] }) {
+  if (!mentions?.length) return null
+  return (
+    <p className="saved-mentions">
+      Written about in{' '}
+      {mentions.map((mention, i) => (
+        <span key={mention.path}>
+          {i > 0 && (i === mentions.length - 1 ? ' and ' : ', ')}
+          <RouterLink to={mention.path}>{mention.title}</RouterLink>
+        </span>
+      ))}
+    </p>
+  )
+}
+
+export function ArticleCard({ article, mentions }: { article: Article; mentions?: Mention[] }) {
+  const minutes =
+    article.words && article.words >= MIN_ARTICLE_WORDS ? readingMinutes(article.words) : null
   return (
     <li className="article-card">
       <a
         className="article-link"
-        href={article.url}
+        href={savedHref(article)}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -85,11 +125,14 @@ export function ArticleCard({ article }: { article: Article }) {
             <time dateTime={new Date(article.readAt * 1000).toISOString()}>
               {formatTime(article.readAt)}
             </time>
+            {minutes && <span className="article-minutes">{minutes} min read</span>}
+            <RotBadge item={article} />
           </span>
           {article.excerpt && <span className="article-excerpt">{article.excerpt}</span>}
         </span>
       </a>
       {article.note && <p className="article-note">{article.note}</p>}
+      <Mentions mentions={mentions} />
     </li>
   )
 }
@@ -133,7 +176,7 @@ export function Favicon({
 // A saved link — deliberately lighter than ArticleCard: one quiet line of
 // favicon + title + host, with the note as a plain muted line under it. No card
 // image, no timestamp; /links is a list of pointers, not a reading log.
-export function LinkRow({ link }: { link: Link }) {
+export function LinkRow({ link, mentions }: { link: Link; mentions?: Mention[] }) {
   const realTitle = link.title?.trim()
   const title = realTitle || titleFromUrl(link.url)
 
@@ -150,14 +193,16 @@ export function LinkRow({ link }: { link: Link }) {
 
   return (
     <li className="link-row">
-      <a className="link-row-link" href={link.url} target="_blank" rel="noopener noreferrer">
+      <a className="link-row-link" href={savedHref(link)} target="_blank" rel="noopener noreferrer">
         <Favicon url={link.url} className="link-row-favicon" />
         <span className="link-row-text">
           <span className="link-row-title">{title}</span>
           {showHost && <span className="link-row-host">{host}</span>}
+          <RotBadge item={link} />
         </span>
       </a>
       {link.note && <p className="link-row-note">{link.note}</p>}
+      <Mentions mentions={mentions} />
     </li>
   )
 }

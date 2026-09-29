@@ -1,13 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLoaderData } from 'react-router-dom'
 import { Seo } from '../components/Seo'
 import { LinkRow } from '../components/ReadingBits'
+import { SavedSearch, SavedStatsStrip } from '../components/SavedExtras'
 import { dayKey, formatDayLabel, formatNumber } from '../lib/datetime'
+import { loadMentions, mentionKey, type Mentions } from '../lib/mentions'
 import { pageSchema } from '../lib/structuredData'
-import { fetchOlderLinks, fetchReading, type Link as SavedLink, type ReadingBundle } from '../lib/reading'
+import {
+  fetchLinkPage,
+  fetchReading,
+  type Link as SavedLink,
+  type ReadingBundle,
+  type SavedFilter,
+} from '../lib/reading'
+import { useSavedFilter } from '../lib/savedFilter'
+
+export const loader = loadMentions
 
 export function Component() {
+  const mentions = useLoaderData() as Mentions | null
   const [bundle, setBundle] = useState<ReadingBundle | null>(null)
   const [error, setError] = useState(false)
+  const { filter, filtered, setQ, setSite } = useSavedFilter()
 
   // No polling: links arrive when I save one, not on a timer.
   useEffect(() => {
@@ -40,14 +54,50 @@ export function Component() {
         {bundle && ` ${formatNumber(bundle.counts.links ?? 0)} so far.`}
       </p>
 
-      {error && !bundle ? (
+      <SavedStatsStrip kind="links" site={filter.site} onSite={setSite} />
+      <SavedSearch q={filter.q} site={filter.site} noun="links" onQ={setQ} onSite={setSite} />
+
+      {filtered ? (
+        <FilteredLinks key={`${filter.q}\n${filter.site}`} filter={filter} mentions={mentions} />
+      ) : error && !bundle ? (
         <p className="reading-error">Could not load links right now. Try again later.</p>
       ) : !bundle ? (
         <LinksSkeleton />
       ) : (
-        <LinkLog initial={bundle.links ?? []} initialCursor={bundle.nextLinkCursor ?? null} />
+        <LinkLog
+          initial={bundle.links ?? []}
+          initialCursor={bundle.nextLinkCursor ?? null}
+          mentions={mentions}
+        />
       )}
     </div>
+  )
+}
+
+function FilteredLinks({ filter, mentions }: { filter: SavedFilter; mentions: Mentions | null }) {
+  const [page, setPage] = useState<{ links: SavedLink[]; nextCursor: string | null } | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchLinkPage(null, filter, 20, controller.signal)
+      .then(setPage)
+      .catch((err) => {
+        if (err?.name !== 'AbortError') setError(true)
+      })
+    return () => controller.abort()
+  }, [filter])
+
+  if (error) return <p className="reading-error">Could not search links right now. Try again later.</p>
+  if (!page) return <LinksSkeleton />
+  return (
+    <LinkLog
+      initial={page.links}
+      initialCursor={page.nextCursor}
+      filter={filter}
+      mentions={mentions}
+      empty="No links match."
+    />
   )
 }
 
@@ -56,9 +106,15 @@ const linkKey = (link: SavedLink) => link.id
 function LinkLog({
   initial,
   initialCursor,
+  filter,
+  mentions,
+  empty = 'Nothing saved yet.',
 }: {
   initial: SavedLink[]
   initialCursor: string | null
+  filter?: SavedFilter
+  mentions: Mentions | null
+  empty?: string
 }) {
   const [items, setItems] = useState(initial)
   const [cursor, setCursor] = useState(initialCursor)
@@ -74,7 +130,7 @@ function LinkLog({
     const controller = new AbortController()
     controllerRef.current = controller
     try {
-      const page = await fetchOlderLinks(cursor, 20, controller.signal)
+      const page = await fetchLinkPage(cursor, filter, 20, controller.signal)
       setItems((prev) => {
         // The cursor is exclusive, but dedupe anyway.
         const seen = new Set(prev.map(linkKey))
@@ -86,7 +142,7 @@ function LinkLog({
     } finally {
       setLoading(false)
     }
-  }, [cursor, loading])
+  }, [cursor, loading, filter])
 
   // Group into local calendar days, preserving the API's newest-first order.
   const days = useMemo(() => {
@@ -107,7 +163,7 @@ function LinkLog({
       </h2>
 
       {days.length === 0 ? (
-        <p className="reading-empty">Nothing saved yet.</p>
+        <p className="reading-empty">{empty}</p>
       ) : (
         days.map((day) => (
           <div className="link-day" key={day.date}>
@@ -119,7 +175,11 @@ function LinkLog({
             </h3>
             <ul className="link-list">
               {day.links.map((link) => (
-                <LinkRow key={link.id} link={link} />
+                <LinkRow
+                  key={link.id}
+                  link={link}
+                  mentions={mentions?.[mentionKey(link.url) ?? '']}
+                />
               ))}
             </ul>
           </div>

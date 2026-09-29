@@ -2595,7 +2595,8 @@ a.book-link:hover .book-title {
 }
 .article-source {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  column-gap: 0.5rem;
   font-family: var(--font-sans);
   font-size: var(--step--1);
   color: var(--muted);
@@ -2747,6 +2748,173 @@ a.book-link:hover .book-title {
   font-family: var(--font-sans);
   font-size: var(--step--1);
   line-height: 1.5;
+}
+
+/* Shared by /links and /reading/articles: stats, search, rot, mentions ----- */
+
+.saved-stats {
+  margin: 1.5rem 0 1.25rem;
+}
+/* Four tiles: two rows of two on a phone, one row once there's room. */
+.saved-stats .stat-tiles {
+  grid-template-columns: repeat(2, 1fr);
+  margin-bottom: 1rem;
+}
+@media (min-width: 40rem) {
+  .saved-stats .stat-tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.saved-stats .stat-tile dd {
+  font-size: var(--step-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.saved-weeks {
+  margin: 0 0 1rem;
+  color: var(--accent);
+}
+.saved-weeks svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+.saved-weeks rect {
+  fill: currentColor;
+}
+.saved-weeks rect.is-empty {
+  fill: var(--rule);
+}
+.saved-weeks rect.hit {
+  fill: transparent;
+}
+.saved-weeks g:hover rect:not(.hit) {
+  fill: var(--fg);
+}
+.saved-weeks figcaption {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+}
+
+.saved-sites-label {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.saved-sites ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Same outlined pill as the tag chips and .post-subscribe. */
+.saved-sites button,
+.saved-site-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.2rem 0.65rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.saved-sites button:hover,
+.saved-site-chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.saved-sites button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.saved-sites-count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.saved-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.75rem;
+}
+.saved-search input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: 1.4;
+}
+.saved-search input::placeholder {
+  color: var(--muted);
+}
+.saved-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.saved-site-chip {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.article-minutes::before {
+  content: '· ';
+}
+.rot-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 0.8em;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.article-source .rot-badge {
+  margin-left: 0;
+}
+.rot-badge.is-dead {
+  text-decoration: line-through;
+}
+
+.saved-mentions {
+  margin: 0.1rem 0 0 var(--link-indent, 0);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  line-height: 1.5;
+}
+.saved-mentions a {
+  color: var(--fg);
+}
+.saved-mentions a:hover {
+  color: var(--accent);
+}
+.article-card .saved-mentions {
+  margin: 0 1rem 0.9rem;
 }
 
 /* Year sections in the finished-books list. */
