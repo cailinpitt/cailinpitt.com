@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canonicalizeUrl } from '../worker-reading/src/articles'
+import { canonicalizeUrl } from '../worker-reading/src/canonical'
 
 describe('canonicalizeUrl', () => {
   it('strips common tracking params', () => {

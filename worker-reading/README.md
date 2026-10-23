@@ -336,7 +336,7 @@ Worth checking:
 - **A page with no OpenGraph tags** — row still created, `site` falls back to the hostname, card
   renders a placeholder.
 
-`canonicalizeUrl` is exported from `src/articles.ts` if you want to check the rules directly.
+`canonicalizeUrl` is exported from `src/canonical.ts` if you want to check the rules directly.
 
 ### Links
 

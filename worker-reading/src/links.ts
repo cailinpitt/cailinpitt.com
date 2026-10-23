@@ -3,13 +3,8 @@
 // the same url canonicalization and idempotency, but no image mirror: /links is
 // a compact favicon list, so a link never costs an R2 subrequest.
 
-import {
-  canonicalizeUrl,
-  cleanNote,
-  ID_LENGTH,
-  type ArticleInput,
-  type IngestResult,
-} from './articles'
+import { cleanNote, ID_LENGTH, type ArticleInput, type IngestResult } from './articles'
+import { canonicalizeUrl } from './canonical'
 import { sha256Hex } from './hash'
 import { fetchMetadata } from './metadata'
 import { moveRow } from './saved'
