@@ -12,6 +12,7 @@ export type ActivityKind =
   | 'yoga'
   | 'climb'
   | 'dance'
+  | 'basketball'
   | 'other'
 
 export interface Activity {
@@ -144,12 +145,12 @@ const KIND_LABELS: Record<ActivityKind, string> = {
   yoga: 'Yoga',
   climb: 'Climb',
   dance: 'Dance',
+  basketball: 'Basketball',
   other: 'Activity',
 }
 
 export const kindLabel = (kind: ActivityKind): string => KIND_LABELS[kind] ?? 'Activity'
 
-/** The bike gets the bolt, so a ride and an e-bike ride read apart at a glance. */
 const KIND_ICONS: Record<ActivityKind, string> = {
   ride: '🚲',
   ebike: '🚲⚡',
@@ -159,6 +160,7 @@ const KIND_ICONS: Record<ActivityKind, string> = {
   yoga: '🧘',
   climb: '🧗',
   dance: '💃',
+  basketball: '🏀',
   other: '•',
 }
 

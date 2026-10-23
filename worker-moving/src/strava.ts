@@ -16,6 +16,7 @@ export type ActivityKind =
   | 'yoga'
   | 'climb'
   | 'dance'
+  | 'basketball'
   | 'other'
 
 export interface SummaryActivity {
@@ -60,6 +61,7 @@ const KINDS: Record<string, ActivityKind> = {
   RockClimbing: 'climb',
   RockClimb: 'climb',
   Dance: 'dance',
+  Basketball: 'basketball',
 }
 
 const kindOf = (sportType: string): ActivityKind => KINDS[sportType] ?? 'other'
