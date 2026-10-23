@@ -179,6 +179,7 @@ const VERBS: Record<ActivityKind, string> = {
   yoga: 'Yoga',
   climb: 'Climbed',
   dance: 'Danced',
+  basketball: 'Basketball',
   other: 'Moved',
 }
 
