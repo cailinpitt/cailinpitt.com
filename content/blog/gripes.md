@@ -19,3 +19,6 @@ A list of gripes that I'll periodically update.
 * Not walking in a predicable pattern at the grocery store / airport / on the sidewalk / etc. 
 * Cities that don't have public bathrooms
 * Cities that don't have public seating
+* Coffee shops with bad pastries
+* People who use social media just to argue
+* Bringing dogs into stores
