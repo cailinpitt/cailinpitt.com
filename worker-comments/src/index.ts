@@ -1,21 +1,27 @@
 // Write path: origin -> honeypot -> Turnstile -> validation -> per-IP limit -> global limit.
 // Comments publish immediately; moderate after the fact via comments:list / comments:rm.
+// Upvotes share the origin + Turnstile checks; the (post_path, ip_hash) key allows one per person.
 
 import { ipHash } from './hash'
 import {
   countByIp,
   countSince,
+  countUpvotes,
   deleteComment,
+  hasUpvoted,
   insertComment,
+  insertUpvote,
   listComments,
   listForAdmin,
   PAGE_SIZE,
+  upvotesByIp,
+  upvotesSince,
   type Comment,
 } from './store'
 import { sendPing } from './ping'
 import { commentPing } from './pingMessage'
 import { verifyTurnstile } from './turnstile'
-import { validate } from './validate'
+import { isPostPath, validate } from './validate'
 
 const EDGE_TTL = 30
 
@@ -26,6 +32,9 @@ const PER_IP_HOURLY = 3
 const PER_IP_DAILY = 10
 // Backstop against a botnet, which per-IP limits alone can't catch.
 const GLOBAL_HOURLY = 60
+
+const UPVOTES_PER_IP_HOURLY = 30
+const UPVOTES_GLOBAL_HOURLY = 500
 
 const LOOPBACK = /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/
 
@@ -179,6 +188,67 @@ async function post(
   return jsonNoStore({ ok: true, comment }, 201, cors)
 }
 
+async function upvote(
+  request: Request,
+  env: Env,
+  cors: Record<string, string>,
+): Promise<Response> {
+  if (!originAllowed(request, env)) {
+    return jsonNoStore({ error: 'Not allowed from this origin.' }, 403, cors)
+  }
+
+  const payload = (await request.json().catch(() => null)) as
+    | { postPath?: unknown; token?: unknown }
+    | null
+  if (!payload) return jsonNoStore({ error: 'Expected a JSON body.' }, 400, cors)
+  const postPath = payload.postPath
+  if (!isPostPath(postPath)) {
+    return jsonNoStore({ error: "That doesn't look like a post." }, 400, cors)
+  }
+
+  const verdict = await verifyTurnstile(
+    payload.token,
+    env.TURNSTILE_SECRET,
+    request.headers.get('cf-connecting-ip'),
+  )
+  if (!verdict.ok) {
+    log({ level: 'info', rejected: 'turnstile', route: 'upvote', codes: verdict.codes })
+    return jsonNoStore(
+      { error: "That challenge didn't check out. Reload the page and try again." },
+      403,
+      cors,
+    )
+  }
+
+  const hash = await ipHash(request, env.IP_SALT)
+  if (await hasUpvoted(env.DB, postPath, hash)) {
+    return jsonNoStore(
+      { ok: true, alreadyUpvoted: true, count: await countUpvotes(env.DB, postPath) },
+      200,
+      cors,
+    )
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  const [hourly, global] = await Promise.all([
+    upvotesByIp(env.DB, hash, now - HOUR),
+    upvotesSince(env.DB, now - HOUR),
+  ])
+  if (hourly >= UPVOTES_PER_IP_HOURLY) {
+    log({ level: 'info', rejected: 'upvote-rate-limit', hourly })
+    return jsonNoStore({ error: "That's a lot of upvotes — give it a little while." }, 429, cors)
+  }
+  if (global >= UPVOTES_GLOBAL_HOURLY) {
+    log({ level: 'warn', rejected: 'upvote-global-limit', global })
+    return jsonNoStore({ error: 'Upvotes are taking a breather. Try again in a bit.' }, 503, cors)
+  }
+
+  const added = await insertUpvote(env.DB, postPath, hash)
+  const count = await countUpvotes(env.DB, postPath)
+  if (added) log({ level: 'info', upvoted: { postPath, count } })
+  return jsonNoStore({ ok: true, alreadyUpvoted: !added, count }, 200, cors)
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const cors = corsHeaders(request, env)
@@ -188,6 +258,20 @@ export default {
     try {
       if (url.pathname === '/comments' && request.method === 'POST') {
         return await post(request, env, ctx, cors)
+      }
+
+      if (url.pathname === '/upvotes' && request.method === 'POST') {
+        return await upvote(request, env, cors)
+      }
+
+      if (url.pathname === '/upvotes.json') {
+        const postPath = url.searchParams.get('post')
+        if (!isPostPath(postPath)) {
+          return jsonNoStore({ error: 'Missing or malformed ?post=' }, 400, cors)
+        }
+        return cached(url, ctx, cors, async () =>
+          json({ count: await countUpvotes(env.DB, postPath) }, EDGE_TTL),
+        )
       }
 
       if (url.pathname === '/admin/comments' && request.method === 'GET') {

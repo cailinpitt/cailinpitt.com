@@ -1,6 +1,6 @@
 // Client for the comments API (worker-comments), mirrors lib/guestbook.ts.
 
-const API_BASE = import.meta.env.VITE_COMMENTS_API ?? 'https://comments.cailinpitt.com'
+export const API_BASE = import.meta.env.VITE_COMMENTS_API ?? 'https://comments.cailinpitt.com'
 
 // Same Turnstile widget as the guestbook form. Kept in sync by hand with
 // worker-comments/wrangler.jsonc.

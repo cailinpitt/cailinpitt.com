@@ -74,6 +74,15 @@ export function Component() {
             delete it — no questions, no verification hoops.
           </p>
 
+          <h2>Upvotes</h2>
+          <p>
+            The upvote button under each post stores nothing about you except the same
+            salted hash of your IP address, so each post can count one upvote per person.
+            It uses the same Turnstile check as the guestbook, loaded only when you go to
+            click it. Your browser also remembers that you upvoted, so the button stays
+            lit; that note never leaves your device.
+          </p>
+
           <h2>Contact</h2>
           <p>
             Questions about privacy? Open an issue on{' '}

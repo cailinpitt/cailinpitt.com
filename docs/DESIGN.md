@@ -542,6 +542,8 @@ by `post_path` instead of sitewide.
 - **Moderation:** `npm run comments:list` / `comments:rm -- <id>` (needs `COMMENTS_ADMIN_TOKEN`
   in `.env`), same shape as guestbook's.
 - **Reuses the guestbook's Turnstile widget** — one site key covers the whole domain.
+- **Upvotes** (`PostUpvote.tsx`, below each post) live in the same Worker and D1: one per salted
+  IP hash per post, no downvotes.
 - API base: `VITE_COMMENTS_API` (default `https://comments.cailinpitt.com`).
 - Full design: [`worker-comments/README.md`](../worker-comments/README.md)
 

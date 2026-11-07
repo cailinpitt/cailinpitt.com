@@ -10,6 +10,7 @@ import { PostHistory, useHistoryPanel } from '../components/PostHistory'
 import { PostLinkGraph } from '../components/PostLinkGraph'
 import { PostShare } from '../components/PostShare'
 import { PostSource } from '../components/PostSource'
+import { PostUpvote } from '../components/PostUpvote'
 import { ReadingProgress } from '../components/ReadingProgress'
 import { Seo } from '../components/Seo'
 import { imageUrl } from '../lib/images'
@@ -148,7 +149,10 @@ export function Component() {
       <ReadingProgress targetRef={articleRef} />
       <article className="post" ref={articleRef}>
         <header className="post-header">
-          <h1>{post.title}</h1>
+          <div className="post-title-row">
+            <h1>{post.title}</h1>
+            <PostUpvote postPath={post.path} />
+          </div>
           {(post.date || readingTime || post.updated) && (
             <p className="post-meta">
               {post.date && (

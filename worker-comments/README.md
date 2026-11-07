@@ -1,6 +1,6 @@
 # Comments API (Cloudflare Worker)
 
-Backs the comment thread under each post on [`cailinpitt.com/blog`](https://cailinpitt.com/blog).
+Backs the comment thread and upvote button under each post on [`cailinpitt.com/blog`](https://cailinpitt.com/blog).
 Sibling to `worker-guestbook` — same write path, same instant-publish-then-moderate design —
 scoped per post instead of sitewide. See that worker's README for the full write-path reasoning.
 
@@ -11,7 +11,7 @@ scoped per post instead of sitewide. See that worker's README for the full write
 | `src/turnstile.ts` | siteverify call |
 | `src/store.ts` | all D1 access |
 | `src/hash.ts` | salted IP hashing + comment ids |
-| `schema.sql` | the single `comments` table |
+| `schema.sql` | the `comments` and `upvotes` tables |
 
 ## Endpoints
 
@@ -19,11 +19,24 @@ scoped per post instead of sitewide. See that worker's README for the full write
 |---|---|---|
 | `GET /comments.json?post=&before=&limit=` | — | edge, 30s |
 | `POST /comments` | Turnstile + origin + rate limits | never |
+| `GET /upvotes.json?post=` | — | edge, 30s |
+| `POST /upvotes` | Turnstile + origin + rate limits | never |
 | `GET /admin/comments?limit=` | `Bearer ADMIN_TOKEN` | never |
 | `DELETE /comments/:id` | `Bearer ADMIN_TOKEN` | never |
 
 `post` is a post's path, e.g. `/blog/2026/8/21/some-slug` (`Post.path` in `src/lib/posts.ts` —
 month/day aren't zero-padded, they're whatever the frontmatter `path:` says).
+
+## Upvotes
+
+One per person per post, no downvotes. "Person" is the same salted IP hash the comment rate limits
+use: `upvotes` is keyed on `(post_path, ip_hash)`, so a repeat is an `INSERT OR IGNORE` no-op and
+the response says `alreadyUpvoted: true`. Each upvote passes the same origin + Turnstile checks as
+a comment, plus a per-IP hourly cap (across posts) and a global hourly backstop.
+
+The browser also remembers its upvote in `localStorage`, but only to show the button as pressed —
+clearing it doesn't let anyone vote twice. Shared NAT/VPN exits share one vote per post; that's
+the trade-off for storing nothing beyond the hash.
 
 ## Setup
 

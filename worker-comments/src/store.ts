@@ -156,3 +156,50 @@ export async function listForAdmin(db: D1Database, limit: number): Promise<Admin
     .all<Row>()
   return (results ?? []).map((row) => ({ ...toComment(row), ipHash: row.ip_hash ?? '' }))
 }
+
+export async function countUpvotes(db: D1Database, postPath: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS n FROM upvotes WHERE post_path = ?1')
+    .bind(postPath)
+    .first<{ n: number }>()
+  return row?.n ?? 0
+}
+
+// Resolves false when this ip_hash already upvoted the post.
+export async function insertUpvote(
+  db: D1Database,
+  postPath: string,
+  ipHash: string,
+): Promise<boolean> {
+  const result = await db
+    .prepare(
+      'INSERT OR IGNORE INTO upvotes (post_path, ip_hash, created_at) VALUES (?1, ?2, ?3)',
+    )
+    .bind(postPath, ipHash, Math.floor(Date.now() / 1000))
+    .run()
+  return (result.meta.changes ?? 0) > 0
+}
+
+export async function hasUpvoted(db: D1Database, postPath: string, ipHash: string): Promise<boolean> {
+  const row = await db
+    .prepare('SELECT 1 AS hit FROM upvotes WHERE post_path = ?1 AND ip_hash = ?2')
+    .bind(postPath, ipHash)
+    .first<{ hit: number }>()
+  return row !== null
+}
+
+export function upvotesByIp(db: D1Database, ipHash: string, since: number): Promise<number> {
+  return db
+    .prepare('SELECT COUNT(*) AS n FROM upvotes WHERE ip_hash = ?1 AND created_at > ?2')
+    .bind(ipHash, since)
+    .first<{ n: number }>()
+    .then((row) => row?.n ?? 0)
+}
+
+export function upvotesSince(db: D1Database, since: number): Promise<number> {
+  return db
+    .prepare('SELECT COUNT(*) AS n FROM upvotes WHERE created_at > ?1')
+    .bind(since)
+    .first<{ n: number }>()
+    .then((row) => row?.n ?? 0)
+}

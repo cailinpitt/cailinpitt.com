@@ -13,6 +13,9 @@ const MAX_LINKS = 2
 // (e.g. /blog/2026/8/1/some-slug, not /blog/2026/08/01/...).
 const POST_PATH = /^\/blog\/\d{4}\/\d{1,2}\/\d{1,2}\/[a-z0-9-]+$/
 
+export const isPostPath = (value: unknown): value is string =>
+  typeof value === 'string' && POST_PATH.test(value)
+
 export interface CleanComment {
   postPath: string
   name: string
@@ -82,8 +85,8 @@ function cleanWebsite(
 export function validate(payload: unknown): Validation {
   const body = (payload ?? {}) as Record<string, unknown>
 
-  const postPath = typeof body.postPath === 'string' ? body.postPath : ''
-  if (!POST_PATH.test(postPath)) {
+  const postPath = body.postPath
+  if (!isPostPath(postPath)) {
     return fail('postPath', "That doesn't look like a post.")
   }
 
