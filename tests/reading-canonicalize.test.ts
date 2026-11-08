@@ -5,7 +5,7 @@ describe('canonicalizeUrl', () => {
   it('strips common tracking params', () => {
     expect(
       canonicalizeUrl(
-        'https://example.com/post?utm_source=x&gclid=1&fbclid=2&mc_eid=3&_hsenc=4&mtm_campaign=5&srsltid=6&mkt_tok=7',
+        'https://example.com/post?utm_source=x&gclid=1&fbclid=2&mc_eid=3&_hsenc=4&mtm_campaign=5&srsltid=6&mkt_tok=7&link_source=ta_bluesky_link',
       ),
     ).toBe('https://example.com/post')
   })
