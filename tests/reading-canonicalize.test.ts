@@ -41,6 +41,29 @@ describe('canonicalizeUrl', () => {
     expect(canonicalizeUrl('https://example.com/search?s=20&t=abc')).toBe('https://example.com/search?s=20&t=abc')
   })
 
+  it('strips nbc campaign params', () => {
+    expect(
+      canonicalizeUrl(
+        'https://www.nbcnews.com/tech/tech-news/tesla-rcna607817?cid=sm_npd_nn_tw_ma&taid=6aede91b49b1f20001e0c5dd',
+      ),
+    ).toBe('https://www.nbcnews.com/tech/tech-news/tesla-rcna607817')
+    expect(canonicalizeUrl('https://example.com/a?cid=7')).toBe('https://example.com/a?cid=7')
+  })
+
+  it('collapses a url glued onto itself', () => {
+    expect(
+      canonicalizeUrl(
+        'https://github.blog/changelog/2026-11-05-new-pull-request-overview-page-in-public-preview/https://github.blog/changelog/2026-11-05-new-pull-request-overview-page-in-public-preview',
+      ),
+    ).toBe('https://github.blog/changelog/2026-11-05-new-pull-request-overview-page-in-public-preview')
+    expect(canonicalizeUrl('https://z1x.us/blog/four-hundred-bucks-of-e-waste https://z1x.us/blog/four-hundred-bucks-of-e-waste')).toBe(
+      'https://z1x.us/blog/four-hundred-bucks-of-e-waste',
+    )
+    expect(canonicalizeUrl('https://web.archive.org/web/2020/https://example.com/a')).toBe(
+      'https://web.archive.org/web/2020/https://example.com/a',
+    )
+  })
+
   it('drops the fragment, sorts params, and trims a trailing slash', () => {
     expect(canonicalizeUrl('https://example.com/a/?b=2&a=1#section')).toBe('https://example.com/a?a=1&b=2')
   })

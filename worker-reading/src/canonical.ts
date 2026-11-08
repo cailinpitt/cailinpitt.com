@@ -19,7 +19,7 @@ const TRACKING_PARAM = new RegExp(
       'vero_id', 'oly_enc_id', 'oly_anon_id', 'at_medium', 'at_campaign', 's_cid', 's_kwcid', 'ef_id',
       'mtm_[a-z_]+', 'pk_[a-z_]+', 'piwik_[a-z_]+', 'matomo_[a-z_]+', '_branch_match_id', '_branch_referrer',
       'guccounter', 'guce_referrer', 'guce_referrer_sig', 'irclickid', 'wickedid', 'rb_clickid', 'share_id', 'sr_share',
-      'cmp', 'leadsource', 'referringsource', 'mrfcid',
+      'cmp', 'leadsource', 'referringsource', 'mrfcid', 'taid',
     ].join('|') +
     ')$',
   'i',
@@ -32,6 +32,7 @@ const SITE_TRACKING_PARAMS: [host: RegExp, param: RegExp][] = [
   [/(^|\.)instagram\.com$/, /^igsh$/],
   [/(^|\.)substack\.com$/, /^(r|triedredirect|isfreemail|post_id|publication_id)$/i],
   [/(^|\.)blogspot\.com$/, /^m$/],
+  [/(^|\.)(nbcnews|msnbc|today)\.com$/, /^cid$/],
 ]
 
 /**
@@ -40,9 +41,17 @@ const SITE_TRACKING_PARAMS: [host: RegExp, param: RegExp][] = [
  * order), and drop a trailing slash.
  */
 export function canonicalizeUrl(raw: string): string | null {
+  const input = raw.trim().split(/\s+/)[0]
+  const doubled = input.match(/^(https?:\/\/.+?)(https?:\/\/.+)$/i)
+  if (doubled) {
+    // Share sheets sometimes glue the url onto itself: "https://a/https://a".
+    const [first, second] = [canonicalizeUrl(doubled[1]), canonicalizeUrl(doubled[2])]
+    if (first && first === second) return first
+  }
+
   let url: URL
   try {
-    url = new URL(raw.trim())
+    url = new URL(input)
   } catch {
     return null
   }
