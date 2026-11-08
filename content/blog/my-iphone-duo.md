@@ -23,7 +23,7 @@ I read a lot of [articles](https://cailinpitt.com/reading/articles) on my phone 
 
 *[This NBC article](https://www.nbcnews.com/tech/tech-news/tesla-wind-cybertruck-production-years-poor-sales-markets-rcna607817*) on the inner display*
 
-A bit of apps have been optimized for the iPhone Duo, but a lot haven't thus far. It's a little annoying, but not a big deal to me. I expect app developers to fix these sooner rather than later, especially since Duo sales seem to have been good and a lot of people are planning to get their hands on one.
+A bunch of apps have already been optimized for the iPhone Duo, but a lot haven't thus far. It's a little annoying, but not a big deal to me. I expect app developers to fix these sooner rather than later, especially since Duo sales seem to have been good and a lot of people are planning to get their hands on one.
 
 ![](/images/my-iphone-duo/IMG_0027.webp)
 
