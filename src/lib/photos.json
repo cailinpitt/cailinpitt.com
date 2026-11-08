@@ -1,5 +1,33 @@
 [
   {
+    "id": "2026-1108-155711-cecd",
+    "src": "/images/2026/1108-155711-cecd.webp",
+    "thumb": "/images/2026/1108-155711-cecd-1000.webp",
+    "widths": [
+      400,
+      800,
+      1000
+    ],
+    "alt": "Photograph — 2026",
+    "width": 1920,
+    "height": 2560,
+    "tint": "#5d6245",
+    "year": "2026",
+    "date": "2026-11-08T15:57:11",
+    "exif": {
+      "shot": "2026-11-08T15:57:11",
+      "camera": "iPhone Duo",
+      "fNumber": 1.6,
+      "exposure": 0.008771929824561403,
+      "iso": 80,
+      "focalLength": 5.960000038146973,
+      "place": [
+        33.75,
+        -84.36
+      ]
+    }
+  },
+  {
     "id": "2026-1106-081552-8c9d",
     "src": "/images/2026/1106-081552-8c9d.webp",
     "thumb": "/images/2026/1106-081552-8c9d-1000.webp",
