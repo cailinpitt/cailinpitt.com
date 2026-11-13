@@ -4,6 +4,7 @@
 // archive, minus an overlap window so edits land. Backfill walks backwards from
 // the oldest row we hold, a few pages per pass, until it runs out of history.
 
+import type { ScooterRide } from './manual'
 import { PER_PAGE, accessToken, fetchActivities, type SummaryActivity } from './strava'
 
 /**
@@ -308,4 +309,22 @@ async function recomputeStats(db: D1Database): Promise<void> {
       Math.floor(Date.now() / 1000),
     )
     .run()
+}
+
+/** Upsert the ride; true when it was new or different. Re-posting the same ride is a no-op. */
+export async function saveScooterRide(db: D1Database, ride: ScooterRide): Promise<boolean> {
+  const activity: SummaryActivity = {
+    ...ride,
+    name: 'Scooter ride',
+    sportType: 'Scooter',
+    kind: 'scooter',
+    elevationFt: 0,
+    trainer: false,
+    commute: false,
+    avgHr: null,
+    maxHr: null,
+  }
+  const changed = await writeActivities(db, [activity])
+  if (changed > 0) await recomputeStats(db)
+  return changed > 0
 }

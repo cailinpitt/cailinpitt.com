@@ -98,14 +98,45 @@ per pass. A fallback for when the export isn't available; prefer the export.
 | `GET /now.json` | The last activity, for the terminal and the /now bar |
 | `GET /` with a CLI user-agent | The text view (`curl moving.cailinpitt.com`) |
 | `POST /sync` | Runs the pull. Needs `Authorization: Bearer $ADMIN_TOKEN` |
+| `POST /activities` | Adds one scooter ride (see below). Same bearer token |
 
 `/sync` takes `?backfill=1` to walk backwards into the archive, `?refresh=1&page=N` to re-pull
 history already stored, or `?recompute=1` to rebuild the totals from the archive with no Strava
 call — for when the stats shape changed but the rows did not.
 
+## Scooter rides
+
+The one source that isn't Strava. A logger on the home server reads the scooter's odometer over
+Bluetooth whenever it comes back in range, and posts the distance since the last reading:
+
+```sh
+curl -X POST https://moving.cailinpitt.com/activities \
+  -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
+  -d '{"id":"scooter-1794609819","startedAt":1794608559,"startDate":"2026-11-13",
+       "distanceMi":5.22,"movingTime":1260,"elapsedTime":1260}'
+```
+
+- **Ids are `scooter-<digits>`**, never all digits, so a post can't overwrite a Strava activity.
+  The logger reuses the id on a retry, and the upsert makes a repeat a no-op (`changed: false`).
+- **`kind` is `scooter`, `sport_type` is `Scooter`.** It's in the `kindOf` table and in
+  `scripts/moving-recategorize.sql` too, so a recategorize doesn't flatten these rows to `other`.
+- **Scooter rides aren't rides.** `rides` and `bikeMiles` count `ride`/`ebike` only; the
+  scooter's distance shows up only in the all-activity `distanceMi`.
+- **Start time is an estimate.** The scooter keeps no trip log, so `startedAt` is the arrival
+  time minus the wheel time, and `elapsedTime` equals `movingTime`.
+
+To remove one:
+
+```sh
+npx wrangler d1 execute cailinpitt-moving --remote \
+  --command "DELETE FROM activities WHERE id = 'scooter-…'"
+curl -X POST -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
+  "https://moving.cailinpitt.com/sync?recompute=1"
+```
+
 ## Notes on the data
 
-- **Ids are Strava's own activity ids** — what makes the export and API interchangeable: a row
+- **Ids are Strava's own activity ids** (scooter rides aside, see above) — what makes the export and API interchangeable: a row
   imported from the CSV and the same activity fetched later are the same row, so the two halves
   can't duplicate each other.
 - **Rows are upserted** from the API and `INSERT OR IGNORE` from the backfill, so the live API

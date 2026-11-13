@@ -13,6 +13,7 @@ export type ActivityKind =
   | 'climb'
   | 'dance'
   | 'basketball'
+  | 'scooter'
   | 'other'
 
 export interface Activity {
@@ -146,6 +147,7 @@ const KIND_LABELS: Record<ActivityKind, string> = {
   climb: 'Climb',
   dance: 'Dance',
   basketball: 'Basketball',
+  scooter: 'Scooter ride',
   other: 'Activity',
 }
 
@@ -161,13 +163,14 @@ const KIND_ICONS: Record<ActivityKind, string> = {
   climb: '🧗',
   dance: '💃',
   basketball: '🏀',
+  scooter: '🛴',
   other: '•',
 }
 
 export const kindIcon = (kind: ActivityKind): string => KIND_ICONS[kind] ?? KIND_ICONS.other
 
 /** Kinds measured by how far, not how long. */
-const DISTANCE_KINDS = new Set<ActivityKind>(['ride', 'ebike', 'walk', 'run'])
+const DISTANCE_KINDS = new Set<ActivityKind>(['ride', 'ebike', 'walk', 'run', 'scooter'])
 
 /** Past-tense verb for the summary line, by kind. */
 const VERBS: Record<ActivityKind, string> = {
@@ -180,6 +183,7 @@ const VERBS: Record<ActivityKind, string> = {
   climb: 'Climbed',
   dance: 'Danced',
   basketball: 'Basketball',
+  scooter: 'Scooted',
   other: 'Moved',
 }
 

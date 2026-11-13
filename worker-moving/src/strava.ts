@@ -17,6 +17,7 @@ export type ActivityKind =
   | 'climb'
   | 'dance'
   | 'basketball'
+  | 'scooter'
   | 'other'
 
 export interface SummaryActivity {
@@ -62,6 +63,8 @@ const KINDS: Record<string, ActivityKind> = {
   RockClimb: 'climb',
   Dance: 'dance',
   Basketball: 'basketball',
+  // Not a Strava type: rides posted by the scooter logger through POST /activities.
+  Scooter: 'scooter',
 }
 
 const kindOf = (sportType: string): ActivityKind => KINDS[sportType] ?? 'other'

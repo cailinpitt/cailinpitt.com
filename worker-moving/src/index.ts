@@ -4,7 +4,8 @@
 //  fetch: serve the bundle from D1 behind the edge cache, plus an authenticated
 //    /sync used for the initial backfill and to pick up a ride on demand.
 
-import { sync } from './sync'
+import { parseScooterRide } from './manual'
+import { saveScooterRide, sync } from './sync'
 import {
   ACTIVITY_PAGE,
   buildBundle,
@@ -208,6 +209,32 @@ export default {
         if (!(to > from)) return new Response('Bad range', { status: 400, headers: cors })
         return cached(url, 'windows', ctx, cors, async () =>
           json({ windows: await fetchWindows(env.DB, from, to) }, WINDOW_TTL),
+        )
+      }
+
+      // Rides that don't come from Strava — the scooter logger posts each one here.
+      if (url.pathname === '/activities' && request.method === 'POST') {
+        if (!authorized(request, env.ADMIN_TOKEN)) {
+          return new Response('Unauthorized', { status: 401, headers: cors })
+        }
+        let body: unknown
+        try {
+          body = await request.json()
+        } catch {
+          return new Response('Body must be JSON', { status: 400, headers: cors })
+        }
+        const ride = parseScooterRide(body)
+        if (typeof ride === 'string') return new Response(ride, { status: 400, headers: cors })
+        const changed = await saveScooterRide(env.DB, ride)
+        console.log(JSON.stringify({ level: 'info', scooter: ride.id, changed }))
+        return withCors(
+          new Response(JSON.stringify({ id: ride.id, changed }), {
+            headers: {
+              'content-type': 'application/json; charset=utf-8',
+              'cache-control': 'no-store',
+            },
+          }),
+          cors,
         )
       }
 

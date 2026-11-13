@@ -80,6 +80,7 @@ const MARKS: Record<string, string> = {
   yoga: 'yoga',
   climb: 'climb',
   dance: 'dance',
+  scooter: 'scoot',
   other: '—',
 }
 
@@ -92,10 +93,11 @@ const VERBS: Record<string, string> = {
   yoga: 'Yoga',
   climb: 'Climbed',
   dance: 'Danced',
+  scooter: 'Scooted',
   other: 'Moved',
 }
 
-const DISTANCE_KINDS = new Set(['ride', 'ebike', 'walk', 'run'])
+const DISTANCE_KINDS = new Set(['ride', 'ebike', 'walk', 'run', 'scooter'])
 
 /** Mirrors summary() in src/lib/moving.ts. */
 function summary(activity: Activity): string {

@@ -60,7 +60,7 @@ export const PAGES: Entry[] = [
   { id: 'page:/links', label: 'Links', kind: 'Page', to: '/links', keywords: 'saved bookmarks interesting sites tools' },
   { id: 'page:/watching', label: 'Watching', kind: 'Page', to: '/watching', keywords: 'films movies letterboxd cinema' },
   { id: 'page:/concerts', label: 'Concerts', kind: 'Page', to: '/concerts', keywords: 'shows gigs live music concertarchives' },
-  { id: 'page:/moving', label: 'Moving', kind: 'Page', to: '/moving', keywords: 'bike cycling ebike rides lifting gym workouts miles' },
+  { id: 'page:/moving', label: 'Moving', kind: 'Page', to: '/moving', keywords: 'bike cycling ebike scooter rides lifting gym workouts miles' },
   {
     id: 'page:/timeline',
     label: 'Timeline',

@@ -2,7 +2,7 @@
 // straight from D1 behind the edge cache, no precomputed blobs.
 
 /** Kinds a caller may filter on; mirrors ActivityKind in strava.ts. */
-const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'dance', 'other'])
+const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'dance', 'scooter', 'other'])
 
 export const ACTIVITY_PAGE = 30
 const MAX_ACTIVITY_PAGE = 100
@@ -114,7 +114,7 @@ function decodeCursor(raw: string | null): [string, string] | null {
   if (at < 1) return null
   const date = raw.slice(0, at)
   const id = raw.slice(at + 1)
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && /^\d+$/.test(id) ? [date, id] : null
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && /^(scooter-)?\d+$/.test(id) ? [date, id] : null
 }
 
 export async function fetchActivities(
