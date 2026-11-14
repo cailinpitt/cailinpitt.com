@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { fetchDuring, formatTime, type Scrobble } from '../lib/listening'
 import {
+  batteryDrop,
   duration,
   heartRate,
   kindIcon,
@@ -85,6 +86,8 @@ export function MovingRow({
   if (activity.distanceMi > 0) details.push(duration(activity.movingTime))
   if (climbed) details.push(`${Math.round(activity.elevationFt).toLocaleString('en-US')} ft up`)
   if (CYCLING.has(activity.kind) && activity.trainer) details.push('indoor')
+  const battery = batteryDrop(activity)
+  if (battery) details.push(`🔋 ${battery}`)
   // Rendered separately, not joined into `details`: needs a coloured, aria-hidden glyph.
   const hr = heartRate(activity)
 

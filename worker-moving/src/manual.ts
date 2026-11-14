@@ -16,7 +16,23 @@ export interface ScooterRide {
   distanceMi: number
   movingTime: number
   elapsedTime: number
+  /** Percent at the start and end, or null when the logger doesn't know. */
+  batteryStart: number | null
+  batteryEnd: number | null
 }
+
+export interface ScooterStatus {
+  odometerMi: number
+  /** Lifetime seconds with the wheels turning. */
+  ridingTime: number
+  /** Unix seconds of the reading. */
+  readAt: number
+}
+
+const MAX_ODOMETER_MI = 100_000
+
+const percent = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100
 
 const wholeSeconds = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0
@@ -34,6 +50,10 @@ export function parseScooterRide(body: unknown): ScooterRide | string {
   if (!wholeSeconds(b.movingTime)) return 'movingTime must be whole seconds'
   const elapsedTime = b.elapsedTime ?? b.movingTime
   if (!wholeSeconds(elapsedTime)) return 'elapsedTime must be whole seconds'
+  const batteryStart = b.batteryStart ?? null
+  const batteryEnd = b.batteryEnd ?? null
+  if (batteryStart !== null && !percent(batteryStart)) return 'batteryStart must be a whole percent'
+  if (batteryEnd !== null && !percent(batteryEnd)) return 'batteryEnd must be a whole percent'
   return {
     id: b.id,
     startedAt: b.startedAt,
@@ -41,5 +61,20 @@ export function parseScooterRide(body: unknown): ScooterRide | string {
     distanceMi: Math.round(b.distanceMi * 100) / 100,
     movingTime: b.movingTime,
     elapsedTime: Math.max(elapsedTime, b.movingTime),
+    batteryStart,
+    batteryEnd,
   }
+}
+
+/** The posted odometer reading, or the reason it isn't one. */
+export function parseScooterStatus(body: unknown): ScooterStatus | string {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'Body must be a JSON object'
+  const b = body as Record<string, unknown>
+  if (typeof b.odometerMi !== 'number' || !(b.odometerMi >= 0 && b.odometerMi < MAX_ODOMETER_MI)) {
+    return `odometerMi must be between 0 and ${MAX_ODOMETER_MI}`
+  }
+  const ridingTime = b.ridingTime ?? 0
+  if (!wholeSeconds(ridingTime)) return 'ridingTime must be whole seconds'
+  if (!wholeSeconds(b.readAt)) return 'readAt must be unix seconds'
+  return { odometerMi: Math.round(b.odometerMi * 10) / 10, ridingTime, readAt: b.readAt }
 }

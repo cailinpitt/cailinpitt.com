@@ -99,6 +99,7 @@ per pass. A fallback for when the export isn't available; prefer the export.
 | `GET /` with a CLI user-agent | The text view (`curl moving.cailinpitt.com`) |
 | `POST /sync` | Runs the pull. Needs `Authorization: Bearer $ADMIN_TOKEN` |
 | `POST /activities` | Adds one scooter ride (see below). Same bearer token |
+| `POST /scooter` | Updates the scooter's lifetime odometer. Same bearer token |
 
 `/sync` takes `?backfill=1` to walk backwards into the archive, `?refresh=1&page=N` to re-pull
 history already stored, or `?recompute=1` to rebuild the totals from the archive with no Strava
@@ -107,13 +108,17 @@ call — for when the stats shape changed but the rows did not.
 ## Scooter rides
 
 The one source that isn't Strava. A logger on the home server reads the scooter's odometer over
-Bluetooth whenever it comes back in range, and posts the distance since the last reading:
+Bluetooth once a night, and posts the distance since the last reading:
 
 ```sh
 curl -X POST https://moving.cailinpitt.com/activities \
   -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
   -d '{"id":"scooter-1794609819","startedAt":1794608559,"startDate":"2026-11-13",
-       "distanceMi":5.22,"movingTime":1260,"elapsedTime":1260}'
+       "distanceMi":5.22,"movingTime":1260,"elapsedTime":1260,"batteryStart":78,"batteryEnd":54}'
+
+curl -X POST https://moving.cailinpitt.com/scooter \
+  -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
+  -d '{"odometerMi":281.2,"ridingTime":58595,"readAt":1794677274}'
 ```
 
 - **Ids are `scooter-<digits>`**, never all digits, so a post can't overwrite a Strava activity.
@@ -124,6 +129,11 @@ curl -X POST https://moving.cailinpitt.com/activities \
   scooter's distance shows up only in the all-activity `distanceMi`.
 - **Start time is an estimate.** The scooter keeps no trip log, so `startedAt` is the arrival
   time minus the wheel time, and `elapsedTime` equals `movingTime`.
+- **Battery levels are optional** whole percents. The logger sends 100 as the start when the
+  scooter was charged since the previous reading, since the real level isn't known.
+- **The odometer is a separate row** (`scooter` table, from `schema-v3.sql`), served as
+  `scooter` in the bundle. It counts miles from before the logger, so it's larger than the sum of
+  the logged rides. `/moving` turns it into gas money and CO₂ compared with a typical gas car.
 
 To remove one:
 

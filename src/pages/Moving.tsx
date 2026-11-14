@@ -7,6 +7,7 @@ import { fetchDuringCounts } from '../lib/listening'
 import { pageSchema } from '../lib/structuredData'
 import {
   byDate,
+  drivingSaved,
   fetchMoving,
   fetchOlderActivities,
   longDate,
@@ -79,6 +80,8 @@ export function Component() {
 
           <MovingYear counts={bundle.counts} />
 
+          {bundle.scooter && <MovingScooter odometerMi={bundle.scooter.odometerMi} />}
+
           <MovingLog
             initial={bundle.activities}
             initialCursor={bundle.nextCursor}
@@ -113,6 +116,23 @@ function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
         {hasRun && <StatTile label="Runs" value={counts.runsThisYear ?? 0} />}
         <StatTile label="Lifts" value={counts.liftsThisYear} />
       </dl>
+    </section>
+  )
+}
+
+function MovingScooter({ odometerMi }: { odometerMi: number }) {
+  const saved = drivingSaved(odometerMi)
+  return (
+    <section className="moving-year" aria-labelledby="moving-scooter-heading">
+      <h2 id="moving-scooter-heading" className="eyebrow">
+        Scooter
+      </h2>
+      <dl className="stat-tiles is-compact">
+        <StatTile label="Scooter miles" value={Math.round(odometerMi)} />
+        <StatTile label="Gas saved" value={`$${Math.round(saved.dollars).toLocaleString('en-US')}`} />
+        <StatTile label="CO₂ avoided" value={`${Math.round(saved.co2Lb).toLocaleString('en-US')} lb`} />
+      </dl>
+      <p className="moving-note">Compared with driving the same miles in a typical gas car.</p>
     </section>
   )
 }

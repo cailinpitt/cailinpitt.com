@@ -4,7 +4,7 @@
 // archive, minus an overlap window so edits land. Backfill walks backwards from
 // the oldest row we hold, a few pages per pass, until it runs out of history.
 
-import type { ScooterRide } from './manual'
+import type { ScooterRide, ScooterStatus } from './manual'
 import { PER_PAGE, accessToken, fetchActivities, type SummaryActivity } from './strava'
 
 /**
@@ -19,13 +19,13 @@ function pageBudget(env: Env): number {
   return Number.isFinite(configured) && configured > 0 ? configured : 8
 }
 
-/** D1 caps bound parameters at 100 per query; each activity binds 14, so 7 rows
- * is 98. Adding another column means dropping this to 6. */
-const ROWS_PER_INSERT = 7
+/** D1 caps bound parameters at 100 per query; each activity binds 16, so 6 rows
+ * is 96. Adding another three columns means dropping this to 5. */
+const ROWS_PER_INSERT = 6
 
 const COLUMNS =
   'id, name, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, ' +
-  'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr'
+  'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr, battery_start, battery_end'
 
 export interface SyncResult {
   mode: 'incremental' | 'backfill' | 'refresh' | 'recompute'
@@ -161,6 +161,8 @@ const MUTABLE = [
   'commute',
   'avg_hr',
   'max_hr',
+  'battery_start',
+  'battery_end',
 ] as const
 
 /**
@@ -184,7 +186,7 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
   const statements: D1PreparedStatement[] = []
   for (let i = 0; i < activities.length; i += ROWS_PER_INSERT) {
     const chunk = activities.slice(i, i + ROWS_PER_INSERT)
-    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
+    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
     const values = chunk.flatMap((a) => [
       a.id,
       a.name,
@@ -202,6 +204,8 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
       // and a zero would average in as if the heart had stopped.
       a.avgHr,
       a.maxHr,
+      a.batteryStart,
+      a.batteryEnd,
     ])
     // Strava is the authority on every column, so an edit upstream — a rename,
     // a corrected sport type — has to land. The WHERE only skips the write when
@@ -327,4 +331,17 @@ export async function saveScooterRide(db: D1Database, ride: ScooterRide): Promis
   const changed = await writeActivities(db, [activity])
   if (changed > 0) await recomputeStats(db)
   return changed > 0
+}
+
+/** Keep the newest odometer reading; an older one arriving late is ignored. */
+export async function saveScooterStatus(db: D1Database, status: ScooterStatus): Promise<boolean> {
+  const { meta } = await db
+    .prepare(
+      `INSERT INTO scooter (id, odometer_mi, riding_time, updated_at) VALUES (1, ?1, ?2, ?3)
+       ON CONFLICT(id) DO UPDATE SET odometer_mi = ?1, riding_time = ?2, updated_at = ?3
+       WHERE excluded.updated_at > scooter.updated_at`,
+    )
+    .bind(status.odometerMi, status.ridingTime, status.readAt)
+    .run()
+  return (meta.changes ?? 0) > 0
 }

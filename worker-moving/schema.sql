@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS activities (
   -- averages to one decimal, which is noise on a summary line.
   -- Two summary numbers only, never a stream, for the same reason as above.
   avg_hr        INTEGER,
-  max_hr        INTEGER
+  max_hr        INTEGER,
+  -- Scooter rides only: battery percent at the start and end. NULL otherwise.
+  battery_start INTEGER,
+  battery_end   INTEGER
 );
 
 -- Matches fetchActivities() exactly, both ordering columns in the query's
@@ -53,6 +56,14 @@ CREATE TABLE IF NOT EXISTS stats (
   updated_at  INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO stats (id) VALUES (1);
+
+-- The scooter's lifetime odometer, posted by the scooter logger after each read.
+CREATE TABLE IF NOT EXISTS scooter (
+  id           INTEGER PRIMARY KEY CHECK (id = 1),
+  odometer_mi  REAL    NOT NULL,
+  riding_time  INTEGER NOT NULL DEFAULT 0,  -- seconds, lifetime
+  updated_at   INTEGER NOT NULL             -- unix seconds
+);
 
 -- Strava rotates the refresh token on every exchange, so it can't live in a
 -- Worker secret — secrets are write-only from the Worker's side. The secret

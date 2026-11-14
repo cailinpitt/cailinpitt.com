@@ -4752,6 +4752,12 @@ a.comment-name:hover {
 .moving-year .eyebrow {
   margin-bottom: 0.75rem;
 }
+.moving-note {
+  margin: 0.6rem 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--step--1);
+  color: var(--muted);
+}
 .moving-error,
 .moving-empty {
   color: var(--muted);

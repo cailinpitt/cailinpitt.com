@@ -12,7 +12,7 @@ const MAX_ACTIVITY_PAGE = 100
 // time, which is what the listening crossover needs.
 const COLS =
   'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
-  'elapsed_time, trainer, avg_hr, max_hr, ' +
+  'elapsed_time, trainer, avg_hr, max_hr, battery_start, battery_end, ' +
   'MIN(elapsed_time, MAX(moving_time, 0) + 1800) AS window_seconds'
 
 export interface Activity {
@@ -36,6 +36,9 @@ export interface Activity {
   avgHr: number | null
   /** Peak bpm, or null on the same terms. */
   maxHr: number | null
+  /** Scooter rides only: battery percent at the start and end, or null. */
+  batteryStart: number | null
+  batteryEnd: number | null
 }
 
 export interface ActivityPage {
@@ -44,10 +47,20 @@ export interface ActivityPage {
   nextCursor: string | null
 }
 
+export interface ScooterTotals {
+  /** The scooter's own odometer, including miles from before the logger. */
+  odometerMi: number
+  ridingTime: number
+  /** Unix seconds of the reading. */
+  readAt: number
+}
+
 export interface MovingBundle {
   updatedAt: number
   activities: Activity[]
   nextCursor: string | null
+  /** Null until the scooter logger has posted a reading. */
+  scooter: ScooterTotals | null
   counts: {
     activities: number
     rides: number
@@ -85,6 +98,8 @@ interface Row {
   trainer: number
   avg_hr: number | null
   max_hr: number | null
+  battery_start: number | null
+  battery_end: number | null
 }
 
 const toActivity = (r: Row): Activity => ({
@@ -101,6 +116,8 @@ const toActivity = (r: Row): Activity => ({
   trainer: r.trainer === 1,
   avgHr: r.avg_hr ?? null,
   maxHr: r.max_hr ?? null,
+  batteryStart: r.battery_start ?? null,
+  batteryEnd: r.battery_end ?? null,
 })
 
 // Composite cursor — `<start_date>:<id>` — because start_date is not unique:
@@ -231,7 +248,7 @@ function allTimeFrom(byYear: string | undefined): { bikeMiles: number; runMiles:
 }
 
 export async function buildBundle(db: D1Database, year: number): Promise<MovingBundle> {
-  const [page, counts] = await Promise.all([
+  const [page, counts, scooter] = await Promise.all([
     fetchActivities(db, null, ACTIVITY_PAGE),
     db
       .prepare(
@@ -245,6 +262,9 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
         moving_time: number
         by_year: string
       }>(),
+    db
+      .prepare('SELECT odometer_mi, riding_time, updated_at FROM scooter WHERE id = 1')
+      .first<{ odometer_mi: number; riding_time: number; updated_at: number }>(),
   ])
 
   const thisYear = yearFrom(counts?.by_year, year)
@@ -254,6 +274,9 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
     updatedAt: Math.floor(Date.now() / 1000),
     activities: page.activities,
     nextCursor: page.nextCursor,
+    scooter: scooter
+      ? { odometerMi: scooter.odometer_mi, ridingTime: scooter.riding_time, readAt: scooter.updated_at }
+      : null,
     counts: {
       activities: counts?.activities ?? 0,
       rides: counts?.rides ?? 0,

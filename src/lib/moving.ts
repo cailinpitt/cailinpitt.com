@@ -37,6 +37,9 @@ export interface Activity {
   windowSeconds?: number
   /** The whole recorded span in seconds, pauses and all. */
   elapsedTime?: number
+  /** Scooter rides only: battery percent at the start and end. */
+  batteryStart?: number | null
+  batteryEnd?: number | null
 }
 
 // The whole recorded span, not `windowSeconds` — stops (an errand, a coffee shop) are still
@@ -55,8 +58,17 @@ export interface ActivityPage {
   nextCursor: string | null
 }
 
+export interface ScooterTotals {
+  /** The scooter's own odometer, including miles from before the logger. */
+  odometerMi: number
+  ridingTime: number
+  readAt: number
+}
+
 export interface MovingBundle extends ActivityPage {
   updatedAt: number
+  /** Null until the scooter logger posts a reading; absent on an older Worker. */
+  scooter?: ScooterTotals | null
   counts: {
     activities: number
     rides: number
@@ -208,6 +220,22 @@ export function summary(activity: Activity): string {
   return `${verb} for ${duration(activity.movingTime)}`
 }
 
+/** "78% → 54%", or null unless both ends are known. */
+export function batteryDrop(activity: Activity): string | null {
+  const { batteryStart: from, batteryEnd: to } = activity
+  return typeof from === 'number' && typeof to === 'number' ? `${from}% → ${to}%` : null
+}
+
+// What the same miles would have cost in a typical gas car. EPA's typical passenger
+// vehicle: about 22 mpg and 400 g of CO2 per mile. Charging the scooter isn't
+// subtracted; it costs well under a cent a mile.
+const CAR_MPG = 22
+const CAR_CO2_LB_PER_MI = 400 / 453.592
+export const GAS_PRICE = 3.1
+
+export function drivingSaved(miles: number): { dollars: number; co2Lb: number } {
+  return { dollars: (miles / CAR_MPG) * GAS_PRICE, co2Lb: miles * CAR_CO2_LB_PER_MI }
+}
 
 const MONTHS = [
   'January',

@@ -4,8 +4,8 @@
 //  fetch: serve the bundle from D1 behind the edge cache, plus an authenticated
 //    /sync used for the initial backfill and to pick up a ride on demand.
 
-import { parseScooterRide } from './manual'
-import { saveScooterRide, sync } from './sync'
+import { parseScooterRide, parseScooterStatus } from './manual'
+import { saveScooterRide, saveScooterStatus, sync } from './sync'
 import {
   ACTIVITY_PAGE,
   buildBundle,
@@ -212,8 +212,12 @@ export default {
         )
       }
 
-      // Rides that don't come from Strava — the scooter logger posts each one here.
-      if (url.pathname === '/activities' && request.method === 'POST') {
+      // Rides that don't come from Strava, and the scooter's odometer — both posted by
+      // the scooter logger.
+      if (
+        (url.pathname === '/activities' || url.pathname === '/scooter') &&
+        request.method === 'POST'
+      ) {
         if (!authorized(request, env.ADMIN_TOKEN)) {
           return new Response('Unauthorized', { status: 401, headers: cors })
         }
@@ -223,12 +227,19 @@ export default {
         } catch {
           return new Response('Body must be JSON', { status: 400, headers: cors })
         }
-        const ride = parseScooterRide(body)
-        if (typeof ride === 'string') return new Response(ride, { status: 400, headers: cors })
-        const changed = await saveScooterRide(env.DB, ride)
-        console.log(JSON.stringify({ level: 'info', scooter: ride.id, changed }))
+        let result: Record<string, unknown>
+        if (url.pathname === '/scooter') {
+          const status = parseScooterStatus(body)
+          if (typeof status === 'string') return new Response(status, { status: 400, headers: cors })
+          result = { odometerMi: status.odometerMi, changed: await saveScooterStatus(env.DB, status) }
+        } else {
+          const ride = parseScooterRide(body)
+          if (typeof ride === 'string') return new Response(ride, { status: 400, headers: cors })
+          result = { id: ride.id, changed: await saveScooterRide(env.DB, ride) }
+        }
+        console.log(JSON.stringify({ level: 'info', scooter: result }))
         return withCors(
-          new Response(JSON.stringify({ id: ride.id, changed }), {
+          new Response(JSON.stringify(result), {
             headers: {
               'content-type': 'application/json; charset=utf-8',
               'cache-control': 'no-store',

@@ -37,6 +37,9 @@ export interface SummaryActivity {
   avgHr: number | null
   /** Peak bpm, or null. */
   maxHr: number | null
+  /** Scooter rides only; null for anything from Strava. */
+  batteryStart: number | null
+  batteryEnd: number | null
 }
 
 const METERS_PER_MILE = 1609.344
@@ -167,6 +170,8 @@ function toActivity(raw: RawActivity): SummaryActivity {
     trainer: Boolean(raw.trainer),
     commute: Boolean(raw.commute),
     ...heartRate(raw),
+    batteryStart: null,
+    batteryEnd: null,
   }
 }
 
