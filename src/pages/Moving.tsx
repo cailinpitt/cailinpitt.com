@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Seo } from '../components/Seo'
 import { CurlHint } from '../components/CurlHint'
-import { StatTile } from '../components/ListeningBits'
 import { MovingRow } from '../components/MovingBits'
 import { fetchDuringCounts } from '../lib/listening'
 import { pageSchema } from '../lib/structuredData'
@@ -57,30 +56,7 @@ export function Component() {
         <MovingSkeleton />
       ) : (
         <>
-          <section className="moving-stats" aria-labelledby="moving-stats-heading">
-            <h2 id="moving-stats-heading" className="visually-hidden">
-              Totals
-            </h2>
-            <dl className="stat-tiles">
-              <StatTile label="Activities" value={bundle.counts.activities} />
-              <StatTile
-                label={bundle.counts.bikeMiles != null ? 'Bike miles' : 'Miles'}
-                value={Math.round(bundle.counts.bikeMiles ?? bundle.counts.distanceMi)}
-              />
-              {bundle.counts.runMiles != null && (
-                <StatTile label="Run miles" value={Math.round(bundle.counts.runMiles)} />
-              )}
-              <StatTile label="Rides" value={bundle.counts.rides} />
-              {bundle.counts.runs != null && (
-                <StatTile label="Runs" value={bundle.counts.runs} />
-              )}
-              <StatTile label="Lifts" value={bundle.counts.lifts} />
-            </dl>
-          </section>
-
-          <MovingYear counts={bundle.counts} />
-
-          {bundle.scooter && <MovingScooter odometerMi={bundle.scooter.odometerMi} />}
+          <MovingSummary bundle={bundle} />
 
           <MovingLog
             initial={bundle.activities}
@@ -93,46 +69,100 @@ export function Component() {
   )
 }
 
-// Renders nothing when the field is absent (same rule as /listening's "this
-// year"), so an older Worker or a cron that hasn't recomputed totals yet
-// doesn't show a broken tile.
-function MovingYear({ counts }: { counts: MovingBundle['counts'] }) {
-  if (counts.bikeMilesThisYear == null) return null
-  const year = new Date().getFullYear()
-  const hasRun = counts.runMilesThisYear != null
+const fmt = (n: number) => Math.round(n).toLocaleString('en-US')
+// Non-breaking inside each figure, so a narrow card wraps at the dots instead.
+const plural = (n: number, word: string) => `${fmt(n)}\u00a0${word}${Math.round(n) === 1 ? '' : 's'}`
 
-  return (
-    <section className="moving-year" aria-labelledby="moving-year-heading">
-      <h2 id="moving-year-heading" className="eyebrow">
-        {year} so far
-      </h2>
-      {/* Three tiles, or six once the Worker sends run splits — is-compact is a
-          fixed 3-wide grid, so four or five would leave the last row ragged. */}
-      <dl className="stat-tiles is-compact">
-        {hasRun && <StatTile label="Activities" value={counts.activitiesThisYear} />}
-        <StatTile label="Bike miles" value={Math.round(counts.bikeMilesThisYear)} />
-        {hasRun && <StatTile label="Run miles" value={Math.round(counts.runMilesThisYear ?? 0)} />}
-        <StatTile label="Rides" value={counts.ridesThisYear} />
-        {hasRun && <StatTile label="Runs" value={counts.runsThisYear ?? 0} />}
-        <StatTile label="Lifts" value={counts.liftsThisYear} />
-      </dl>
-    </section>
-  )
+interface Sport {
+  key: string
+  icon: string
+  name: string
+  total: string
+  unit?: string
+  detail?: string
+  year?: string
+  note?: string
 }
 
-function MovingScooter({ odometerMi }: { odometerMi: number }) {
-  const saved = drivingSaved(odometerMi)
+function sports(bundle: MovingBundle): Sport[] {
+  const c = bundle.counts
+  const list: Sport[] = [
+    {
+      key: 'bike',
+      icon: '🚲',
+      name: 'Bike',
+      total: fmt(c.bikeMiles ?? c.distanceMi),
+      unit: 'mi',
+      detail: plural(c.rides, 'ride'),
+      year: `${fmt(c.bikeMilesThisYear)}\u00a0mi · ${plural(c.ridesThisYear, 'ride')}`,
+    },
+  ]
+  if (c.runs) {
+    list.push({
+      key: 'run',
+      icon: '🏃',
+      name: 'Run',
+      total: fmt(c.runMiles ?? 0),
+      unit: 'mi',
+      detail: plural(c.runs, 'run'),
+      year: `${fmt(c.runMilesThisYear ?? 0)}\u00a0mi · ${plural(c.runsThisYear ?? 0, 'run')}`,
+    })
+  }
+  list.push({
+    key: 'lift',
+    icon: '🏋️',
+    name: 'Lift',
+    total: fmt(c.lifts),
+    detail: c.lifts === 1 ? 'session' : 'sessions',
+    year: plural(c.liftsThisYear, 'session'),
+  })
+  if (bundle.scooter) {
+    const saved = drivingSaved(bundle.scooter.odometerMi)
+    list.push({
+      key: 'scooter',
+      icon: '🛴',
+      name: 'Scooter',
+      total: fmt(bundle.scooter.odometerMi),
+      unit: 'mi',
+      detail: 'lifetime',
+      note: `Saved $${fmt(saved.dollars)} in gas, ${fmt(saved.co2Lb)} lb CO₂`,
+    })
+  }
+  return list
+}
+
+function MovingSummary({ bundle }: { bundle: MovingBundle }) {
+  const year = new Date().getFullYear()
+  const { activities, activitiesThisYear } = bundle.counts
   return (
-    <section className="moving-year" aria-labelledby="moving-scooter-heading">
-      <h2 id="moving-scooter-heading" className="eyebrow">
-        Scooter
+    <section className="moving-totals" aria-labelledby="moving-totals-heading">
+      <h2 id="moving-totals-heading" className="moving-headline">
+        <strong>{fmt(activities)}</strong> activities
+        <span className="moving-headline-year">
+          {' · '}
+          <strong>{fmt(activitiesThisYear)}</strong> in {year}
+        </span>
       </h2>
-      <dl className="stat-tiles is-compact">
-        <StatTile label="Scooter miles" value={Math.round(odometerMi)} />
-        <StatTile label="Gas saved" value={`$${Math.round(saved.dollars).toLocaleString('en-US')}`} />
-        <StatTile label="CO₂ avoided" value={`${Math.round(saved.co2Lb).toLocaleString('en-US')} lb`} />
-      </dl>
-      <p className="moving-note">Compared with driving the same miles in a typical gas car.</p>
+      <ul className="sport-cards">
+        {sports(bundle).map((sport) => (
+          <li key={sport.key} className={`sport-card sport-${sport.key}`}>
+            <h3 className="sport-name">
+              <span aria-hidden="true">{sport.icon}</span> {sport.name}
+            </h3>
+            <p className="sport-total">
+              {sport.total}
+              {sport.unit && <span className="sport-unit"> {sport.unit}</span>}
+            </p>
+            {sport.detail && <p className="sport-detail">{sport.detail}</p>}
+            {sport.year && (
+              <p className="sport-year">
+                <span className="sport-year-label">{year}</span> {sport.year}
+              </p>
+            )}
+            {sport.note && <p className="sport-year">{sport.note}</p>}
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
