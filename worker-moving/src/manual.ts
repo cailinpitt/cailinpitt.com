@@ -19,6 +19,8 @@ export interface ScooterRide {
   /** Percent at the start and end, or null when the logger doesn't know. */
   batteryStart: number | null
   batteryEnd: number | null
+  /** Watt-hours used across both batteries, or null. */
+  energyWh: number | null
 }
 
 export interface ScooterStatus {
@@ -27,9 +29,12 @@ export interface ScooterStatus {
   ridingTime: number
   /** Unix seconds of the reading. */
   readAt: number
+  /** Both batteries when full, for the range estimate; null when not sent. */
+  fullWh: number | null
 }
 
 const MAX_ODOMETER_MI = 100_000
+const MAX_WH = 10_000
 
 const percent = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100
@@ -54,6 +59,10 @@ export function parseScooterRide(body: unknown): ScooterRide | string {
   const batteryEnd = b.batteryEnd ?? null
   if (batteryStart !== null && !percent(batteryStart)) return 'batteryStart must be a whole percent'
   if (batteryEnd !== null && !percent(batteryEnd)) return 'batteryEnd must be a whole percent'
+  const energyWh = b.energyWh ?? null
+  if (energyWh !== null && !(wholeSeconds(energyWh) && energyWh > 0 && energyWh < MAX_WH)) {
+    return `energyWh must be a whole number between 0 and ${MAX_WH}`
+  }
   return {
     id: b.id,
     startedAt: b.startedAt,
@@ -63,6 +72,7 @@ export function parseScooterRide(body: unknown): ScooterRide | string {
     elapsedTime: Math.max(elapsedTime, b.movingTime),
     batteryStart,
     batteryEnd,
+    energyWh,
   }
 }
 
@@ -76,5 +86,9 @@ export function parseScooterStatus(body: unknown): ScooterStatus | string {
   const ridingTime = b.ridingTime ?? 0
   if (!wholeSeconds(ridingTime)) return 'ridingTime must be whole seconds'
   if (!wholeSeconds(b.readAt)) return 'readAt must be unix seconds'
-  return { odometerMi: Math.round(b.odometerMi * 10) / 10, ridingTime, readAt: b.readAt }
+  const fullWh = b.fullWh ?? null
+  if (fullWh !== null && !(wholeSeconds(fullWh) && fullWh > 0 && fullWh < MAX_WH)) {
+    return `fullWh must be a whole number between 0 and ${MAX_WH}`
+  }
+  return { odometerMi: Math.round(b.odometerMi * 10) / 10, ridingTime, readAt: b.readAt, fullWh }
 }

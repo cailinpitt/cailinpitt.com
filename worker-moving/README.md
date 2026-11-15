@@ -114,11 +114,11 @@ Bluetooth once a night, and posts the distance since the last reading:
 curl -X POST https://moving.cailinpitt.com/activities \
   -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
   -d '{"id":"scooter-1794609819","startedAt":1794608559,"startDate":"2026-11-13",
-       "distanceMi":5.22,"movingTime":1260,"elapsedTime":1260,"batteryStart":78,"batteryEnd":54}'
+       "distanceMi":5.22,"movingTime":1260,"elapsedTime":1260,"batteryStart":78,"batteryEnd":54,"energyWh":163}'
 
 curl -X POST https://moving.cailinpitt.com/scooter \
   -H "Authorization: Bearer $MOVING_ADMIN_TOKEN" \
-  -d '{"odometerMi":281.2,"ridingTime":58595,"readAt":1794677274}'
+  -d '{"odometerMi":281.2,"ridingTime":58595,"readAt":1794677274,"fullWh":1184}'
 ```
 
 - **Ids are `scooter-<digits>`**, never all digits, so a post can't overwrite a Strava activity.
@@ -131,6 +131,9 @@ curl -X POST https://moving.cailinpitt.com/scooter \
   time minus the wheel time, and `elapsedTime` equals `movingTime`.
 - **Battery levels are optional** whole percents, combined across the scooter's internal and
   external batteries by capacity. The logger omits them when the charge rose between readings.
+- **`energyWh` is optional**: watt-hours the ride used across both batteries. `/scooter` takes an
+  optional `fullWh`, both batteries when full. The bundle's `scooter.whPerMi` averages the rides
+  that have energy, and `/moving` turns the two into a full-charge range. Needs `schema-v4.sql`.
 - **The odometer is a separate row** (`scooter` table, from `schema-v3.sql`), served as
   `scooter` in the bundle. It counts miles from before the logger, so it's larger than the sum of
   the logged rides. `/moving` turns it into gas money and CO₂ compared with a typical gas car.

@@ -40,6 +40,7 @@ export interface SummaryActivity {
   /** Scooter rides only; null for anything from Strava. */
   batteryStart: number | null
   batteryEnd: number | null
+  energyWh: number | null
 }
 
 const METERS_PER_MILE = 1609.344
@@ -172,6 +173,7 @@ function toActivity(raw: RawActivity): SummaryActivity {
     ...heartRate(raw),
     batteryStart: null,
     batteryEnd: null,
+    energyWh: null,
   }
 }
 

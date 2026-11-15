@@ -19,13 +19,13 @@ function pageBudget(env: Env): number {
   return Number.isFinite(configured) && configured > 0 ? configured : 8
 }
 
-/** D1 caps bound parameters at 100 per query; each activity binds 16, so 6 rows
- * is 96. Adding another three columns means dropping this to 5. */
-const ROWS_PER_INSERT = 6
+/** D1 caps bound parameters at 100 per query; each activity binds 17, so 5 rows
+ * is 85. Adding another three columns means dropping this to 4. */
+const ROWS_PER_INSERT = 5
 
 const COLUMNS =
   'id, name, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, ' +
-  'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr, battery_start, battery_end'
+  'moving_time, elapsed_time, trainer, commute, avg_hr, max_hr, battery_start, battery_end, energy_wh'
 
 export interface SyncResult {
   mode: 'incremental' | 'backfill' | 'refresh' | 'recompute'
@@ -163,6 +163,7 @@ const MUTABLE = [
   'max_hr',
   'battery_start',
   'battery_end',
+  'energy_wh',
 ] as const
 
 /**
@@ -186,7 +187,7 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
   const statements: D1PreparedStatement[] = []
   for (let i = 0; i < activities.length; i += ROWS_PER_INSERT) {
     const chunk = activities.slice(i, i + ROWS_PER_INSERT)
-    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
+    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
     const values = chunk.flatMap((a) => [
       a.id,
       a.name,
@@ -206,6 +207,7 @@ async function writeActivities(db: D1Database, activities: SummaryActivity[]): P
       a.maxHr,
       a.batteryStart,
       a.batteryEnd,
+      a.energyWh,
     ])
     // Strava is the authority on every column, so an edit upstream — a rename,
     // a corrected sport type — has to land. The WHERE only skips the write when
@@ -337,11 +339,12 @@ export async function saveScooterRide(db: D1Database, ride: ScooterRide): Promis
 export async function saveScooterStatus(db: D1Database, status: ScooterStatus): Promise<boolean> {
   const { meta } = await db
     .prepare(
-      `INSERT INTO scooter (id, odometer_mi, riding_time, updated_at) VALUES (1, ?1, ?2, ?3)
-       ON CONFLICT(id) DO UPDATE SET odometer_mi = ?1, riding_time = ?2, updated_at = ?3
+      `INSERT INTO scooter (id, odometer_mi, riding_time, updated_at, full_wh) VALUES (1, ?1, ?2, ?3, ?4)
+       ON CONFLICT(id) DO UPDATE SET odometer_mi = ?1, riding_time = ?2, updated_at = ?3,
+         full_wh = COALESCE(?4, scooter.full_wh)
        WHERE excluded.updated_at > scooter.updated_at`,
     )
-    .bind(status.odometerMi, status.ridingTime, status.readAt)
+    .bind(status.odometerMi, status.ridingTime, status.readAt, status.fullWh)
     .run()
   return (meta.changes ?? 0) > 0
 }

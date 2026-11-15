@@ -12,7 +12,7 @@ const MAX_ACTIVITY_PAGE = 100
 // time, which is what the listening crossover needs.
 const COLS =
   'id, sport_type, kind, start_date, started_at, distance_mi, elevation_ft, moving_time, ' +
-  'elapsed_time, trainer, avg_hr, max_hr, battery_start, battery_end, ' +
+  'elapsed_time, trainer, avg_hr, max_hr, battery_start, battery_end, energy_wh, ' +
   'MIN(elapsed_time, MAX(moving_time, 0) + 1800) AS window_seconds'
 
 export interface Activity {
@@ -39,6 +39,8 @@ export interface Activity {
   /** Scooter rides only: battery percent at the start and end, or null. */
   batteryStart: number | null
   batteryEnd: number | null
+  /** Scooter rides only: watt-hours used across both batteries, or null. */
+  energyWh: number | null
 }
 
 export interface ActivityPage {
@@ -53,6 +55,10 @@ export interface ScooterTotals {
   ridingTime: number
   /** Unix seconds of the reading. */
   readAt: number
+  /** Both batteries when full, or null until the logger sends it. */
+  fullWh: number | null
+  /** Average over rides with an energy figure, or null before the first. */
+  whPerMi: number | null
 }
 
 export interface MovingBundle {
@@ -100,6 +106,7 @@ interface Row {
   max_hr: number | null
   battery_start: number | null
   battery_end: number | null
+  energy_wh: number | null
 }
 
 const toActivity = (r: Row): Activity => ({
@@ -118,6 +125,7 @@ const toActivity = (r: Row): Activity => ({
   maxHr: r.max_hr ?? null,
   batteryStart: r.battery_start ?? null,
   batteryEnd: r.battery_end ?? null,
+  energyWh: r.energy_wh ?? null,
 })
 
 // Composite cursor — `<start_date>:<id>` — because start_date is not unique:
@@ -248,7 +256,7 @@ function allTimeFrom(byYear: string | undefined): { bikeMiles: number; runMiles:
 }
 
 export async function buildBundle(db: D1Database, year: number): Promise<MovingBundle> {
-  const [page, counts, scooter] = await Promise.all([
+  const [page, counts, scooter, efficiency] = await Promise.all([
     fetchActivities(db, null, ACTIVITY_PAGE),
     db
       .prepare(
@@ -263,9 +271,16 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
         by_year: string
       }>(),
     db
-      .prepare('SELECT odometer_mi, riding_time, updated_at FROM scooter WHERE id = 1')
-      .first<{ odometer_mi: number; riding_time: number; updated_at: number }>(),
+      .prepare('SELECT odometer_mi, riding_time, updated_at, full_wh FROM scooter WHERE id = 1')
+      .first<{ odometer_mi: number; riding_time: number; updated_at: number; full_wh: number | null }>(),
+    db
+      .prepare(
+        `SELECT SUM(energy_wh) AS wh, SUM(distance_mi) AS mi FROM activities
+         WHERE kind = 'scooter' AND energy_wh IS NOT NULL`,
+      )
+      .first<{ wh: number | null; mi: number | null }>(),
   ])
+  const whPerMi = efficiency?.wh && efficiency.mi ? Math.round((efficiency.wh / efficiency.mi) * 10) / 10 : null
 
   const thisYear = yearFrom(counts?.by_year, year)
   const allTime = allTimeFrom(counts?.by_year)
@@ -275,7 +290,13 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
     activities: page.activities,
     nextCursor: page.nextCursor,
     scooter: scooter
-      ? { odometerMi: scooter.odometer_mi, ridingTime: scooter.riding_time, readAt: scooter.updated_at }
+      ? {
+          odometerMi: scooter.odometer_mi,
+          ridingTime: scooter.riding_time,
+          readAt: scooter.updated_at,
+          fullWh: scooter.full_wh ?? null,
+          whPerMi,
+        }
       : null,
     counts: {
       activities: counts?.activities ?? 0,
