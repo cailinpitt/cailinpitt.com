@@ -7,6 +7,7 @@ import { fetchDuring, formatTime, type Scrobble } from '../lib/listening'
 import {
   avgSpeed,
   batteryDrop,
+  efficiency,
   duration,
   heartRate,
   kindIcon,
@@ -89,6 +90,8 @@ export function MovingRow({
   if (CYCLING.has(activity.kind) && activity.trainer) details.push('indoor')
   const speed = avgSpeed(activity)
   if (speed) details.push(speed)
+  const used = efficiency(activity)
+  if (used) details.push(used)
   const battery = batteryDrop(activity)
   if (battery) details.push(`🔋 ${battery}`)
   // Rendered separately, not joined into `details`: needs a coloured, aria-hidden glyph.

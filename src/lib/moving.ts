@@ -40,6 +40,8 @@ export interface Activity {
   /** Scooter rides only: battery percent at the start and end. */
   batteryStart?: number | null
   batteryEnd?: number | null
+  /** Scooter rides only: watt-hours used across both batteries. */
+  energyWh?: number | null
 }
 
 // The whole recorded span, not `windowSeconds` — stops (an errand, a coffee shop) are still
@@ -63,6 +65,10 @@ export interface ScooterTotals {
   odometerMi: number
   ridingTime: number
   readAt: number
+  /** Both batteries when full. */
+  fullWh?: number | null
+  /** Average over the rides that have an energy figure. */
+  whPerMi?: number | null
 }
 
 export interface MovingBundle extends ActivityPage {
@@ -224,6 +230,17 @@ export function summary(activity: Activity): string {
 export function avgSpeed(activity: Activity): string | null {
   if (activity.kind !== 'scooter' || !(activity.distanceMi > 0) || !(activity.movingTime > 0)) return null
   return `${Math.round(activity.distanceMi / (activity.movingTime / 3600))} mph`
+}
+
+/** "31 Wh/mi" for a scooter ride with an energy figure. */
+export function efficiency(activity: Activity): string | null {
+  if (activity.kind !== 'scooter' || !activity.energyWh || !(activity.distanceMi > 0)) return null
+  return `${Math.round(activity.energyWh / activity.distanceMi)} Wh/mi`
+}
+
+/** Miles a full charge of both batteries would last at the average efficiency. */
+export function fullChargeRange(scooter: ScooterTotals): number | null {
+  return scooter.fullWh && scooter.whPerMi ? Math.round(scooter.fullWh / scooter.whPerMi) : null
 }
 
 /** "78% → 54%", or null unless both ends are known. */

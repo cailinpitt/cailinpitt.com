@@ -7,6 +7,7 @@ import { pageSchema } from '../lib/structuredData'
 import {
   byDate,
   drivingSaved,
+  fullChargeRange,
   fetchMoving,
   fetchOlderActivities,
   longDate,
@@ -124,11 +125,17 @@ function sports(bundle: MovingBundle): Sport[] {
       name: 'Scooter',
       total: fmt(bundle.scooter.odometerMi),
       unit: 'mi',
-      detail: 'lifetime',
+      detail: scooterDetail(bundle.scooter),
       note: `Saved $${fmt(saved.dollars)} in gas, ${fmt(saved.co2Lb)} lb CO₂`,
     })
   }
   return list
+}
+
+function scooterDetail(scooter: NonNullable<MovingBundle['scooter']>): string {
+  const range = fullChargeRange(scooter)
+  if (!range || !scooter.whPerMi) return 'lifetime'
+  return `${Math.round(scooter.whPerMi)}\u00a0Wh/mi · ~${range}\u00a0mi per charge`
 }
 
 function MovingSummary({ bundle }: { bundle: MovingBundle }) {

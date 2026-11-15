@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseScooterRide, parseScooterStatus } from '../worker-moving/src/manual'
-import { avgSpeed, batteryDrop, drivingSaved, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
+import { avgSpeed, batteryDrop, drivingSaved, efficiency, fullChargeRange, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
 
 const body = (over: Record<string, unknown> = {}) => ({
   id: 'scooter-1763076000',
@@ -14,7 +14,13 @@ const body = (over: Record<string, unknown> = {}) => ({
 
 describe('parseScooterRide', () => {
   it('accepts a ride from the logger, rounding the distance', () => {
-    expect(parseScooterRide(body())).toEqual({ ...body(), distanceMi: 5.22, batteryStart: null, batteryEnd: null })
+    expect(parseScooterRide(body())).toEqual({
+      ...body(),
+      distanceMi: 5.22,
+      batteryStart: null,
+      batteryEnd: null,
+      energyWh: null,
+    })
   })
 
   it('defaults elapsed time to moving time, and never lets it be shorter', () => {
@@ -77,6 +83,7 @@ describe('scooter battery and odometer', () => {
       odometerMi: 273.7,
       ridingTime: 50000,
       readAt: 1794639706,
+      fullWh: null,
     })
     expect(parseScooterStatus({ odometerMi: -1, readAt: 1 })).toBeTypeOf('string')
     expect(parseScooterStatus({ odometerMi: 10 })).toBeTypeOf('string')
@@ -102,5 +109,25 @@ describe('avgSpeed', () => {
     expect(avgSpeed(ride)).toBe('18 mph')
     expect(avgSpeed({ ...ride, kind: 'ride' })).toBeNull()
     expect(avgSpeed({ ...ride, movingTime: 0 })).toBeNull()
+  })
+})
+
+describe('scooter efficiency', () => {
+  it('takes optional whole watt-hours', () => {
+    expect(parseScooterRide(body({ energyWh: 163 }))).toMatchObject({ energyWh: 163 })
+    expect(parseScooterRide(body({ energyWh: -5 }))).toBeTypeOf('string')
+    expect(parseScooterStatus({ odometerMi: 283, readAt: 1, fullWh: 1184 })).toMatchObject({ fullWh: 1184 })
+  })
+
+  it('shows Wh per mile on scooter rides that have it', () => {
+    const ride = { kind: 'scooter', distanceMi: 5.22, energyWh: 163 } as Activity
+    expect(efficiency(ride)).toBe('31 Wh/mi')
+    expect(efficiency({ ...ride, energyWh: null })).toBeNull()
+  })
+
+  it('estimates a full-charge range from the average', () => {
+    const totals = { odometerMi: 283, ridingTime: 0, readAt: 0 }
+    expect(fullChargeRange({ ...totals, fullWh: 1184, whPerMi: 31.2 })).toBe(38)
+    expect(fullChargeRange({ ...totals, fullWh: 1184, whPerMi: null })).toBeNull()
   })
 })
