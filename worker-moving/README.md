@@ -129,8 +129,8 @@ curl -X POST https://moving.cailinpitt.com/scooter \
   scooter's distance shows up only in the all-activity `distanceMi`.
 - **Start time is an estimate.** The scooter keeps no trip log, so `startedAt` is the arrival
   time minus the wheel time, and `elapsedTime` equals `movingTime`.
-- **Battery levels are optional** whole percents. The logger sends 100 as the start when the
-  scooter was charged since the previous reading, since the real level isn't known.
+- **Battery levels are optional** whole percents, combined across the scooter's internal and
+  external batteries by capacity. The logger omits them when the charge rose between readings.
 - **The odometer is a separate row** (`scooter` table, from `schema-v3.sql`), served as
   `scooter` in the bundle. It counts miles from before the logger, so it's larger than the sum of
   the logged rides. `/moving` turns it into gas money and CO₂ compared with a typical gas car.

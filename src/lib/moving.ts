@@ -220,6 +220,12 @@ export function summary(activity: Activity): string {
   return `${verb} for ${duration(activity.movingTime)}`
 }
 
+/** "18 mph" for a scooter ride, from distance over wheel time. Null without both. */
+export function avgSpeed(activity: Activity): string | null {
+  if (activity.kind !== 'scooter' || !(activity.distanceMi > 0) || !(activity.movingTime > 0)) return null
+  return `${Math.round(activity.distanceMi / (activity.movingTime / 3600))} mph`
+}
+
 /** "78% → 54%", or null unless both ends are known. */
 export function batteryDrop(activity: Activity): string | null {
   const { batteryStart: from, batteryEnd: to } = activity

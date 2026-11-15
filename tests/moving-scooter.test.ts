@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseScooterRide, parseScooterStatus } from '../worker-moving/src/manual'
-import { batteryDrop, drivingSaved, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
+import { avgSpeed, batteryDrop, drivingSaved, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
 
 const body = (over: Record<string, unknown> = {}) => ({
   id: 'scooter-1763076000',
@@ -92,5 +92,15 @@ describe('scooter battery and odometer', () => {
     const saved = drivingSaved(220)
     expect(saved.dollars).toBeCloseTo(31, 0)
     expect(Math.round(saved.co2Lb)).toBe(194)
+  })
+})
+
+describe('avgSpeed', () => {
+  const ride = { kind: 'scooter', distanceMi: 2.55, movingTime: 510 } as Activity
+
+  it('is distance over wheel time, for scooter rides only', () => {
+    expect(avgSpeed(ride)).toBe('18 mph')
+    expect(avgSpeed({ ...ride, kind: 'ride' })).toBeNull()
+    expect(avgSpeed({ ...ride, movingTime: 0 })).toBeNull()
   })
 })
