@@ -130,7 +130,9 @@ curl -X POST https://moving.cailinpitt.com/scooter \
 - **Start time is an estimate.** The scooter keeps no trip log, so `startedAt` is the arrival
   time minus the wheel time, and `elapsedTime` equals `movingTime`.
 - **Battery levels are optional** whole percents, combined across the scooter's internal and
-  external batteries by capacity. The logger omits them when the charge rose between readings.
+  external batteries by capacity. A charge between readings is always to full, so the logger
+  sends 100 as the start then. `batteryEnd` alone means the previous reading was incomplete;
+  `/moving` shows it as "54% left".
 - **`energyWh` is optional**: watt-hours the ride used across both batteries. `/scooter` takes an
   optional `fullWh`, both batteries when full. The bundle's `scooter.whPerMi` averages the rides
   that have energy, and `/moving` turns the two into a full-charge range. Needs `schema-v4.sql`.

@@ -89,10 +89,10 @@ describe('scooter battery and odometer', () => {
     expect(parseScooterStatus({ odometerMi: 10 })).toBeTypeOf('string')
   })
 
-  it('shows the drop only when both ends are known', () => {
-    const ride = { batteryStart: 78, batteryEnd: 54 } as Activity
-    expect(batteryDrop(ride)).toBe('78% → 54%')
-    expect(batteryDrop({ batteryStart: null, batteryEnd: 54 } as Activity)).toBeNull()
+  it('shows the drop, or just the level left when the start is unknown', () => {
+    expect(batteryDrop({ batteryStart: 78, batteryEnd: 54 } as Activity)).toBe('78% → 54%')
+    expect(batteryDrop({ batteryStart: null, batteryEnd: 54 } as Activity)).toBe('54% left')
+    expect(batteryDrop({ batteryStart: 78, batteryEnd: null } as Activity)).toBeNull()
   })
 
   it('prices the miles as gas-car driving', () => {

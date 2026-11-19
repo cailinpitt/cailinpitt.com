@@ -243,10 +243,11 @@ export function fullChargeRange(scooter: ScooterTotals): number | null {
   return scooter.fullWh && scooter.whPerMi ? Math.round(scooter.fullWh / scooter.whPerMi) : null
 }
 
-/** "78% → 54%", or null unless both ends are known. */
+/** "78% → 54%", or "54% left" when the starting level isn't known. */
 export function batteryDrop(activity: Activity): string | null {
   const { batteryStart: from, batteryEnd: to } = activity
-  return typeof from === 'number' && typeof to === 'number' ? `${from}% → ${to}%` : null
+  if (typeof to !== 'number') return null
+  return typeof from === 'number' ? `${from}% → ${to}%` : `${to}% left`
 }
 
 // What the same miles would have cost in a typical gas car. EPA's typical passenger
