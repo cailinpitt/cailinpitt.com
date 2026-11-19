@@ -8,6 +8,7 @@ import {
   avgSpeed,
   batteryDrop,
   efficiency,
+  rideGasSaved,
   duration,
   heartRate,
   kindIcon,
@@ -92,6 +93,8 @@ export function MovingRow({
   if (speed) details.push(speed)
   const used = efficiency(activity)
   if (used) details.push(used)
+  const gas = rideGasSaved(activity)
+  if (gas) details.push(gas)
   const battery = batteryDrop(activity)
   if (battery) details.push(`🔋 ${battery}`)
   // Rendered separately, not joined into `details`: needs a coloured, aria-hidden glyph.
@@ -105,7 +108,8 @@ export function MovingRow({
       </span>
       <span className="moving-summary">{summary(activity)}</span>
       <span className="moving-detail">
-        {details.join(' · ')}
+        {/* Non-breaking inside each item, so a wrapped line breaks only at the dots. */}
+        {details.map((d) => d.replace(/ /g, '\u00a0')).join(' · ')}
         {hr && (
           <>
             {details.length > 0 && ' · '}

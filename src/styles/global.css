@@ -4910,6 +4910,7 @@ a.comment-name:hover {
   .moving-detail {
     grid-column: 3;
     text-align: left;
+    white-space: normal;
   }
 }
 

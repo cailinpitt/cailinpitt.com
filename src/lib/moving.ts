@@ -42,6 +42,8 @@ export interface Activity {
   batteryEnd?: number | null
   /** Scooter rides only: watt-hours used across both batteries. */
   energyWh?: number | null
+  /** Scooter rides only: dollars of gas the same miles would have cost, at that week's price. */
+  gasSaved?: number | null
 }
 
 // The whole recorded span, not `windowSeconds` — stops (an errand, a coffee shop) are still
@@ -245,6 +247,12 @@ export function efficiency(activity: Activity): string | null {
 /** Miles a full charge of both batteries would last at the average efficiency. */
 export function fullChargeRange(scooter: ScooterTotals): number | null {
   return scooter.fullWh && scooter.whPerMi ? Math.round(scooter.fullWh / scooter.whPerMi) : null
+}
+
+/** "$0.47 gas saved" for a scooter ride the Worker could price. */
+export function rideGasSaved(activity: Activity): string | null {
+  if (activity.kind !== 'scooter' || typeof activity.gasSaved !== 'number' || !(activity.gasSaved > 0)) return null
+  return `$${activity.gasSaved.toFixed(2)} gas saved`
 }
 
 /** "78% → 54%", or "54% left" when the starting level isn't known. */

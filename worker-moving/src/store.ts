@@ -1,7 +1,7 @@
 // D1 reads for the /activity API. Same shape as worker-watching's store:
 // straight from D1 behind the edge cache, no precomputed blobs.
 
-import { gasSaved, type WeekPrice } from './gas'
+import { CAR_MPG, gasSaved, priceOn, type WeekPrice } from './gas'
 
 /** Kinds a caller may filter on; mirrors ActivityKind in strava.ts. */
 const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'dance', 'scooter', 'other'])
@@ -43,6 +43,8 @@ export interface Activity {
   batteryEnd: number | null
   /** Scooter rides only: watt-hours used across both batteries, or null. */
   energyWh: number | null
+  /** Scooter rides only: dollars of gas the same miles would have cost, at that week's price. */
+  gasSaved?: number | null
 }
 
 export interface ActivityPage {
@@ -148,6 +150,19 @@ function decodeCursor(raw: string | null): [string, string] | null {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) && /^(scooter-)?\d+$/.test(id) ? [date, id] : null
 }
 
+/** Prices each scooter ride's miles at its week's gas price; one query, and only when there's a scooter ride. */
+async function withGasSaved(db: D1Database, activities: Activity[]): Promise<Activity[]> {
+  if (!activities.some((a) => a.kind === 'scooter')) return activities
+  const { results } = await db.prepare('SELECT week, price FROM gas_prices ORDER BY week').all<WeekPrice>()
+  const prices = results ?? []
+  if (!prices.length) return activities
+  return activities.map((a) =>
+    a.kind === 'scooter'
+      ? { ...a, gasSaved: Math.round((a.distanceMi / CAR_MPG) * priceOn(a.startDate, prices) * 100) / 100 }
+      : a,
+  )
+}
+
 export async function fetchActivities(
   db: D1Database,
   cursor: string | null,
@@ -176,7 +191,7 @@ export async function fetchActivities(
     .bind(...binds, size + 1)
     .all<Row>()
 
-  const rows = (results ?? []).map(toActivity)
+  const rows = await withGasSaved(db, (results ?? []).map(toActivity))
   const hasMore = rows.length > size
   const activities = hasMore ? rows.slice(0, size) : rows
   return {
@@ -191,7 +206,7 @@ export async function fetchActivitiesOnDate(db: D1Database, date: string): Promi
     .prepare(`SELECT ${COLS} FROM activities WHERE start_date = ?1 ORDER BY id DESC`)
     .bind(date)
     .all<Row>()
-  return (results ?? []).map(toActivity)
+  return withGasSaved(db, (results ?? []).map(toActivity))
 }
 
 export interface ActivityNow {
@@ -206,7 +221,7 @@ export async function buildNow(db: D1Database): Promise<ActivityNow> {
     .first<Row>()
 
   return {
-    lastActivity: row ? toActivity(row) : null,
+    lastActivity: row ? (await withGasSaved(db, [toActivity(row)]))[0] : null,
     updatedAt: Math.floor(Date.now() / 1000),
   }
 }

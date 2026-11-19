@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseScooterRide, parseScooterStatus } from '../worker-moving/src/manual'
 import { gasSaved, parseEiaPrices, priceOn } from '../worker-moving/src/gas'
-import { avgSpeed, batteryDrop, drivingSaved, efficiency, fullChargeRange, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
+import { avgSpeed, batteryDrop, drivingSaved, efficiency, fullChargeRange, rideGasSaved, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
 
 const body = (over: Record<string, unknown> = {}) => ({
   id: 'scooter-1763076000',
@@ -168,5 +168,14 @@ describe('gas prices', () => {
     // 22 mi at 3.70 + 22 mi at 3.40 + 66 older mi at 3.70, all at 22 mpg
     expect(gasSaved(rides, prices, 110)).toBeCloseTo(3.7 + 3.4 + 3 * 3.7, 2)
     expect(gasSaved(rides, [], 110)).toBeNull()
+  })
+})
+
+describe('rideGasSaved', () => {
+  it('shows a scooter ride\'s priced savings in dollars and cents', () => {
+    const ride = { kind: 'scooter', gasSaved: 0.4747 } as Activity
+    expect(rideGasSaved(ride)).toBe('$0.47 gas saved')
+    expect(rideGasSaved({ ...ride, gasSaved: null })).toBeNull()
+    expect(rideGasSaved({ ...ride, kind: 'ride' })).toBeNull()
   })
 })
