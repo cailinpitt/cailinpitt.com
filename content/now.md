@@ -5,7 +5,7 @@ description: "What Cailin Pitt is working on, thinking about, and listening to r
 ---
 ## Where I am
 
-I'm currently based in Chicago, Illinois. 🌭
+I'm currently based in Atlanta, Georgia. 🍑
 
 ## Work
 
@@ -22,7 +22,7 @@ More projects can be found [here](/projects).
 ## Music, books, films, exercise, photos, concerts
 
 Things I'm currently reading, watching, and listening to can be found on the
-[/reading](/reading), [/watching](/watching), and [/listening](/listening) pages (also at the top of this page). My exercise log (biking, weightlifting, etc.) is at [/moving](/moving). Recent photos I've taken also appear at [/photos](/photos), which I often upload directly from my phone. Concerts I've seen are at [/concerts](/concerts).
+[/reading](/reading), [/watching](/watching), and [/listening](/listening) pages (also at the top of this page). My exercise log (biking, weightlifting, etc.) is at [/moving](/moving). Recent photos I've taken also appear at [/photos](/photos), which I upload directly from my phone. Concerts I've seen are at [/concerts](/concerts).
 
 ## Otherwise
 
