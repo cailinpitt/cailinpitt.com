@@ -4,6 +4,7 @@
 // archive, minus an overlap window so edits land. Backfill walks backwards from
 // the oldest row we hold, a few pages per pass, until it runs out of history.
 
+import { eiaUrl, parseEiaPrices } from './gas'
 import type { ScooterRide, ScooterStatus } from './manual'
 import { PER_PAGE, accessToken, fetchActivities, type SummaryActivity } from './strava'
 
@@ -347,4 +348,31 @@ export async function saveScooterStatus(db: D1Database, status: ScooterStatus): 
     .bind(status.odometerMi, status.ridingTime, status.readAt, status.fullWh)
     .run()
   return (meta.changes ?? 0) > 0
+}
+
+/** EIA publishes weekly, so twice a day is plenty however often the cron fires. */
+const GAS_REFRESH_SECONDS = 12 * 60 * 60
+/** Enough history to price a year of rides; later pulls only need the latest weeks. */
+const GAS_WEEKS = 60
+
+/** Pull recent weekly gas prices into D1. Returns how many weeks were stored, or 0 when skipped. */
+export async function syncGasPrices(env: Env, force = false): Promise<number> {
+  const now = Math.floor(Date.now() / 1000)
+  if (!force) {
+    const last = await env.DB.prepare('SELECT MAX(fetched_at) AS at FROM gas_prices').first<{ at: number | null }>()
+    if (last?.at && now - last.at < GAS_REFRESH_SECONDS) return 0
+  }
+  const res = await fetch(eiaUrl(env.EIA_API_KEY || 'DEMO_KEY', GAS_WEEKS))
+  if (!res.ok) throw new Error(`EIA ${res.status}`)
+  const prices = parseEiaPrices(await res.json())
+  if (!prices.length) throw new Error('EIA returned no prices')
+  await env.DB.batch(
+    prices.map((p) =>
+      env.DB.prepare(
+        `INSERT INTO gas_prices (week, price, fetched_at) VALUES (?1, ?2, ?3)
+         ON CONFLICT(week) DO UPDATE SET price = ?2, fetched_at = ?3`,
+      ).bind(p.week, p.price, now),
+    ),
+  )
+  return prices.length
 }

@@ -18,4 +18,11 @@ interface Env {
    * this secret is stale by design.
    */
   STRAVA_REFRESH_TOKEN: string
+
+  /**
+   * Free key from eia.gov/opendata, for weekly gas prices. Optional: without it
+   * the Worker uses EIA's shared, rate-limited DEMO_KEY.
+   * Set with: wrangler secret put EIA_API_KEY
+   */
+  EIA_API_KEY?: string
 }

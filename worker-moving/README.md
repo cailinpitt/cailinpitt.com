@@ -136,6 +136,12 @@ curl -X POST https://moving.cailinpitt.com/scooter \
 - **`energyWh` is optional**: watt-hours the ride used across both batteries. `/scooter` takes an
   optional `fullWh`, both batteries when full. The bundle's `scooter.whPerMi` averages the rides
   that have energy, and `/moving` turns the two into a full-charge range. Needs `schema-v4.sql`.
+- **Gas saved is priced week by week.** The cron pulls the EIA's weekly retail price for regular
+  gas in the Lower Atlantic (PADD 1C, which includes Georgia) into `gas_prices`, at most twice a
+  day. Each scooter ride is priced at its week; odometer miles from before the logger take the first
+  ride's week. The bundle serves the total as `scooter.gasSaved`. Needs `schema-v5.sql` and,
+  optionally, an `EIA_API_KEY` secret (free from eia.gov/opendata; without it the shared, rate-limited
+  `DEMO_KEY` is used). `POST /sync?gas=1` refreshes prices on demand.
 - **The odometer is a separate row** (`scooter` table, from `schema-v3.sql`), served as
   `scooter` in the bundle. It counts miles from before the logger, so it's larger than the sum of
   the logged rides. `/moving` turns it into gas money and CO₂ compared with a typical gas car.

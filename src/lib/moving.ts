@@ -69,6 +69,10 @@ export interface ScooterTotals {
   fullWh?: number | null
   /** Average over the rides that have an energy figure. */
   whPerMi?: number | null
+  /** Gas money saved, each ride priced at its week's regional average. */
+  gasSaved?: number | null
+  /** The latest weekly gas price, dollars per gallon. */
+  gasPrice?: number | null
 }
 
 export interface MovingBundle extends ActivityPage {
@@ -252,10 +256,11 @@ export function batteryDrop(activity: Activity): string | null {
 
 // What the same miles would have cost in a typical gas car. EPA's typical passenger
 // vehicle: about 22 mpg and 400 g of CO2 per mile. Charging the scooter isn't
-// subtracted; it costs well under a cent a mile.
+// subtracted; it costs well under a cent a mile. The Worker prices gas from weekly
+// EIA averages (ScooterTotals.gasSaved); GAS_PRICE is only the fallback.
 const CAR_MPG = 22
 const CAR_CO2_LB_PER_MI = 400 / 453.592
-export const GAS_PRICE = 3.1
+export const GAS_PRICE = 3.45
 
 export function drivingSaved(miles: number): { dollars: number; co2Lb: number } {
   return { dollars: (miles / CAR_MPG) * GAS_PRICE, co2Lb: miles * CAR_CO2_LB_PER_MI }

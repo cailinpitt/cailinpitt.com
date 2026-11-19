@@ -1,6 +1,8 @@
 // D1 reads for the /activity API. Same shape as worker-watching's store:
 // straight from D1 behind the edge cache, no precomputed blobs.
 
+import { gasSaved, type WeekPrice } from './gas'
+
 /** Kinds a caller may filter on; mirrors ActivityKind in strava.ts. */
 const KINDS = new Set(['ride', 'ebike', 'lift', 'walk', 'run', 'yoga', 'climb', 'dance', 'scooter', 'other'])
 
@@ -59,6 +61,10 @@ export interface ScooterTotals {
   fullWh: number | null
   /** Average over rides with an energy figure, or null before the first. */
   whPerMi: number | null
+  /** Gas a car would have burned on these miles, each ride at its week's price; null without prices. */
+  gasSaved: number | null
+  /** The latest weekly price used, dollars per gallon. */
+  gasPrice: number | null
 }
 
 export interface MovingBundle {
@@ -256,7 +262,7 @@ function allTimeFrom(byYear: string | undefined): { bikeMiles: number; runMiles:
 }
 
 export async function buildBundle(db: D1Database, year: number): Promise<MovingBundle> {
-  const [page, counts, scooter, efficiency] = await Promise.all([
+  const [page, counts, scooter, efficiency, rides, prices] = await Promise.all([
     fetchActivities(db, null, ACTIVITY_PAGE),
     db
       .prepare(
@@ -279,7 +285,19 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
          WHERE kind = 'scooter' AND energy_wh IS NOT NULL`,
       )
       .first<{ wh: number | null; mi: number | null }>(),
+    db
+      .prepare(`SELECT start_date, distance_mi FROM activities WHERE kind = 'scooter'`)
+      .all<{ start_date: string; distance_mi: number }>(),
+    db.prepare('SELECT week, price FROM gas_prices ORDER BY week').all<WeekPrice>(),
   ])
+  const weekly = prices.results ?? []
+  const saved = scooter
+    ? gasSaved(
+        (rides.results ?? []).map((r) => ({ startDate: r.start_date, distanceMi: r.distance_mi })),
+        weekly,
+        scooter.odometer_mi,
+      )
+    : null
   const whPerMi = efficiency?.wh && efficiency.mi ? Math.round((efficiency.wh / efficiency.mi) * 10) / 10 : null
 
   const thisYear = yearFrom(counts?.by_year, year)
@@ -296,6 +314,8 @@ export async function buildBundle(db: D1Database, year: number): Promise<MovingB
           readAt: scooter.updated_at,
           fullWh: scooter.full_wh ?? null,
           whPerMi,
+          gasSaved: saved,
+          gasPrice: weekly.length ? weekly[weekly.length - 1].price : null,
         }
       : null,
     counts: {

@@ -126,7 +126,7 @@ function sports(bundle: MovingBundle): Sport[] {
       total: fmt(bundle.scooter.odometerMi),
       unit: 'mi',
       detail: scooterDetail(bundle.scooter),
-      note: `Saved $${fmt(saved.dollars)} in gas, ${fmt(saved.co2Lb)} lb CO₂`,
+      note: `Saved $${fmt(bundle.scooter.gasSaved ?? saved.dollars)} in gas, ${fmt(saved.co2Lb)} lb CO₂`,
     })
   }
   return list

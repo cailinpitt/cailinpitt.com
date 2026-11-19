@@ -5,7 +5,7 @@
 //    /sync used for the initial backfill and to pick up a ride on demand.
 
 import { parseScooterRide, parseScooterStatus } from './manual'
-import { saveScooterRide, saveScooterStatus, sync } from './sync'
+import { saveScooterRide, saveScooterStatus, sync, syncGasPrices } from './sync'
 import {
   ACTIVITY_PAGE,
   buildBundle,
@@ -130,6 +130,13 @@ export default {
           console.log(JSON.stringify({ level: 'error', stage: 'sync', error: String(err) })),
         ),
     )
+    ctx.waitUntil(
+      syncGasPrices(env)
+        .then((weeks) => weeks && console.log(JSON.stringify({ level: 'info', gasWeeks: weeks })))
+        .catch((err) =>
+          console.log(JSON.stringify({ level: 'error', stage: 'gas', error: String(err) })),
+        ),
+    )
   },
 
   async fetch(request, env, ctx): Promise<Response> {
@@ -166,6 +173,16 @@ export default {
         let body: string
         let status = 200
         try {
+          // `?gas=1` only refreshes gas prices, skipping the throttle.
+          if (url.searchParams.has('gas')) {
+            const weeks = await syncGasPrices(env, true)
+            return withCors(
+              new Response(JSON.stringify({ gasWeeks: weeks }), {
+                headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+              }),
+              cors,
+            )
+          }
           const result = await sync(env, {
             backfill: url.searchParams.has('backfill'),
             refresh: url.searchParams.has('refresh'),

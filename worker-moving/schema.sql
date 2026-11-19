@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS scooter (
   full_wh      INTEGER                      -- both batteries when full
 );
 
+-- Weekly EIA retail prices for regular gas in the Lower Atlantic (PADD 1C), which
+-- includes Georgia. Each scooter ride's miles are priced at their week's price.
+CREATE TABLE IF NOT EXISTS gas_prices (
+  week        TEXT    PRIMARY KEY,  -- YYYY-MM-DD, the EIA's week
+  price       REAL    NOT NULL,     -- dollars per gallon, regular
+  fetched_at  INTEGER NOT NULL      -- unix seconds
+);
+
 -- Strava rotates the refresh token on every exchange, so it can't live in a
 -- Worker secret — secrets are write-only from the Worker's side. The secret
 -- seeds this table on first run; after that this row is the authority.

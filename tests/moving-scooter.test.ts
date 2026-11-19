@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseScooterRide, parseScooterStatus } from '../worker-moving/src/manual'
+import { gasSaved, parseEiaPrices, priceOn } from '../worker-moving/src/gas'
 import { avgSpeed, batteryDrop, drivingSaved, efficiency, fullChargeRange, kindIcon, measure, summary, type Activity } from '../src/lib/moving'
 
 const body = (over: Record<string, unknown> = {}) => ({
@@ -97,7 +98,7 @@ describe('scooter battery and odometer', () => {
 
   it('prices the miles as gas-car driving', () => {
     const saved = drivingSaved(220)
-    expect(saved.dollars).toBeCloseTo(31, 0)
+    expect(saved.dollars).toBeCloseTo(34.5, 1)
     expect(Math.round(saved.co2Lb)).toBe(194)
   })
 })
@@ -129,5 +130,43 @@ describe('scooter efficiency', () => {
     const totals = { odometerMi: 283, ridingTime: 0, readAt: 0 }
     expect(fullChargeRange({ ...totals, fullWh: 1184, whPerMi: 31.2 })).toBe(38)
     expect(fullChargeRange({ ...totals, fullWh: 1184, whPerMi: null })).toBeNull()
+  })
+})
+
+describe('gas prices', () => {
+  const prices = [
+    { week: '2026-11-02', price: 3.7 },
+    { week: '2026-11-09', price: 3.6 },
+    { week: '2026-11-16', price: 3.4 },
+  ]
+
+  it('reads the EIA response, whose values are strings', () => {
+    const body = {
+      response: {
+        data: [
+          { period: '2026-11-16', value: '3.436' },
+          { period: '2026-11-09', value: null },
+          { period: 'bad', value: '3.5' },
+        ],
+      },
+    }
+    expect(parseEiaPrices(body)).toEqual([{ week: '2026-11-16', price: 3.436 }])
+    expect(parseEiaPrices({ error: 'no key' })).toEqual([])
+  })
+
+  it('uses the week a date falls in, or the earliest week before the data starts', () => {
+    expect(priceOn('2026-11-12', prices)).toBe(3.6)
+    expect(priceOn('2026-11-16', prices)).toBe(3.4)
+    expect(priceOn('2026-10-01', prices)).toBe(3.7)
+  })
+
+  it('prices each ride at its week, and older odometer miles at the first ride\'s week', () => {
+    const rides = [
+      { startDate: '2026-11-17', distanceMi: 22 },
+      { startDate: '2026-11-03', distanceMi: 22 },
+    ]
+    // 22 mi at 3.70 + 22 mi at 3.40 + 66 older mi at 3.70, all at 22 mpg
+    expect(gasSaved(rides, prices, 110)).toBeCloseTo(3.7 + 3.4 + 3 * 3.7, 2)
+    expect(gasSaved(rides, [], 110)).toBeNull()
   })
 })
